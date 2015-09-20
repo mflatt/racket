@@ -23,7 +23,7 @@ typedef struct mpage {
 #endif
   uintptr_t previous_size; /* for med page, place to search for available block; for jit nursery, allocated size */
   uintptr_t size; /* big page size, med page element size, or nursery starting point */
-  struct mpage *modified_next; /* next in chain of pages for backpointers, marks, etc. */
+  struct mpage *backpointer_next;
   unsigned short live_size;
   unsigned char generation    :2;
   unsigned char back_pointers :1;
@@ -142,8 +142,8 @@ typedef struct NewGC {
   intptr_t num_gen1_pages;
 
   /* linked list of pages with back pointers to be traversed in a
-     minor collection, etc.: */
-  struct mpage *modified_next;
+     minor collection: */
+  struct mpage *backpointer_next;
 
   MarkSegment *mark_stack;
 
