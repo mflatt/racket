@@ -31,23 +31,19 @@
 		    [(regexp-match re:close l)
 		     (error 'mkmark.rkt "unexpected close")]
 		    [else (cons l (loop))])))))]
-	[print-lines (lambda (l [skip-rx #f] [skip-alt-bracket #f])
+	[print-lines (lambda (l [skip-rx #f])
                        (let loop ([l l] [skip? #f])
                          (cond
                           [(null? l) (void)]
                           [(and skip-rx (regexp-match? skip-rx (car l)))
-                           (when skip-alt-bracket
-                             (if skip?
-                                 (printf "#endif\n")
-                                 (printf "#ifdef ~a\n" skip-alt-bracket)))
                            (loop (cdr l) (not skip?))]
-                          [(and skip? (not skip-alt-bracket))
+                          [skip?
                            (loop (cdr l) #t)]
                           [(regexp-match? #rx"(START|END)_[A-Z_]+_ONLY;" (car l))
                            (loop (cdr l) skip?)]
                           [else
                            (printf "~a\n" (car l))
-                           (loop (cdr l) skip?)])))])
+                           (loop (cdr l) #f)])))])
     (let ([prefix (read-lines re:mark)]
 	  [mark (read-lines re:size-or-more)]
 	  [fixup (if (regexp-match-peek re:fixup-start (current-input-port))
@@ -56,26 +52,13 @@
                        (read-lines re:size))
                      null)]
 	  [size (read-lines re:close)])
-      
-      (define (print-size size)
-        (printf "# ifdef GC_NO_SIZE_NEEDED_FROM_PROCS\n")
-        (printf "  return 0;\n")
-        (printf "# else\n")
-        (printf "  return\n")
-        (print-lines size)
-        (printf "# endif\n"))
-          
       (printf "static int ~a_SIZE(void *p, struct NewGC *gc) {\n" name)
-      (printf "#ifndef GC_NO_SIZE_NEEDED_FROM_PROCS\n")
       (print-lines prefix)
+      (printf "  return\n")
       (print-lines size)
-      (printf "#else\n")
-      (printf "  return 0;\n")
-      (printf "#endif\n")
       (printf "}\n\n")
 
       (printf "static int ~a_MARK(void *p, struct NewGC *gc) {\n" name)
-      (printf "#ifndef GC_NO_MARK_PROCEDURE_NEEDED\n")
       (print-lines prefix)
       (print-lines (map (lambda (s)
 			  (regexp-replace* 
@@ -87,12 +70,11 @@
 			   ""))
 			mark)
                    #rx"FIXUP_ONLY")
-      (print-size size)
-      (printf "#endif\n")
+      (printf "  return\n")
+      (print-lines size)
       (printf "}\n\n")
 
       (printf "static int ~a_FIXUP(void *p, struct NewGC *gc) {\n" name)
-      (printf "#ifndef GC_NO_FIXUP_PROCEDURE_NEEDED\n")
       (print-lines prefix)
       (print-lines (map (lambda (s)
 			  (regexp-replace* 
@@ -106,8 +88,8 @@
                          mark
                          fixup))
                    #rx"MARK_ONLY")
-      (print-size size)
-      (printf "#endif\n")
+      (printf "  return\n")
+      (print-lines size)
       (printf "}\n\n")
 
       (printf "#define ~a_IS_ATOMIC ~a\n" 

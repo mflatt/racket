@@ -7041,7 +7041,7 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
   LOG_EXPAND_DECLS;
 
   if (!rec[drec].comp) {
-    SCHEME_EXPAND_OBSERVE_PRIM_MODULE(env->observer);
+    SCHEME_EXPAND_OBSERVE_PRIM_MODULE(rec[drec].observer);
     if (rec[drec].depth > 0)
       rec[drec].depth++;
   }
@@ -7205,7 +7205,7 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
     m->super_bxs_info = super_bxs_info;
   }
 
-  SCHEME_EXPAND_OBSERVE_PREPARE_ENV(env->observer);
+  SCHEME_EXPAND_OBSERVE_PREPARE_ENV(rec[drec].observer);
 
   /* load the module for the initial require */
   if (iidx) {
@@ -7291,7 +7291,6 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
     else
       benv = scheme_new_expand_env(menv, env->insp, frame_scopes,
                                    SCHEME_MODULE_BEGIN_FRAME | SCHEME_KEEP_SCOPES_FRAME);
-    benv->observer = env->observer;
   }
 
   /* If fm isn't a single expression, it certainly needs a
@@ -7309,7 +7308,7 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
   fm = scheme_datum_to_syntax(fm, form, mb_ctx, 0, 2);
 
   if (check_mb) {
-    SCHEME_EXPAND_OBSERVE_TAG(env->observer, fm);
+    SCHEME_EXPAND_OBSERVE_TAG(rec[drec].observer, fm);
   }
 
   fm = scheme_stx_property(fm, module_name_symbol, scheme_resolved_module_path_value(rmp));
@@ -7322,7 +7321,7 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
 
   fm = scheme_stx_add_module_frame_context(fm, rn_set);
 
-  SCHEME_EXPAND_OBSERVE_RENAME_ONE(env->observer, fm);
+  SCHEME_EXPAND_OBSERVE_RENAME_ONE(rec[drec].observer, fm);
 
   if (!check_mb) {
     fm = scheme_check_immediate_macro(fm, benv, rec, drec, &mbval, 1);
@@ -7335,7 +7334,7 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
       fm = scheme_datum_to_syntax(fm, form, mb_ctx, 0, 2);
       fm = scheme_stx_property(fm, module_name_symbol, scheme_resolved_module_path_value(rmp));
       
-      SCHEME_EXPAND_OBSERVE_TAG(env->observer, fm);
+      SCHEME_EXPAND_OBSERVE_TAG(rec[drec].observer, fm);
 
       check_mb = 1;
     }
@@ -7452,7 +7451,7 @@ static Scheme_Object *do_module(Scheme_Object *form, Scheme_Comp_Env *env,
 
   LOG_END_EXPAND(m);
 
-  SCHEME_EXPAND_OBSERVE_RENAME_ONE(env->observer, fm);
+  SCHEME_EXPAND_OBSERVE_RENAME_ONE(rec[drec].observer, fm);
   return fm;
 }
 
@@ -8179,7 +8178,7 @@ static Scheme_Object *do_module_begin(Scheme_Object *orig_form, Scheme_Comp_Env 
      scoped identifiers for definitions. */
   form = introduce_to_module_context(form, rn_set);
 
-  observer = env->observer;
+  observer = rec[drec].observer;
   SCHEME_EXPAND_OBSERVE_RENAME_ONE(observer, form);
 
   _num_phases = MALLOC_ONE_ATOMIC(int);
@@ -8227,6 +8226,8 @@ static Scheme_Object *do_module_begin(Scheme_Object *orig_form, Scheme_Comp_Env 
     crec.dont_mark_local_use = 0;
     crec.resolve_module_ids = 0;
     crec.substitute_bindings = 1;
+    crec.value_name = scheme_false;
+    crec.observer = NULL;
     crec.pre_unwrapped = 0;
     crec.env_already = 0;
     crec.comp_flags = rec[drec].comp_flags;
@@ -8691,14 +8692,20 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
     void **args;
 
     if (rec) {
-      recx = MALLOC_ONE_ATOMIC(Scheme_Compile_Expand_Info);
+      recx = MALLOC_ONE_RT(Scheme_Compile_Expand_Info);
       memcpy(recx, rec + drec, sizeof(Scheme_Compile_Expand_Info));
+#ifdef MZTAG_REQUIRED
+      recx->type = scheme_rt_compile_info;
+#endif
     } else
       recx = NULL;
     
     if (erec) {
-      erecx = MALLOC_ONE_ATOMIC(Scheme_Compile_Expand_Info);
+      erecx = MALLOC_ONE_RT(Scheme_Compile_Expand_Info);
       memcpy(erecx, erec + derec, sizeof(Scheme_Compile_Expand_Info));
+#ifdef MZTAG_REQUIRED
+      erecx->type = scheme_rt_compile_info;
+#endif
     } else
       erecx = NULL;
 
@@ -8806,8 +8813,11 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
   /* For syntax-local-context, etc., in a d-s RHS: */
   rhs_env = scheme_new_comp_env(env->genv, env->insp, NULL, SCHEME_TOPLEVEL_FRAME);
 
-  observer = env->observer;
-  rhs_env->observer = observer;
+  if (erec) {
+    observer = erec[derec].observer;
+  } else {
+    observer = NULL;
+  }
 
   maybe_has_lifts = 0;
   lift_ctx = scheme_generate_lifts_key();
@@ -8854,6 +8864,8 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
 	Scheme_Expand_Info erec1;
 	erec1.comp = 0;
 	erec1.depth = -1;
+	erec1.value_name = scheme_false;
+        erec1.observer = observer;
         erec1.pre_unwrapped = 0;
         erec1.substitute_bindings = 1;
         erec1.env_already = 0;
@@ -9095,6 +9107,8 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
 	  mrec.dont_mark_local_use = 0;
 	  mrec.resolve_module_ids = 0;
           mrec.substitute_bindings = 1;
+	  mrec.value_name = NULL;
+          mrec.observer = NULL;
           mrec.pre_unwrapped = 0;
           mrec.env_already = 0;
           mrec.comp_flags = rec[drec].comp_flags;
@@ -9102,6 +9116,8 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
           if (erec) {
             erec1.comp = 0;
             erec1.depth = -1;
+            erec1.value_name = boundname;
+            erec1.observer = observer;
             erec1.pre_unwrapped = 0;
             erec1.substitute_bindings = 1;
             erec1.env_already = 0;
@@ -9135,14 +9151,9 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
           } else {
             if (erec) {
               SCHEME_EXPAND_OBSERVE_PHASE_UP(observer);
-              eenv->value_name = boundname;
-              eenv->observer = xenv->observer;
               code = scheme_expand_expr_lift_to_let(code, eenv, &erec1, 0);
             }
-            eenv->value_name = boundname;
-            eenv->observer = NULL;
             m = scheme_compile_expr_lift_to_let(code, eenv, &mrec, 0);
-            eenv->value_name = NULL;
           }
 
           if (!for_stx) {
@@ -9359,7 +9370,6 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
     frame_scopes = scheme_module_context_frame_scopes(rn_set, xenv->scopes);
     cenv = scheme_new_comp_env(env->genv, env->insp, frame_scopes,
                                SCHEME_TOPLEVEL_FRAME | SCHEME_KEEP_SCOPES_FRAME);
-    cenv->observer = env->observer;
   }
 
   lift_data = scheme_make_vector(3, NULL);
@@ -9425,6 +9435,7 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
       if (erec) {
 	Scheme_Expand_Info erec1;
 	scheme_init_expand_recs(erec, derec, &erec1, 1);
+	erec1.value_name = scheme_false;
 	e = scheme_expand_expr(e, nenv, &erec1, 0);
         expanded_l = scheme_make_pair(e, expanded_l);
       }
@@ -9433,9 +9444,7 @@ static Scheme_Object *do_module_begin_at_phase(Scheme_Object *form, Scheme_Comp_
 	Scheme_Compile_Info crec1;
 	scheme_init_compile_recs(rec, drec, &crec1, 1);
 	crec1.resolve_module_ids = 0;
-        nenv->observer = NULL;
 	e = scheme_compile_expr(e, nenv, &crec1, 0);
-        nenv->observer = env->observer;
       }
 
       lifted_reqs = scheme_frame_get_require_lifts(cenv);
@@ -9648,7 +9657,7 @@ static Scheme_Object *expand_all_provides(Scheme_Object *form,
   Scheme_Object *e, *ex, *fst;
   Scheme_Comp_Env *pcenv;
 
-  observer = cenv->observer;
+  observer = rec[drec].observer;
   
   saved_provides = scheme_reverse(bxs->saved_provides);
   while (!SCHEME_NULLP(saved_provides)) {
@@ -9675,7 +9684,6 @@ static Scheme_Object *expand_all_provides(Scheme_Object *form,
         pcenv = scheme_new_comp_env(penv, penv->access_insp, NULL, SCHEME_TOPLEVEL_FRAME);
       else
         pcenv = scheme_new_expand_env(penv, penv->access_insp, NULL, SCHEME_TOPLEVEL_FRAME);
-      pcenv->observer = cenv->observer;
     } else {
       pcenv = cenv;
     }
@@ -9720,10 +9728,10 @@ static Scheme_Object *expand_submodules(Scheme_Compile_Expand_Info *rec, int dre
 
   while (!SCHEME_NULLP(l)) {
     mod = SCHEME_CAR(l);
-    SCHEME_EXPAND_OBSERVE_ENTER_PRIM(env->observer, SCHEME_CAR(mod));
+    SCHEME_EXPAND_OBSERVE_ENTER_PRIM(rec[drec].observer,SCHEME_CAR(mod));
     mod = do_module(SCHEME_CAR(mod), env, rec, drec, ancestry, env->genv->module->submodule_path, post,
                     bxs, SCHEME_CDR(mod));
-    SCHEME_EXPAND_OBSERVE_EXIT_PRIM(env->observer,mod);
+    SCHEME_EXPAND_OBSERVE_EXIT_PRIM(rec[drec].observer,mod);
 
     mods = scheme_make_pair(mod, mods);
 
@@ -9943,7 +9951,7 @@ module_begin_syntax(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Compile_In
 static Scheme_Object *
 module_begin_expand(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Expand_Info *erec, int drec)
 {
-  SCHEME_EXPAND_OBSERVE_PRIM_MODULE_BEGIN(env->observer);
+  SCHEME_EXPAND_OBSERVE_PRIM_MODULE_BEGIN(erec[drec].observer);
   return do_module_begin(form, env, erec, drec);
 }
 
@@ -10838,6 +10846,7 @@ static Scheme_Object *expand_provide(Scheme_Object *e, int at_phase,
                             stop, xenv, 0);
 
   scheme_init_expand_recs(rec, drec, &erec1, 1);
+  erec1.value_name = scheme_false;
   erec1.depth = -1;
 
   p = scheme_current_thread;
@@ -12588,7 +12597,7 @@ require_syntax(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Compile_Info *r
 static Scheme_Object *
 require_expand(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Expand_Info *erec, int drec)
 {
-  SCHEME_EXPAND_OBSERVE_PRIM_REQUIRE(env->observer);
+  SCHEME_EXPAND_OBSERVE_PRIM_REQUIRE(erec[drec].observer);
   return do_require(form, env, erec, drec);
 }
 
@@ -12622,7 +12631,7 @@ provide_syntax(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Compile_Info *r
 static Scheme_Object *
 provide_expand(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Expand_Info *erec, int drec)
 {
-  SCHEME_EXPAND_OBSERVE_PRIM_PROVIDE(env->observer);
+  SCHEME_EXPAND_OBSERVE_PRIM_PROVIDE(erec[drec].observer);
   scheme_wrong_syntax(NULL, NULL, form, "not in module body");
   return NULL;
 }
@@ -12637,7 +12646,7 @@ declare_syntax(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Compile_Info *r
 static Scheme_Object *
 declare_expand(Scheme_Object *form, Scheme_Comp_Env *env, Scheme_Expand_Info *erec, int drec)
 {
-  SCHEME_EXPAND_OBSERVE_PRIM_PROVIDE(env->observer);
+  SCHEME_EXPAND_OBSERVE_PRIM_PROVIDE(erec[drec].observer);
   scheme_wrong_syntax(NULL, NULL, form, "not in module body");
   return NULL;
 }

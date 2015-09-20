@@ -320,6 +320,7 @@ void *(*GC_malloc_atomic)(size_t size_in_bytes);
 void *(*GC_malloc_one_tagged)(size_t size_in_bytes);
 void *(*GC_malloc_atomic_uncollectable)(size_t size_in_bytes);
 void *(*scheme_malloc_uncollectable)(size_t size_in_bytes);
+void *(*GC_malloc_array_tagged)(size_t size_in_bytes);
 void *(*GC_malloc_allow_interior)(size_t size_in_bytes);
 void *(*GC_malloc_atomic_allow_interior)(size_t size_in_bytes);
 void *(*GC_malloc_tagged_allow_interior)(size_t size_in_bytes);

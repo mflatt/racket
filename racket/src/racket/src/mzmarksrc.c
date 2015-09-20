@@ -565,9 +565,11 @@ bstring_obj {
 }
 
 symbol_obj {
+  Scheme_Symbol *s = (Scheme_Symbol *)p;
+
  mark:
  size:
-  gcBYTES_TO_WORDS(sizeof(Scheme_Symbol) + ((Scheme_Symbol *)p)->len + 1 - mzFLEX4_DELTA);
+  gcBYTES_TO_WORDS(sizeof(Scheme_Symbol) + s->len + 1 - mzFLEX4_DELTA);
 }
 
 cons_cell {
@@ -595,25 +597,31 @@ vector_obj {
 }
 
 fxvector_obj {
+  Scheme_Vector *vec = (Scheme_Vector *)p;
+
  mark:
  size:
   gcBYTES_TO_WORDS((sizeof(Scheme_Vector) 
-		    + ((((Scheme_Vector *)p)->size - mzFLEX_DELTA) * sizeof(Scheme_Object *))));
+		    + ((vec->size - mzFLEX_DELTA) * sizeof(Scheme_Object *))));
 }
 
 flvector_obj {
+  Scheme_Double_Vector *vec = (Scheme_Double_Vector *)p;
+
  mark:
  size:
   gcBYTES_TO_WORDS((sizeof(Scheme_Double_Vector) 
-		    + ((((Scheme_Double_Vector *)p)->size - mzFLEX_DELTA) * sizeof(double))));
+		    + ((vec->size - mzFLEX_DELTA) * sizeof(double))));
 }
 
 #ifdef MZ_LONG_DOUBLE
 extflvector_obj {
+  Scheme_Long_Double_Vector *vec = (Scheme_Long_Double_Vector *)p;
+
  mark:
  size:
   gcBYTES_TO_WORDS((sizeof(Scheme_Long_Double_Vector) 
-		    + ((((Scheme_Long_Double_Vector *)p)->size - mzFLEX_DELTA) * sizeof(long double))));
+		    + ((vec->size - mzFLEX_DELTA) * sizeof(long double))));
 }
 #endif
 
@@ -762,6 +770,8 @@ thread_val {
   gcMARK2(pr->ku.k.p5, gc);
 
   gcMARK2(pr->self_for_proc_chaperone, gc);
+  
+  gcMARK2(pr->list_stack, gc);
   
   gcMARK2(pr->kill_data, gc);
   gcMARK2(pr->private_kill_data, gc);
@@ -1260,8 +1270,6 @@ mark_comp_env {
   gcMARK2(e->prefix, gc);
   gcMARK2(e->next, gc);
   gcMARK2(e->scopes, gc);
-  gcMARK2(e->value_name, gc);
-  gcMARK2(e->observer, gc);
   gcMARK2(e->binders, gc);
   gcMARK2(e->bindings, gc);
   gcMARK2(e->vals, gc);
@@ -1420,6 +1428,17 @@ END optimize;
 /**********************************************************************/
 
 START eval;
+
+mark_comp_info {
+ mark:
+  Scheme_Compile_Info *i = (Scheme_Compile_Info *)p;
+  
+  gcMARK2(i->value_name, gc);
+  gcMARK2(i->observer, gc);
+
+ size:
+  gcBYTES_TO_WORDS(sizeof(Scheme_Compile_Info));
+}
 
 mark_saved_stack {
  mark:
