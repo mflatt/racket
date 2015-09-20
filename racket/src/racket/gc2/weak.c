@@ -123,8 +123,6 @@ static void zero_weak_arrays(GCTYPE *gc, int force_zero)
       void *p = data[i];
       if (p && (force_zero || !is_marked(gc, p)))
         data[i] = wa->replace_val;
-      else
-        data[i] = GC_resolve2(p, gc);
     }
 
     wa = wa->next;
@@ -225,8 +223,7 @@ static void zero_weak_boxes(GCTYPE *gc, int is_late, int force_zero)
         *(p + wb->soffset) = NULL;
         wb->secondary_erase = NULL;
       }
-    } else
-      wb->val = GC_resolve2(wb->val, gc);
+    }
     wb = wb->next;
   }
 
@@ -321,7 +318,6 @@ static int mark_ready_ephemerons(GCTYPE *gc)
   for (eph = gc->ephemerons; eph; eph = next) {
     next = eph->next;
     if (is_marked(gc, eph->key)) {
-      eph->key = GC_resolve2(eph->key, gc);
       gcMARK2(eph->val, gc);
       gc->num_last_seen_ephemerons++;
       did_one = 1;
