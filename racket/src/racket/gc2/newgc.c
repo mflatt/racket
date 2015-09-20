@@ -4310,13 +4310,6 @@ mpage *allocate_compact_target(NewGC *gc, mpage *work)
   return npage;
 }
 
-static inline void gen1_free_mpage(PageMap pagemap, mpage *page) {
-  pagemap_remove(pagemap, page);
-  free_backtrace(page);
-  free_pages(GC_instance, page->addr, real_page_size(page), page_mmu_type(page), page_mmu_protectable(page), &page->mmu_src_block);
-  free_mpage(page);
-}
-
 /* Compact when 1/4 of the space between objects is unused: */
 #define should_compact_page(lsize,tsize) (lsize < (tsize - PREFIX_SIZE - (APAGE_SIZE >> 2)))
 
@@ -4329,9 +4322,8 @@ static inline void gen1_free_mpage(PageMap pagemap, mpage *page) {
 
 inline static void do_heap_compact(NewGC *gc)
 {
-  int i, compact_count = 0, noncompact_count = 0;
+  int i;
   int tic_tock = gc->num_major_collects % 2;
-  
   mmu_prep_for_compaction(gc->mmu);
 #ifdef GC_MP_CNT 
   mp_prev_compact_cnt = mp_compact_cnt;
@@ -4361,7 +4353,6 @@ inline static void do_heap_compact(NewGC *gc)
           GCDEBUG((DEBUGOUTF, "Compacting page %p: new version at %p\n", 
                    work, npage));
 
-          compact_count++;
           gc->need_fixup = 1;
 
           if (npage == work) {
@@ -4422,8 +4413,7 @@ inline static void do_heap_compact(NewGC *gc)
           work->generation = AGE_VACATED;
 
           work = prev;
-        } else {
-          noncompact_count++;
+        } else { 
           work = work->prev;
         }
       } else {
@@ -4726,6 +4716,13 @@ static void repair_heap(NewGC *gc)
   memory_in_use += gen_half_size_in_use(gc);
   memory_in_use = add_no_overflow(memory_in_use, gc->phantom_count);
   gc->memory_in_use = memory_in_use;
+}
+
+static inline void gen1_free_mpage(PageMap pagemap, mpage *page) {
+  pagemap_remove(pagemap, page);
+  free_backtrace(page);
+  free_pages(GC_instance, page->addr, real_page_size(page), page_mmu_type(page), page_mmu_protectable(page), &page->mmu_src_block);
+  free_mpage(page);
 }
 
 static inline void cleanup_vacated_pages(NewGC *gc) {
