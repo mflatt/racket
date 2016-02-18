@@ -1882,6 +1882,9 @@ resolve_closure_compilation(Scheme_Object *_data, Resolve_Info *info,
         data->code = bcode;
       }
     }
+  } else {
+    new_info = NULL;
+    closure_map = NULL;
   }
 
   if ((closure_size == 1)

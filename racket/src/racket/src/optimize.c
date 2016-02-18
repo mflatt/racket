@@ -4008,6 +4008,8 @@ static Scheme_Object *optimize_sequence(Scheme_Object *o, Optimize_Info *info, i
 
   if (sub_opt)
     optimize_info_seq_init(info, &info_seq);
+  else
+    memset(&info_seq, 0, sizeof(info_seq));
   
   count = s->count;
   for (i = 0; i < count; i++) {
