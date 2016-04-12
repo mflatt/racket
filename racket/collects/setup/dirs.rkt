@@ -30,6 +30,39 @@
     [(windows macosx) 'same]
     [(unix) "bin"]))
 
+(provide find-addon-console-bin-dir
+         find-addon-gui-bin-dir)
+
+(define addon-bin-table
+  (delay (let ()
+           (define f (build-path (find-system-path 'addon-dir)
+                                 "etc"
+                                 "config.rktd"))
+           (and (file-exists? f)
+                (call-with-input-file* 
+                 f
+                 (lambda (in) 
+                   (call-with-default-reading-parameterization
+                    (lambda ()
+                      (read in)))))))))
+
+(define (find-addon-bin-dir key)
+  (define t (force addon-bin-table))
+  (and (hash? t)
+       (let ([v (hash-ref t key #f)])
+         (and (path-string? v)
+              (simplify-path
+               (path->complete-path
+                v
+                (build-path (find-system-path 'addon-dir)
+                            "etc")))))))
+
+(define (find-addon-console-bin-dir)
+  (find-addon-bin-dir 'addon-console-bin-dir))
+
+(define (find-addon-gui-bin-dir)
+  (find-addon-bin-dir 'addon-gui-bin-dir))
+
 ;; ----------------------------------------
 ;; DLLs
 

@@ -710,33 +710,47 @@ Optional @filepath{info.rkt} fields trigger additional actions by
 
  @item{@indexed-racket[install-collection] : @racket[path-string?]  --- A
    library module relative to the collection that provides
-   @racket[installer]. The @racket[installer] procedure accepts one
-   to three arguments. The first argument is a directory path to the
-   parent of the Racket installation's @filepath{collects} directory; the
+   @racket[installer] and, optionally, @racket[addon-installer].
+
+   The @racket[installer] procedure must accept one, two, or three
+   arguments. The first argument is a directory path to the
+   parent of the Racket installation's @filepath{collects} directory. The
    second argument, if accepted, is a path to the collection's own
-   directory; the third argument, if accepted, is a boolean indicating
+   directory. The third argument, if accepted, is a boolean indicating
    whether the collection is installed as user-specific (@racket[#t])
    or installation-wide (@racket[#f]). The procedure should perform collection-specific
    installation work, and it should avoid unnecessary work in the case
-   that it is called multiple times for the same installation.}
+   that it is called multiple times for the same installation.
+
+   The @racket[addon-installer] procedure is called in the same way as
+   @racket[installer], but only when
+   @racket[find-addon-console-bin-dir] or
+   @racket[find-addon-gui-bin-dir] returns a path. If both
+   @racket[installer] and @racket[addon-installer] are called, then
+   @racket[installer] is called first. However, @racket[installer] is
+   not called @exec{raco setup} is instructed to avoid changing the main
+   installation and the containing collection is installation-wide.}
 
  @item{@indexed-racket[pre-install-collection] : @racket[path-string?] ---
    Like @racket[install-collection], except that the corresponding
-   installer is called @emph{before} the normal @filepath{.zo} build,
-   instead of after. The provided procedure should be named
-   @racket[pre-installer] in this case, so it can be provided by the
-   same file that provides an @racket[installer].}
+   installer procedures are called @emph{before} the normal @filepath{.zo} build,
+   instead of after. The provided procedures are
+   @racket[pre-installer] and @racket[addon-pre-installer] (where the
+   latter is optional); they can be provided by the
+   same file that provides an @racket[installer] procedure.}
 
  @item{@indexed-racket[post-install-collection] : @racket[path-string?]  ---
-   Like @racket[install-collection]. It is called right after the
-   @racket[install-collection] procedure is executed. The only
-   difference between these is that the @DFlag{no-install} flag can be
-   used to disable the previous two installers, but not this one.  It
-   is therefore expected to perform operations that are always needed,
+   Like @racket[install-collection] for procedures that are called right after the
+   @racket[install-collection] procedure is executed. The
+   @DFlag{no-install} flag can be provided to @exec{raco setup}
+   to disable @racket[install-collection] and @racket[pre-install-collection],
+   but not @racket[post-install-collection].  The @racket[post-install-collection]
+   function is therefore expected to perform operations that are always needed,
    even after an installation that contains pre-compiled files. The
-   provided procedure should be named @racket[post-installer] in this
-   case, so it can be provided by the same file that provides the
-   previous two.}
+   provided procedures should be named @racket[post-installer] and
+   @racket[addon-post-installer] (where the latter is optional); they
+   can be provided by the same file that provides an
+   @racket[installer] procedure.}
 
  @item{@indexed-racket[assume-virtual-sources] : @racket[any/c] ---
    A true value indicates that bytecode files without a corresponding
@@ -1411,6 +1425,36 @@ function for installing a single @filepath{.plt} file.
   Returns @racket[#t] if this installation uses
   absolute path names for executable and library references, 
   @racket[#f] otherwise.}
+
+@deftogether[(
+@defproc[(find-addon-console-bin-dir) (or/c #f path?)]
+@defproc[(find-addon-gui-bin-dir) (or/c #f path?)]
+)]{
+  Returns a path to a user-specific directory to hold an extra copy of
+  any installed executable, where the extra copy is created by
+  @exec{raco setup} and tethered to a particular result for
+  @racket[(find-system-path 'addon-dir)].
+
+  Unlike other directories, which are configured via
+  @filepath{config.rktd} in the @racket[(find-config-dir)] directory
+  (see @secref["config-file"]), these paths are configured via
+  @racket['addon-console-bin-dir] and @racket['addon-gui-bin-dir]
+  entries in @filepath{config.rktd} in @racket[(build-path
+  (find-system-path 'addon-dir) "etc")]. If no configuration is
+  present, the result from the corresponding function,
+  @racket[find-addon-console-bin-dir] or
+  @racket[find-addon-gui-bin-dir], is @racket[#f] instead of a path.
+
+  The intent of this protocol is to support a kind of sandbox: an
+  installation that is more specific than user-specific, and where
+  copies of executables such as @exec{racket} serve as entry points
+  into the sandbox. Assuming that the addon directory is set to a
+  directory other than the user's default addon directory when
+  @exec{raco setup} creates the executable copies, then further
+  package build and setup operations through the entry points will be
+  confined to the sandbox and not affect a user's default environment.
+ 
+  @history[#:added "6.5.0.2"]}
 
 @; ------------------------------------------------------------------------
 

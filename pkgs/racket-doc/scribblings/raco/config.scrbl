@@ -18,6 +18,10 @@ to configure other directories as described below. Use the
 @racketmodname[setup/dirs] library (which combines information from
 the configuration files and other sources) to locate configured
 directories, instead of reading @filepath{config.rktd} directly.
+A @filepath{config.rktd} file can also appear in the directory
+@racket[(build-path (find-system-path 'addon-dir) "etc")], but it
+controls only the results of @racket[find-addon-console-bin-dir] and
+@racket[find-addon-gui-bin-dir].
 
 The path of the @deftech{main collection directory} is built into the
 Racket executable, and it can be changed via the

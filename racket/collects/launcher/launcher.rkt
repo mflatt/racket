@@ -392,6 +392,8 @@
                              (let ([m (assq 'exe-is-gracket aux)])
                                (and m (cdr m)))
                              (eq? kind 'mred))]
+         [addon? (let ([im (assoc 'install-mode aux)])
+                   (and im (eq? (cdr im) 'addon)))]
          [dir-finder
           (let ([bindir (if alt-exe
                             (let ([m (assq 'exe-is-gracket aux)])
@@ -399,8 +401,12 @@
                                   (find-lib-dir)
                                   (let ([p (path-only dest)])
                                     (if (eq? 'macosx (cross-system-type))
-                                        (let* ([cdir (find-console-bin-dir)]
-                                               [gdir (find-gui-bin-dir)]
+                                        (let* ([cdir (or (and addon?
+                                                              (find-addon-console-bin-dir))
+                                                         (find-console-bin-dir))]
+                                               [gdir (or (and addon?
+                                                              (find-addon-gui-bin-dir))
+                                                         (find-gui-bin-dir))]
                                                [rel (find-relative-path cdir gdir)])
                                           (cond
                                            [(relative-path? rel)
@@ -894,7 +900,7 @@
      (string-append (if mred? file (unix-sfx file mred?)) ".exe")]
     [else file]))
 
-(define (program-launcher-path name mred? user?)
+(define (program-launcher-path name mred? user? addon?)
   (let* ([variant (current-launcher-variant)]
          [mac-script? (and (eq? (cross-system-type) 'macosx)
                            (script-variant? variant))])
@@ -902,10 +908,14 @@
               (build-path
                (if (or mac-script? (not mred?))
                    (if user?
-                       (find-user-console-bin-dir)
+                       (or (and addon?
+                                (find-addon-console-bin-dir))
+                           (find-user-console-bin-dir))
                        (find-console-bin-dir))
                    (if user?
-                       (find-user-gui-bin-dir)
+                       (or (and addon?
+                                (find-addon-gui-bin-dir))
+                           (find-user-gui-bin-dir))
                        (find-gui-bin-dir)))
                ((if mac-script? unix-sfx sfx) name mred?))
               variant
@@ -915,23 +925,25 @@
           (path-replace-suffix p #".app")
           p))))
 
-(define (gracket-program-launcher-path name #:user? [user? #f])
-  (program-launcher-path name #t user?))
-(define (mred-program-launcher-path name #:user? [user? #f])
-  (gracket-program-launcher-path name #:user? user?))
+(define (gracket-program-launcher-path name #:user? [user? #f] #:addon? [addon? #f])
+  (program-launcher-path name #t user? addon?))
+(define (mred-program-launcher-path name #:user? [user? #f] #:addon? [addon? #f])
+  (gracket-program-launcher-path name #:user? user? #:addon? addon?))
 
-(define (racket-program-launcher-path name #:user? [user? #f])
+(define (racket-program-launcher-path name #:user? [user? #f] #:addon? [addon? #f])
   (case (cross-system-type)
     [(macosx)
      (add-file-suffix (build-path (if user?
-                                      (find-user-console-bin-dir)
+                                      (or (and addon?
+                                               (find-addon-console-bin-dir))
+                                          (find-user-console-bin-dir))
                                       (find-console-bin-dir))
                                   (unix-sfx name #f))
                       (current-launcher-variant)
                       #f)]
-    [else (program-launcher-path name #f user?)]))
-(define (mzscheme-program-launcher-path name #:user? [user? #f])
-  (racket-program-launcher-path name #:user? user?))
+    [else (program-launcher-path name #f user? addon?)]))
+(define (mzscheme-program-launcher-path name #:user? [user? #f] #:addon? [addon? #f])
+  (racket-program-launcher-path name #:user? user? #:addon? addon?))
 
 (define (gracket-launcher-is-directory?)
   #f)

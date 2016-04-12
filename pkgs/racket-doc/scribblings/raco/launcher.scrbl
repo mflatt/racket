@@ -69,9 +69,10 @@ the following additional associations apply to launchers:
         base GRacket executable through a relative path.}
 
  @item{@racket['install-mode] (Windows, Unix) --- either
-       @racket['user] or @racket['main], indicates that the launcher
-       is being installed to a user-specific place or to an
-       installation-wide place, which in turn determines where to
+       @racket['main], @racket['user], or @racket['addon], indicates that the launcher
+       is being installed to an
+       installation-wide place, a user-specific place, or another place,
+       which in turn determines where to
        record @racket['start-menu], @racket['extension-registry],
        and/or @racket['desktop] information.}
 
@@ -251,27 +252,33 @@ arguments.}
 @section{Launcher Path and Platform Conventions}
 
 @defproc[(gracket-program-launcher-path [name string?]
-                                        [#:user? user? any/c #f]) 
+                                        [#:user? user? any/c #f]
+                                        [#:addon? addon? any/c #f]) 
          path?]{
 
 Returns a pathname for an executable called something like @racket[name]
-in the Racket installation (if @racket[user?] is @racket[#f]) or the
-user's Racket executable directory (if @racket[user?] is @racket[#t]).
+in the Racket installation (if @racket[user?] is @racket[#f]), the
+user's Racket executable directory (if @racket[user?] is @racket[#t] and @racket[addon?] is @racket[#f]),
+or an additional executable directory (if both @racket[user?] and @racket[addon?] are @racket[#t]).
+
 For Windows, the @filepath{.exe}
 suffix is automatically appended to @racket[name]. For Unix,
 @racket[name] is changed to lowercase, whitespace is changed to
 @litchar{-}, and the path includes the @filepath{bin} subdirectory of
 the Racket installation. For Mac OS X, the @filepath{.app} suffix
-is appended to @racket[name].}
+is appended to @racket[name].
+
+@history[#:changed "6.5.0.2" @elem{Added the @racket[#:addon?] argument.}]}
 
 
 @defproc[(racket-program-launcher-path [name string?]
-                                       [#:user? user? any/c #f])
+                                       [#:user? user? any/c #f]
+                                       [#:addon? addon? any/c #f])
          path?]{
 
-Returns the same path as @racket[(gracket-program-launcher-path name #:user? user?)]
-for Unix and Windows. For Mac OS X, the result is the same as for
-Unix.}
+Returns the same path as @racket[(gracket-program-launcher-path name #:user? user? #:addon addon?)].
+
+@history[#:changed "6.5.0.2" @elem{Added the @racket[#:addon?] argument.}]}
 
 
 @defproc[(gracket-launcher-is-directory?) boolean?]{
@@ -335,7 +342,7 @@ Like @racket[gracket-launcher-get-file-extension+style+filters], but for
 Racket launchers.}
 
 @deftogether[(
-@defproc[(mred-program-launcher-path [name string?] [#:user? user? any/c #f]) path?]
+@defproc[(mred-program-launcher-path [name string?] [#:user? user? any/c #f] [#:addon? addon? any/c #f]) path?]
 @defproc[(mred-launcher-is-directory?) boolean?]
 @defproc[(mred-launcher-is-actually-directory?) boolean?]
 @defproc[(mred-launcher-add-suffix [path-string? path]) path?]
@@ -346,10 +353,12 @@ Racket launchers.}
 )]{
 
 Backward-compatible aliases for
-@racket[gracket-program-launcher-path], etc.}
+@racket[gracket-program-launcher-path], etc.
+
+@history[#:changed "6.5.0.2" @elem{Added the @racket[#:addon?] argument.}]}
 
 @deftogether[(
-@defproc[(mzscheme-program-launcher-path [name string?] [#:user? user? any/c #f]) path?]
+@defproc[(mzscheme-program-launcher-path [name string?] [#:user? user? any/c #f] [#:addon? addon? any/c #f]) path?]
 @defproc[(mzscheme-launcher-is-directory?) boolean?]
 @defproc[(mzscheme-launcher-is-actually-directory?) boolean?]
 @defproc[(mzscheme-launcher-add-suffix [path-string? path]) path?]
@@ -360,7 +369,9 @@ Backward-compatible aliases for
 )]{
 
 Backward-compatible aliases for
-@racket[racket-program-launcher-path], etc.}
+@racket[racket-program-launcher-path], etc.
+
+@history[#:changed "6.5.0.2" @elem{Added the @racket[#:addon?] argument.}]}
 
 
 @defproc[(installed-executable-path->desktop-path [exec-path path-string?] [user? any/c])
