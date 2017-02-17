@@ -1,5 +1,6 @@
 #lang racket/base
 (require "../common/performance.rkt"
+         "../common/sort.rkt"
          "../syntax/syntax.rkt"
          "../syntax/scope.rkt"
          "../syntax/taint.rkt"

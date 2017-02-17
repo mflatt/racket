@@ -1,5 +1,6 @@
 #lang racket/base
 (require "../common/set.rkt"
+         "../common/sort.rkt"
          "../common/list-ish.rkt"
          "../syntax/syntax.rkt"
          "../syntax/property.rkt"

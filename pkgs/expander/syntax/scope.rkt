@@ -1,5 +1,6 @@
 #lang racket/base
 (require "../common/set.rkt"
+         "../common/sort.rkt"
          "../compile/serialize-property.rkt"
          "../compile/serialize-state.rkt"
          "../common/memo.rkt"

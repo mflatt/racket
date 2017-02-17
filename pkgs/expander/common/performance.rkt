@@ -1,5 +1,6 @@
 #lang racket/base
 
+(require "../common/sort.rkt")
 (provide performance-region)
 
 ;; To enable measurement, see the end of this file.

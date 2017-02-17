@@ -10,7 +10,8 @@
          "main.rkt"
          "log.rkt"
          "free-id-set.rkt"
-         "stop-ids.rkt")
+         "stop-ids.rkt"
+         (for-syntax racket/base))
 
 (provide add-intdef-scopes
          add-intdef-bindings
@@ -139,8 +140,26 @@
   (for/fold ([id id]) ([intdef (in-intdefs intdef)])
     (internal-definition-context-introduce intdef id 'remove)))
 
+(define-sequence-syntax in-intdefs
+  (lambda () #'-in-intdefs)
+  (lambda (stx)
+    (syntax-case stx ()
+      [[(d) (_ arg)]
+       #'[(d)
+          (:do-in
+           ([(x) (let ([a arg]) (cond [(list? a) (reverse a)]
+                                      [(not a) null]
+                                      [else (list a)]))])
+           #t
+           ([a x])
+           (pair? a)
+           ([(d) (car a)])
+           #t
+           #t
+           ((cdr a)))]])))
+
 ;; Sequence for intdefs provided to `local-expand`
-(define (in-intdefs intdefs)
+(define (-in-intdefs intdefs)
   (cond
    [(not intdefs) (in-list null)]
    [(list? intdefs) (in-list (reverse intdefs))]

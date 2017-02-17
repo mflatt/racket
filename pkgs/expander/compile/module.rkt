@@ -9,6 +9,7 @@
          "../namespace/module.rkt"
          "../common/module-path.rkt"
          "../common/performance.rkt"
+         "../common/sort.rkt"
          "../expand/parsed.rkt"
          "module-use.rkt"
          "serialize.rkt"

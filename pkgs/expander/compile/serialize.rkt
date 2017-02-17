@@ -3,6 +3,7 @@
          "serialize-property.rkt"
          "serialize-state.rkt"
          "../common/set.rkt"
+         "../common/sort.rkt"
          "../syntax/syntax.rkt"
          "../syntax/binding-table.rkt"
          "../syntax/scope.rkt"
@@ -880,7 +881,10 @@
 (define deserialize-instance
   (make-instance 'deserialize #f
                  'deserialize-module-path-indexes deserialize-module-path-indexes
-                 'syntax-module-path-index-shift syntax-module-path-index-shift
+                 'syntax-module-path-index-shift ;; avoid higher-order use of kw function
+                 (let ([syntax-module-path-index-shift
+                        (lambda (a b c [d #f]) (syntax-module-path-index-shift a b c d))])
+                   syntax-module-path-index-shift)
                  'syntax-shift-phase-level syntax-shift-phase-level
                  'module-use module-use
                  'deserialize deserialize))

@@ -1,6 +1,7 @@
 #lang racket/base
 (require "provided.rkt"
          "../common/phase.rkt"
+         "../common/sort.rkt"
          "../common/module-path.rkt"
          "../syntax/module-binding.rkt")
 
