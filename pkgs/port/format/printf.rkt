@@ -15,7 +15,7 @@
   (let loop ([i 0] [expected-count 0] [args all-args] [error-thunk #f])
     (cond
      [(= i len)
-      (check-conclusions who expected-count args error-thunk fmt args)]
+      (check-conclusions who expected-count args error-thunk fmt all-args)]
      [else
       (case (string-ref fmt i)
         [(#\~)
@@ -183,4 +183,9 @@
   ((error-value->string-handler) v (error-print-width)))
 
 (define (arguments->string args)
-  "")
+  (apply string-append
+         "; arguments were: "
+         (let loop ([ss (map value->string args)])
+           (if (or (null? ss) (null? (cdr ss)))
+               ss
+               (cons (car ss) (cons " " (loop (cdr ss))))))))
