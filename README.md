@@ -1,7 +1,8 @@
-[![Linux/Mac Build
-Status](https://travis-ci.org/racket/racket.svg?branch=master)](https://travis-ci.org/racket/racket)
-[![Windows build status](https://ci.appveyor.com/api/projects/status/hqir4eib0okk6xar?svg=true)](https://ci.appveyor.com/project/plt/racket)
+Moved to
 
+   https://github.com/racket/racket7
+
+----------------------------------------
 
 This is the source code for the core of Racket.  See
 "INSTALL.txt" for full information on building Racket.
