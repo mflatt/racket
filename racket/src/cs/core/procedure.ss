@@ -286,14 +286,11 @@
 ;; ----------------------------------------
 
 (define (make-jit-procedure force mask name)
-  (letrec ([p (make-reduced-arity-procedure
-               (lambda args
-                 (let ([f (force)])
-                   (set-reduced-arity-procedure-proc! p f)
-                   (apply f args)))
-               mask
-               name)])
-    p))
+  (define b (box (lambda args
+                   (let ([f (force)])
+                     (#%box-cas! b (#%unbox b) f)
+                     (apply (#%unbox b) args)))))
+  (#%$make-unbox-and-apply b mask name))
 
 ;; ----------------------------------------
 
@@ -433,7 +430,7 @@
                                    args
                                    new-args)))]
                     [continue
-                     ;; To continue iretaing through wrappers:
+                     ;; To continue iterating through wrappers:
                      (lambda (new-args)
                        (if mark-pair
                            (with-continuation-mark (car mark-pair) (cdr mark-pair)

@@ -34,9 +34,12 @@
        [else
         (n v)]))]
    [(#%procedure? v)
-    (let ([name (((inspect/object v) 'code) 'name)])
-      (and name
-           (string->symbol name)))]
+    (if (#%$unbox-and-apply? v)
+        ;; Assuming created with `make-jit-procedure`:
+        (#%$unbox-and-apply-data v)
+        (let ([name (((inspect/object v) 'code) 'name)])
+          (and name
+               (string->symbol name))))]
    [(impersonator? v)
     (object-name (impersonator-val v))]
    [(procedure? v)
