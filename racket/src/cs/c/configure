@@ -3182,22 +3182,27 @@ fi
 
 case "$host_os" in
   solaris2*)
+    MACH_OS=s2
     ;;
   aix*)
     ;;
   *freebsd*)
+    MACH_OS=fb
     ;;
   openbsd*)
+    MACH_OS=ob
     ;;
   bitrig*)
     ;;
   dragonfly*)
     ;;
   netbsd*)
+    MACH_OS=nb
     ;;
   irix*)
     ;;
   linux*)
+    MACH_OS=le
     ;;
   osf1*)
     ;;
@@ -3210,7 +3215,7 @@ case "$host_os" in
     ;;
   darwin*)
     PREFLAGS="$PREFLAGS -DOS_X"
-    MACH=a6osx
+    MACH_OS=osx
     LIBS="${LIBS} -lncurses -framework CoreFoundation"
     if test "${enable_xonx}" == "no" ; then
       INCLUDEDEP="-include"
@@ -3225,9 +3230,25 @@ case "$host_os" in
     use_flag_pthread=no
     ;;
   nto-qnx*)
+    MACH_OS=qnx
     use_flag_pthread=no
     ;;
   *)
+    ;;
+esac
+
+case "$host_cpu" in
+  x86_64)
+    MACH="a6${MACH_OS}"
+    ;;
+  x86|i*86)
+    MACH="i3${MACH_OS}"
+    ;;
+  arm*)
+    MACH="arm32${MACH_OS}"
+    ;;
+  power*)
+    MACH="ppc32${MACH_OS}"
     ;;
 esac
 
