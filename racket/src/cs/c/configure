@@ -2289,6 +2289,8 @@ FRAMEWORK_PREFIX='@executable_path/../lib/'
 
 RACKET='$(DEFAULT_RACKET)'
 
+enable_pthread_by_default=yes
+
 ###### Autoconfigure #######
 
 ac_ext=c
@@ -3203,6 +3205,7 @@ case "$host_os" in
     ;;
   linux*)
     MACH_OS=le
+    LIBS="${LIBS} -lm -ldl -lncurses"
     ;;
   osf1*)
     ;;
