@@ -3,7 +3,8 @@ srcdir = @srcdir@
 SCHEME_SRC = @SCHEME_SRC@
 MACH = @MACH@
 SCHEME_BIN = $(SCHEME_SRC)/$(MACH)/bin/$(MACH)/scheme
-SCHEME_INC = $(SCHEME_SRC)/$(MACH)/boot/$(MACH)/
+SCHEME_INC = $(SCHEME_SRC)/$(MACH)/boot/$(MACH)
+SCHEME = $(SCHEME_BIN) -b $(SCHEME_INC)/petite.boot -b $(SCHEME_INC)/scheme.boot
 
 CC = @CC@
 CFLAGS = @CFLAGS@ @CPPFLAGS@ -I$(SCHEME_INC) -I$(srcdir)/../../rktio -Irktio -I.
@@ -24,15 +25,18 @@ mainsrcdir = @srcdir@/../..
 @INCLUDEDEP@ @srcdir@/../../racket/version.mak
 
 cs:
-	$(MAKE) racket.so RACKET="`$(RACKET) $(srcdir)/../absify.rkt --exec $(RACKET)`"
-	cd rktio; $(MAKE)
 	$(MAKE) scheme
+	$(MAKE) racket.so
+	cd rktio; $(MAKE)
 	$(MAKE) racketcs
 	$(MAKE) gracketcs
 	$(MAKE) starter
 
 racket.so:
-	cd $(srcdir)/.. && @CONFIGURE_RACKET_SO_COMPILE@ $(MAKE) RACKET="$(RACKET)"
+	$(MAKE) build-racket.so RACKET="`$(RACKET) $(srcdir)/../absify.rkt --exec $(RACKET)`" SCHEME_SRC="`$(RACKET) $(srcdir)/../absify.rkt $(SCHEME_SRC)`"
+
+build-racket.so:
+	cd $(srcdir)/.. && @CONFIGURE_RACKET_SO_COMPILE@ $(MAKE) RACKET="$(RACKET)" SCHEME="$(SCHEME)"
 
 scheme:
 	$(MAKE) $(SCHEME_BIN)
