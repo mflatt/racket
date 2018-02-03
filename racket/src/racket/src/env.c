@@ -2118,7 +2118,8 @@ static Scheme_Object *do_variable_namespace(const char *who, int tl, int argc, S
     /* return env directly; need to set up  */
     if (!env->mod_phase && env->module)
       scheme_prep_namespace_rename(env);
-    env->interactive_bindings = 1;
+    if (!env->mod_phase)
+      env->interactive_bindings = 1;
   } else {
     /* new namespace: */
     Scheme_Env *new_env;

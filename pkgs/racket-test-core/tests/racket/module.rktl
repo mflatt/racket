@@ -2068,5 +2068,29 @@ case of module-leve bindings; it doesn't cover local bindings.
     (eval '(m) ns)))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Make sure `variable-reference->namespace` at phase 1
+;; doesn't interfere with re-expansion when trigged
+;; by a submodule
+;;
+;; This test is by William Bowman, Michael Ballantyne, and
+;; Leif Andersen.
+
+(let ([m '(module namespace-mismatch racket/base
+            (#%plain-module-begin
+             
+             (#%require (for-syntax racket/base))
+
+             (begin-for-syntax
+               (variable-reference->namespace (#%variable-reference))
+               (#%plain-lambda () foo))
+
+             (begin-for-syntax
+               (define-values (foo) #f))
+
+             (module* f #f
+               (#%plain-module-begin))))])
+  (expand (expand m)))
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (report-errs)
