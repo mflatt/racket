@@ -16,6 +16,7 @@
          "../syntax/binding.rkt"
          "dup-check.rkt"
          "free-id-set.rkt"
+         "stop-ids.rkt"
          "require+provide.rkt"
          "../common/module-path.rkt"
          "lift-context.rkt"
@@ -288,8 +289,9 @@
          (define partial-body-ctx (struct*-copy expand-context ctx
                                                 [context 'module]
                                                 [phase phase]
+                                                [to-parsed? #f]
                                                 [namespace (namespace->namespace-at-phase m-ns phase)]
-                                                [only-immediate? #t]
+                                                [stops (free-id-set phase (module-expand-stop-ids phase))]
                                                 [def-ctx-scopes def-ctx-scopes]
                                                 [need-eventually-defined need-eventually-defined] ; used only at phase 1 and up
                                                 [declared-submodule-names declared-submodule-names]
@@ -334,7 +336,7 @@
          (log-expand partial-body-ctx 'next-group)
          
          (define body-ctx (struct*-copy expand-context (accumulate-def-ctx-scopes partial-body-ctx def-ctx-scopes)
-                                        [only-immediate? #f]
+                                        [stops empty-free-id-set]
                                         [def-ctx-scopes #f]
                                         [post-expansion-scope #:parent root-expand-context #f]
                                         [to-module-lifts (make-to-module-lift-context phase
@@ -688,9 +690,12 @@
           (append
            (get-and-clear-end-lifts! (expand-context-to-module-lifts partial-body-ctx))
            (get-and-clear-provide-lifts! (expand-context-to-module-lifts partial-body-ctx))))
-        (if (null? bodys)
-            null
-            (loop #t (add-post-expansion-scope bodys partial-body-ctx)))]
+        (cond
+          [(null? bodys)
+           (log-expand partial-body-ctx 'module-lift-end-loop '())
+           null]
+          [else
+           (loop #t (add-post-expansion-scope bodys partial-body-ctx))])]
        [else null])]
      [else
       (define rest-bodys (cdr bodys))
@@ -700,12 +705,10 @@
                         (expand (car bodys) partial-body-ctx)))
       (define disarmed-exp-body (syntax-disarm exp-body))
       (define lifted-defns (get-and-clear-lifts! (expand-context-lifts partial-body-ctx)))
-      (cond
-       [(null? lifted-defns)
-        (log-expand partial-body-ctx 'rename-list lifted-defns)
-        (log-expand partial-body-ctx 'module-lift-loop (append lifted-defns (cons exp-body rest-bodys)))]
-       [else
-        (log-expand partial-body-ctx 'module-lift-end-loop (cons exp-body rest-bodys))])
+      (when (pair? lifted-defns)
+        (log-expand* partial-body-ctx
+                     ['rename-list lifted-defns]
+                     ['module-lift-loop (append lifted-defns (cons exp-body rest-bodys))]))
       (log-expand partial-body-ctx 'rename-one exp-body)
       (append/tail-on-null
        ;; Save any requires lifted during partial expansion
@@ -724,7 +727,7 @@
           (loop tail? spliced-bodys)]
          [(begin-for-syntax)
           (log-expand partial-body-ctx 'enter-prim exp-body)
-          (log-expand partial-body-ctx 'enter-prim-begin-for-syntax)
+          (log-expand partial-body-ctx 'prim-begin-for-syntax)
           (define-match m disarmed-exp-body '(begin-for-syntax e ...))
           (define nested-bodys (pass-1-and-2-loop (m 'e) (add1 phase)))
           (define ct-m-ns (namespace->namespace-at-phase m-ns (add1 phase)))
@@ -737,7 +740,7 @@
            (loop tail? rest-bodys))]
          [(define-values)
           (log-expand partial-body-ctx 'enter-prim exp-body)
-          (log-expand partial-body-ctx 'enter-prim-define-values)
+          (log-expand partial-body-ctx 'prim-define-values)
           (define-match m disarmed-exp-body '(define-values (id ...) rhs))
           (define ids (remove-use-site-scopes (m 'id) partial-body-ctx))
           (check-no-duplicate-ids ids phase exp-body)
@@ -754,7 +757,7 @@
            (loop tail? rest-bodys))]
          [(define-syntaxes)
           (log-expand partial-body-ctx 'enter-prim exp-body)
-          (log-expand partial-body-ctx 'enter-prim-define-syntaxes)
+          (log-expand partial-body-ctx 'prim-define-syntaxes)
           (define-match m disarmed-exp-body '(define-syntaxes (id ...) rhs))
           (define ids (remove-use-site-scopes (m 'id) partial-body-ctx))
           (check-no-duplicate-ids ids phase exp-body)
@@ -789,7 +792,7 @@
                 (loop tail? rest-bodys))]
          [(#%require)
           (log-expand partial-body-ctx 'enter-prim exp-body)
-          (log-expand partial-body-ctx 'enter-prim-require)
+          (log-expand partial-body-ctx 'prim-require)
           (define ready-body (remove-use-site-scopes disarmed-exp-body partial-body-ctx))
           (define-match m ready-body '(#%require req ...))
           (parse-and-perform-requires! (m 'req) exp-body #:self self
@@ -890,9 +893,12 @@
           (append
            (get-and-clear-end-lifts! (expand-context-to-module-lifts body-ctx))
            (get-and-clear-provide-lifts! (expand-context-to-module-lifts body-ctx))))
-        (if (null? bodys)
-            null
-            (loop #t bodys))]
+        (cond
+          [(null? bodys)
+           (log-expand body-ctx 'module-lift-end-loop '())
+           null]
+          [else
+           (loop #t bodys)])]
        [else bodys])]
      [else
       (log-expand body-ctx 'next)
@@ -947,17 +953,20 @@
                   (expanded+parsed
                    exp-body
                    (expand exp-body (as-to-parsed-context body-ctx)))))])]))
-      (define lifted-defns
-        ;; If there were any lifts, the right-hand sides need to be expanded
-        (loop #f (get-and-clear-lifts! (expand-context-lifts body-ctx))))
+      (define lifted-defns (get-and-clear-lifts! (expand-context-lifts body-ctx)))
       (define lifted-requires
         ;; Get any requires and provides, keeping them as-is
         (get-and-clear-require-lifts! (expand-context-require-lifts body-ctx)))
-      (define lifted-modules
+      (define lifted-modules (get-and-clear-module-lifts! (expand-context-module-lifts body-ctx)))
+      (unless (and (null? lifted-defns) (null? lifted-modules) (null? lifted-requires))
+        (log-expand body-ctx 'module-lift-loop (append lifted-requires lifted-defns lifted-modules)))
+      (define exp-lifted-defns
+        ;; If there were any lifts, the right-hand sides need to be expanded
+        (loop #f lifted-defns))
+      (define exp-lifted-modules
         ;; If there were any module lifts, the `module` forms need to
         ;; be expanded
-        (expand-non-module*-submodules (get-and-clear-module-lifts!
-                                        (expand-context-module-lifts body-ctx))
+        (expand-non-module*-submodules lifted-modules
                                        phase
                                        self
                                        body-ctx
@@ -965,15 +974,10 @@
                                        #:declared-submodule-names declared-submodule-names
                                        #:compiled-submodules compiled-submodules
                                        #:modules-being-compiled modules-being-compiled))
-      (cond
-       [(null? lifted-defns)
-        (log-expand body-ctx 'module-lift-loop lifted-defns)]
-       [else
-        (log-expand body-ctx 'module-lift-end-loop (cons exp-body rest-bodys))])
       (append
        lifted-requires
-       lifted-defns
-       lifted-modules
+       exp-lifted-defns
+       exp-lifted-modules
        (cons exp-body
              (loop tail? rest-bodys)))])))
 
@@ -1020,7 +1024,7 @@
        (case (core-form-sym disarmed-body phase)
          [(#%provide)
           (log-expand ctx 'enter-prim (car bodys))
-          (log-expand ctx 'enter-prim-provide)
+          (log-expand ctx 'prim-provide)
           (define-match m disarmed-body '(#%provide spec ...))
           (define-values (track-stxes specs)
             (parse-and-expand-provides! (m 'spec) (car bodys)
@@ -1253,8 +1257,8 @@
                           #:declared-submodule-names declared-submodule-names
                           #:compiled-submodules compiled-submodules
                           #:modules-being-compiled modules-being-compiled)
-  (log-expand ctx 'enter-prim s)
-  (log-expand ctx (if is-star? 'enter-prim-submodule* 'enter-prim-submodule))
+  (unless is-star?
+    (log-expand* ctx ['enter-prim s] [(if is-star? 'prim-submodule* 'prim-submodule)]))
   
   ;; Register name and check for duplicates
   (define-match m s '(module name . _))
@@ -1263,11 +1267,13 @@
     (raise-syntax-error #f "submodule already declared with the same name" s name))
   (hash-set! declared-submodule-names name (syntax-e (m 'module)))
 
+  (log-expand* ctx ['enter-prim s])
+
   (define submod
     (expand-module s
                    (struct*-copy expand-context ctx
                                  [context 'module]
-                                 [only-immediate? #f]
+                                 [stops empty-free-id-set]
                                  [post-expansion-scope #:parent root-expand-context #f])
                    self
                    #:always-produce-compiled? #t
@@ -1277,6 +1283,8 @@
                    #:enclosing-is-cross-phase-persistent? enclosing-is-cross-phase-persistent?
                    #:mpis-for-enclosing-reset mpis-to-reset
                    #:modules-being-compiled modules-being-compiled))
+
+  (log-expand* ctx ['exit-prim s])
   
   ;; Compile and declare the submodule for use by later forms
   ;; in the enclosing module:
@@ -1299,8 +1307,9 @@
                  [current-module-declare-name (make-resolved-module-path root-module-name)])
     (eval-module compiled-submodule
                  #:with-submodules? #f))
-  
-  (log-expand ctx 'exit-prim submod)
+
+  (unless is-star?
+    (log-expand ctx 'exit-prim submod))
 
   ;; Return the expanded submodule
   (cond
