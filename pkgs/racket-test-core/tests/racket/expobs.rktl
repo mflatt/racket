@@ -5,7 +5,7 @@
 (require '#%expobs)
 
 (define generate-expobs-regression? #f)
-(define checking-against-old-expander? #t)
+(define checking-against-old-expander? #f)
 
 (define expobs-traces-path
   (build-path (current-load-relative-directory)
@@ -53,19 +53,19 @@
     (hash-set! new-expected-traces e (get-trace e)))
 
   (for-each generate-trace
-            '((#%top . x)
-              x
+            '((#%top . __x)
+              __x
               (#%plain-app 1 2)
               (quote-syntax (stx-quoted))
               (quote quoted)
-              (set! x 99)
-              (letrec-values ([(x) y] [(y z) w]) x)
-              (let-values ([(x) y] [(y z) w]) x)
-              (begin 1 x (+ 3 4))
+              (set! __x 99)
+              (letrec-values ([(x) __y] [(y z) __w]) __x)
+              (let-values ([(x) __y] [(y z) __w]) __x)
+              (begin 1 __x (+ 3 4))
               (case-lambda [(x) x] [(x y) (+ x y)])
-              (#%variable-reference z)
+              (#%variable-reference __z)
               (begin0 '3 '5)
-              (with-continuation-mark x y z)
+              (with-continuation-mark __x __y __z)
               (if 1 2 3)
               (lambda (x)
                 (define y (+ x x))

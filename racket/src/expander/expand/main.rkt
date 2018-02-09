@@ -580,14 +580,15 @@
 ;; Expand and evaluate `s` as a compile-time expression, ensuring that
 ;; the number of returned values matches the number of target
 ;; identifiers; return the expanded form as well as its values
-(define (expand+eval-for-syntaxes-binding rhs ids ctx)
+(define (expand+eval-for-syntaxes-binding rhs ids ctx
+                                          #:log-next? [log-next? #t])
   (define exp-rhs (expand-transformer rhs (as-named-context ctx ids)))
   (define phase (add1 (expand-context-phase ctx)))
   (define parsed-rhs (if (expand-context-to-parsed? ctx)
                          exp-rhs
                          (expand exp-rhs (context->transformer-context
                                           (as-to-parsed-context ctx)))))
-  (log-expand ctx 'next)
+  (when log-next? (log-expand ctx 'next))
   (values exp-rhs
           parsed-rhs
           (eval-for-bindings ids

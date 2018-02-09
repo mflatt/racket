@@ -300,7 +300,7 @@
 
 (define (syntax-local-lift-provide s)
   (define-values (ctx result-s)
-    (do-local-lift-to-module 'syntax-local-lift-module-end-declaration
+    (do-local-lift-to-module 'syntax-local-lift-provide
                              s
                              #:get-lift-ctx expand-context-to-module-lifts
                              #:get-wrt-phase to-module-lift-context-wrt-phase
