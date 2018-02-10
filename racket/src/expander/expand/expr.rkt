@@ -25,7 +25,6 @@
          "reference-record.rkt"
          "prepare.rkt"
          "log.rkt"
-         "already-expanded.rkt"
          "parsed.rkt")
 
 ;; ----------------------------------------
@@ -242,13 +241,16 @@
                                 (for/list ([val-id (in-list val-ids)])
                                   (datum->syntax #f (syntax-e val-id) val-id val-id)))
                               val-idss))
-    
+
+    (when syntaxes?
+      (log-expand... ctx (lambda (obs) (log-letrec-values obs val-idss val-rhss bodys))))
+
     (define (get-body)
-      (log-expand ctx 'next-group)
+      (log-expand* ctx #:unless (and syntaxes? (null? val-idss)) ['next-group])
       (define body-ctx (struct*-copy expand-context rec-ctx
                                      [reference-records orig-rrs]))
       (expand-body bodys (as-tail-context body-ctx #:wrt ctx) #:source rebuild-s))
-    
+
     (define result-s
       (cond
         [(not split-by-reference?)
@@ -299,6 +301,13 @@
                                                       [trans-rhs (in-list trans-rhss)])
                                              (datum->syntax #f `[,trans-ids ,(add-scope trans-rhs sc)]))
                                            vals+body))]))
+
+(define (log-letrec-values obs val-idss val-rhss bodys)
+  (...log-expand obs ['next-group])
+  (unless (null? val-idss)
+    (...log-expand obs ['prim-letrec-values])
+    (log-let-renames obs 'let-renames val-idss val-rhss bodys
+                     #f #f #f)))
 
 (add-core-form!
  'let-values
@@ -427,7 +436,8 @@
     [else
      ;; otherwise, prune scopes up to transformer boundary:
      (define datum-s (remove-scopes (m 'datum) (expand-context-scopes ctx)))
-     (if (expand-context-to-parsed? ctx)
+     (if (and (expand-context-to-parsed? ctx)
+              (free-id-set-empty? (expand-context-stops ctx)))
          (parsed-quote-syntax (keep-properties-only~ s) datum-s)
          (rebuild
           s

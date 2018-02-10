@@ -724,11 +724,11 @@
           (loop tail? spliced-bodys)]
          [(begin-for-syntax)
           (log-expand* partial-body-ctx ['enter-prim exp-body] ['prim-begin-for-syntax] ['prepare-env])
-          (define-match m disarmed-exp-body '(begin-for-syntax e ...))
-          (define nested-bodys (pass-1-and-2-loop (m 'e) (add1 phase)))
           (define ct-m-ns (namespace->namespace-at-phase m-ns (add1 phase)))
           (namespace-run-available-modules! m-ns (add1 phase)) ; to support running `begin-for-syntax`
           (log-expand* partial-body-ctx ['phase-up])
+          (define-match m disarmed-exp-body '(begin-for-syntax e ...))
+          (define nested-bodys (pass-1-and-2-loop (m 'e) (add1 phase)))
           (eval-nested-bodys nested-bodys (add1 phase) ct-m-ns self partial-body-ctx)
           (namespace-visit-available-modules! m-ns phase) ; since we're shifting back a phase
           (log-expand partial-body-ctx 'exit-prim
@@ -886,7 +886,7 @@
      [(null? bodys)
       (cond
        [tail? 
-        ;; Were at the very end of the module, again, so check for lifted-to-end
+        ;; We're at the very end of the module, again, so check for lifted-to-end
         ;; declarations
         (define bodys
           (append
@@ -959,13 +959,11 @@
         ;; Get any requires and provides, keeping them as-is
         (get-and-clear-require-lifts! (expand-context-require-lifts body-ctx)))
       (define lifted-modules (get-and-clear-module-lifts! (expand-context-module-lifts body-ctx)))
-      (unless (and (null? lifted-defns) (null? lifted-modules) (null? lifted-requires))
+      (define no-lifts? (and (null? lifted-defns) (null? lifted-modules) (null? lifted-requires)))
+      (unless no-lifts?
         (log-expand body-ctx 'module-lift-loop (append lifted-requires
                                                        (lifted-defns-extract-syntax lifted-defns)
                                                        lifted-modules)))
-      (define exp-lifted-defns
-        ;; If there were any lifts, the right-hand sides need to be expanded
-        (loop #f lifted-defns))
       (define exp-lifted-modules
         ;; If there were any module lifts, the `module` forms need to
         ;; be expanded
@@ -977,6 +975,10 @@
                                        #:declared-submodule-names declared-submodule-names
                                        #:compiled-submodules compiled-submodules
                                        #:modules-being-compiled modules-being-compiled))
+      (unless no-lifts? (log-expand body-ctx 'next))
+      (define exp-lifted-defns
+        ;; If there were any lifts, the right-hand sides need to be expanded
+        (loop #f lifted-defns))
       (append
        lifted-requires
        exp-lifted-defns

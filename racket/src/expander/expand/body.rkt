@@ -415,7 +415,7 @@
        (not (expand-context-only-immediate? ctx))))
 
 ;; Generate observer actions that simulate the old expander
-;; going back through `letre-values`:
+;; going back through `letrec-values`:
 (define (log-letrec-values obs ctx s val-idss val-rhss track-stxs
                            stx-clauses done-bodys)
   (define phase (expand-context-phase ctx))
