@@ -23,6 +23,7 @@
          "set-bang-trans.rkt"
          "rename-trans.rkt"
          "reference-record.rkt"
+         "prepare.rkt"
          "log.rkt"
          "already-expanded.rkt"
          "parsed.rkt")
@@ -191,13 +192,14 @@
                          (log-let-renames obs renames-log-tag val-idss val-rhss bodys
                                           trans-idss (and syntaxes? (stx-m 'trans-rhs)) sc)))
     ;; Evaluate compile-time expressions (if any):
-    (when syntaxes? (log-expand ctx 'prepare-env))
+    (when syntaxes?
+      (log-expand ctx 'prepare-env)
+      (prepare-next-phase-namespace ctx))
     (define trans-valss (for/list ([rhs (in-list (if syntaxes? (stx-m 'trans-rhs) '()))]
                                    [ids (in-list trans-idss)])
-                          (log-expand ctx 'next)
-                          (when syntaxes? (log-expand ctx 'enter-bind))
+                          (log-expand* ctx ['next] ['enter-bind])
                           (define trans-val (eval-for-syntaxes-binding (add-scope rhs sc) ids ctx))
-                          (when syntaxes? (log-expand ctx 'exit-bind))
+                          (log-expand ctx 'exit-bind)
                           trans-val))
     ;; Fill expansion-time environment:
     (define rec-val-env

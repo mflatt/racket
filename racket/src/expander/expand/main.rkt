@@ -564,21 +564,21 @@
 (define (context->transformer-context ctx [context 'expression]
                                       #:keep-stops? [keep-stops? #f])
   (define phase (add1 (expand-context-phase ctx)))
-   (define ns (namespace->namespace-at-phase (expand-context-namespace ctx)
-                                             phase))
-   (namespace-visit-available-modules! ns phase)
-   (struct*-copy expand-context ctx
-                 [context context]
-                 [scopes null]
-                 [phase phase]
-                 [namespace ns]
-                 [env empty-env]
-                 [only-immediate? (and keep-stops? (expand-context-only-immediate? ctx))]
-                 [stops (if keep-stops?
-                            (expand-context-stops ctx)
-                            empty-free-id-set)]
-                 [def-ctx-scopes #f]
-                 [post-expansion-scope #:parent root-expand-context #f]))
+  (define ns (namespace->namespace-at-phase (expand-context-namespace ctx)
+                                            phase))
+  (namespace-visit-available-modules! ns phase)
+  (struct*-copy expand-context ctx
+                [context context]
+                [scopes null]
+                [phase phase]
+                [namespace ns]
+                [env empty-env]
+                [only-immediate? (and keep-stops? (expand-context-only-immediate? ctx))]
+                [stops (if keep-stops?
+                           (expand-context-stops ctx)
+                           empty-free-id-set)]
+                [def-ctx-scopes #f]
+                [post-expansion-scope #:parent root-expand-context #f]))
 
 ;; Expand and evaluate `s` as a compile-time expression, ensuring that
 ;; the number of returned values matches the number of target
