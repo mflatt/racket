@@ -730,6 +730,7 @@
           (define-match m disarmed-exp-body '(begin-for-syntax e ...))
           (define nested-bodys (pass-1-and-2-loop (m 'e) (add1 phase)))
           (log-expand partial-body-ctx 'next-group)
+          (namespace-run-available-modules! m-ns (add1 phase)) ; to support running `begin-for-syntax`
           (eval-nested-bodys nested-bodys (add1 phase) ct-m-ns self partial-body-ctx)
           (namespace-visit-available-modules! m-ns phase) ; since we're shifting back a phase
           (log-expand partial-body-ctx 'exit-prim
