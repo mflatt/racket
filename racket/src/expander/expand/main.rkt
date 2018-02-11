@@ -534,7 +534,7 @@
       with-lifts-s]
      [else
       ;; Expand again...
-      (log-expand ctx 'lift-loop with-lifts-s)
+      (log-expand ctx 'letlift-loop with-lifts-s)
       (loop with-lifts-s #f ctx)])))
 
 ;; [*] Although `(memq context '(top-level module))` makes more sense

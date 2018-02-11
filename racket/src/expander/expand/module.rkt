@@ -314,7 +314,6 @@
          ;; contain `compile-form` or `expanded+parsed` structures:
          (define partially-expanded-bodys
            (partially-expand-bodys bodys
-                                   #:tail? (zero? phase)
                                    #:phase phase
                                    #:ctx partial-body-ctx
                                    #:namespace m-ns
@@ -345,7 +344,6 @@
                                                                                       #:end-as-expressions? #t)]))
          
          (finish-expanding-body-expressons partially-expanded-bodys
-                                           #:tail? (zero? phase)
                                            #:phase phase
                                            #:ctx body-ctx
                                            #:self self
@@ -663,7 +661,6 @@
 ;; Pass 1 of `module` expansion, which uncovers definitions,
 ;; requires, and `module` submodules
 (define (partially-expand-bodys bodys
-                                #:tail? tail?
                                 #:phase phase
                                 #:ctx partial-body-ctx
                                 #:namespace m-ns
@@ -680,10 +677,13 @@
                                 #:mpis-to-reset mpis-to-reset
                                 #:loop pass-1-and-2-loop)
   (namespace-visit-available-modules! m-ns phase)
-  (let loop ([tail? tail?] [bodys bodys])
+  (let loop ([tail? #t] [bodys bodys])
     (cond
      [(null? bodys)
       (cond
+       [(and tail? (not (zero? phase)))
+        (log-expand partial-body-ctx 'module-lift-end-loop '())
+        null]
        [tail?
         ;; Were at the very end of the module; if there are any lifted-to-end
         ;; declarations, keep going
@@ -725,14 +725,17 @@
          [(begin-for-syntax)
           (log-expand* partial-body-ctx ['enter-prim exp-body] ['prim-begin-for-syntax] ['prepare-env])
           (define ct-m-ns (namespace->namespace-at-phase m-ns (add1 phase)))
-          (namespace-run-available-modules! m-ns (add1 phase)) ; to support running `begin-for-syntax`
-          (log-expand* partial-body-ctx ['phase-up])
+          (prepare-next-phase-namespace partial-body-ctx)
+          (log-expand partial-body-ctx 'phase-up)
           (define-match m disarmed-exp-body '(begin-for-syntax e ...))
           (define nested-bodys (pass-1-and-2-loop (m 'e) (add1 phase)))
+          (log-expand partial-body-ctx 'next-group)
           (eval-nested-bodys nested-bodys (add1 phase) ct-m-ns self partial-body-ctx)
           (namespace-visit-available-modules! m-ns phase) ; since we're shifting back a phase
           (log-expand partial-body-ctx 'exit-prim
-                      (datum->syntax #f (cons (m 'begin-for-syntax) nested-bodys) exp-body))
+                      (let ([s-nested-bodys (for/list ([nested-body (in-list nested-bodys)])
+                                              (extract-syntax nested-body))])
+                        (datum->syntax #f (cons (m 'begin-for-syntax) s-nested-bodys) exp-body)))
           (cons
            (semi-parsed-begin-for-syntax exp-body nested-bodys)
            (loop tail? rest-bodys))]
@@ -873,7 +876,6 @@
 
 ;; Pass 2 of `module` expansion, which expands all expressions
 (define (finish-expanding-body-expressons partially-expanded-bodys
-                                          #:tail? tail?
                                           #:phase phase
                                           #:ctx body-ctx
                                           #:self self
@@ -881,24 +883,27 @@
                                           #:compiled-submodules compiled-submodules
                                           #:modules-being-compiled modules-being-compiled
                                           #:mpis-to-reset mpis-to-reset)
-  (let loop ([tail? tail?] [bodys partially-expanded-bodys])
+  (let loop ([tail? #t] [bodys partially-expanded-bodys])
     (cond
      [(null? bodys)
       (cond
-       [tail? 
-        ;; We're at the very end of the module, again, so check for lifted-to-end
-        ;; declarations
-        (define bodys
-          (append
-           (get-and-clear-end-lifts! (expand-context-to-module-lifts body-ctx))
-           (get-and-clear-provide-lifts! (expand-context-to-module-lifts body-ctx))))
-        (cond
-          [(null? bodys)
-           (log-expand body-ctx 'module-lift-end-loop '())
-           null]
-          [else
-           (loop #t bodys)])]
-       [else bodys])]
+        [(and tail? (not (zero? phase)))
+         (log-expand body-ctx 'module-lift-end-loop '())
+         null]
+        [tail? 
+         ;; We're at the very end of the module, again, so check for lifted-to-end
+         ;; declarations
+         (define bodys
+           (append
+            (get-and-clear-end-lifts! (expand-context-to-module-lifts body-ctx))
+            (get-and-clear-provide-lifts! (expand-context-to-module-lifts body-ctx))))
+         (cond
+           [(null? bodys)
+            (log-expand body-ctx 'module-lift-end-loop '())
+            null]
+           [else
+            (loop #t bodys)])]
+        [else null])]
      [else
       (log-expand body-ctx 'next)
       (define body (car bodys))
