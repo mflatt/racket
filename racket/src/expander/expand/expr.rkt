@@ -374,7 +374,6 @@
    (cond
     [(null? es)
      (define phase (expand-context-phase ctx))
-     (log-expand* ctx ['enter-list (datum->syntax #f es s)] ['next] ['exit-list (datum->syntax #f es s)])
      (if (expand-context-to-parsed? ctx)
          (parsed-quote (keep-properties-only~ s) null)
          (rebuild

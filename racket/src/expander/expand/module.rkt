@@ -823,6 +823,8 @@
                 (loop tail? rest-bodys))]
          [(module*)
           ;; Submodule to save for after this module
+          (log-expand* partial-body-ctx ['enter-prim exp-body] ['prim-submodule*]
+                       ['exit-prim exp-body])
           (cons exp-body
                 (loop tail? rest-bodys))]
          [(#%declare)
@@ -980,10 +982,10 @@
                                        #:declared-submodule-names declared-submodule-names
                                        #:compiled-submodules compiled-submodules
                                        #:modules-being-compiled modules-being-compiled))
-      (unless no-lifts? (log-expand body-ctx 'next))
       (define exp-lifted-defns
         ;; If there were any lifts, the right-hand sides need to be expanded
         (loop #f lifted-defns))
+      (unless no-lifts? (log-expand body-ctx 'next))
       (append
        lifted-requires
        exp-lifted-defns
