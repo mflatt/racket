@@ -570,7 +570,7 @@
         (out-anything (protect-quote body) out)]
        [(struct let-rec (procs body))
         (out-byte CPT_LETREC out)
-        (out-number count out)
+        (out-number (length procs) out)
         (for ([proc (in-list procs)]) (out-anything proc out))
         (out-anything (protect-quote body) out)]
        [(struct install-value (count pos boxes? rhs body))
