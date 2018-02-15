@@ -68,6 +68,13 @@
      `(linklet
        ,importss
        ,exports
+       '(import-shapes: ,@(for/list ([imports (in-list importss)]
+                                     [import-shapes (in-list import-shapess)]
+                                     #:when #t
+                                     [import (in-list imports)]
+                                     [import-shape (in-list import-shapes)]
+                                     #:when import-shape)
+                            `[,import ,import-shape]))
        ,@(for/list ([form (in-list body)])
            (decompile-form form globs '(#%globals) closed)))]))
 

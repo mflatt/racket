@@ -117,7 +117,6 @@
         
       (define r (run (if (null? submod) path (cons path submod)) phase linkl uses))
       (hash-set! runs-done (cons (cons path submod) phase) #t)
-      (when linkl (set! runs (cons r runs)))
 
       (define reqs (instance-variable-value decl 'requires))
       (for* ([phase+reqs (in-list reqs)]
@@ -126,9 +125,13 @@
         (define at-phase (- phase (car phase+reqs)))
         (define path/submod (module-path-index->path req path submod))
         (unless (symbol? path/submod)
-          (find-phase-runs! path/submod #:phase at-phase)))))
+          (find-phase-runs! path/submod #:phase at-phase)))
+
+      ;; Adding after requires, so that `runs` ends up in the
+      ;; reverse order that we want to emit code
+      (when linkl (set! runs (cons r runs)))))
 
   (find-modules! (cons orig-path submod))
   (find-phase-runs! (cons orig-path submod))
 
-  runs)
+  (reverse runs))

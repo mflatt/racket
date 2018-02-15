@@ -1,5 +1,7 @@
 #lang racket/base
-(require racket/match
+(require (only-in '#%linklet primitive->compiled-position)
+         racket/match
+         racket/set
          compiler/zo-structs
          "run.rkt"
          "name.rkt"
@@ -53,6 +55,11 @@
      append
      (for/list ([r (in-list runs)])
        (define pos-to-name/import (make-position-mapping r))
+       (define (remap-pos pos)
+         (define new-name/import (hash-ref pos-to-name/import pos))
+         (if (import? new-name/import)
+             (import-pos new-name/import)
+             (hash-ref positions new-name/import)))
        (define graph (make-hasheq))
        (make-reader-graph
         (for/list ([b (in-list (linkl-body (run-linkl r)))])
@@ -64,10 +71,7 @@
                   (set! saw-zero-pos-toplevel? #t)
                   b]
                  [else
-                  (define new-name/import (hash-ref pos-to-name/import pos))
-                  (define new-pos (if (import? new-name/import)
-                                      (import-pos new-name/import)
-                                      (hash-ref positions new-name/import)))
+                  (define new-pos (remap-pos pos))
                   (toplevel depth new-pos const? ready?)])]
               [(def-values ids rhs)
                (def-values (map remap ids) (remap rhs))]
@@ -106,7 +110,7 @@
               [(varref constant? toplevel dummy)
                (varref constant? (remap toplevel) (remap dummy))]
               [(assign id rhs undef-ok?)
-               (assign id (remap rhs) undef-ok?)]
+               (assign (remap id) (remap rhs) undef-ok?)]
               [(apply-values proc args-expr)
                (apply-values (remap proc) (remap args-expr))]
               [(with-immed-mark key def-val body)
@@ -116,13 +120,25 @@
               [_
                (cond
                  [(lam? b)
-                  (struct-copy lam b [body (remap (lam-body b))])]
+                  (define tl-map (lam-toplevel-map b))
+                  (define new-tl-map
+                    (and tl-map
+                         (for/set ([pos (in-set tl-map)])
+                           (remap-pos pos))))
+                  (struct-copy lam b
+                               [body (remap (lam-body b))]
+                               [toplevel-map new-tl-map])]
                  [else b])])))))))
 
+  (define module-name 'demodularized)
+  (define (primitive v)
+    (primval (or (primitive->compiled-position v)
+                 (error "cannot find primitive" v))))
+  
   (define new-linkl
-    (linkl 'demodularized
-           ordered-importss
-           import-shapess
+    (linkl module-name
+           (list* '() '() ordered-importss)
+           (list* '() '() import-shapess)
            '() ; exports
            internals
            lifts
@@ -132,5 +148,85 @@
              (max m (linkl-max-let-depth (run-linkl r))))
            saw-zero-pos-toplevel?))
 
-  (linkl-bundle (hasheq 0 new-linkl)))
+  (define data-linkl
+    (linkl 'data
+           '((deserialize-module-path-indexes))
+           '((#f))
+           '(.mpi-vector)
+           '()
+           '()
+           #hasheq()
+           (list
+            (def-values (list (toplevel 0 2 #f #f)) ; .mpi-vector
+              (application (toplevel 2 1 #f #f) ; deserialize-module-path-indexes
+                           (list
+                            (list->vector
+                             (cons
+                              (box module-name)
+                              (for/list ([path/submod+phase (in-list import-keys)])
+                                (vector `(quote ,(car path/submod+phase))))))
+                            (for/vector ([i (in-range (add1 (length import-keys)))])
+                              i)))))
+           16
+           #f))
 
+  (define decl-linkl
+    (let ([deserialize-pos 1]
+          [module-use-pos 2]
+          [mpi-vector-pos 3]
+          [exports-pos 4])
+      (linkl 'decl
+             '((deserialize
+                module-use)
+               (.mpi-vector))
+             '((#f)
+               (#f))
+             '(self-mpi requires provides phase-to-link-modules)
+             '()
+             '()
+             #hasheq()
+             (list
+              (def-values (list (toplevel 0 (+ exports-pos 0) #f #f)) ; .self-mpi
+                (application (primitive vector-ref)
+                             (list (toplevel 2 mpi-vector-pos #f #f)
+                                   '0)))
+              (def-values (list (toplevel 0 (+ exports-pos 1) #f #f)) ; requires
+                (let ([arg-count 9])
+                  (application (toplevel arg-count deserialize-pos #f #f)
+                               (list
+                                (toplevel arg-count mpi-vector-pos #f #f)
+                                #f #f 0 '#() 0 '#() '#()
+                                (list->vector
+                                 (append
+                                  `(#:cons #:list ,(add1 (length import-keys)) 0)
+                                  (apply
+                                   append
+                                   (for/list ([k (in-list import-keys)]
+                                              [i (in-naturals 1)])
+                                     `(#:mpi ,i)))
+                                  '(())))))))
+              (def-values (list (toplevel 0 (+ exports-pos 2) #f #f)) ; provides
+                (application (primitive hasheqv) null))
+              (def-values (list (toplevel 0 (+ exports-pos 3) #f #f)) ; phase-to-link-modules
+                (let ([depth 2])
+                  (application (primitive hasheqv)
+                               (list 0
+                                     (let ([depth (+ depth (length import-keys))])
+                                       (application (primitive list)
+                                                    (for/list ([k (in-list import-keys)]
+                                                               [i (in-naturals 1)])
+                                                      (let ([depth (+ depth 2)])
+                                                        (application (toplevel depth module-use-pos #f #f)
+                                                                     (list
+                                                                      (let ([depth (+ depth 2)])
+                                                                        (application (primitive vector-ref)
+                                                                                     (list
+                                                                                      (toplevel depth mpi-vector-pos #f #f)
+                                                                                      i)))
+                                                                      '0)))))))))))
+             (+ 32 (length import-keys))
+             #f)))
+
+  (linkl-bundle (hasheq 0 new-linkl
+                        'data data-linkl
+                        'decl decl-linkl)))
