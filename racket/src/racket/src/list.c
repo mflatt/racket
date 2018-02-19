@@ -603,11 +603,11 @@ scheme_init_list (Scheme_Startup_Env *env)
 						      "hash-weak?",
 						      1, 1, 1),
 			     env);
-  scheme_addto_prim_instance("hash-count",
-			     scheme_make_immed_prim(scheme_checked_hash_count,
-						    "hash-count",
-						    1, 1),
-			     env);
+
+  p = scheme_make_immed_prim(scheme_checked_hash_count, "hash-count", 1, 1);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_PRODUCES_FIXNUM);
+  scheme_addto_prim_instance("hash-count", p, env);
+
   scheme_addto_prim_instance("hash-copy",
 			     scheme_make_noncm_prim(hash_table_copy,
 						    "hash-copy",
