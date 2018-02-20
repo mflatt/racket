@@ -51,6 +51,8 @@ READ_ONLY Scheme_Object *scheme_unsafe_bytes_ref_proc;
 READ_ONLY Scheme_Object *scheme_unsafe_bytes_set_proc;
 READ_ONLY Scheme_Object *scheme_unsafe_struct_ref_proc;
 READ_ONLY Scheme_Object *scheme_unsafe_struct_star_ref_proc;
+READ_ONLY Scheme_Object *scheme_unsafe_struct_set_proc;
+READ_ONLY Scheme_Object *scheme_unsafe_struct_star_set_proc;
 
 /* locals */
 static Scheme_Object *vector_p (int argc, Scheme_Object *argv[]);
@@ -98,7 +100,8 @@ scheme_init_vector (Scheme_Startup_Env *env)
   REGISTER_SO(scheme_vector_p_proc);
   p = scheme_make_folding_prim(vector_p, "vector?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance("vector?", p, env);
   scheme_vector_p_proc = p;
 
@@ -311,13 +314,17 @@ scheme_init_unsafe_vector (Scheme_Startup_Env *env)
                                                             | SCHEME_PRIM_IS_OMITABLE);
   scheme_addto_prim_instance("unsafe-struct*-ref", p, env);
 
+  REGISTER_SO(scheme_unsafe_struct_set_proc);
   p = scheme_make_immed_prim(unsafe_struct_set, "unsafe-struct-set!", 3, 3);
+  scheme_unsafe_struct_set_proc = p;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_NARY_INLINED);
-  scheme_addto_prim_instance("unsafe-struct-set!", p, env);  
+  scheme_addto_prim_instance("unsafe-struct-set!", p, env);
 
+  REGISTER_SO(scheme_unsafe_struct_star_set_proc);
   p = scheme_make_immed_prim(unsafe_struct_star_set, "unsafe-struct*-set!", 3, 3);
+  scheme_unsafe_struct_star_set_proc = p;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_NARY_INLINED);
-  scheme_addto_prim_instance("unsafe-struct*-set!", p, env);  
+  scheme_addto_prim_instance("unsafe-struct*-set!", p, env);
 
   p = scheme_make_immed_prim(unsafe_struct_star_cas, "unsafe-struct*-cas!", 4, 4);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_NARY_INLINED);

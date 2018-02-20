@@ -229,7 +229,8 @@ scheme_init_fun (Scheme_Startup_Env *env)
 
   o = scheme_make_folding_prim(procedure_p, "procedure?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(o) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance("procedure?", o, env);
 
   scheme_procedure_p_proc = o;
@@ -467,7 +468,8 @@ scheme_init_fun (Scheme_Startup_Env *env)
   REGISTER_SO(scheme_void_p_proc);
   scheme_void_p_proc = scheme_make_folding_prim(void_p, "void?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(scheme_void_p_proc) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                                             | SCHEME_PRIM_IS_OMITABLE);
+                                                                             | SCHEME_PRIM_IS_OMITABLE
+                                                                             | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance("void?", scheme_void_p_proc, env);
 
   scheme_addto_prim_instance("time-apply",
@@ -534,7 +536,8 @@ scheme_init_fun (Scheme_Startup_Env *env)
                                "procedure-arity-includes?",
                                2, 3, 1);
   SCHEME_PRIM_PROC_FLAGS(o) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_AD_HOC_OPT);
+                                                            | SCHEME_PRIM_AD_HOC_OPT
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_procedure_arity_includes_proc = o;
   scheme_addto_prim_instance("procedure-arity-includes?", o, env);
 
@@ -557,7 +560,8 @@ scheme_init_fun (Scheme_Startup_Env *env)
   o = scheme_make_folding_prim(procedure_equal_closure_p,
                                "procedure-closure-contents-eq?",
                                2, 2, 1);
-  SCHEME_PRIM_PROC_FLAGS(o) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_AD_HOC_OPT);
+  SCHEME_PRIM_PROC_FLAGS(o) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_AD_HOC_OPT
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance("procedure-closure-contents-eq?", o, env);
 
   REGISTER_SO(scheme_procedure_specialize_proc);

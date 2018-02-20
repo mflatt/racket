@@ -1239,6 +1239,8 @@ static int is_values_with_accessors_and_mutators(Scheme_Object *e, int vals, int
         && is_local_ref(app->args[2], delta+1, 1, vars)
         && is_local_ref(app->args[3], delta+2, 1, vars)) {
       int i, num_gets = 0, num_sets = 0, normal_ops = 1;
+      int setter_fields = 0, normal_sets = 1;
+      int prev_setter_pos = app->num_args; /* bigger than any setter index can be */
       for (i = app->num_args; i > 3; i--) {
         if (is_local_ref(app->args[i], delta, 5, vars)) {
           normal_ops = 0;
@@ -1251,10 +1253,21 @@ static int is_values_with_accessors_and_mutators(Scheme_Object *e, int vals, int
                                       delta2, _stinfo->field_count, vars))
               break;
             if (SAME_OBJ(app3->args[0], scheme_make_struct_field_mutator_proc)) {
+              int pos = SCHEME_INT_VAL(app3->args[2]);
               if (num_gets) {
-                /* Since we're alking backwards, it's not normal to hit a mutator
+                /* Since we're walking backwards, it's not normal to hit a mutator
                    after (i.e., before in argument order) a selector */
                 normal_ops = 0;
+              }
+              if (normal_sets) {
+                if (pos >= prev_setter_pos) {
+                  /* setters are not in the usual order; zero out the mask */
+                  normal_sets = 0;
+                  setter_fields = 0;
+                } else if (pos < (31 - STRUCT_PROC_SHAPE_SHIFT)) {
+                  setter_fields |= (1 << pos);
+                  prev_setter_pos = pos;
+                }
               }
               num_sets++;
             } else {
@@ -1288,6 +1301,7 @@ static int is_values_with_accessors_and_mutators(Scheme_Object *e, int vals, int
         _stinfo->indexed_ops = 1;
         _stinfo->num_gets = num_gets;
         _stinfo->num_sets = num_sets;
+        _stinfo->setter_fields = setter_fields;
         return 1;
       }
     }
@@ -1825,10 +1839,30 @@ intptr_t scheme_get_struct_proc_shape(int k, Simple_Struct_Type_Info *stinfo)
         return (STRUCT_PROC_SHAPE_GETTER
                 | (stinfo->authentic ? STRUCT_PROC_SHAPE_AUTHENTIC : 0)
                 | ((stinfo->super_field_count + (k - 3)) << STRUCT_PROC_SHAPE_SHIFT));
-      } else
+      } else {
+        int idx = (k - 3 - stinfo->num_gets), setter_fields = stinfo->setter_fields, pos = 0;
+
+        /* setter_fields is a bitmap for first (31-STRUCT_PROC_SHAPE_SHIFT) fields that may have a setter */
+        while ((idx > 0) || !(setter_fields & 1)) {
+          if (setter_fields & 1) {
+            idx--;
+          }
+          setter_fields = setter_fields >> 1;
+          pos++;
+          if (!setter_fields) break;
+        }
+
+        if (!idx && (setter_fields & 1))
+          pos += stinfo->super_field_count + 1;
+        else {
+          /* represent "unknown" by zero */
+          pos = 0;
+        }
+
         return (STRUCT_PROC_SHAPE_SETTER
                 | (stinfo->authentic ? STRUCT_PROC_SHAPE_AUTHENTIC : 0)
-                | (stinfo->field_count << STRUCT_PROC_SHAPE_SHIFT));
+                | (pos << STRUCT_PROC_SHAPE_SHIFT));
+      }
     }
   }
 
@@ -3223,6 +3257,8 @@ static Scheme_Object *rator_implies_predicate(Scheme_Object *rator, Optimize_Inf
       return scheme_real_p_proc;
     else if (SCHEME_PRIM_PROC_OPT_FLAGS(rator) & SCHEME_PRIM_PRODUCES_NUMBER)
       return scheme_number_p_proc;
+    else if (SCHEME_PRIM_PROC_OPT_FLAGS(rator) & SCHEME_PRIM_PRODUCES_BOOL)
+      return scheme_boolean_p_proc;
     else if (SAME_OBJ(rator, scheme_cons_proc))
       return scheme_pair_p_proc;
     else if (SAME_OBJ(rator, scheme_unsafe_cons_list_proc))
@@ -3269,65 +3305,12 @@ static Scheme_Object *rator_implies_predicate(Scheme_Object *rator, Optimize_Inf
              || IS_NAMED_PRIM(rator, "bytes-set!")
              || IS_NAMED_PRIM(rator, "set-box!"))
       return scheme_void_p_proc;
-    else if (IS_NAMED_PRIM(rator, "vector-set!")
-             || IS_NAMED_PRIM(rator, "string-set!")
-             || IS_NAMED_PRIM(rator, "bytes-set!"))
-      return scheme_void_p_proc;
     else if (IS_NAMED_PRIM(rator, "string->symbol")
              || IS_NAMED_PRIM(rator, "gensym"))
       return scheme_symbol_p_proc;
     else if (IS_NAMED_PRIM(rator, "string->keyword"))
       return scheme_keyword_p_proc;
-    else if (IS_NAMED_PRIM(rator, "pair?")
-             || IS_NAMED_PRIM(rator, "mpair?")
-             || IS_NAMED_PRIM(rator, "list?")
-             || IS_NAMED_PRIM(rator, "list-pair?")
-             || IS_NAMED_PRIM(rator, "vector?")
-             || IS_NAMED_PRIM(rator, "box?")
-             || IS_NAMED_PRIM(rator, "number?")
-             || IS_NAMED_PRIM(rator, "real?")
-             || IS_NAMED_PRIM(rator, "complex?")
-             || IS_NAMED_PRIM(rator, "rational?")
-             || IS_NAMED_PRIM(rator, "integer?")
-             || IS_NAMED_PRIM(rator, "exact-integer?")
-             || IS_NAMED_PRIM(rator, "exact-nonnegative-integer?")
-             || IS_NAMED_PRIM(rator, "exact-positive-integer?")
-             || IS_NAMED_PRIM(rator, "inexact-real?")
-             || IS_NAMED_PRIM(rator, "fixnum?")
-             || IS_NAMED_PRIM(rator, "flonum?")
-             || IS_NAMED_PRIM(rator, "single-flonum?")
-             || IS_NAMED_PRIM(rator, "null?")
-             || IS_NAMED_PRIM(rator, "void?")
-             || IS_NAMED_PRIM(rator, "symbol?")
-             || IS_NAMED_PRIM(rator, "keyword?")
-             || IS_NAMED_PRIM(rator, "string?")
-             || IS_NAMED_PRIM(rator, "bytes?")
-             || IS_NAMED_PRIM(rator, "path?")
-             || IS_NAMED_PRIM(rator, "char?")
-             || IS_NAMED_PRIM(rator, "interned-char?")
-             || IS_NAMED_PRIM(rator, "boolean?")
-             || IS_NAMED_PRIM(rator, "chaperone?")
-             || IS_NAMED_PRIM(rator, "impersonator?")
-             || IS_NAMED_PRIM(rator, "procedure?")
-             || IS_NAMED_PRIM(rator, "eof-object?")
-             || IS_NAMED_PRIM(rator, "immutable?")
-             || IS_NAMED_PRIM(rator, "not")
-             || IS_NAMED_PRIM(rator, "true-object?")
-             || IS_NAMED_PRIM(rator, "zero?")
-             || IS_NAMED_PRIM(rator, "procedure-arity-includes?")
-             || IS_NAMED_PRIM(rator, "variable-reference-constant?")
-             || IS_NAMED_PRIM(rator, "eq?")
-             || IS_NAMED_PRIM(rator, "eqv?")
-             || IS_NAMED_PRIM(rator, "equal?")
-             || IS_NAMED_PRIM(rator, "string=?")
-             || IS_NAMED_PRIM(rator, "bytes=?")
-             || IS_NAMED_PRIM(rator, "char=?")
-             || IS_NAMED_PRIM(rator, "free-identifier=?")
-             || IS_NAMED_PRIM(rator, "bound-identifier=?")
-             || IS_NAMED_PRIM(rator, "procedure-closure-contents-eq?")) {
-      return scheme_boolean_p_proc;
-    }
-
+    
     {
       Scheme_Object *p;
       p = local_type_to_predicate(produces_local_type(rator, argc));
@@ -5123,6 +5106,56 @@ static Scheme_Object *finish_optimize_application3(Scheme_App3_Rec *app, Optimiz
     }
 
     rator = app->rator; /* in case it was updated */
+  }
+
+  /* Using a struct mutator? */
+  {
+    Scheme_Object *alt;
+    alt = get_struct_proc_shape(app->rator, info, 0);
+    if (alt) {
+      int mode = (SCHEME_PROC_SHAPE_MODE(alt) & STRUCT_PROC_SHAPE_MASK);
+
+      if (mode == STRUCT_PROC_SHAPE_SETTER) {
+        Scheme_Object *pred;
+        int unsafe = 0;
+        
+        if (info->unsafe_mode) {
+          pred = NULL;
+          unsafe = 1;
+        } else
+          pred = expr_implies_predicate(app->rand1, info);
+        
+        if ((unsafe
+             || (pred
+                 && SAME_TYPE(SCHEME_TYPE(pred), scheme_struct_proc_shape_type)
+                 && is_struct_identity_subtype(SCHEME_PROC_SHAPE_IDENTITY(pred),
+                                               SCHEME_PROC_SHAPE_IDENTITY(alt))))
+            /* Only if the field position is known: */
+            && ((SCHEME_PROC_SHAPE_MODE(alt) >> STRUCT_PROC_SHAPE_SHIFT) != 0)) {
+          /* Struct type matches, so use `unsafe-struct-set!` */
+          Scheme_Object *l;
+          Scheme_App_Rec *new_app;
+          int pos = (SCHEME_PROC_SHAPE_MODE(alt) >> STRUCT_PROC_SHAPE_SHIFT) - 1;
+          l = scheme_make_pair(scheme_make_integer(pos),
+                               scheme_make_pair(app->rand2,
+                                                scheme_null));
+          l = scheme_make_pair(app->rand1, l);
+          l = scheme_make_pair(((SCHEME_PROC_SHAPE_MODE(alt) & STRUCT_PROC_SHAPE_AUTHENTIC)
+                                ? scheme_unsafe_struct_star_set_proc
+                                : scheme_unsafe_struct_set_proc),
+                               l);
+          new_app = (Scheme_App_Rec *)scheme_make_application(l, info);
+          SCHEME_APPN_FLAGS(new_app) |= (APPN_FLAG_IMMED | APPN_FLAG_SFS_TAIL);
+          return finish_optimize_application(new_app, info, context);
+        }
+      }
+
+      /* Register type based on setter succeeding: */
+      if (!SCHEME_NULLP(SCHEME_PROC_SHAPE_IDENTITY(alt))
+          && SAME_TYPE(SCHEME_TYPE(rand), scheme_ir_local_type))
+        add_type(info, app->rand1, scheme_make_struct_proc_shape(STRUCT_PROC_SHAPE_PRED,
+                                                                 SCHEME_PROC_SHAPE_IDENTITY(alt)));
+    }
   }
   
   increment_clocks_for_application(info, app->rator, 2);

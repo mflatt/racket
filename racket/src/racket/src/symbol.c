@@ -336,7 +336,8 @@ scheme_init_symbol (Scheme_Startup_Env *env)
   REGISTER_SO(scheme_symbol_p_proc);
   p = scheme_make_folding_prim(symbol_p_prim, "symbol?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_symbol_p_proc = p;
   scheme_addto_prim_instance("symbol?", p, env);
 
@@ -362,7 +363,8 @@ scheme_init_symbol (Scheme_Startup_Env *env)
   REGISTER_SO(scheme_keyword_p_proc);
   p = scheme_make_folding_prim(keyword_p_prim, "keyword?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_keyword_p_proc = p;
   scheme_addto_prim_instance("keyword?", p, env);
 

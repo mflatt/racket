@@ -228,14 +228,16 @@ scheme_init_list (Scheme_Startup_Env *env)
   REGISTER_SO(scheme_pair_p_proc);
   p = scheme_make_folding_prim(pair_p_prim, "pair?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance ("pair?", p, env);
   scheme_pair_p_proc = p;
 
   REGISTER_SO(scheme_mpair_p_proc);
   p = scheme_make_folding_prim(mpair_p_prim, "mpair?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance ("mpair?", p, env);
   scheme_mpair_p_proc = p;
 
@@ -290,14 +292,16 @@ scheme_init_list (Scheme_Startup_Env *env)
   p = scheme_make_folding_prim(null_p_prim, "null?", 1, 1, 1);
   scheme_null_p_proc = p;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance ("null?", p, env);
 
   REGISTER_SO(scheme_list_p_proc);
   p = scheme_make_folding_prim(list_p_prim, "list?", 1, 1, 1);
   scheme_list_p_proc = p;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance ("list?", p, env);
 
   REGISTER_SO(scheme_list_proc);
@@ -322,12 +326,14 @@ scheme_init_list (Scheme_Startup_Env *env)
   p = scheme_make_folding_prim(list_pair_p_prim, "list-pair?", 1, 1, 1);
   scheme_list_pair_p_proc = p;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance ("list-pair?", p, env);
 
   p = scheme_make_folding_prim(immutablep, "immutable?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance("immutable?", p, env);
 
   p = scheme_make_immed_prim(length_prim, "length", 1, 1);
@@ -507,7 +513,8 @@ scheme_init_list (Scheme_Startup_Env *env)
   REGISTER_SO(scheme_box_p_proc);
   p = scheme_make_folding_prim(box_p, "box?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance("box?", p, env);
   scheme_box_p_proc = p;
 
@@ -597,7 +604,8 @@ scheme_init_list (Scheme_Startup_Env *env)
   
   p = scheme_make_folding_prim(hash_p, "hash?", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_IS_OMITABLE);
+                                                            | SCHEME_PRIM_IS_OMITABLE
+                                                            | SCHEME_PRIM_PRODUCES_BOOL);
   scheme_addto_prim_instance ("hash?", p, env);
 
 
