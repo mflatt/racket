@@ -448,7 +448,7 @@ int is_slow_equal (Scheme_Object *obj1, Scheme_Object *obj2)
   return is_equal(obj1, obj2, &eql);
 }
 
-int scheme_equal (Scheme_Object *obj1, Scheme_Object *obj2)
+int scheme_equal (Scheme_Object *obj1, Scheme_Object *obj2) XFORM_ASSERT_NO_CONVERSION
 {
   int v;
 

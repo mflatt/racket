@@ -106,35 +106,40 @@ void scheme_init_numcomp(Scheme_Startup_Env *env)
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_NUMBER
-                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS);
+                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("=", p, env);
 
   p = scheme_make_folding_prim(lt, "<", 2, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_REAL
-                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS);
+                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("<", p, env);
 
   p = scheme_make_folding_prim(gt, ">", 2, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_REAL
-                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS);
+                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance(">", p, env);
 
   p = scheme_make_folding_prim(lt_eq, "<=", 2, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_REAL
-                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS);
+                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("<=", p, env);
 
   p = scheme_make_folding_prim(gt_eq, ">=", 2, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_REAL
-                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS);
+                                                            | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance(">=", p, env);
 
   p = scheme_make_folding_prim(zero_p, "zero?", 1, 1, 1);
@@ -160,7 +165,8 @@ void scheme_init_numcomp(Scheme_Startup_Env *env)
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_REAL
                                                             | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
-                                                            | SCHEME_PRIM_PRODUCES_REAL);
+                                                            | SCHEME_PRIM_PRODUCES_REAL
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("max", p, env);
 
   p = scheme_make_folding_prim(sch_min, "min", 1, -1, 1);
@@ -168,7 +174,8 @@ void scheme_init_numcomp(Scheme_Startup_Env *env)
                                                             | SCHEME_PRIM_IS_NARY_INLINED
                                                             | SCHEME_PRIM_WANTS_REAL
                                                             | SCHEME_PRIM_OMITTABLE_ON_GOOD_ARGS
-                                                            | SCHEME_PRIM_PRODUCES_REAL);
+                                                            | SCHEME_PRIM_PRODUCES_REAL
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("min", p, env);
 }
 
@@ -178,23 +185,28 @@ void scheme_init_flfxnum_numcomp(Scheme_Startup_Env *env)
   int flags;
 
   p = scheme_make_folding_prim(fx_eq, "fx=", 2, 2, 1);
-  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fx=", p, env);
 
   p = scheme_make_folding_prim(fx_lt, "fx<", 2, 2, 1);
-  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fx<", p, env);
 
   p = scheme_make_folding_prim(fx_gt, "fx>", 2, 2, 1);
-  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fx>", p, env);
 
   p = scheme_make_folding_prim(fx_lt_eq, "fx<=", 2, 2, 1);
-  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fx<=", p, env);
 
   p = scheme_make_folding_prim(fx_gt_eq, "fx>=", 2, 2, 1);
-  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fx>=", p, env);
 
   p = scheme_make_folding_prim(fx_min, "fxmin", 2, 2, 1);
@@ -203,7 +215,8 @@ void scheme_init_flfxnum_numcomp(Scheme_Startup_Env *env)
   else
     flags = SCHEME_PRIM_SOMETIMES_INLINED;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(flags
-                                                            | SCHEME_PRIM_PRODUCES_FIXNUM);
+                                                            | SCHEME_PRIM_PRODUCES_FIXNUM
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fxmin", p, env);
   
   p = scheme_make_folding_prim(fx_max, "fxmax", 2, 2, 1);
@@ -212,7 +225,8 @@ void scheme_init_flfxnum_numcomp(Scheme_Startup_Env *env)
   else
     flags = SCHEME_PRIM_SOMETIMES_INLINED;
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(flags
-                                                            | SCHEME_PRIM_PRODUCES_FIXNUM);
+                                                            | SCHEME_PRIM_PRODUCES_FIXNUM
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fxmax", p, env);
 
 

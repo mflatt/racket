@@ -123,8 +123,11 @@
 /* indicates a primitive that produces a real number when
    given real-number arguments: */
 #define SCHEME_PRIM_CLOSED_ON_REALS        (1 << 21)
+/* indicates the presence of an ad-hoc optimization
+   in one of the application optimization passes */
+#define SCHEME_PRIM_AD_HOC_OPT             (1 << 22)
 
-#define SCHEME_PRIM_OPT_TYPE_SHIFT           22
+#define SCHEME_PRIM_OPT_TYPE_SHIFT           23
 #define SCHEME_PRIM_OPT_TYPE_MASK            (SCHEME_MAX_LOCAL_TYPE_MASK << SCHEME_PRIM_OPT_TYPE_SHIFT)
 #define SCHEME_PRIM_OPT_TYPE(x) ((x & SCHEME_PRIM_OPT_TYPE_MASK) >> SCHEME_PRIM_OPT_TYPE_SHIFT)
 

@@ -347,10 +347,17 @@ scheme_init_symbol (Scheme_Startup_Env *env)
   scheme_addto_prim_instance("symbol-interned?", p, env);
 
   ADD_FOLDING_PRIM("symbol<?",                 symbol_lt,                       2, -1, 1, env);  
-  ADD_IMMED_PRIM("string->symbol",             string_to_symbol_prim,            1, 1, env);
+
+  p = scheme_make_folding_prim(string_to_symbol_prim, "string->symbol", 1, 1, 1);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_AD_HOC_OPT);
+  scheme_addto_prim_instance("string->symbol", p, env);
+  
   ADD_IMMED_PRIM("string->uninterned-symbol",  string_to_uninterned_symbol_prim, 1, 1, env);
   ADD_IMMED_PRIM("string->unreadable-symbol",  string_to_unreadable_symbol_prim, 1, 1, env);
-  ADD_IMMED_PRIM("symbol->string",             symbol_to_string_prim,            1, 1, env);
+
+  p = scheme_make_folding_prim(symbol_to_string_prim, "symbol->string", 1, 1, 1);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_AD_HOC_OPT);
+  scheme_addto_prim_instance("symbol->string", p, env);
 
   REGISTER_SO(scheme_keyword_p_proc);
   p = scheme_make_folding_prim(keyword_p_prim, "keyword?", 1, 1, 1);
@@ -360,8 +367,15 @@ scheme_init_symbol (Scheme_Startup_Env *env)
   scheme_addto_prim_instance("keyword?", p, env);
 
   ADD_FOLDING_PRIM("keyword<?",                keyword_lt,                       2, -1, 1, env);
-  ADD_IMMED_PRIM("string->keyword",            string_to_keyword_prim,           1, 1, env);
-  ADD_IMMED_PRIM("keyword->string",            keyword_to_string_prim,           1, 1, env);
+  
+  p = scheme_make_folding_prim(string_to_keyword_prim, "string->keyword", 1, 1, 1);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_AD_HOC_OPT);
+  scheme_addto_prim_instance("string->keyword", p, env);
+  
+  p = scheme_make_folding_prim(keyword_to_string_prim, "keyword->string", 1, 1, 1);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_AD_HOC_OPT);
+  scheme_addto_prim_instance("keyword->string", p, env);
+  
   ADD_IMMED_PRIM("gensym",                     gensym,                           0, 1, env);
 }
 

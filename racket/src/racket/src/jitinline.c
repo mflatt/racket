@@ -36,7 +36,7 @@ static Scheme_Object *equal_as_bool(Scheme_Object *a, Scheme_Object *b);
 #endif
 #include "jit_ts.c"
 
-static Scheme_Object *equal_as_bool(Scheme_Object *a, Scheme_Object *b)
+static Scheme_Object *equal_as_bool(Scheme_Object *a, Scheme_Object *b) XFORM_ASSERT_NO_CONVERSION
 {
   if (scheme_equal(a, b))
     return scheme_true;
@@ -1919,6 +1919,8 @@ int scheme_generate_inlined_unary(mz_jit_state *jitter, Scheme_App2_Rec *app, in
       __START_TINY_JUMPS__(1);
       if (!for_weak && !for_star)
         refdone = jit_jmpi(jit_forward());
+      else
+        refdone = NULL;
       mz_patch_branch(ref);
       (void)mz_bnei_t(reffail, JIT_R0, (for_weak ? scheme_weak_box_type : scheme_box_type), JIT_R1);
       __END_TINY_JUMPS__(1);

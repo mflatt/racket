@@ -572,21 +572,25 @@ scheme_init_number (Scheme_Startup_Env *env)
 
   p = scheme_make_folding_prim(scheme_bitwise_and, "bitwise-and", 0, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_IS_NARY_INLINED);
+                                                            | SCHEME_PRIM_IS_NARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("bitwise-and", p, env);
 
   p = scheme_make_folding_prim(bitwise_or, "bitwise-ior", 0, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_IS_NARY_INLINED);
+                                                            | SCHEME_PRIM_IS_NARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("bitwise-ior", p, env);
 
   p = scheme_make_folding_prim(bitwise_xor, "bitwise-xor", 0, -1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_IS_NARY_INLINED);
+                                                            | SCHEME_PRIM_IS_NARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("bitwise-xor", p, env);
 
   p = scheme_make_folding_prim(bitwise_not, "bitwise-not", 1, 1, 1);
-  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED);
+  SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("bitwise-not", p, env);
 
   p = scheme_make_folding_prim(bitwise_bit_set_p, "bitwise-bit-set?", 2, 2, 1);
@@ -854,22 +858,26 @@ void scheme_init_flfxnum_number(Scheme_Startup_Env *env)
 
   p = scheme_make_folding_prim(fx_and, "fxand", 2, 2, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_PRODUCES_FIXNUM);
+                                                            | SCHEME_PRIM_PRODUCES_FIXNUM
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fxand", p, env);
 
   p = scheme_make_folding_prim(fx_or, "fxior", 2, 2, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_PRODUCES_FIXNUM);
+                                                            | SCHEME_PRIM_PRODUCES_FIXNUM
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fxior", p, env);
 
   p = scheme_make_folding_prim(fx_xor, "fxxor", 2, 2, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_BINARY_INLINED
-                                                            | SCHEME_PRIM_PRODUCES_FIXNUM);
+                                                            | SCHEME_PRIM_PRODUCES_FIXNUM
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fxxor", p, env);
 
   p = scheme_make_folding_prim(fx_not, "fxnot", 1, 1, 1);
   SCHEME_PRIM_PROC_FLAGS(p) |= scheme_intern_prim_opt_flags(SCHEME_PRIM_IS_UNARY_INLINED
-                                                            | SCHEME_PRIM_PRODUCES_FIXNUM);
+                                                            | SCHEME_PRIM_PRODUCES_FIXNUM
+                                                            | SCHEME_PRIM_AD_HOC_OPT);
   scheme_addto_prim_instance("fxnot", p, env);
 
   p = scheme_make_folding_prim(fx_lshift, "fxlshift", 2, 2, 1);
