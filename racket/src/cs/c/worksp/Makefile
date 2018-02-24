@@ -11,7 +11,7 @@ LIBS = $(RKTIO_LIB) \
 
 DEST = ..\..\..\build\raw_racketcs.exe
 
-$(DEST): ..\main.c ..\boot.c ..\..\..\worksp\librktio\librktio.lib
+$(DEST): ..\main.c ..\boot.c $(RKTIO_LIB)
 	cl /Fe$(DEST) /Ox /MT $(INCS) ..\main.c ..\boot.c $(LIBS)
 
 

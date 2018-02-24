@@ -1,3 +1,12 @@
+# This makefile is used to a limited degree with nmake, but it mostly
+# intended for use as a GNU makefile.
+
+# You can probably also make it work in WSL for a Windows checkout
+# with
+#    make SCHEME=... RACKET=... SAVE_DEPS="" S_SAVE_DEPS="" K_SAVE_DEPS="" RKTIO_DEP=""
+# to avoid parts of the setup that would leak Windows paths into
+# the WSL world.
+
 RACKET = ../../bin/racket
 SCHEME = scheme
 
@@ -175,8 +184,9 @@ thread-rktl:
 	$(MAKE) bounce BOUNCE_DIR=../thread BOUNCE_TARGET=thread-src BUILDDIR="../cs/"
 
 
+# The `--same-up` flag makes things work in WSL, but only because all
 bounce:
-	$(MAKE) bounce-go RACKET="`$(RACKET) absify.rkt --exec $(RACKET)`"
+	$(MAKE) bounce-go RACKET="`$(RACKET) absify.rkt --same-up --exec $(RACKET)`"
 
 bounce-go:
 	cd $(BOUNCE_DIR); $(MAKE) RACO="$(RACKET) -N raco -l- raco" $(BOUNCE_TARGET)

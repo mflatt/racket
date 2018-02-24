@@ -12,7 +12,9 @@ IGNORE = ++knot read - ++pure ../../collects/racket/private/collect.rkt
 # `$(GENERATED_RKTL)` appears as a dependency target in "$(BUILDDIR)expander.d"
 GENERATED_RKTL = $(BUILDDIR)compiled/io.rktl
 
-io-src: ../build/so-rktio/Makefile
+RKTIO_DEP=../build/so-rktio/Makefile
+
+io-src: $(RKTIO_DEP)
 	$(RACO) make ../expander/bootstrap-run.rkt
 	$(MAKE) $(GENERATED_RKTL)
 
