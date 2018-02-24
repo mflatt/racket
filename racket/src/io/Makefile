@@ -22,9 +22,19 @@ SAVE_DEPS = --depends $(GENERATED_RKTL) $(BUILDDIR)compiled/io.d
 $(GENERATED_RKTL): $(DIRECT_DEP)
 	$(RACKET) ../expander/bootstrap-run.rkt -t main.rkt --submod main -c $(BUILDDIR)compiled/cache-src -k ../.. $(IGNORE) -s -x $(SAVE_DEPS) -o $(GENERATED_RKTL)
 
+# \
+!if 0
+
 # Dependencies in "expander.d" are created via the "cs" makefile
 -include $(BUILDDIR)expander.d
 -include $(BUILDDIR)compiled/io.d
+
+# \
+!endif
+# \
+!include ..\build\expander_io.d
+# \
+!include ..\build\compiled\io.d
 
 demo: compiled/rktio.rktl
 	$(RACO) make demo.rkt

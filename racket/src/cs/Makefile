@@ -64,7 +64,7 @@ $(BUILDDIR)main.so: $(MAIN_DEPS) main.sps $(COMPILE_FILE_DEPS)
 	$(COMPILE_FILE) main.sps $(MAIN_DEPS)
 
 strip:
-	${SCHEME} --script strip.ss $(MAIN_DEPS) $(BUILDDIR)racket.so
+	$(SCHEME) --script strip.ss $(MAIN_DEPS) $(BUILDDIR)racket.so
 
 rktl:
 	$(MAKE) thread-rktl
