@@ -44,6 +44,8 @@
 (generate-procedure-source-information #t)
 (define build-dir "")
 
+(write (command-line-arguments)) (newline)
+
 (define-values (src deps)
   (let loop ([args (command-line-arguments)])
     (cond
