@@ -151,204 +151,200 @@
                 (andmap bytes? l)
                 (map bytes->path l))))))
 
-(define work?
-  (cond
-    [check-dependencies
-     (unless print-extracted-to
-       (raise-user-error 'run "cannot check dependencies without a specific output file"))
-     (define ts (file-or-directory-modify-seconds print-extracted-to #f (lambda () #f)))
-     (not (and ts
-               (let ([l (read-dependencies-from-file check-dependencies)])
-                 (and l
-                      (for/and ([dep (in-list l)])
-                        (<= (file-or-directory-modify-seconds dep #f (lambda () +inf.0))
-                            ts))))))]
-    [else #t]))
-
-(unless work?
-  (log-status "No dependencies are newer"))
+(when check-dependencies
+  (unless print-extracted-to
+    (raise-user-error 'run "cannot check dependencies without a specific output file"))
+  (define ts (file-or-directory-modify-seconds print-extracted-to #f (lambda () #f)))
+  (when (and
+         ts
+         (let ([l (read-dependencies-from-file check-dependencies)])
+           (and l
+                (for/and ([dep (in-list l)])
+                  (<= (file-or-directory-modify-seconds dep #f (lambda () +inf.0))
+                      ts)))))
+    (log-status "No dependencies are newer")
+    (exit 0)))
 
 ;; ----------------------------------------
 
-(when work?
-  (define cache
-    (and (or cache-dir extract?)
-         (make-cache cache-dir (lambda (path)
-                                 (log-status "changed: ~a" path)))))
+(define cache
+  (and (or cache-dir extract?)
+       (make-cache cache-dir (lambda (path)
+                               (log-status "changed: ~a" path)))))
 
-  (when checkout-directory
-    ;; After booting, we're going to change the way module paths
-    ;; resolve. That's not generally ok, but as long we trigger visits
-    ;; of available modules here, it turns out that it won't cause
-    ;; trouble.
-    (host:namespace-require ''#%kernel)
-    (host:eval '(void)))
+(when checkout-directory
+  ;; After booting, we're going to change the way module paths
+  ;; resolve. That's not generally ok, but as long we trigger visits
+  ;; of available modules here, it turns out that it won't cause
+  ;; trouble.
+  (host:namespace-require ''#%kernel)
+  (host:eval '(void)))
 
-  ;; Install handlers:
-  (boot)
+;; Install handlers:
+(boot)
 
-  ;; Avoid use of ".zo" files:
-  (use-compiled-file-paths null)
+;; Avoid use of ".zo" files:
+(use-compiled-file-paths null)
 
-  ;; Redirect module search to another installation:
-  (when checkout-directory
-    (let ([l (list (build-path checkout-directory "collects"))])
-      (host:current-library-collection-paths l))
-    (let ([l (list #f
-                   (build-path checkout-directory "share" "links.rktd"))])
-      (host:current-library-collection-links l)))
+;; Redirect module search to another installation:
+(when checkout-directory
+  (let ([l (list (build-path checkout-directory "collects"))])
+    (host:current-library-collection-paths l))
+  (let ([l (list #f
+                 (build-path checkout-directory "share" "links.rktd"))])
+    (host:current-library-collection-links l)))
 
-  (current-library-collection-paths (host:current-library-collection-paths))
-  (current-library-collection-links (host:current-library-collection-links))
+(current-library-collection-paths (host:current-library-collection-paths))
+(current-library-collection-links (host:current-library-collection-links))
 
-  ;; Replace the load handler to stash compiled modules in the cache
-  ;; and/or load them from the cache
-  (define orig-load (current-load))
-  (current-load (lambda (path expected-module)
-                  (cond
-                    [expected-module
-                     (let loop ()
-                       (cond
-                         [(and cache
-                               (not cache-skip-first?)
-                               (get-cached-compiled cache path
-                                                    (lambda ()
-                                                      (when cache-dir
-                                                        (unless quiet-load?
-                                                          (log-status "cached: ~a" path))))))
-                          => (lambda (m)
-                               ;; Since we've set `use-compiled-file-paths` to null,
-                               ;; the load/use-compiled handler thinks that we're
-                               ;; always loading from source, so don't find the
-                               ;; expected submodule with
-                               ;;  `(extract-requested-submodule m expected-module)`
-                               (eval m))]
-                         [(and (pair? expected-module)
-                               (not (car expected-module)))
-                          ;; shouldn't load from source when `expected-module` starts with #f
-                          (void)]
+;; Replace the load handler to stash compiled modules in the cache
+;; and/or load them from the cache
+(define orig-load (current-load))
+(current-load (lambda (path expected-module)
+                (cond
+                 [expected-module
+                  (let loop ()
+                    (cond
+                     [(and cache
+                           (not cache-skip-first?)
+                           (get-cached-compiled cache path
+                                                (lambda ()
+                                                  (when cache-dir
+                                                    (unless quiet-load?
+                                                      (log-status "cached: ~a" path))))))
+                      => (lambda (m)
+                           ;; Since we've set `use-compiled-file-paths` to null,
+                           ;; the load/use-compiled handler thinks that we're
+                           ;; always loading from source, so don't find the
+                           ;; expected submodule with
+                           ;;  `(extract-requested-submodule m expected-module)`
+                           (eval m))]
+                     [(and (pair? expected-module)
+                           (not (car expected-module)))
+                      ;; shouldn't load from source when `expected-module` starts with #f
+                      (void)]
+                     [else
+                      (unless quiet-load?
+                        (log-status "compile: ~a" path))
+                      (set! cache-skip-first? #f)
+                      (with-handlers ([exn:fail? (lambda (exn)
+                                                   (unless quiet-load?
+                                                     (log-status "...during ~a..." path))
+                                                   (raise exn))])
+                        (define s
+                          (call-with-input-file*
+                           path
+                           (lambda (i)
+                             (port-count-lines! i)
+                             (with-module-reading-parameterization
+                                 (lambda ()
+                                   (check-module-form
+                                    (read-syntax (object-name i) i)
+                                    path))))))
+                        (cond
+                         [(not cache)
+                          (eval s)]
                          [else
-                          (unless quiet-load?
-                            (log-status "compile: ~a" path))
-                          (set! cache-skip-first? #f)
-                          (with-handlers ([exn:fail? (lambda (exn)
-                                                       (unless quiet-load?
-                                                         (log-status "...during ~a..." path))
-                                                       (raise exn))])
-                            (define s
-                              (call-with-input-file*
-                               path
-                               (lambda (i)
-                                 (port-count-lines! i)
-                                 (with-module-reading-parameterization
-                                   (lambda ()
-                                     (check-module-form
-                                      (read-syntax (object-name i) i)
-                                      path))))))
-                            (cond
-                              [(not cache)
-                               (eval s)]
-                              [else
-                               (define cache-layer (make-cache-layer))
-                               (define c
-                                 (parameterize ([current-cache-layer cache-layer])
-                                   (compile s)))
-                               (when time-expand?
-                                 ;; Re-expanding avoids timing load of required modules
-                                 (time (expand s)))
-                               (cond
-                                 [(and cache
-                                       (not cache-read-only?)
-                                       (or (not cache-save-only)
-                                           (hash-ref cache-save-only (path->string path) #f)))
-                                  (cache-compiled! cache path c cache-layer)
-                                  (loop)]
-                                 [else (eval c)])]))]))]
-                    [else (orig-load path #f)])))
+                          (define cache-layer (make-cache-layer))
+                          (define c
+                            (parameterize ([current-cache-layer cache-layer])
+                              (compile s)))
+                          (when time-expand?
+                            ;; Re-expanding avoids timing load of required modules
+                            (time (expand s)))
+                          (cond
+                           [(and cache
+                                 (not cache-read-only?)
+                                 (or (not cache-save-only)
+                                     (hash-ref cache-save-only (path->string path) #f)))
+                            (cache-compiled! cache path c cache-layer)
+                            (loop)]
+                           [else (eval c)])]))]))]
+                 [else (orig-load path #f)])))
 
-  (define orig-resolver (current-module-name-resolver))
-  (current-module-name-resolver
-   (case-lambda
-     [(r ns) (orig-resolver r ns)]
-     [(r wrt src load?)
-      (define p (orig-resolver r wrt src load?))
-      (define n (resolved-module-path-name p))
-      (when (and (path? n) cache)
-        (register-dependency! cache n))
-      p]))
+(define orig-resolver (current-module-name-resolver))
+(current-module-name-resolver
+ (case-lambda
+   [(r ns) (orig-resolver r ns)]
+   [(r wrt src load?)
+    (define p (orig-resolver r wrt src load?))
+    (define n (resolved-module-path-name p))
+    (when (and (path? n) cache)
+      (register-dependency! cache n))
+    p]))
 
-  (define (apply-to-module proc mod-path)
-    (define path (resolved-module-path-name
-                  (resolve-module-path mod-path #f)))
-    (define-values (dir file dir?) (split-path path))
-    (parameterize ([current-load-relative-directory dir])
-      (proc (call-with-input-file*
-             path
-             (lambda (i)
-               (port-count-lines! i)
-               (with-module-reading-parameterization
+(define (apply-to-module proc mod-path)
+  (define path (resolved-module-path-name
+                (resolve-module-path mod-path #f)))
+  (define-values (dir file dir?) (split-path path))
+  (parameterize ([current-load-relative-directory dir])
+    (proc (call-with-input-file*
+           path
+           (lambda (i)
+             (port-count-lines! i)
+             (with-module-reading-parameterization
                  (lambda ()
                    (check-module-form
                     (read-syntax (object-name i) i)
                     path))))))))
 
-  (cond
-    [expand?
-     (pretty-write (syntax->datum (apply-to-module expand startup-module)))]
-    [linklets?
-     (pretty-write (correlated->datum
-                    (datum->correlated
-                     (apply-to-module compile-to-linklets startup-module) #f)))]
-    [else
-     ;; Load and run the requested module
-     (parameterize ([current-command-line-arguments (list->vector args)])
-       (namespace-require (if submod-name
-                              `(submod ,startup-module ,submod-name)
-                              startup-module)))])
+(cond
+ [expand?
+  (pretty-write (syntax->datum (apply-to-module expand startup-module)))]
+ [linklets?
+  (pretty-write (correlated->datum
+                 (datum->correlated
+                  (apply-to-module compile-to-linklets startup-module) #f)))]
+ [else
+  ;; Load and run the requested module
+  (parameterize ([current-command-line-arguments (list->vector args)])
+    (namespace-require (if submod-name
+                           `(submod ,startup-module ,submod-name)
+                           startup-module)))])
 
-  (when extract?
-    ;; Extract a bootstrapping slice of the requested module
-    (extract startup-module cache
-             #:print-extracted-to print-extracted-to
-             #:as-c? extract-to-c?
-             #:as-decompiled? extract-to-decompiled?
-             #:instance-knot-ties instance-knot-ties
-             #:primitive-table-directs primitive-table-directs
-             #:side-effect-free-modules side-effect-free-modules))
+(when extract?
+  ;; Extract a bootstrapping slice of the requested module
+  (extract startup-module cache
+           #:print-extracted-to print-extracted-to
+           #:as-c? extract-to-c?
+           #:as-decompiled? extract-to-decompiled?
+           #:instance-knot-ties instance-knot-ties
+           #:primitive-table-directs primitive-table-directs
+           #:side-effect-free-modules side-effect-free-modules))
 
-  (when load-file
-    (load load-file))
+(when load-file
+  (load load-file))
 
-  ;; ----------------------------------------
+;; ----------------------------------------
 
-  (when (or dependencies-file
-            makefile-dependencies-file)
-    (for ([mod-file (in-list extra-module-dependencies)])
-      (define deps (cons mod-file
-                         (module-recorded-dependencies mod-file)))
-      (for ([dep (in-list deps)])
-        (hash-set! dependencies (simplify-path (path->complete-path dep)) #t)))
-    ;; Note: `cache` currently misses external dependencies, such as
-    ;; `include`d files.
-    (for ([dep (in-list (cache->used-paths cache))])
-      (hash-set! dependencies (simplify-path dep) #t)))
+(when (or dependencies-file
+          makefile-dependencies-file)
+  (for ([mod-file (in-list extra-module-dependencies)])
+    (define deps (cons mod-file
+                       (module-recorded-dependencies mod-file)))
+    (for ([dep (in-list deps)])
+      (hash-set! dependencies (simplify-path (path->complete-path dep)) #t)))
+  ;; Note: `cache` currently misses external dependencies, such as
+  ;; `include`d files.
+  (for ([dep (in-list (cache->used-paths cache))])
+    (hash-set! dependencies (simplify-path dep) #t)))
 
-  (when dependencies-file
-    (call-with-output-file*
-     dependencies-file
-     #:exists 'truncate/replace
-     (lambda (o)
-       (writeln (for/list ([dep (in-hash-keys dependencies)])
-                  (path->bytes dep))
-                o))))
+(when dependencies-file
+  (call-with-output-file*
+   dependencies-file
+   #:exists 'truncate/replace
+   (lambda (o)
+     (writeln (for/list ([dep (in-hash-keys dependencies)])
+                (path->bytes dep))
+              o))))
 
-  (when makefile-dependencies-file
-    (define (quote-if-space s) (if (regexp-match? #rx" " s) (format "\"~a\"" s) s))
-    (call-with-output-file*
-     makefile-dependencies-file
-     #:exists 'truncate/replace
-     (lambda (o)
-       (fprintf o "~a:" (quote-if-space makefile-dependencies-target))
-       (for ([dep (in-hash-keys dependencies)])
-         (fprintf o " \\\n  ~a" (quote-if-space dep)))
-       (newline o)))))
+(when makefile-dependencies-file
+  (define (quote-if-space s) (if (regexp-match? #rx" " s) (format "\"~a\"" s) s))
+  (call-with-output-file*
+   makefile-dependencies-file
+   #:exists 'truncate/replace
+   (lambda (o)
+     (fprintf o "~a:" (quote-if-space makefile-dependencies-target))
+     (for ([dep (in-hash-keys dependencies)])
+       (fprintf o " \\\n  ~a" (quote-if-space dep)))
+     (newline o))))
