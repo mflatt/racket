@@ -64,11 +64,9 @@ restart from scratch should you need to.
 ========================================================================
 
 Compilation for Windows on Windows requires building the traditional
-Racket implementation. Then, from the directory
+Racket implementation. Then, from the directory "..\..\worksp", run
 
- ../../worksp
-
-run "csbuild.bat".
+ ..\..\racket csbuild.rkt
 
 Many intermediate files will be put in "../../build", including a Chez
 Scheme checkout if it's not already present (in whcih case `git` must
