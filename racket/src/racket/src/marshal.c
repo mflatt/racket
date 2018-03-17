@@ -337,6 +337,7 @@ Scheme_Object *scheme_write_linklet(Scheme_Object *obj)
   l = scheme_make_pair(scheme_make_integer(linklet->num_lifts), l);
   l = scheme_make_pair(scheme_make_integer(linklet->max_let_depth), l);
   l = scheme_make_pair((linklet->need_instance_access ? scheme_true : scheme_false), l);
+  l = scheme_make_pair((linklet->undead ? scheme_true : scheme_false), l);
 
   l = scheme_make_pair(linklet->name, l);
 
@@ -433,6 +434,10 @@ Scheme_Object *scheme_read_linklet(Scheme_Object *obj, int unsafe_ok)
   if (!SCHEME_PAIRP(obj)) return_NULL();
   linklet->name = SCHEME_CAR(obj);
   if (!SCHEME_SYMBOLP(linklet->name)) return_NULL();
+  obj = SCHEME_CDR(obj);
+
+  if (!SCHEME_PAIRP(obj)) return_NULL();
+  linklet->undead = SCHEME_TRUEP(SCHEME_CAR(obj));
   obj = SCHEME_CDR(obj);
 
   if (!SCHEME_PAIRP(obj)) return_NULL();

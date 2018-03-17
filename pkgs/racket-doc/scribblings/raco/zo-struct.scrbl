@@ -32,7 +32,7 @@ structures that are produced by @racket[zo-parse] and consumed by
   A supertype for all forms that can appear in compiled code.}
 
 @; --------------------------------------------------
-@section{Prefix}
+@section{Linklet Bundles and Directories}
 
 @deftogether[(
 @defstruct+[(linkl-directory zo)
@@ -75,7 +75,8 @@ structures that are produced by @racket[zo-parse] and consumed by
              [source-names (hash/c symbol? symbol?)]
              [body (listof (or/c form? any/c))]
              [max-let-depth exact-nonnegative-integer?]
-             [need-instance-access? boolean?])]{
+             [need-instance-access? boolean?]
+             [undead? boolean?])]{
 
   Represents a linklet, which corresponds to a module body or a
   top-level sequence at a single phase.
@@ -126,7 +127,13 @@ structures that are produced by @racket[zo-parse] and consumed by
  The @racket[need-instance-access?] boolean indicates whether the
  linklet contains a @racket[toplevel] for position 0. A @racket[#t] is
  allowed (but suboptimal) if not such reference is present in the
- linklet body.}
+ linklet body.
+
+ The @racket[undead?] boolean indicates whether all definitions and
+ imports of an instance of the linklet should be retained. If
+ @racket[undead?] is true, then @racket[lam] forms within the linklet
+ can have empty top-level maps, since all variables in the toplevel
+ array are retained.}
 
 @defstruct+[function-shape
             ([arity procedure-arity?]
@@ -153,9 +160,6 @@ returns.}
 
 Represents the shape of an expected import as a structure-type
 binding, constructor, etc.}
-
-@defstruct+[(stx zo) ([content stx-obj?])]{
-  Wraps a syntax object as it appears in a @racket[prefix].}
 
 
 @; --------------------------------------------------
@@ -222,25 +226,15 @@ binding, constructor, etc.}
 
   When a closure captures top-level or module-level variables or
   refers to a syntax-object constant, the variables and constants are
-  represented in the closure by capturing a prefix (in the sense
-  of @racket[prefix]).  The @racket[toplevel-map] field indicates
-  which top-level variables (i.e., linklet imports and definitions) are actually used by the
-  closure (so that variables in a prefix can be pruned by the run-time
-  system if they become unused) and whether any syntax objects are
-  used (so that the syntax objects as a group can be similarly
-  pruned). A @racket[#f] value indicates either that no prefix is
-  captured or all variables and syntax objects in the prefix should be
-  considered used. Otherwise, numbers in the set indicate which
-  variables and lifted variables are used. Variables are numbered
-  consecutively by position in the prefix starting from
-  @racket[0], but the number equal to the number of non-lifted
-  variables corresponds to syntax objects (i.e., the number is
-  include if any syntax-object constant is used). Lifted variables 
-  are numbered immediately
-  afterward---which means that, if the prefix contains any syntax
-  objects, lifted-variable numbers are shifted down relative to a
-  @racket[toplevel] by the number of syntax object in the prefix
-  (which makes the @racket[toplevel-map] set more compact).
+  represented in the closure by capturing a array if variables. The
+  @racket[toplevel-map] field indicates which top-level variables
+  (i.e., linklet imports and definitions) are actually used by the
+  closure (so that variables in the linklet's array can be pruned by
+  the run-time system if they become unused). A @racket[#f] value
+  indicates either that no array is captured or all variables in the
+  array should be considered used. Otherwise, numbers in the set
+  indicate which variables are used. Variables are numbered
+  consecutively by position in the array starting from @racket[0].
 
   When the function is called, the rest-argument list (if any) is pushed
   onto the stack, then the normal arguments in reverse order, then the
@@ -251,12 +245,7 @@ binding, constructor, etc.}
   The @racket[max-let-depth] field indicates the maximum stack depth
   created by @racket[body] plus the arguments and closure-captured
   values pushed onto the stack.  The @racket[body] field is the
-  expression for the closure's body.
-
-  @history[#:changed "6.1.1.8" @elem{Added a number to
-  @racket[toplevel-map] to indicate whether any syntax object is used,
-  shifting numbers for lifted variables up by one if any syntax object
-  is in the prefix.}]}
+  expression for the closure's body.]}
 
 @defstruct+[(closure expr)
             ([code lam?] [gen-id symbol?])]{
@@ -356,8 +345,8 @@ binding, constructor, etc.}
              [ready? boolean?])]{
   Represents a reference to an imported or defined variable within
   a linklet. The @racket[depth] field indicates the number
-  of stack slots to skip to reach the prefix array, and @racket[pos] is
-  the offset into the array.
+  of stack slots to skip to reach the enclosing linklet's variable array,
+  and @racket[pos] is the offset into the array.
 
   When the @racket[toplevel] is an expression, if both @racket[const?]
   and @racket[ready?] are @racket[#t], then the variable definitely

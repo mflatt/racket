@@ -44,7 +44,7 @@
 struct Resolve_Info
 {
   MZTAG_IF_REQUIRED
-  char in_module, in_proc, enforce_const, no_lift, need_instance_access;
+  char in_module, in_proc, enforce_const, undead, no_lift, need_instance_access;
   int current_depth; /* tracks the stack depth, so variables can be
                         resolved relative to it; this depth is reset
                         on entry to `lambda` forms */
@@ -118,7 +118,7 @@ static void extend_linklet_defns(Scheme_Linklet *linklet, int num_lifts);
 static void prune_unused_imports(Scheme_Linklet *linklet);
 static void prepare_definition_queue(Scheme_Linklet *linklet, Resolve_Info *rslv);
 static void remove_definition_names(Scheme_Object *defn, Scheme_Linklet *linklet);
-static Resolve_Info *resolve_info_create(Scheme_Linklet *rp, int enforce_const);
+static Resolve_Info *resolve_info_create(Scheme_Linklet *rp, int enforce_const, int undead);
 
 #ifdef MZ_PRECISE_GC
 static void register_traversers(void);
@@ -1894,7 +1894,12 @@ resolve_lambda(Scheme_Object *_lam, Resolve_Info *info,
     lam->max_let_depth = (new_info->max_let_depth
                            + SCHEME_TAIL_COPY_THRESHOLD);
 
-    lam->tl_map = new_info->tl_map;
+    if (info->undead && new_info->tl_map) {
+      /* prefix will be retained on instantiation, so no need to
+         keep `new_info->tl_map`, which might be big */
+      lam->tl_map = (void *)0x1;
+    } else
+      lam->tl_map = new_info->tl_map;
     if (!lam->tl_map && has_tl) {
       /* Our reason to refer to the top level has apparently gone away;
          record that we're not using anything */
@@ -2005,13 +2010,13 @@ resolve_lambda(Scheme_Object *_lam, Resolve_Info *info,
 /*                                linklet                                 */
 /*========================================================================*/
 
-Scheme_Linklet *scheme_resolve_linklet(Scheme_Linklet *linklet, int enforce_const)
+Scheme_Linklet *scheme_resolve_linklet(Scheme_Linklet *linklet, int enforce_const, int undead)
 {
   Scheme_Object *lift_vec, *body = scheme_null, *new_bodies;
   Resolve_Info *rslv;
   int i, cnt, num_lifts;
 
-  rslv = resolve_info_create(linklet, enforce_const);
+  rslv = resolve_info_create(linklet, enforce_const, undead);
   enable_expression_resolve_lifts(rslv);
 
   if (linklet->num_exports < SCHEME_VEC_SIZE(linklet->defns)) {
@@ -2103,6 +2108,8 @@ Scheme_Linklet *scheme_resolve_linklet(Scheme_Linklet *linklet, int enforce_cons
   /* Adjust the imports vector of vectors to drop unused imports at
      the level of variables */
   prune_unused_imports(linklet);
+
+  linklet->undead = undead;
 
   return linklet;
 }
@@ -2417,7 +2424,7 @@ static Scheme_Object *shift_lifted_reference(Scheme_Object *tl, Resolve_Info *in
 /*                    compile-time env for resolve                        */
 /*========================================================================*/
 
-static Resolve_Info *resolve_info_create(Scheme_Linklet *linklet, int enforce_const)
+static Resolve_Info *resolve_info_create(Scheme_Linklet *linklet, int enforce_const, int undead)
 {
   Resolve_Info *naya;
   int *toplevel_starts, pos, dpos, i, j;
@@ -2432,6 +2439,7 @@ static Resolve_Info *resolve_info_create(Scheme_Linklet *linklet, int enforce_co
   naya->current_lex_depth = 0;
   naya->next = NULL;
   naya->enforce_const = enforce_const;
+  naya->undead = undead;
   naya->linklet = linklet;
 
   toplevel_starts = MALLOC_N_ATOMIC(int, SCHEME_VEC_SIZE(linklet->importss) + 1);
@@ -2488,6 +2496,7 @@ static Resolve_Info *resolve_info_extend(Resolve_Info *info, int size, int lambd
   naya->linklet = info->linklet;
   naya->next = (lambda ? NULL : info);
   naya->enforce_const = info->enforce_const;
+  naya->undead = info->undead;
   naya->current_depth = (lambda ? 0 : info->current_depth) + size;
   naya->current_lex_depth = info->current_lex_depth + size;
   naya->toplevel_pos = (lambda

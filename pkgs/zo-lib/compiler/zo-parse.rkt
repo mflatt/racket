@@ -117,7 +117,7 @@
       
 (define (read-linklet v)
   (match v
-    [`(,name ,need-instance-access? ,max-let-depth ,num-lifts ,num-exports
+    [`(,name ,undead? ,need-instance-access? ,max-let-depth ,num-lifts ,num-exports
        ,body
        ,source-names ,defns-vec ,imports-vec ,shapes-vec)
      (define defns (vector->list defns-vec))
@@ -141,7 +141,8 @@
                       (vector-ref source-names (add1 i))))
             (vector->list body)
             max-let-depth
-            need-instance-access?)]))
+            need-instance-access?
+            undead?)]))
 
 (define (parse-shape shape)
   (cond

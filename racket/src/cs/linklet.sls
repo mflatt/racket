@@ -353,56 +353,57 @@
 
   (define compile-linklet
     (case-lambda
-     [(c) (compile-linklet c #f #f (lambda (key) (values #f #f)) #t)]
-     [(c name) (compile-linklet c name #f (lambda (key) (values #f #f)) #t)]
-     [(c name import-keys) (compile-linklet c name import-keys (lambda (key) (values #f #f)) #t)]
-     [(c name import-keys get-import) (compile-linklet c name import-keys get-import #t)]
-     [(c name import-keys get-import serializable?)
-      (performance-region
-       'schemify
-       (define jitify-mode?
-         (or (eq? linklet-compilation-mode 'jit)
-             (and (linklet-bigger-than? c linklet-compilation-limit serializable?)
-                  (log-message root-logger 'info 'linklet "compiling only interior functions for large linklet" #f)
-                  #t)))
-       (define format (if jitify-mode? 'interpret 'compile))
-       ;; Convert the linklet S-expression to a `lambda` S-expression:
-       (define-values (impl-lam importss exports new-import-keys importss-abi exports-info)
-         (schemify-linklet (show "linklet" c)
-                           serializable?
-                           jitify-mode?
-                           (|#%app| compile-allow-set!-undefined)
-                           #f ;; safe mode
-                           recorrelate
-                           prim-knowns
-                           ;; Callback to get a specific linklet for a
-                           ;; given import:
-                           (lambda (key)
-                             (lookup-linklet-or-instance get-import key))
-                           import-keys))
-       (define impl-lam/lifts
-         (lift-in-schemified-linklet (show pre-lift-on? "pre-lift" impl-lam)
-                                     recorrelate))
-       (define impl-lam/jitified
-         (cond
-           [(not jitify-mode?) impl-lam/lifts]
-           [else
-            (jitify-schemified-linklet (case linklet-compilation-mode
-                                         [(jit) (show pre-jit-on? "pre-jitified" impl-lam/lifts)]
-                                         [else (show "schemified" impl-lam/lifts)])
-                                       ;; don't need extract for non-serializable 'lambda mode
-                                       (or serializable? (eq? linklet-compilation-mode 'jit))
-                                       ;; compilation threshold for ahead-of-time mode:
-                                       (and (eq? linklet-compilation-mode 'mach)
-                                            linklet-compilation-limit)
-                                       ;; correlation -> lambda
-                                       (case linklet-compilation-mode
-                                         [(jit)
-                                          ;; Preserve annotated `lambda` source for on-demand compilation:
-                                          (lambda (expr arity-mask name)
-                                            (make-wrapped-code (correlated->annotation expr) arity-mask name))]
-                                         [else
-                                          ;; Compile an individual `lambda`:
+     [(c) (compile-linklet c #f #f (lambda (key) (values #f #f)) '())]
+     [(c name) (compile-linklet c name #f (lambda (key) (values #f #f)) '())]
+     [(c name import-keys) (compile-linklet c name import-keys (lambda (key) (values #f #f)) '())]
+     [(c name import-keys get-import) (compile-linklet c name import-keys get-import '())]
+     [(c name import-keys get-import options)
+      (let ([serializable? (not (#%memq 'unserializable options))])
+        (performance-region
+         'schemify
+         (define jitify-mode?
+           (or (eq? linklet-compilation-mode 'jit)
+               (and (linklet-bigger-than? c linklet-compilation-limit serializable?)
+                    (log-message root-logger 'info 'linklet "compiling only interior functions for large linklet" #f)
+                    #t)))
+         (define format (if jitify-mode? 'interpret 'compile))
+         ;; Convert the linklet S-expression to a `lambda` S-expression:
+         (define-values (impl-lam importss exports new-import-keys importss-abi exports-info)
+           (schemify-linklet (show "linklet" c)
+                             serializable?
+                             jitify-mode?
+                             (|#%app| compile-allow-set!-undefined)
+                             #f ;; safe mode
+                             recorrelate
+                             prim-knowns
+                             ;; Callback to get a specific linklet for a
+                             ;; given import:
+                             (lambda (key)
+                               (lookup-linklet-or-instance get-import key))
+                             import-keys))
+         (define impl-lam/lifts
+           (lift-in-schemified-linklet (show pre-lift-on? "pre-lift" impl-lam)
+                                       recorrelate))
+         (define impl-lam/jitified
+           (cond
+            [(not jitify-mode?) impl-lam/lifts]
+            [else
+             (jitify-schemified-linklet (case linklet-compilation-mode
+                                          [(jit) (show pre-jit-on? "pre-jitified" impl-lam/lifts)]
+                                          [else (show "schemified" impl-lam/lifts)])
+                                        ;; don't need extract for non-serializable 'lambda mode
+                                        (or serializable? (eq? linklet-compilation-mode 'jit))
+                                        ;; compilation threshold for ahead-of-time mode:
+                                        (and (eq? linklet-compilation-mode 'mach)
+                                             linklet-compilation-limit)
+                                        ;; correlation -> lambda
+                                        (case linklet-compilation-mode
+                                          [(jit)
+                                           ;; Preserve annotated `lambda` source for on-demand compilation:
+                                           (lambda (expr arity-mask name)
+                                             (make-wrapped-code (correlated->annotation expr) arity-mask name))]
+                                          [else
+                                           ;; Compile an individual `lambda`:
                                            (lambda (expr arity-mask name)
                                              (performance-region
                                               'compile
@@ -411,40 +412,40 @@
                                                 (if serializable?
                                                     (make-wrapped-code code arity-mask name)
                                                     code))))])
-                                       recorrelate)]))
-       (define impl-lam/interpable
-         (let ([impl-lam (case (and jitify-mode?
-                                    linklet-compilation-mode)
-                           [(mach) (show post-lambda-on? "post-lambda" impl-lam/jitified)]
-                           [else (show "schemified" impl-lam/jitified)])])
-           (if jitify-mode?
-               (interpretable-jitified-linklet impl-lam correlated->datum)
-               (correlated->annotation impl-lam))))
-       (when known-on?
-         (show "known" (hash-map exports-info (lambda (k v) (list k v)))))
-       (performance-region
-        'compile
-        ;; Create the linklet:
-        (let ([lk (make-linklet (call-with-system-wind
-                                 (lambda ()
-                                   ((if serializable? compile-to-bytevector outer-eval)
-                                    (show (and jitify-mode? post-interp-on?) "post-interp" impl-lam/interpable)
-                                    format)))
-                                format
-                                (if serializable? 'faslable 'callable)
-                                importss-abi
-                                exports-info
-                                name
-                                importss
-                                exports)])
-          (show "compiled" 'done)
-          ;; In general, `compile-linklet` is allowed to extend the set
-          ;; of linklet imports if `import-keys` is provided (e.g., for
-          ;; cross-linklet optimization where inlining needs a new
-          ;; direct import)
-          (if import-keys
-              (values lk new-import-keys)
-              lk))))]))
+                                        recorrelate)]))
+         (define impl-lam/interpable
+           (let ([impl-lam (case (and jitify-mode?
+                                      linklet-compilation-mode)
+                             [(mach) (show post-lambda-on? "post-lambda" impl-lam/jitified)]
+                             [else (show "schemified" impl-lam/jitified)])])
+             (if jitify-mode?
+                 (interpretable-jitified-linklet impl-lam correlated->datum)
+                 (correlated->annotation impl-lam))))
+         (when known-on?
+           (show "known" (hash-map exports-info (lambda (k v) (list k v)))))
+         (performance-region
+          'compile
+          ;; Create the linklet:
+          (let ([lk (make-linklet (call-with-system-wind
+                                   (lambda ()
+                                     ((if serializable? compile-to-bytevector outer-eval)
+                                      (show (and jitify-mode? post-interp-on?) "post-interp" impl-lam/interpable)
+                                      format)))
+                                  format
+                                  (if serializable? 'faslable 'callable)
+                                  importss-abi
+                                  exports-info
+                                  name
+                                  importss
+                                  exports)])
+            (show "compiled" 'done)
+            ;; In general, `compile-linklet` is allowed to extend the set
+            ;; of linklet imports if `import-keys` is provided (e.g., for
+            ;; cross-linklet optimization where inlining needs a new
+            ;; direct import)
+            (if import-keys
+                (values lk new-import-keys)
+                lk)))))]))
 
   (define (lookup-linklet-or-instance get-import key)
     ;; Use the provided callback to get an linklet for the

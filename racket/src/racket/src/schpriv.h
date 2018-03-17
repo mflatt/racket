@@ -2945,7 +2945,7 @@ XFORM_NONGCING int scheme_predicate_to_local_type(Scheme_Object *pred);
 Scheme_Object *scheme_make_noninline_proc(Scheme_Object *e);
 Scheme_Object *scheme_optimize_extract_tail_inside(Scheme_Object *t2);
 
-Scheme_Linklet *scheme_resolve_linklet(Scheme_Linklet *, int enforce_const);
+Scheme_Linklet *scheme_resolve_linklet(Scheme_Linklet *, int enforce_const, int undead);
 Scheme_Object *scheme_unresolve(Scheme_Object *, int argv, int *_has_cases,
                                 Scheme_Linklet *linklet, Scheme_Object *linklet_key,
                                 Optimize_Info *opt_info);
@@ -3279,6 +3279,7 @@ struct Scheme_Linklet
 
   char jit_ready; /* true if the linklet is in has been prepared for the JIT */
   char reject_eval; /* true when loaded without the root inspector, for example */
+  char undead; /* ensure that prefix is never GCed */
 
   Scheme_Hash_Table *constants; /* holds info about the linklet's body for inlining */
 };

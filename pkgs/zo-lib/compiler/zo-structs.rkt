@@ -69,7 +69,8 @@
                                 [source-names (hash/c symbol? symbol?)]
                                 [body (listof (or/c form? any/c))]
                                 [max-let-depth exact-nonnegative-integer?]
-                                [need-instance-access? boolean?]))
+                                [need-instance-access? boolean?]
+                                [undead? boolean?]))
 
 (define-form-struct (linkl-directory zo) ([table (hash/c (listof symbol?) linkl-bundle?)]))
 (define-form-struct (linkl-bundle zo)    ([table (hash/c (or/c symbol? fixnum?)
@@ -143,6 +144,7 @@
                                                                   _ ; source-names
                                                                   (list code) ; body
                                                                   max-let-depth
+                                                                  _
                                                                   _))
                                                         _ (... ...))))
                                       _ (... ...)))]))
@@ -159,4 +161,5 @@
                                                       #hasheq()
                                                       (list code)
                                                       (add1 max-let-depth)
+                                                      #f
                                                       #f)))))])))
