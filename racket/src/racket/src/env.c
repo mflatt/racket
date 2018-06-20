@@ -248,6 +248,8 @@ Scheme_Env *scheme_basic_env()
   }
 #endif
 
+  scheme_atexit(scheme_run_post_custodian_shutdown); // REMOVEME
+
   return env;
 }
 
@@ -589,6 +591,8 @@ void scheme_place_instance_destroy(int force)
     scheme_run_atexit_closers_on_all(force_more_closed);
   else
     scheme_run_atexit_closers_on_all(force_more_closed_after);
+
+  scheme_run_post_custodian_shutdown();
 
   scheme_release_fd_semaphores();
   
