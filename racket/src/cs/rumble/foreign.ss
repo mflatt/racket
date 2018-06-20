@@ -580,7 +580,7 @@
        [else
         (let ([s (if (pair? sl) (car sl) sl)])
           (case s
-            [(int char float double void)
+            [(int char wchar float double void)
              (cond
               [base-type
                (raise-arguments-error 'compiler-sizeof
