@@ -679,7 +679,6 @@
   (current-exception-state (create-exception-state))
   (base-exception-handler
    (lambda (v)
-     #;(#%printf "~a ~s\n" (exn->string v) (continuation->trace (condition-continuation v)))
      (cond
       [(and (warning? v)
             (not (non-continuable-violation? v)))
