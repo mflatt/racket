@@ -679,6 +679,7 @@
   (current-exception-state (create-exception-state))
   (base-exception-handler
    (lambda (v)
+     #;(#%printf "~a ~s\n" (exn->string v) (continuation->trace (condition-continuation v)))
      (cond
       [(and (warning? v)
             (not (non-continuable-violation? v)))
@@ -738,7 +739,7 @@
         (|#%app| exn:fail msg (current-continuation-marks))))))
 
 (define (call-with-exception-handler proc thunk)
-  (call/cm exception-handler-key proc thunk))
+  (with-continuation-mark exception-handler-key proc (thunk)))
 
 ;; ----------------------------------------
 

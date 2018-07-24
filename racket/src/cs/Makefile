@@ -2,7 +2,7 @@
 # intended for use as a GNU makefile.
 
 RACKET = ../../bin/racket
-SCHEME = scheme
+SCHEME = /Users/mflatt/repo/ChezScheme-mflatt+cm/ta6osx/bin/scheme -b /Users/mflatt/repo/ChezScheme-mflatt+cm/ta6osx/boot/ta6osx/petite.boot -b /Users/mflatt/repo/ChezScheme-mflatt+cm/ta6osx/boot/ta6osx/scheme.boot
 
 # Controls whether Racket layers are built as unsafe:
 UNSAFE_COMP = --unsafe
