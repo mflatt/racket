@@ -27,7 +27,9 @@
              keyword-apply
              procedure-keywords
              new:procedure-reduce-arity
+             new:procedure-reduce-arity-mask
              procedure-reduce-keyword-arity
+             procedure-reduce-keyword-arity-mask
              new-prop:procedure
              new:procedure->method
              new:procedure-rename
@@ -1565,11 +1567,26 @@
     (keyword-procedure-extract/method kws n p 0))
 
   ;; setting procedure arity
-  (define (procedure-reduce-keyword-arity proc arity req-kw allowed-kw)
-    (let* ([plain-proc (procedure-reduce-arity (if (okp? proc) 
-                                                   (okp-ref proc 0)
-                                                   proc)
-                                               arity)])
+  (define procedure-reduce-keyword-arity 
+    (case-lambda
+      [(proc arity req-kw allowed-kw name)
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f name req-kw allowed-kw)]
+      [(proc arity req-kw allowed-kw)
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f #f req-kw allowed-kw)]))
+  (define procedure-reduce-keyword-arity-mask
+    (case-lambda
+      [(proc mask req-kw allowed-kw name)
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask name req-kw allowed-kw)]
+      [(proc mask req-kw allowed-kw)
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask #f req-kw allowed-kw)]))
+  
+  (define (do-procedure-reduce-keyword-arity who proc arity mask name req-kw allowed-kw)
+    (let* ([plain-proc (let ([p (if (okp? proc) 
+                                    (okp-ref proc 0)
+                                    proc)])
+                         (if arity
+                             (procedure-reduce-arity p arity)
+                             (procedure-reduce-arity-mask p mask name)))])
       (define (sorted? kws)
         (let loop ([kws kws])
           (cond
@@ -1580,39 +1597,40 @@
 
       (unless (and (list? req-kw) (andmap keyword? req-kw)
                    (sorted? req-kw))
-        (raise-argument-error 'procedure-reduce-keyword-arity "(and/c (listof? keyword?) sorted? distinct?)"
-                              2 proc arity req-kw allowed-kw))
+        (raise-argument-error who "(and/c (listof? keyword?) sorted? distinct?)"
+                              2 proc (or arity mask) req-kw allowed-kw))
       (when allowed-kw
         (unless (and (list? allowed-kw) (andmap keyword? allowed-kw)
                      (sorted? allowed-kw))
-          (raise-argument-error 'procedure-reduce-keyword-arity "(or/c (and/c (listof? keyword?) sorted? distinct?) #f)"
-                                3 proc arity req-kw allowed-kw))
+          (raise-argument-error who "(or/c (and/c (listof? keyword?) sorted? distinct?) #f)"
+                                3 proc (or arity mask) req-kw allowed-kw))
         (unless (subset? req-kw allowed-kw)
-          (raise-arguments-error 'procedure-reduce-keyword-arity 
+          (raise-arguments-error who
                                  "allowed-keyword list does not include all required keywords"
                                  "allowed-keyword list" allowed-kw
                                  "required keywords" req-kw)))
       (let-values ([(old-req old-allowed) (procedure-keywords proc)])
         (unless (subset? old-req req-kw)
-          (raise-arguments-error 'procedure-reduce-keyword-arity
+          (raise-arguments-error who
                                  "cannot reduce required keyword set"
                                  "required keywords" old-req
                                  "requested required keywords" req-kw))
         (when old-allowed
           (unless (subset? req-kw old-allowed)
-            (raise-arguments-error 'procedure-reduce-keyword-arity
+            (raise-arguments-error who
                                    "cannot require keywords not in original allowed set"
                                    "original allowed keywords" old-allowed
                                    "requested required keywords" req-kw))
           (unless (or (not allowed-kw)
                       (subset? allowed-kw old-allowed))
-            (raise-arguments-error 'procedure-reduce-keyword-arity
+            (raise-arguments-error who
                                    "cannot allow keywords not in original allowed set"
                                    "original allowed keywords" old-allowed
                                    "requested allowed keywords" allowed-kw))))
       (if (null? allowed-kw)
           plain-proc
-          (let* ([inc-arity (lambda (arity delta)
+          (let* ([arity (or arity (mask->arity mask))]
+                 [inc-arity (lambda (arity delta)
                               (let loop ([a arity])
                                 (cond
                                  [(integer? a) (+ a delta)]
@@ -1651,20 +1669,58 @@
                  req-kw
                  allowed-kw))))))
 
+  (define (mask->arity mask)
+    (let loop ([mask mask] [pos 0])
+      (cond
+        [(= mask 0) null]
+        [(= mask -1) (arity-at-least pos)]
+        [(bitwise-bit-set? mask 0)
+         (let ([rest (loop (arithmetic-shift mask -1) (add1 pos))])
+           (cond
+             [(null? rest) pos]
+             [(pair? rest) (cons pos rest)]
+             [else (list pos rest)]))]
+        [else
+         (loop (arithmetic-shift mask -1) (add1 pos))])))
+
   (define new:procedure-reduce-arity
     (let ([procedure-reduce-arity
-           (lambda (proc arity)
-             (if (and (procedure? proc)
-                      (let-values ([(req allows) (procedure-keywords proc)])
-                        (pair? req))
-                      (not (null? arity)))
-                 (raise-arguments-error 'procedure-reduce-arity
-                                        "procedure has required keyword arguments"
-                                        "procedure" proc)
-                 (procedure-reduce-arity (if (okm? proc)
-                                             (procedure->method proc)
-                                             proc)
-                                         arity)))])
+           (case-lambda
+             [(proc arity name)
+              (if (and (procedure? proc)
+                       (let-values ([(req allows) (procedure-keywords proc)])
+                         (pair? req))
+                       (not (null? arity)))
+                  (raise-arguments-error 'procedure-reduce-arity
+                                         "procedure has required keyword arguments"
+                                         "procedure" proc)
+                  (procedure-reduce-arity (if (okm? proc)
+                                              (procedure->method proc)
+                                              proc)
+                                          arity
+                                          name))]
+             [(proc arity)
+              (procedure-reduce-arity proc arity #f)])])
+      procedure-reduce-arity))
+
+  (define new:procedure-reduce-arity-mask
+    (let ([procedure-reduce-arity
+           (case-lambda
+             [(proc mask name)
+              (if (and (procedure? proc)
+                       (let-values ([(req allows) (procedure-keywords proc)])
+                         (pair? req))
+                       (not (eqv? mask 0)))
+                  (raise-arguments-error 'procedure-reduce-arity
+                                         "procedure has required keyword arguments"
+                                         "procedure" proc)
+                  (procedure-reduce-arity-mask (if (okm? proc)
+                                                   (procedure->method proc)
+                                                   proc)
+                                               mask
+                                               name))]
+             [(proc mask)
+              (procedure-reduce-arity-mask proc mask #f)])])
       procedure-reduce-arity))
     
   (define new:procedure->method

@@ -139,10 +139,12 @@
           extract-procedure ; not exported to Racket
           procedure-arity-includes?
           procedure-arity
+          procedure-arity-mask
           procedure-result-arity
           procedure-extract-target
           procedure-closure-contents-eq?
           procedure-reduce-arity
+          procedure-reduce-arity-mask
           procedure-rename
           procedure->method
           procedure-arity?

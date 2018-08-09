@@ -207,6 +207,7 @@
              (rename norm:procedure-arity procedure-arity)
              (rename norm:raise-arity-error raise-arity-error)
              (rename new:procedure-reduce-arity procedure-reduce-arity)
+             (rename new:procedure-reduce-arity-mask procedure-reduce-arity-mask)
              (rename new:procedure->method procedure->method)
              (rename new:procedure-rename procedure-rename)
              (rename new:chaperone-procedure chaperone-procedure)
@@ -216,7 +217,7 @@
              (rename new:collection-path collection-path)
              (rename new:collection-file-path collection-file-path)
              (all-from-except '#%kernel lambda λ #%app #%module-begin apply prop:procedure 
-                              procedure-arity procedure-reduce-arity raise-arity-error
+                              procedure-arity procedure-reduce-arity procedure-reduce-arity-mask raise-arity-error
                               procedure->method procedure-rename
                               chaperone-procedure impersonate-procedure
                               chaperone-procedure* impersonate-procedure*
@@ -243,6 +244,7 @@
              (rename new-keyword-apply keyword-apply)
              procedure-keywords
              procedure-reduce-keyword-arity
+             procedure-reduce-keyword-arity-mask
              (rename define-struct* define-struct)
              define-struct/derived
              struct-field-index

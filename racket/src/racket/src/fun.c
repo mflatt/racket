@@ -146,7 +146,9 @@ static Scheme_Object *seconds_to_date(int argc, Scheme_Object **argv);
 static Scheme_Object *object_name(int argc, Scheme_Object *argv[]);
 static Scheme_Object *procedure_arity(int argc, Scheme_Object *argv[]);
 static Scheme_Object *procedure_arity_p(int argc, Scheme_Object *argv[]);
+static Scheme_Object *procedure_arity_mask(int argc, Scheme_Object *argv[]);
 static Scheme_Object *procedure_reduce_arity(int argc, Scheme_Object *argv[]);
+static Scheme_Object *procedure_reduce_arity_mask(int argc, Scheme_Object *argv[]);
 static Scheme_Object *procedure_rename(int argc, Scheme_Object *argv[]);
 static Scheme_Object *procedure_to_method(int argc, Scheme_Object *argv[]);
 static Scheme_Object *procedure_equal_closure_p(int argc, Scheme_Object *argv[]);
@@ -192,6 +194,8 @@ static void reset_cjs(Scheme_Continuation_Jump_State *a);
 typedef void (*DW_PrePost_Proc)(void *);
 
 #define CONS(a,b) scheme_make_pair(a,b)
+
+static void ensure_reduced_arity(Scheme_Object *ra);
 
 #ifdef MZ_PRECISE_GC
 static void register_traversers(void);
@@ -543,15 +547,26 @@ scheme_init_fun (Scheme_Startup_Env *env)
   scheme_procedure_arity_includes_proc = o;
   scheme_addto_prim_instance("procedure-arity-includes?", o, env);
 
+  scheme_addto_prim_instance("procedure-arity-mask",
+			     scheme_make_folding_prim(procedure_arity_mask,
+						      "procedure-arity-mask",
+						      1, 1, 1),
+			     env);
+
   scheme_addto_prim_instance("procedure-reduce-arity",
 			     scheme_make_prim_w_arity(procedure_reduce_arity,
 						      "procedure-reduce-arity",
-						      2, 2),
+						      2, 3),
 			     env);
   scheme_addto_prim_instance("procedure-rename",
 			     scheme_make_prim_w_arity(procedure_rename,
 						      "procedure-rename",
 						      2, 2),
+			     env);
+  scheme_addto_prim_instance("procedure-reduce-arity-mask",
+			     scheme_make_prim_w_arity(procedure_reduce_arity_mask,
+						      "procedure-reduce-arity-mask",
+						      2, 3),
 			     env);
   scheme_addto_prim_instance("procedure->method",
 			     scheme_make_prim_w_arity(procedure_to_method,
@@ -1688,7 +1703,7 @@ _scheme_tail_apply_to_list (Scheme_Object *rator, Scheme_Object *rands)
 /*                                   arity                                */
 /*========================================================================*/
 
-static Scheme_Object *make_arity(mzshort mina, mzshort maxa, int mode)
+static Scheme_Object *make_arity(intptr_t mina, intptr_t maxa, int mode)
 {
   if (mina == maxa)
     return scheme_make_integer(mina);
@@ -1701,7 +1716,7 @@ static Scheme_Object *make_arity(mzshort mina, mzshort maxa, int mode)
       return scheme_make_struct_instance(scheme_arity_at_least, 1, p);
     }
   } else {
-    int i;
+    intptr_t i;
     Scheme_Object *l = scheme_null;
 
     for (i = maxa; i >= mina; --i) {
@@ -1715,6 +1730,54 @@ static Scheme_Object *make_arity(mzshort mina, mzshort maxa, int mode)
 Scheme_Object *scheme_make_arity(mzshort mina, mzshort maxa)
 {
   return make_arity(mina, maxa, -1);
+}
+
+Scheme_Object *shift_for_drop(Scheme_Object *n, int drop)
+{
+  Scheme_Object *a[2];
+  a[0] = n;
+  a[1] = scheme_make_integer(-drop);
+  return scheme_bitwise_shift(2, a);
+}
+
+static Scheme_Object *make_shifted_one(intptr_t n)
+{
+  Scheme_Object *a[2];
+  a[0] = scheme_make_integer(1);
+  a[1] = scheme_make_integer(n);
+  return scheme_bitwise_shift(2, a);
+}
+
+static Scheme_Object *make_arity_mask(intptr_t mina, intptr_t maxa)
+{
+  /* Generate a mask */
+  if (mina == maxa) {
+    if (mina < SCHEME_MAX_FAST_ARITY_CHECK)
+      return scheme_make_integer(1 << mina);
+    else
+      return make_shifted_one(mina);
+  } else if (maxa == -1) {
+    if (mina < SCHEME_MAX_FAST_ARITY_CHECK) {
+      return scheme_make_integer(((1 << mina) - 1) ^ (intptr_t)-1);
+    } else {
+      return scheme_bin_bitwise_xor(scheme_bin_minus(make_shifted_one(mina), scheme_make_integer(1)),
+                                    scheme_make_integer(-1));
+    }
+  } else {
+    mzshort i;
+    Scheme_Object *mask = scheme_make_integer(0);
+    
+    for (i = mina; i <= maxa; i++) {
+      mask = scheme_bin_bitwise_or(make_shifted_one(i), mask);
+    }
+    
+    return mask;
+  }
+}
+
+Scheme_Object *scheme_make_arity_mask(intptr_t mina, intptr_t maxa)
+{
+  return make_arity_mask(mina, maxa);
 }
 
 static Scheme_Object *clone_arity(Scheme_Object *a, int delta, int mode)
@@ -1780,7 +1843,8 @@ int scheme_fast_check_arity(Scheme_Object *p, int a)
 static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Object *bign, int inc_ok)
 /* a == -1 => get arity
    a == -2 => check for allowing bignum
-   a == -3 => like -1, but alternate representation using negative numbers for arity-at-least  */
+   a == -3 => like -1, but alternate representation using negative numbers for arity-at-least
+   a == -4 => mask  */
 {
   Scheme_Type type;
   mzshort mina, maxa;
@@ -1819,97 +1883,95 @@ static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Ob
 
     if ((a == -1) || (a == -3))
       first = scheme_null;
+    else if (a == -4)
+      first = scheme_make_integer(0);
     else
       first = scheme_false;
 
     seq = (Scheme_Case_Lambda *)p;
     for (i = 0; i < seq->count; i++) {
       v = seq->array[i];
-      if (SAME_TYPE(SCHEME_TYPE(v), scheme_lambda_type))
-        data = (Scheme_Lambda *)v;
-      else
-        data = SCHEME_CLOSURE_CODE(v);
-      mina = maxa = data->num_params;
-      if (SCHEME_LAMBDA_FLAGS(data) & LAMBDA_HAS_REST) {
-	if (mina)
-	  --mina;
-	maxa = -1;
-      }
-
-      if (a >= 0) {
-	if ((a + drop) >= mina && (maxa < 0 || (a + drop) <= maxa))
-	  return scheme_true;
-      } else if (a == -2) {
-	if (maxa < 0)
-	  return scheme_true;
+      if (a == -4) {
+        first = scheme_bin_bitwise_or(get_or_check_arity(v, -4, NULL, inc_ok), first);
       } else {
-	if (mina >= drop) {
-	  mina -= drop;
-	  if (maxa > 0)
-	    maxa -= drop;
+        if (SAME_TYPE(SCHEME_TYPE(v), scheme_lambda_type))
+          data = (Scheme_Lambda *)v;
+        else
+          data = SCHEME_CLOSURE_CODE(v);
+        mina = maxa = data->num_params;
+        if (SCHEME_LAMBDA_FLAGS(data) & LAMBDA_HAS_REST) {
+          if (mina)
+            --mina;
+          maxa = -1;
+        }
 
-	  v = scheme_make_pair(make_arity(mina, maxa, a), scheme_null);
-	  if (!last)
-	    first = v;
-	  else
-	    SCHEME_CDR(last) = v;
-	  last = v;
-	}
+        if (a >= 0) {
+          if ((a + drop) >= mina && (maxa < 0 || (a + drop) <= maxa))
+            return scheme_true;
+        } else if (a == -2) {
+          if (maxa < 0)
+            return scheme_true;
+        } else {
+          if (mina >= drop) {
+            mina -= drop;
+            if (maxa > 0)
+              maxa -= drop;
+            
+            v = scheme_make_pair(make_arity(mina, maxa, a), scheme_null);
+            if (!last)
+              first = v;
+            else
+              SCHEME_CDR(last) = v;
+            last = v;
+          }
+        }
       }
     }
+
+    if (drop && (a == -4))
+      first = shift_for_drop(first, drop);
 
     return first;
   } else if (type == scheme_proc_struct_type) {
     int is_method;
     if (!inc_ok
         && scheme_no_arity_property
-        && scheme_struct_type_property_ref(scheme_no_arity_property, p))
-      return scheme_false;
+        && scheme_struct_type_property_ref(scheme_no_arity_property, p)) {
+      if (a == -4)
+        return scheme_make_integer(0);
+      else
+        return scheme_false;
+    }
     if (scheme_reduced_procedure_struct
         && scheme_is_struct_instance(scheme_reduced_procedure_struct, p)) {
+      if (a == -4) {
+        p = ((Scheme_Structure *)p)->slots[4];
+        if (drop)
+          return shift_for_drop(p, drop);
+        else
+          return p;
+      }
+      
       if (a >= 0) {
         bign = scheme_make_integer(a);
         if (drop)
           bign = scheme_bin_plus(bign, scheme_make_integer(drop));
       }
-      if ((a == -1) || (a == -3))
+      if ((a == -1) || (a == -3)) {
+        ensure_reduced_arity(p);
         return clone_arity(((Scheme_Structure *)p)->slots[1], drop, a);
-      else {
-        /* Check arity (or for varargs) */
-        Scheme_Object *v;
-        v = ((Scheme_Structure *)p)->slots[1];
-        if (SCHEME_STRUCTP(v)) {
-          v = ((Scheme_Structure *)v)->slots[0];
-          return (scheme_bin_lt_eq(v, bign)
-                  ? scheme_true
-                  : scheme_false);
-        } else if (SCHEME_PAIRP(v)) {
-          Scheme_Object *x;
-          while (!SCHEME_NULLP(v)) {
-            x = SCHEME_CAR(v);
-            if (SCHEME_STRUCTP(x)) {
-              x = ((Scheme_Structure *)x)->slots[0];  
-              if (scheme_bin_lt_eq(x, bign))
-                return scheme_true;
-            } else {
-              if (scheme_bin_eq(x, bign))
-                return scheme_true;
-            }
-            v = SCHEME_CDR(v);
-          }
+      } else {
+        if (scheme_bin_bitwise_bit_set_p(((Scheme_Structure *)p)->slots[4], bign))
+          return scheme_true;
+        else
           return scheme_false;
-        } else if (SCHEME_NULLP(v)) {
-          return scheme_false;
-        } else {
-          return (scheme_bin_eq(v, bign)
-                  ? scheme_true
-                  : scheme_false);
-        }
       }
     } else {
       p = scheme_extract_struct_procedure(p, -1, NULL, &is_method);
       if (!SCHEME_PROCP(p)) {
-        if ((a == -1) || (a == -3))
+        if (a == -4)
+          return scheme_make_integer(0);
+        else if ((a == -1) || (a == -3))
           return scheme_null;
         else
           return scheme_false;
@@ -1925,6 +1987,12 @@ static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Ob
       Scheme_Object *pa;
 
       pa = scheme_get_native_arity(p, a);
+      if (a == -4) {
+        if (drop)
+          return shift_for_drop(pa, drop);
+        else
+          return pa;
+      }
 
       if (SCHEME_BOXP(pa)) {
 	/* Is a method; pa already corrects for it */
@@ -2041,7 +2109,16 @@ static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Ob
   if (cases) {
     int count = cases_count, i;
 
-    if ((a == -1) || (a == -3)) {
+    if (a == -4) {
+      Scheme_Object *mask = scheme_make_integer(0);
+      for (i = 0; i < count; i++) {
+        mask = scheme_bin_bitwise_or(make_arity_mask(cases[2 * i], cases[(2 * i)+1]), mask);
+      }
+      if (drop)
+        return shift_for_drop(mask, drop);
+      else
+        return mask;
+    } else if ((a == -1) || (a == -3)) {
       Scheme_Object *arity, *ae, *last = NULL;
 
       arity = scheme_alloc_list(count);
@@ -2098,11 +2175,14 @@ static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Ob
     return scheme_false;
   }
 
-  if ((a == -1) || (a == -3)) {
+  if ((a == -1) || (a == -3) || (a == -4)) {
     if (mina < drop) {
-      if ((maxa >= 0) && (maxa < drop))
-        return scheme_null;
-      else
+      if ((maxa >= 0) && (maxa < drop)) {
+        if (a == -4)
+          return scheme_make_integer(0);
+        else
+          return scheme_null;
+      } else
         mina = 0;
     } else
       mina -= drop;
@@ -2110,6 +2190,9 @@ static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Ob
       /* assert: maxa >= drop, or else would have returned in `mina < drop` test */
       maxa -= drop;
     }
+
+    if (a == -4)
+      return make_arity_mask(mina, maxa);
 
     return make_arity(mina, maxa, a);
   }
@@ -2128,6 +2211,11 @@ static Scheme_Object *get_or_check_arity(Scheme_Object *p, intptr_t a, Scheme_Ob
 Scheme_Object *scheme_get_or_check_arity(Scheme_Object *p, intptr_t a)
 {
   return get_or_check_arity(p, a, NULL, 1);
+}
+
+Scheme_Object *scheme_get_arity_mask(Scheme_Object *p)
+{
+  return get_or_check_arity(p, -4, NULL, 1);
 }
 
 int scheme_check_proc_arity2(const char *where, int a,
@@ -2714,6 +2802,14 @@ static Scheme_Object *procedure_arity(int argc, Scheme_Object *argv[])
   return get_or_check_arity(argv[0], -1, NULL, 1);
 }
 
+static Scheme_Object *procedure_arity_mask(int argc, Scheme_Object *argv[])
+{
+  if (!SCHEME_PROCP(argv[0]))
+    scheme_wrong_contract("procedure-arity-mask", "procedure?", 0, argc, argv);
+
+  return get_or_check_arity(argv[0], -4, NULL, 1);
+}
+
 static Scheme_Object *procedure_arity_p(int argc, Scheme_Object *argv[])
 {
   Scheme_Object *a = argv[0], *v;
@@ -2811,49 +2907,106 @@ void scheme_init_reduced_proc_struct(Scheme_Startup_Env *env)
   }
 }
 
-static Scheme_Object *arity_to_fast_check_mask(Scheme_Object *aty)
+static Scheme_Object *arity_to_mask(Scheme_Object *aty)
 {
   if (SCHEME_INTP(aty)) {
     intptr_t n = SCHEME_INT_VAL(aty);
     if (n <= SCHEME_MAX_FAST_ARITY_CHECK)
       return scheme_make_integer(1 << n);
     else
-      return scheme_make_integer(0);
+      return make_shifted_one(n);
+  } else if (SCHEME_BIGNUMP(aty)) {
+    scheme_raise_out_of_memory(NULL, NULL);
+    return NULL;
   } else if (SCHEME_STRUCTP(aty)) {
     Scheme_Object *mask;
-    intptr_t n;
 
-    mask = arity_to_fast_check_mask(scheme_struct_ref(aty, 0));
-    n = SCHEME_INTP(mask);
-    if (!n)
-      return mask;
+    aty = scheme_struct_ref(aty, 0);
+    if (SCHEME_INTP(aty))
+      return make_arity_mask(SCHEME_INT_VAL(aty), -1);
     else {
-      /* Set all bits above highest-set bit */
-      int i;
-      for (i = SCHEME_MAX_FAST_ARITY_CHECK; ; i--) {
-        if (n & (1 << i))
-          break;
-        n |= (1 << i);
-      }
-      return scheme_make_integer(n);
+      mask = arity_to_mask(aty);
+      return scheme_bin_bitwise_xor(scheme_bin_minus(mask, scheme_make_integer(1)),
+                                    scheme_make_integer(-1));
     }
   } else if (SCHEME_PAIRP(aty)) {
-    Scheme_Object *mask;
-    intptr_t n = 0;
+    Scheme_Object *mask = scheme_make_integer(0);
     while (SCHEME_PAIRP(aty)) {
-      mask = arity_to_fast_check_mask(SCHEME_CAR(aty));
-      n |= SCHEME_INT_VAL(mask);
+      mask = scheme_bin_bitwise_or(arity_to_mask(SCHEME_CAR(aty)), mask);
       aty = SCHEME_CDR(aty);
     }
-    return scheme_make_integer(n);
+    return mask;
   } else
     return scheme_make_integer(0);
 }
 
-
-static Scheme_Object *make_reduced_proc(Scheme_Object *proc, Scheme_Object *aty, Scheme_Object *name, Scheme_Object *is_meth)
+static Scheme_Object *mask_to_arity(Scheme_Object *mask)
 {
-  Scheme_Object *mask;
+  intptr_t n, pos = 0;
+  Scheme_Object *l = scheme_null;
+
+  while (!SCHEME_INTP(mask)) {
+    Scheme_Object *a[2], *b;
+    b = scheme_bin_bitwise_and(mask, scheme_make_integer(0xFFFF));
+    if (SCHEME_INTP(b)) {
+      b = scheme_bin_bitwise_and(mask, scheme_make_integer(1));
+      if (SCHEME_INTP(b))
+        l = scheme_make_pair(scheme_make_integer(pos), l);
+      pos++;
+      a[0] = mask;
+      a[1] = scheme_make_integer(-1);
+      mask = scheme_bitwise_shift(2, a);
+    } else {
+      pos += 16;
+      a[0] = mask;
+      a[1] = scheme_make_integer(-16);
+      mask = scheme_bitwise_shift(2, a);
+    }
+  }
+
+  n = SCHEME_INT_VAL(mask);
+  if (!n) {
+    if (SCHEME_PAIRP(l) && SCHEME_NULLP(SCHEME_CDR(l)))
+      return SCHEME_CAR(l);
+    else
+      return l;
+  }
+  
+  while (1) {
+    if (n == -1) {
+      if (SCHEME_NULLP(l))
+        return make_arity(pos, -1, -1);
+      else
+        return scheme_make_pair(make_arity(pos, -1, -1), l);
+    } else if (n == 1) {
+      if (SCHEME_NULLP(l))
+        return scheme_make_integer(pos);
+      else
+        return scheme_make_pair(scheme_make_integer(pos), l);
+    } else if (n & 0x1) {
+      l = scheme_make_pair(scheme_make_integer(pos), l);
+    }
+    pos++;
+    n >>= 1;
+  }
+}
+
+static void ensure_reduced_arity(Scheme_Object *ra)
+{
+  Scheme_Object *aty;
+  aty = ((Scheme_Structure *)ra)->slots[1];
+  
+  if (!SCHEME_FALSEP(aty))
+    return;
+
+  aty = mask_to_arity(((Scheme_Structure *)ra)->slots[4]);
+  ((Scheme_Structure *)ra)->slots[1] = aty;
+}
+
+static Scheme_Object *make_reduced_proc(Scheme_Object *proc,
+                                        Scheme_Object *aty, Scheme_Object *mask,
+                                        Scheme_Object *name, Scheme_Object *is_meth)
+{
   Scheme_Structure *inst;
   
   if (SCHEME_STRUCTP(proc)
@@ -2866,9 +3019,8 @@ static Scheme_Object *make_reduced_proc(Scheme_Object *proc, Scheme_Object *aty,
     proc = ((Scheme_Structure *)proc)->slots[0];
   }
 
-  /* A fast-check bitmap, where a bitmap is set in a fixnum if that
-     many arguments are allowed: */
-  mask = arity_to_fast_check_mask(aty);
+  if (!mask)
+    mask = arity_to_mask(aty);
 
   inst = (Scheme_Structure *)scheme_malloc_tagged(sizeof(Scheme_Structure)
                                                   + ((5 - mzFLEX_DELTA) * sizeof(Scheme_Object *)));
@@ -2876,7 +3028,7 @@ static Scheme_Object *make_reduced_proc(Scheme_Object *proc, Scheme_Object *aty,
   inst->stype = (Scheme_Struct_Type *)scheme_reduced_procedure_struct;
 
   inst->slots[0] = proc;
-  inst->slots[1] = aty;
+  inst->slots[1] = (aty ? aty : scheme_false); /* compute on demand if only mask is provided */
   inst->slots[2] = (name ? name : scheme_false);
   inst->slots[3] = (is_meth ? is_meth : scheme_false);
   inst->slots[4] = mask;
@@ -3051,7 +3203,7 @@ static int proc_is_method(Scheme_Object *proc)
 
 static Scheme_Object *procedure_reduce_arity(int argc, Scheme_Object *argv[])
 {
-  Scheme_Object *orig, *aty, *is_meth = NULL;
+  Scheme_Object *orig, *aty, *is_meth = NULL, *name = NULL;
 
   if (!SCHEME_PROCP(argv[0]))
     scheme_wrong_contract("procedure-reduce-arity", "procedure?", 0, argc, argv);
@@ -3061,6 +3213,17 @@ static Scheme_Object *procedure_reduce_arity(int argc, Scheme_Object *argv[])
                           "(or/c exact-nonnegative-integer? arity-at-least? (listof (or/c exact-nonnegative-integer? arity-at-least?)))", 
                           1, argc, argv);
   }
+
+  if (argc > 2) {
+    name = argv[2];
+    if (SCHEME_FALSEP(name))
+      name = NULL;
+    else if (!SCHEME_SYMBOLP(name)) {
+      scheme_wrong_contract("procedure-reduce-arity-mask", "(or/c symbol? #f)", 2, argc, argv);
+      return NULL;
+    }
+  } else
+    name = NULL;
 
   /* Check whether current arity covers the requested arity.  This is
      a bit complicated, because both the source and target can be
@@ -3082,12 +3245,56 @@ static Scheme_Object *procedure_reduce_arity(int argc, Scheme_Object *argv[])
     is_meth = scheme_true;
 
   /* Construct a procedure that has the given arity. */
-  return make_reduced_proc(argv[0], aty, NULL, is_meth);
+  return make_reduced_proc(argv[0], aty, NULL, name, is_meth);
+}
+
+static Scheme_Object *procedure_reduce_arity_mask(int argc, Scheme_Object *argv[])
+{
+  Scheme_Object *mask = argv[1], *orig, *is_meth = scheme_false, *name;
+  
+  if (!SCHEME_PROCP(argv[0])) {
+    scheme_wrong_contract("procedure-reduce-arity-mask", "procedure?", 0, argc, argv);
+    return NULL;
+  }
+
+  if (!scheme_exact_p(argv[1])) {
+    scheme_wrong_contract("procedure-reduce-arity-mask", 
+                          "exact-integer?", 
+                          1, argc, argv);
+    return NULL;
+  }
+
+  if (argc > 2) {
+    name = argv[2];
+    if (SCHEME_FALSEP(name))
+      name = NULL;
+    else if (!SCHEME_SYMBOLP(name)) {
+      scheme_wrong_contract("procedure-reduce-arity-mask", "(or/c symbol? #f)", 2, argc, argv);
+      return NULL;
+    }
+  } else
+    name = NULL;
+
+  orig = get_or_check_arity(argv[0], -4, NULL, 1);
+  if (!scheme_bin_eq(scheme_bin_bitwise_and(mask, orig), mask)) {
+    scheme_contract_error("procedure-reduce-arity-mask",
+                          "arity mask of procedure does not include requested arity mask",
+                          "procedure", 1, argv[0],
+                          "requested arity mask", 1, mask,
+                          NULL);
+    return NULL;
+  }
+
+  if (proc_is_method(argv[0]))
+    is_meth = scheme_true;
+
+  /* Construct a procedure that has the given arity. */
+  return make_reduced_proc(argv[0], NULL, mask, name, is_meth);
 }
 
 static Scheme_Object *procedure_rename(int argc, Scheme_Object *argv[])
 {
-  Scheme_Object *p, *aty;
+  Scheme_Object *p, *mask;
 
   if (!SCHEME_PROCP(argv[0]))
     scheme_wrong_contract("procedure-rename", "procedure?", 0, argc, argv);
@@ -3097,21 +3304,21 @@ static Scheme_Object *procedure_rename(int argc, Scheme_Object *argv[])
   p = scheme_rename_struct_proc(argv[0], argv[1]);
   if (p) return p;
 
-  aty = get_or_check_arity(argv[0], -1, NULL, 1);  
+  mask = get_or_check_arity(argv[0], -4, NULL, 1);
 
-  return make_reduced_proc(argv[0], aty, argv[1], NULL);
+  return make_reduced_proc(argv[0], NULL, mask, argv[1], NULL);
 }
 
 static Scheme_Object *procedure_to_method(int argc, Scheme_Object *argv[])
 {
-  Scheme_Object *aty;
+  Scheme_Object *mask;
 
   if (!SCHEME_PROCP(argv[0]))
     scheme_wrong_contract("procedure->method", "procedure?", 0, argc, argv);
 
-  aty = get_or_check_arity(argv[0], -1, NULL, 1);  
+  mask = get_or_check_arity(argv[0], -4, NULL, 1);
 
-  return make_reduced_proc(argv[0], aty, NULL, scheme_true);
+  return make_reduced_proc(argv[0], NULL, mask, NULL, scheme_true);
 }
 
 static Scheme_Object *procedure_equal_closure_p(int argc, Scheme_Object *argv[])
