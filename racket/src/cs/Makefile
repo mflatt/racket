@@ -5,7 +5,7 @@ RACKET = ../../bin/racket
 SCHEME = scheme
 
 # Controls whether Racket layers are built as unsafe:
-UNSAFE_COMP = --unsafe
+UNSAFE_COMP = # --unsafe
 
 # Controls whether compiled code is compressed:
 COMPRESS_COMP = # --compress
@@ -14,7 +14,7 @@ COMPRESS_COMP = # --compress
 DEBUG_COMP = # --debug
 
 # Controls whether Rumble is built as unsafe:
-RUMBLE_UNSAFE_COMP = --unsafe
+RUMBLE_UNSAFE_COMP = # --unsafe
 
 COMPILE_FILE = $(SCHEME) --script compile-file.ss $(UNSAFE_COMP) $(COMPRESS_COMP) $(DEBUG_COMP) --dest "$(BUILDDIR)"
 COMPILE_FILE_DEPS = compile-file.ss include.ss place-register.ss 
