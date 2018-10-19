@@ -268,15 +268,7 @@ cs-in-place:
 	$(MAKE) cs
 
 cs-base:
-	if [ "$(CPUS)" = "" ] ; \
-         then $(MAKE) plain-cs-base ; \
-         else $(MAKE) cpus-cs-base CPUS="$(CPUS)" ; fi
-
-plain-cs-base:
 	$(MAKE) cs CS_SETUP_TARGET=nothing-after-base
-
-cpus-cs-base:
-	$(MAKE) -j $(CPUS) plain-cs-base JOB_OPTIONS="-j $(CPUS)"
 
 cs-as-is:
 	$(MAKE) cs BASE_TARGET=plain-base CS_SETUP_TARGET=in-place-setup
@@ -622,6 +614,10 @@ binary-catalog-server:
 # keep the "build/user" directory on the grounds that the
 # client is the same as the server.
 
+# These can get replaced by `cs-base` and `win32-cs-base`:
+CLIENT_BASE = base
+WIN32_CLIENT_BASE = win32-base
+
 PROP_ARGS = SERVER=$(SERVER) SERVER_PORT=$(SERVER_PORT) SERVER_HOSTS="$(SERVER_HOSTS)" \
             PKGS="$(PKGS)" PLAIN_RACKET="$(PLAIN_RACKET)" BUILD_STAMP="$(BUILD_STAMP)" \
 	    RELEASE_MODE=$(RELEASE_MODE) SOURCE_MODE=$(SOURCE_MODE) \
@@ -642,7 +638,7 @@ SET_BUNDLE_CONFIG_q = $(BUNDLE_CONFIG) "$(INSTALL_NAME)" "$(BUILD_STAMP)" "$(DOC
 
 client:
 	if [ ! -d build/log ] ; then rm -rf build/user ; fi
-	$(MAKE) base $(COPY_ARGS)
+	$(MAKE) $(CLIENT_BASE) $(COPY_ARGS)
 	$(MAKE) distro-build-from-server $(COPY_ARGS)
 	$(MAKE) bundle-from-server $(COPY_ARGS)
 	$(USER_RACKET) -l distro-build/set-config $(SET_BUNDLE_CONFIG_q)
@@ -650,7 +646,7 @@ client:
 
 win32-client:
 	IF EXIST build\user cmd /c del /f /s /q build\user
-	$(MAKE) win32-base $(COPY_ARGS)
+	$(MAKE) $(WIN32_CLIENT_BASE) $(COPY_ARGS)
 	$(MAKE) win32-distro-build-from-server $(COPY_ARGS)
 	$(MAKE) win32-bundle-from-server $(COPY_ARGS)
 	$(WIN32_RACKET) -l distro-build/set-config $(SET_BUNDLE_CONFIG_q)
