@@ -245,6 +245,9 @@ RKTIO_EXTERN rktio_fd_t *rktio_std_fd(rktio_t *rktio, int which);
 #define RKTIO_STDOUT 1
 #define RKTIO_STDERR 2
 
+RKTIO_EXTERN void rktio_create_console();
+/* */
+
 RKTIO_EXTERN_ERR(RKTIO_READ_ERROR)
 intptr_t rktio_read(rktio_t *rktio, rktio_fd_t *fd, char *buffer, intptr_t len);
 /* Returns the number of bytes read, possibly 0, in non-blocking mode.
