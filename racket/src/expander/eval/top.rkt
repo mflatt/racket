@@ -15,6 +15,7 @@
          "../compile/multi-top.rkt"
          "../compile/namespace-scope.rkt"
          "../expand/context.rkt"
+         "../compile/correlated-linklet.rkt"
          "top-level-instance.rkt"
          "multi-top.rkt"
          "protect.rkt")
@@ -34,8 +35,8 @@
   (define ld (if (compiled-in-memory? c)
                  (compiled-in-memory-linklet-directory c)
                  c))
-  (and (linklet-directory? ld)
-       (not (hash-ref (linklet-directory->hash ld) #f #f))))
+  (and (linklet-directory*? ld)
+       (not (hash-ref (linklet-directory*->hash ld) #f #f))))
 
 (define (eval-top c ns [eval-compiled eval-top] [as-tail? #t])
   (if (compiled-multiple-top? c)
@@ -57,13 +58,13 @@
   (cond
    [(compiled-in-memory? c)
     (eval-compiled-parts (compiled-in-memory-pre-compiled-in-memorys c))]
-   [(hash-ref (linklet-directory->hash c) 'data #f)
+   [(hash-ref (linklet-directory*->hash c) 'data #f)
     => (lambda (data-ld)
          (eval-compiled-parts
           (create-compiled-in-memorys-using-shared-data
            (compiled-top->compiled-tops c)
            ;; extract data linklet:
-           (hash-ref (linklet-bundle->hash (hash-ref (linklet-directory->hash data-ld) #f)) 0)
+           (hash-ref (linklet-bundle*->hash (hash-ref (linklet-directory*->hash data-ld) #f)) 0)
            ns)))]
    [else
     ;; No shared data? Strage, but we can carry on, anyway:
@@ -77,11 +78,11 @@
    (define ld (if (compiled-in-memory? c)
                   (compiled-in-memory-linklet-directory c)
                   c))
-   (define h (linklet-bundle->hash (hash-ref (linklet-directory->hash ld) #f)))
+   (define h (linklet-bundle*->hash (hash-ref (linklet-directory*->hash ld) #f)))
    (define link-instance
      (if (compiled-in-memory? c)
          (link-instance-from-compiled-in-memory c (and (not single-expression?) ns))
-         (instantiate-linklet (hash-ref h 'link)
+         (instantiate-linklet (eval-linklet* (hash-ref h 'link))
                               (list deserialize-instance
                                     (make-eager-instance-instance
                                      #:namespace ns
@@ -136,7 +137,7 @@
                                                                           name
                                                                           val)))))
 
-       (define linklet (hash-ref h phase #f))
+       (define linklet (eval-linklet* (hash-ref h phase #f)))
 
        (cond
         [linklet
@@ -198,3 +199,14 @@
   (make-instance 'link #f 'constant
                  mpi-vector-id (compiled-in-memory-mpis cim)
                  syntax-literals-id syntax-literals))
+
+;; Compile a correlated linklet on demand:
+(define (eval-linklet* l)
+  (cond
+    [(correlated-linklet? l)
+     (or (correlated-linklet-compiled l)
+         (let ([c (compile-linklet (correlated-linklet-expr l))])
+           (set-correlated-linklet-compiled! l c)
+           c))]
+    [else
+     l]))

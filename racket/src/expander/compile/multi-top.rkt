@@ -1,7 +1,8 @@
 #lang racket/base
 (require "compiled-in-memory.rkt"
          "multi-top-data.rkt"
-         "../host/linklet.rkt")
+         "../host/linklet.rkt"
+         "correlated-linklet.rkt")
 
 (provide compiled-tops->compiled-top
          compiled-top->compiled-tops)
@@ -18,8 +19,17 @@
 ;; top of a tree, we repeat work only twice and avoid non-linear
 ;; behavior.)
 (define (compiled-tops->compiled-top all-cims
+                                     #:to-correlated-linklet? [to-correlated-linklet? #f]
                                      #:merge-serialization? [merge-serialization? #f]
                                      #:namespace [ns #f]) ; need for `merge-serialization?`
+  (define (hash->linklet-bundle* ht)
+    (if to-correlated-linklet?
+        (hash->correlated-linklet-bundle ht)
+        (hash->linklet-bundle ht)))
+  (define (hash->linklet-directory* ht)
+    (if to-correlated-linklet?
+        (hash->correlated-linklet-directory ht)
+        (hash->linklet-directory ht)))
   (define cims (remove-nontail-purely-functional all-cims))
   (cond
    [(= 1 (length cims))
@@ -34,14 +44,14 @@
     (define ht (if merge-serialization?
                    (hash-set sequence-ht
                              'data
-                             (hash->linklet-directory
+                             (hash->linklet-directory*
                               (hasheq #f
-                                      (hash->linklet-bundle
+                                      (hash->linklet-bundle*
                                        (hasheq
                                         0
                                         (build-shared-data-linklet cims ns))))))
                    sequence-ht))
-    (compiled-in-memory (hash->linklet-directory ht)
+    (compiled-in-memory (hash->linklet-directory* ht)
                         #f ; self
                         #f ; requires
                         #f ; provides
@@ -58,7 +68,7 @@
 ;; Decode a sequence of compiled top-level forms by unpacking the
 ;; linklet directory into a list of linklet directories
 (define (compiled-top->compiled-tops ld)
-  (define ht (linklet-directory->hash ld))
+  (define ht (linklet-directory*->hash ld))
   (for*/list ([i (in-range (hash-count ht))]
               [top (in-value (hash-ref ht (string->symbol (number->string i)) #f))]
               #:when top)

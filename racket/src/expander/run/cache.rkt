@@ -1,5 +1,6 @@
 #lang racket/base
 (require racket/file
+         racket/port
          file/sha1)
 
 (provide make-cache
@@ -51,7 +52,12 @@
     (or (hash-ref new-table path #f)
         (and (file-exists? path)
              (file-exists? (build-path cache-dir (entry-key e)))
-             (equal? (call-with-input-file* path sha1)
+             (equal? (call-with-input-file* path (lambda (i)
+                                                   (sha1
+                                                    (input-port-append
+                                                     #f
+                                                     (open-input-string (version))
+                                                     i))))
                      (entry-content e))
              (for/and ([path (in-list (entry-dependencies e))])
                (define e (hash-ref table path #f))

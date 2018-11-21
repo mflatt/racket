@@ -6,6 +6,7 @@
          "../compile/reserved-symbol.rkt"
          "../compile/namespace-scope.rkt"
          "../compile/multi-top.rkt"
+         "../compile/correlated-linklet.rkt"
          "../host/linklet.rkt")
 
 (provide create-compiled-in-memorys-using-shared-data)
@@ -36,9 +37,9 @@
                                         mpi-vector-tree
                                         phase-to-link-modules-tree
                                         syntax-literals-tree)
-    (define is-module? (or (linklet-bundle? ld)
-                           (let ([b (hash-ref (linklet-directory->hash ld) #f #f)])
-                             (and b (hash-ref (linklet-bundle->hash b) 'decl #f)))))
+    (define is-module? (or (linklet-bundle*? ld)
+                           (let ([b (hash-ref (linklet-directory*->hash ld) #f #f)])
+                             (and b (hash-ref (linklet-bundle*->hash b) 'decl #f)))))
     (define mpi-pos-vec (vector-ref mpi-vector-tree 0))
     (define syntax-literals-spec (vector-ref syntax-literals-tree 0))
     (define pres (if is-module? 
@@ -83,14 +84,14 @@
  
 (define (extract-submodules ld names-key)
   (cond
-   [(linklet-bundle? ld)
+   [(linklet-bundle*? ld)
     ;; no submodules
     null]
    [else
     (define h (linklet-directory->hash ld))
     (define mod (hash-ref h #f #f))
     (unless mod (error "missing main module"))
-    (define mh (linklet-bundle->hash mod))
+    (define mh (linklet-bundle*->hash mod))
     (define names (hash-ref mh names-key null))
     (for/list ([name (in-list names)])
       (hash-ref h name (lambda () (error "missing submodule declaration:" name))))]))

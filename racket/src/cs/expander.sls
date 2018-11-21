@@ -199,4 +199,8 @@
                           (not (not (1/string->number str 10 'read)))))
 
   ;; `set-maybe-raise-missing-module!` is also from the `io` library
-  (set-maybe-raise-missing-module! maybe-raise-missing-module))
+  (set-maybe-raise-missing-module! maybe-raise-missing-module)
+
+  ;; connect expander's linklet-directory reader and writer to the linklet layer
+  (set-generic-linklet-reader! read-linklet-bundle-or-directory)
+  (set-generic-linklet-writers! write-linklet-bundle write-linklet-directory))

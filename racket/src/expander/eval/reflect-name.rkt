@@ -1,24 +1,44 @@
 #lang racket/base
 (require "../compile/compiled-in-memory.rkt"
-         "../host/linklet.rkt")
+         "../common/contract.rkt"
+         "../host/linklet.rkt"
+         "../compile/correlated-linklet.rkt"
+         "reflect-compiled.rkt")
 
-(provide module-compiled-current-name
+(provide module-compiled-name
+         module-compiled-current-name
          change-module-name
          module-compiled-immediate-name
          rebuild-linklet-directory
          compiled->linklet-directory-or-bundle)
 
-(define (compiled->linklet-directory-or-bundle c)
-  (if (compiled-in-memory? c)
-      (compiled-in-memory-linklet-directory c)
-      c))
+(define/who module-compiled-name
+  (case-lambda
+    [(c)
+     (check who compiled-module-expression? c)
+     (module-compiled-current-name c)]
+    [(c name)
+     (check who compiled-module-expression? c)
+     (unless (or (symbol? name)
+                 (and (pair? name)
+                      (list? name)
+                      (andmap symbol? name)))
+       (raise-argument-error who
+                             "(or/c symbol? (cons/c symbol? (non-empty-listof symbol?)))"
+                             name))
+     (define-values (i-name prefix) 
+       (if (symbol? name)
+           (values name null)
+           (let ([r (reverse name)])
+             (values (car r) (reverse (cdr r))))))
+     (change-module-name c i-name prefix)]))
 
 (define (module-compiled-current-name c)
   (define ld (compiled->linklet-directory-or-bundle c))
-  (define b (if (linklet-bundle? ld)
+  (define b (if (linklet-bundle*? ld)
                 ld
-                (hash-ref (linklet-directory->hash ld) #f)))
-  (hash-ref (linklet-bundle->hash b) 'name))
+                (hash-ref (linklet-directory*->hash ld) #f)))
+  (hash-ref (linklet-bundle*->hash b) 'name))
 
 (define (module-compiled-immediate-name c)
   (define n (module-compiled-current-name c))
@@ -47,31 +67,34 @@
                  [linklet-directory (rebuild-linklet-directory
                                      (update-one-name
                                       (let ([ld (compiled->linklet-directory-or-bundle c)])
-                                        (if (linklet-bundle? ld)
+                                        (if (linklet-bundle*? ld)
                                             ld
-                                            (hash-ref (linklet-directory->hash ld) #f)))
+                                            (hash-ref (linklet-directory*->hash ld) #f)))
                                       full-name)
                                      #:bundle-ok? (symbol? full-name)
                                      (append pre-compiled-in-memorys
                                              post-compiled-in-memorys))])]
-   [(linklet-directory? c)
-    (hash->linklet-directory
-     (for/hasheq ([(key val) (in-hash (linklet-directory->hash c))])
-       (values key
-               (if (not key)
-                   (update-one-name val full-name)
-                   (recur val key)))))]
+   [(linklet-directory*? c)
+    (define ht
+      (for/hasheq ([(key val) (in-hash (linklet-directory*->hash c))])
+        (values key
+                (if (not key)
+                    (update-one-name val full-name)
+                    (recur val key)))))
+    (hash->linklet-directory* c ht)]
    [else
     ;; linklet bundle
     (update-one-name c full-name)]))
 
 (define (update-one-name lb name)
-  (hash->linklet-bundle (hash-set (linklet-bundle->hash lb) 'name name)))
+  (hash->linklet-bundle* lb (hash-set (linklet-bundle*->hash lb) 'name name)))
 
 (define (rebuild-linklet-directory main submods #:bundle-ok? [bundle-ok? #f])
-  (if (and (null? submods) bundle-ok?)
-      main
-      (hash->linklet-directory
+  (cond
+    [(and (null? submods) bundle-ok?)
+     main]
+    [else
+     (define ht
        (hash-set (for/fold ([ht #hasheq()]) ([submod (in-list submods)])
                    (define name (module-compiled-immediate-name submod))
                    (cond
@@ -82,4 +105,8 @@
                     [else
                      (hash-set ht name (compiled->linklet-directory-or-bundle submod))]))
                  #f
-                 main))))
+                 main))
+     (if (or (linklet-bundle? main)
+             (linklet-directory? main))
+         (hash->linklet-directory ht)
+         (hash->correlated-linklet-directory ht))]))

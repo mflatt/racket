@@ -19,7 +19,8 @@
          "form.rkt"
          "multi-top.rkt"
          "namespace-scope.rkt"
-         "side-effect.rkt")
+         "side-effect.rkt"
+         "correlated-linklet.rkt")
 
 (provide compile-single
          compile-top)
@@ -38,7 +39,8 @@
 ;; used.
 (define (compile-top p cctx
                      #:serializable? [serializable? #t]
-                     #:single-expression? [single-expression? #f])
+                     #:single-expression? [single-expression? #f]
+                     #:to-correlated-linklet? [to-correlated-linklet? #f])
   (performance-region
    ['compile (if single-expression? 'transformer 'top)]
 
@@ -70,6 +72,7 @@
                                                   empty-top-syntax-literal-instance
                                                   empty-instance-instance)
                     #:serializable? serializable?
+                    #:to-correlated-linklet? to-correlated-linklet?
                     #:definition-callback (lambda () (set! purely-functional? #f))
                     #:compiled-expression-callback
                     (lambda (e expected-results phase required-reference?)
@@ -87,7 +90,10 @@
        ht))
    
    (define bundle
-     (hash->linklet-bundle
+     ((lambda (ht)
+        (if to-correlated-linklet?
+            (hash->correlated-linklet-bundle ht)
+            (hash->linklet-bundle ht)))
       (add-metadata
        (cond
         [serializable?
@@ -105,15 +111,17 @@
 
          (define link-linklet
            ((lambda (s)
-              (performance-region
-               ['compile 'top 'linklet]
-               (define-values (linklet new-keys)
-                 (compile-linklet s
-                                  #f
-                                  (vector deserialize-instance
-                                          empty-eager-instance-instance)
-                                  (lambda (inst) (values inst #f))))
-               linklet))
+              (if to-correlated-linklet?
+                  (make-correlated-linklet s)
+                  (performance-region
+                   ['compile 'top 'linklet]
+                   (define-values (linklet new-keys)
+                     (compile-linklet s
+                                      #f
+                                      (vector deserialize-instance
+                                              empty-eager-instance-instance)
+                                      (lambda (inst) (values inst #f))))
+                   linklet)))
             `(linklet
               ;; imports
               (,deserialize-imports
@@ -137,7 +145,10 @@
    
    ;; If the compiled code is executed directly, it must be in its
    ;; original phase, and we'll share the original values
-   (compiled-in-memory (hash->linklet-directory (hasheq #f bundle))
+   (compiled-in-memory (let ([ht (hasheq #f bundle)])
+                         (if to-correlated-linklet?
+                             (hash->correlated-linklet-directory ht)
+                             (hash->linklet-directory ht)))
                        #f ; self
                        #f ; requires
                        #f ; provides

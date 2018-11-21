@@ -13,6 +13,8 @@
          "../host/linklet.rkt"
          "../compile/instance.rkt"
          "../compile/compiled-in-memory.rkt"
+         "../compile/module.rkt"
+         "../compile/correlated-linklet.rkt"
          "../expand/context.rkt"
          "../expand/root-expand-context.rkt"
          "root-context.rkt"
@@ -39,7 +41,7 @@
                      #:supermodule-name [supermodule-name #f]) ; for submodules declared with module
   (performance-region
    ['eval 'module]
-   
+
    (define-values (dh h data-instance declaration-instance)
      (compiled-module->dh+h+data-instance+declaration-instance c))
 
@@ -48,7 +50,7 @@
          (make-syntax-literal-data-instance-from-compiled-in-memory c)
          (let ([l (hash-ref h 'stx-data #f)])
            (cond
-            [l (instantiate-linklet (eval-linklet l)
+            [l (instantiate-linklet (eval-module-linklet* l #:name 'syntax-literals-data)
                                     (list deserialize-instance
                                           data-instance))]
             [(eq? (hash-ref h 'module->namespace #f) 'empty)
@@ -82,9 +84,12 @@
    (define phases-h (for*/hash ([phase-level (in-range min-phase (add1 max-phase))]
                                 [v (in-value (hash-ref h phase-level #f))]
                                 #:when v)
-                      (values phase-level (eval-linklet v))))
+                      (values phase-level (eval-module-linklet* v
+                                                                #:name 'module
+                                                                #:bundle-hash h
+                                                                #:namespace ns))))
    (define syntax-literals-linklet (let ([l (hash-ref h 'stx #f)])
-                                     (and l (eval-linklet l))))
+                                     (and l (eval-module-linklet* l #:name 'syntax-literals))))
 
    (define extra-inspector (and (compiled-in-memory? c)
                                 (compiled-in-memory-compile-time-inspector c)))
@@ -319,15 +324,15 @@
                    (compiled-in-memory-linklet-directory c)
                    c))
   (define dh (cond
-              [(linklet-directory? ld/h)
+              [(linklet-directory*? ld/h)
                ;; has submodules
-               (linklet-directory->hash ld/h)]
+               (linklet-directory*->hash ld/h)]
               [else
                ;; no submodules
                #f]))
-  (define h (linklet-bundle->hash (if dh
-                                      (hash-ref dh #f)
-                                      ld/h)))
+  (define h (linklet-bundle*->hash (if dh
+                                       (hash-ref dh #f)
+                                       ld/h)))
   
   (values dh h))
 
@@ -349,14 +354,14 @@
   (define data-instance
     (if (compiled-in-memory? c)
         (make-data-instance-from-compiled-in-memory c)
-        (instantiate-linklet (eval-linklet (hash-ref h 'data))
+        (instantiate-linklet (eval-module-linklet* (hash-ref h 'data) #:name 'data)
                              (list deserialize-instance))))
 
   (define declaration-instance
     (if (and (compiled-in-memory? c)
              (compiled-in-memory-original-self c))
         (make-declaration-instance-from-compiled-in-memory c)
-        (instantiate-linklet (eval-linklet (hash-ref h 'decl))
+        (instantiate-linklet (eval-module-linklet* (hash-ref h 'decl) #:name 'decl)
                              (list deserialize-instance
                                    data-instance))))
   

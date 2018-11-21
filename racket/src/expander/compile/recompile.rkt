@@ -1,6 +1,7 @@
 #lang racket/base
 (require "../host/linklet.rkt"
-         "../eval/reflect.rkt")
+         "../eval/reflect.rkt"
+         "correlated-linklet.rkt")
 
 (provide compiled-expression-recompile)
 
@@ -8,15 +9,15 @@
   (unless (compiled-expression? c)
     (raise-argument-error 'compiled-expression-recompile "compiled-expression?" c))
   (cond
-    [(linklet-bundle? c)
+    [(linklet-bundle*? c)
      (hash->linklet-bundle
-      (for/hasheq ([(k v) (in-hash (linklet-bundle->hash c))])
+      (for/hasheq ([(k v) (in-hash (linklet-bundle*->hash c))])
         (cond
           [(linklet? v) (values k (recompile-linklet v))]
           [else (values k v)])))]
-    [(linklet-directory? c)
+    [(linklet-directory*? c)
      (hash->linklet-directory
-      (for/hasheq ([(k v) (in-hash (linklet-directory->hash c))])
+      (for/hasheq ([(k v) (in-hash (linklet-directory*->hash c))])
         (cond
           [(compiled-expression? v)
            (values k (compiled-expression-recompile v))]

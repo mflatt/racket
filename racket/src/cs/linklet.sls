@@ -36,6 +36,7 @@
           compile-enforce-module-constants
           compile-context-preservation-enabled
           compile-allow-set!-undefined
+          compile-machine-independent
           eval-jit-enabled
           load-on-demand-enabled
 
@@ -49,6 +50,9 @@
           linklet-performance-report! ; not exported to racket
 
           install-linklet-primitive-tables!  ; not exported to racket
+
+          set-generic-linklet-reader!  ; not exported to racket
+          set-generic-linklet-writers! ; not exported to racket
           
           ;; schemify glue:
           variable-set!
@@ -847,6 +851,9 @@
     (make-parameter #f (lambda (v) (and v #t))))
 
   (define compile-allow-set!-undefined
+    (make-parameter #f (lambda (v) (and v #t))))
+
+  (define compile-machine-independent
     (make-parameter #f (lambda (v) (and v #t))))
 
   (define eval-jit-enabled

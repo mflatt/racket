@@ -30,6 +30,8 @@
          "boot/runtime-primitive.rkt"
          "boot/handler.rkt"
          "syntax/api.rkt"
+         "compile/write-linklet.rkt"
+         "compile/read-linklet.rkt"
          (only-in racket/private/config find-main-config)
          (only-in "syntax/cache.rkt" cache-place-init!)
          (only-in "syntax/scope.rkt" scope-place-init!)
@@ -114,6 +116,13 @@
 
          expander-place-init!
 
+         ;; These are useful to linklet backends to implement
+         ;; linklet-directory layout, parameterized over marshaling of
+         ;; an individual linklet bundle
+         read-linklet-bundle-or-directory
+         write-linklet-bundle
+         write-linklet-directory
+
          ;; The remaining functions are provided for basic testing
          ;; (such as "demo.rkt")
 
@@ -167,7 +176,6 @@
      (declare-hash-based-module! '#%expobs expobs-primitives #:namespace ns
                                  #:protected? #t)
      (declare-kernel-module! ns
-                             #:eval eval
                              #:main-ids (for/set ([name (in-hash-keys main-primitives)])
                                           name)
                              #:read-ids (for/set ([name (in-hash-keys read-primitives)])
