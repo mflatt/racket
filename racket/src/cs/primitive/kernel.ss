@@ -542,7 +542,7 @@
   [make-struct-field-mutator (known-procedure 12)]
   [make-struct-type (known-procedure 4080)]
   [make-struct-type-property (known-procedure 30)]
-  [make-thread-cell (known-procedure 6)]
+  [make-thread-cell (known-procedure/succeeds 6)]
   [make-thread-group (known-procedure 3)]
   [make-vector (known-procedure 6)]
   [make-weak-box (known-procedure 2)]

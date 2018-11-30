@@ -48,6 +48,7 @@
           install-linklet-primitive-tables!  ; not exported to racket
           
           ;; schemify glue:
+          make-internal-variable
           variable-set!
           variable-set!/check-undefined
           variable-ref
@@ -55,7 +56,8 @@
           make-instance-variable-reference
           jitified-extract-closed
           jitified-extract
-          schemify-table)
+          schemify-table
+          call-with-module-prompt)
   (import (chezpart)
           (only (chezscheme) printf)
           (rumble)
@@ -407,6 +409,7 @@
      [(c name import-keys get-import) (compile-linklet c name import-keys get-import '(serializable))]
      [(c name import-keys get-import options)
       (define serializable? (#%memq 'serializable options))
+      (define use-prompt? (#%memq 'use-prompt options))
       (performance-region
        'schemify
        (define jitify-mode?
@@ -422,6 +425,7 @@
                            jitify-mode?
                            (|#%app| compile-allow-set!-undefined)
                            #f ;; safe mode
+                           (not use-prompt?)
                            prim-knowns
                            ;; Callback to get a specific linklet for a
                            ;; given import:
@@ -593,20 +597,33 @@
                            constance  ; #f (mutable), 'constant, or 'consistent (always the same shape)
                            inst-box)) ; weak pair with instance in `car`
 
-  (define (variable-set! var val constance)
+  (define (make-internal-variable name)
+    (make-variable unsafe-undefined name #f #f))
+
+  (define (do-variable-set! var val constance as-define?)
     (cond
      [(variable-constance var)
-      (raise
-       (|#%app|
-        exn:fail:contract:variable
-        (string-append (symbol->string (variable-name var))
-                       ": cannot modify constant")
-        (current-continuation-marks)
-        (variable-name var)))]
+      (cond
+       [as-define?
+        (raise-arguments-error 'define-values
+                               "assignment disallowed;\n cannot re-define a constant"
+                               "constant" (unquoted-printing-string (symbol->string (variable-name var)))
+                               "in module" (describe-variable-module var))]
+       [else
+        (raise
+         (|#%app|
+          exn:fail:contract:variable
+          (string-append (symbol->string (variable-name var))
+                         ": cannot modify constant")
+          (current-continuation-marks)
+          (variable-name var)))])]
      [else
       (set-variable-val! var val)
       (when constance
         (set-variable-constance! var constance))]))
+
+  (define (variable-set! var val constance)
+    (do-variable-set! var val constance #f))
 
   (define (variable-set!/check-undefined var val constance)
     (when (eq? (variable-val var) unsafe-undefined)
@@ -693,6 +710,23 @@
              (#%procedure? (variable-val var)))
         (known-procedure (#%procedure-arity-mask (variable-val var)))]
        [else a-known-constant])))
+
+  (define (check-variable-set var sym)
+    (when (eq? (variable-val var) unsafe-undefined)
+      (raise-arguments-error 'define-values
+                             (string-append
+                              "skipped variable definition;\n"
+                              " cannot continue without defining variable")
+                             "variable" (unquoted-printing-string (symbol->string sym))
+                             "in module" (describe-variable-module var))))
+
+  (define (describe-variable-module var)
+    (let* ([b (variable-inst-box var)]
+           [i (if b (car b) #!bwp)])
+      (unquoted-printing-string
+       (if (eq? i #!bwp)
+           "[unknown]"
+           (format "~a" (instance-name i))))))
 
   ;; ----------------------------------------
 
@@ -811,6 +845,49 @@
 
   (define (make-instance-variable-reference vr v)
     (make-variable-reference (variable-reference-instance vr) v))
+
+  ;; --------------------------------------------------
+
+  (define module-prompt-handler
+    (lambda (arg)
+      (abort-current-continuation
+       (default-continuation-prompt-tag)
+       arg)))
+
+  (define call-with-module-prompt
+    (case-lambda
+     [(proc)
+      ;; No bindings to set or check, so just call `proc` in a prompt
+      (call-with-continuation-prompt
+       proc
+       (default-continuation-prompt-tag)
+       module-prompt-handler)]
+     [(proc syms modes var)
+      ;; Common case: one binding to set/check
+      (call-with-continuation-prompt
+       (lambda ()
+         (do-variable-set! var (proc) (car modes) #t))
+       (default-continuation-prompt-tag)
+       module-prompt-handler)
+      (check-variable-set var (car syms))]
+     [(proc syms modes . vars)
+      ;; General case: many bindings to set/check
+      (call-with-continuation-prompt
+       (lambda ()
+         (call-with-values proc
+           (lambda vals
+             (unless (= (length syms) (length vals))
+               (raise-binding-result-arity-error syms vals))
+             (let loop ([vars vars] [vals vals] [modes modes])
+               (unless (null? vars)
+                 (do-variable-set! (car vars) (car vals) (car modes) #t)
+                 (loop (cdr vars) (cdr vals) (cdr modes)))))))
+       (default-continuation-prompt-tag)
+       module-prompt-handler)
+      (let loop ([vars vars] [syms syms])
+        (unless (null? vars)
+          (check-variable-set (car vars) (car syms))
+          (loop (cdr vars) (cdr syms))))]))
 
   ;; --------------------------------------------------
   
