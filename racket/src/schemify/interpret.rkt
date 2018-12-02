@@ -3,7 +3,8 @@
          racket/unsafe/ops
          "match.rkt"
          "wrap.rkt"
-         "interp-match.rkt")
+         "interp-match.rkt"
+         "interp-stack.rkt")
 
 ;; Interpreter for the output of "jitify". This little interpreter is
 ;; useful to avoid going through a more heavyweight `eval` or
@@ -12,109 +13,48 @@
 ;; outer layer, it can implement that layer more efficiently and
 ;; compactly.
 
+;; The interpreter operates on its own "bytecode" format, so
+;; `interpretable-jitified-linklet` compiles to that format, and
+;; `interpret-linklet` runs it.
+
+;; The interpreter is safe-for-space. It uses flat closures, a
+;; persistent mapping from indices to values for the environment, and
+;; explicit operations to remove mappings from the environment as
+;; needed to implement space safety.
+
 (provide interpretable-jitified-linklet
          interpret-linklet)
 
-(struct indirect (stack element))
-(struct boxed (stack))
+(struct indirect (pos element))
+(struct boxed (pos))
 (struct boxed/check boxed ())
-
-(struct stack-info (capture-depth
-                    closure-map
-                    [use-map #:mutable]
-                    [local-use-map #:mutable]
-                    [non-tail-at-depth #:mutable]))
-
-(define (stack->pos i stk-i stack-depth #:nonuse? [nonuse? #f])
-  (define capture-depth (stack-info-capture-depth stk-i))
-  (define pos
-    (cond
-      [(not capture-depth) i]
-      [(i . >= . capture-depth)
-       (- i capture-depth)]
-      [(hash-ref (stack-info-closure-map stk-i) i #f)
-       => (lambda (pos) pos)]
-      [else
-       ;; Count backwards from -1 to represent closure elements
-       (define cmap (stack-info-closure-map stk-i))
-       (define pos (- -1 (hash-count cmap)))
-       (hash-set! cmap i pos)
-       pos]))
-  (cond
-    [nonuse? pos]
-    [else
-     ;; Record the use of this position. If it's the last use (i.e.,
-     ;; first from the end), then box the position, which means "clear
-     ;; after retreiving" and implements space safety.
-     (define use-map (stack-info-use-map stk-i))
-     (cond
-       [(or (not use-map)
-            (hash-ref use-map pos #f))
-        pos]
-       [else
-        (when use-map
-          (set-stack-info-use-map! stk-i (hash-set use-map pos #t)))
-        (define local-use-map (stack-info-local-use-map stk-i))
-        (when local-use-map
-          (set-stack-info-local-use-map! stk-i (hash-set local-use-map pos #t)))
-        (if (i . < . (stack-info-non-tail-at-depth stk-i))
-            (box pos)
-            pos)])]))
-
-(define (stack-info-branch stk-i)
-  (stack-info (stack-info-capture-depth stk-i)
-              (stack-info-closure-map stk-i)
-              (stack-info-use-map stk-i)
-              #hasheq()
-              (stack-info-non-tail-at-depth stk-i)))
-
-(define (stack-info-merge! stk-i branch-stk-is)
-  (define all-clear (make-hasheq))
-  (for ([branch-stk-i (in-list branch-stk-is)])
-    (for ([pos (in-hash-keys (stack-info-local-use-map branch-stk-i))])
-      (hash-set! all-clear pos #t)
-      (define use-map (stack-info-use-map stk-i))
-      (when use-map
-        (set-stack-info-use-map! stk-i (hash-set use-map pos #t)))
-      (define local-use-map (stack-info-local-use-map stk-i))
-      (when local-use-map
-        (set-stack-info-local-use-map! stk-i (hash-set local-use-map pos #t)))
-      (set-stack-info-non-tail-at-depth! stk-i
-                                         (max (stack-info-non-tail-at-depth stk-i)
-                                              (stack-info-non-tail-at-depth branch-stk-i)))))
-  all-clear)
-
-(define (stack-info-forget! stk-i stack-depth start-pos len)
-  (set-stack-info-non-tail-at-depth! stk-i
-                                     (min (stack-info-non-tail-at-depth stk-i)
-                                          stack-depth))
-  (when (stack-info-use-map stk-i)
-    (for ([i (in-range len)])
-      (define pos (+ start-pos i))
-      (define use-map (stack-info-use-map stk-i))
-      (set-stack-info-use-map! stk-i (hash-remove use-map pos))
-      (define local-use-map (stack-info-local-use-map stk-i))
-      (when local-use-map
-        (set-stack-info-local-use-map! stk-i (hash-remove local-use-map pos))))))
-
-(define (stack-info-non-tail! stk-i stack-depth)
-  (set-stack-info-non-tail-at-depth! stk-i
-                                     (max (stack-info-non-tail-at-depth stk-i)
-                                          stack-depth)))
 
 (define (interpretable-jitified-linklet linklet-e strip-annotations)
   ;; Return a compiled linklet in two parts: a vector expression for
   ;; constants to be run once, and a expression for the linklet body.
-  ;; A compiled expression uses a list as a stack for local variables,
-  ;; where the coldest element is is a vector of constants, and the
-  ;; 1th slot is a vector of linklet arguments for imports and
-  ;; exports, and the 2nd slot is a vector for top-level variables. We
-  ;; don't have to worry about continuations, because linklet bodies
-  ;; are constrained.
-  ;;
-  ;; Bindings in the environment are represented as positions that
-  ;; count from the coldest end of the stack; that position relative
-  ;; to the hottest end can be computed from the current stack depth.
+  
+  ;; Conceptually, the run-time environment is implemented as a list,
+  ;; and identifiers are mapped to positions in that list, where 0
+  ;; corresponds to the last element of the list and more deeply
+  ;; nested bindings are pushed on to the front. The `stack-depth` at
+  ;; compile time corresponds to the length of that list. The
+  ;; compile-time environment maps names to those coordinates. But
+  ;; those coodinates are shifted for closure capture, where negative
+  ;; positions are used to access elements of the closure.
+
+  ;; At run time, instead of a list, the "stack" is implemented as a
+  ;; persistent map, but the position keys for that mapping are still
+  ;; contiguous integers shifted from the compile-time coordinates. A
+  ;; `stack-info` record at compile time manages the translation from
+  ;; environment coordinates to run-time positions.
+
+  ;; The compilation pass is responsible not only for turning names
+  ;; into run-time positions, but also for tracking the last use of a
+  ;; variable, so its mapping can be removed at runtime to preserve
+  ;; space safety. To compute last use, the compiler must always work
+  ;; from the end expressions toward starting expressions. That's why
+  ;; `compile-list` compiles later expressions before earlier ones in
+  ;; the list, for example.
 
   (define (start linklet-e)
     (match linklet-e
@@ -146,12 +86,16 @@
   (define (compile-linklet-body v env stack-depth)
     (match v
       [`(lambda ,args . ,body)
+       ;; The `args` here are linklet import and export variables
        (define num-args (length args))
        (define args-env
          (for/fold ([env env]) ([arg (in-list args)]
                                 [i (in-naturals)])
            (hash-set env arg (+ stack-depth i))))
        (define body-vars-index (+ num-args stack-depth))
+       ;; Gather all the names that have `define`s, and build up the
+       ;; enviornment that has them consceptually pushed after the
+       ;; import and export variables.
        (define-values (body-env num-body-vars)
          (for/fold ([env args-env] [num-body-vars 0]) ([e (in-wrap-list body)])
            (let loop ([e e] [env env] [num-body-vars num-body-vars])
@@ -168,6 +112,9 @@
                   (loop e env num-body-vars))]
                [`,_ (values env num-body-vars)]))))
        (define body-stack-depth (+ num-body-vars num-args stack-depth))
+       ;; This `stack-info` is mutated as expressiones are compiled,
+       ;; because that's more convenient than threading it through as
+       ;; both an argument and a result
        (define stk-i (stack-info #f #hasheq() #hasheq() #f 0))
        (define new-body
          (compile-top-body body body-env body-stack-depth stk-i))
@@ -216,13 +163,16 @@
          (args->env ids env stack-depth))
        (define cmap (make-hasheq))
        (define body-stack-depth (+ stack-depth count))
+       ;; A fresh `stack-info` reflects how a flat closure shifts the
+       ;; coordinates of the variables that it captures; captured
+       ;; variables are added to `cmap` as they are discovered
        (define body-stk-i (stack-info stack-depth cmap #hasheq() #f 0))
        (define new-body (compile-body body body-env body-stack-depth body-stk-i #t))
        (define rev-cmap (for/hasheq ([(i pos) (in-hash cmap)]) (values (- -1 pos) i)))
        (vector 'lambda
                (count->mask count rest?)
                (for/vector #:length (hash-count cmap) ([i (in-range (hash-count cmap))])
-                 (stack->pos (hash-ref rev-cmap i) stk-i stack-depth))
+                 (stack->pos (hash-ref rev-cmap i) stk-i))
                new-body)]
       [`(case-lambda [,idss . ,bodys] ...)
        (define lams (for/list ([ids (in-list idss)]
@@ -239,7 +189,7 @@
            (hash-set env (unwrap id) (+ stack-depth i))))
        (define body-stack-depth (+ stack-depth len))
        (define new-body (compile-body body body-env body-stack-depth stk-i tail?))
-       (define pos (stack->pos stack-depth stk-i stack-depth #:nonuse? #t))
+       (define pos (stack->pos stack-depth stk-i #:nonuse? #t))
        (stack-info-forget! stk-i stack-depth pos len)
        (define new-rhss (list->vector
                          (compile-list rhss env stack-depth stk-i #f)))
@@ -318,14 +268,14 @@
              (args->env ids env stack-depth))
            (define new-stack-depth (+ stack-depth count))
            (define new-body (compile-body body new-env new-stack-depth body-stk-i tail?))
-           (define pos (stack->pos stack-depth body-stk-i stack-depth #:nonuse? #t))
+           (define pos (stack->pos stack-depth body-stk-i #:nonuse? #t))
            (stack-info-forget! body-stk-i stack-depth pos count)
            (vector (count->mask count rest?)
                    new-body)))
        (define all-clear (stack-info-merge! stk-i body-stk-is))
        (vector 'cwv
                (compile-body body env stack-depth stk-i #f)
-               (stack->pos stack-depth stk-i stack-depth #:nonuse? #t)
+               (stack->pos stack-depth stk-i #:nonuse? #t)
                (for/list ([initial-new-clause (in-list initial-new-clauses)]
                           [body-stk-i (in-list body-stk-is)])
                  (define body (vector-ref initial-new-clause 1))
@@ -343,15 +293,15 @@
        (define dest-var (hash-ref env (unwrap dest-id)))
        (define new-expr (compile-expr e env stack-depth stk-i #f))
        (vector 'set-variable!
-               (stack->pos dest-var stk-i stack-depth)
+               (stack->pos dest-var stk-i)
                new-expr
                constance)]
       [`(variable-ref ,id)
        (define var (hash-ref env (unwrap id)))
-       (vector 'ref-variable/checked (stack->pos var stk-i stack-depth))]
+       (vector 'ref-variable/checked (stack->pos var stk-i))]
       [`(variable-ref/no-check ,id)
        (define var (hash-ref env (unwrap id)))
-       (vector 'ref-variable (stack->pos var stk-i stack-depth))]
+       (vector 'ref-variable (stack->pos var stk-i))]
       [`(#%app ,_ ...) (compile-apply (wrap-cdr e) env stack-depth stk-i tail?)]
       [`(,rator ,_ ...)  (compile-apply e env stack-depth stk-i tail?)]
       [`,id
@@ -363,16 +313,16 @@
               (vector 'quote u)
               u)]
          [(indirect? var)
-          (define pos (stack->pos (indirect-stack var) stk-i stack-depth))
+          (define pos (stack->pos (indirect-pos var) stk-i))
           (define elem (indirect-element var))
           (cons pos elem)]
          [(boxed? var)
-          (define pos (stack->pos (boxed-stack var) stk-i stack-depth))
+          (define pos (stack->pos (boxed-pos var) stk-i))
           (if (boxed/check? var)
               (vector 'unbox/checked pos u)
               (vector 'unbox pos))]
          [else
-          (stack->pos var stk-i stack-depth)])]))
+          (stack->pos var stk-i)])]))
 
   (define (compile-letrec e env stack-depth stk-i tail?)
     (match e
@@ -388,7 +338,7 @@
        (define new-body (compile-body body body-env body-stack-depth stk-i tail?))
        (define new-rhss (list->vector
                          (compile-list rhss rhs-env body-stack-depth stk-i #F)))
-       (define pos (stack->pos stack-depth stk-i stack-depth #:nonuse? #t))
+       (define pos (stack->pos stack-depth stk-i #:nonuse? #t))
        (stack-info-forget! stk-i stack-depth pos count)
        (vector 'letrec pos new-rhss new-body)]))
 
@@ -404,11 +354,11 @@
     (define var (hash-ref env u))
     (cond
       [(indirect? var)
-       (define s (stack->pos (indirect-stack var) stk-i stack-depth))
+       (define s (stack->pos (indirect-pos var) stk-i))
        (define e (indirect-element var))
        (vector 'set!-indirect s e compiled-rhs)]
       [(boxed? var)
-       (define s (stack->pos (boxed-stack var) stk-i stack-depth))
+       (define s (stack->pos (boxed-pos var) stk-i))
        (if (boxed/check? var)
            (vector 'set!-boxed/checked s compiled-rhs u)
            (vector 'set!-boxed s compiled-rhs))]
@@ -440,7 +390,11 @@
 
 ;; ----------------------------------------
 
-(define (interpret-linklet b primitives variable-ref variable-ref/no-check variable-set!
+(define (interpret-linklet b            ; compiled form
+                           primitives   ; hash of symbol -> value
+                           ;; the implementation of variables:
+                           variable-ref variable-ref/no-check variable-set!
+                           ;; to create a procedure with a specific arity mask:
                            make-arity-wrapper-procedure)
   (interp-match
    b
@@ -455,39 +409,25 @@
                          vec))])
       (lambda args
         (define start-stack (if consts
-                                (hasheq 0 consts)
-                                #hasheq()))
+                                (stack-set empty-stack 0 consts)
+                                empty-stack))
         (define args-stack (for/fold ([stack start-stack]) ([arg (in-list args)]
                                                             [i (in-naturals (if consts 1 0))])
-                             (hash-set stack i arg)))
-        (define post-args-pos (hash-count args-stack))
+                             (stack-set stack i arg)))
+        (define post-args-pos (stack-count args-stack))
         (define stack (for/fold ([stack args-stack]) ([i (in-range num-body-vars)])
-                        (hash-set stack (+ i post-args-pos) (box unsafe-undefined))))
+                        (stack-set stack (+ i post-args-pos) (box unsafe-undefined))))
         (interpret-expr b stack primitives variable-ref variable-ref/no-check variable-set!
                         make-arity-wrapper-procedure)))]))
 
 (define (interpret-expr b stack primitives variable-ref variable-ref/no-check variable-set!
                         make-arity-wrapper-procedure)
 
-  (define (stack-ref stack i [tail? #f])
-    (cond
-      [(box? i)
-       (let ([i (unbox* i)])
-         (if tail?
-             (hash-ref stack i)
-             (values (hash-remove stack i)
-                     (hash-ref stack i))))]
-      [else
-       (if tail?
-           (hash-ref stack i)
-           (values stack (hash-ref stack i)))]))
-
-  (define (stack-set stack i v)
-    (hash-set stack i v))
-  
-  (define (stack-clear stack i)
-    (hash-remove stack i))
-  
+  ;; Returns `result ...` when `tail?` is #t, and
+  ;; returns `(values stack result ...)` when `tail?` is #f.
+  ;; An updated "stack" is returned because bindings are
+  ;; removed from the stack on their last uses (where there is
+  ;; a non-tail call after the last use)
   (define (interpret b stack [tail? #f])
     (cond
       [(integer? b) (stack-ref stack b tail?)]
@@ -621,7 +561,7 @@
              [(null? clears)
               (interpret e stack tail?)]
              [else
-              (loop (cdr clears) (stack-clear stack (car clears)))]))]
+              (loop (cdr clears) (stack-remove stack (car clears)))]))]
         [#(if ,tst ,thn ,els)
          (define-values (new-stack val) (interpret tst stack))
          (if val
@@ -745,38 +685,20 @@
 
   (define (capture-closure close-vec stack)
     (define len (vector*-length close-vec))
-    (let loop ([i 0] [stack stack] [captured #hasheq()])
+    (let loop ([i 0] [stack stack] [captured empty-stack])
       (cond
         [(= i len) (values stack captured)]
         [else
          (define-values (val-stack val) (stack-ref stack (vector*-ref close-vec i)))
          (loop (add1 i)
                val-stack
-               (hash-set captured (- -1 i) val))])))
+               (stack-set captured (- -1 i) val))])))
 
   (define (apply-function b captured args)
     (interp-match
      b
      [#(lambda ,mask ,close-vec ,b)
       (interpret b (push-stack captured 0 args mask) #t)]))
-
-  (define (matching-argument-count? mask len)
-    (bitwise-bit-set? mask len))
-
-  (define (push-stack stack pos vals mask)
-    (define rest? (negative? mask))
-    (define count (if rest?
-                      (integer-length mask)
-                      (sub1 (integer-length mask))))
-    (let loop ([pos pos] [vals vals] [count count] [stack stack])
-      (cond
-        [(zero? count)
-         (if rest?
-             (stack-set stack pos vals)
-             stack)]
-        [else
-         (loop (add1 pos) (cdr vals) (sub1 count)
-               (stack-set stack pos (car vals)))])))
 
   (interp-match
    b
@@ -793,10 +715,15 @@
    [#()
     (interpret b stack #t)]))
 
+;; ----------------------------------------
+
 (define (count->mask count rest?)
   (if rest?
       (bitwise-xor -1 (sub1 (arithmetic-shift 1 (sub1 count))))
       (arithmetic-shift 1 count)))
+
+(define (matching-argument-count? mask len)
+  (bitwise-bit-set? mask len))
 
 ;; ----------------------------------------
 
