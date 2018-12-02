@@ -19,11 +19,11 @@
 (struct boxed (stack))
 (struct boxed/check boxed ())
 
-(struct stack-info ([max-depth #:mutable]
-                    capture-depth
+(struct stack-info (capture-depth
                     closure-map
                     [use-map #:mutable]
-                    [local-use-map #:mutable]))
+                    [local-use-map #:mutable]
+                    [non-tail-at-depth #:mutable]))
 
 (define (stack->pos i stk-i stack-depth #:nonuse? [nonuse? #f])
   (define capture-depth (stack-info-capture-depth stk-i))
@@ -57,14 +57,16 @@
         (define local-use-map (stack-info-local-use-map stk-i))
         (when local-use-map
           (set-stack-info-local-use-map! stk-i (hash-set local-use-map pos #t)))
-        (box pos)])]))
+        (if (i . < . (stack-info-non-tail-at-depth stk-i))
+            (box pos)
+            pos)])]))
 
 (define (stack-info-branch stk-i)
-  (stack-info 0
-              (stack-info-capture-depth stk-i)
+  (stack-info (stack-info-capture-depth stk-i)
               (stack-info-closure-map stk-i)
               (stack-info-use-map stk-i)
-              #hasheq()))
+              #hasheq()
+              (stack-info-non-tail-at-depth stk-i)))
 
 (define (stack-info-merge! stk-i branch-stk-is)
   (define all-clear (make-hasheq))
@@ -76,10 +78,16 @@
         (set-stack-info-use-map! stk-i (hash-set use-map pos #t)))
       (define local-use-map (stack-info-local-use-map stk-i))
       (when local-use-map
-        (set-stack-info-local-use-map! stk-i (hash-set local-use-map pos #t)))))
+        (set-stack-info-local-use-map! stk-i (hash-set local-use-map pos #t)))
+      (set-stack-info-non-tail-at-depth! stk-i
+                                         (max (stack-info-non-tail-at-depth stk-i)
+                                              (stack-info-non-tail-at-depth branch-stk-i)))))
   all-clear)
 
-(define (stack-info-forget! stk-i start-pos len)
+(define (stack-info-forget! stk-i stack-depth start-pos len)
+  (set-stack-info-non-tail-at-depth! stk-i
+                                     (min (stack-info-non-tail-at-depth stk-i)
+                                          stack-depth))
   (when (stack-info-use-map stk-i)
     (for ([i (in-range len)])
       (define pos (+ start-pos i))
@@ -88,6 +96,11 @@
       (define local-use-map (stack-info-local-use-map stk-i))
       (when local-use-map
         (set-stack-info-local-use-map! stk-i (hash-remove local-use-map pos))))))
+
+(define (stack-info-non-tail! stk-i stack-depth)
+  (set-stack-info-non-tail-at-depth! stk-i
+                                     (max (stack-info-non-tail-at-depth stk-i)
+                                          stack-depth)))
 
 (define (interpretable-jitified-linklet linklet-e strip-annotations)
   ;; Return a compiled linklet in two parts: a vector expression for
@@ -107,21 +120,19 @@
     (match linklet-e
       [`(lambda . ,_)
        ;; No constants:
-       (define-values (compiled-body num-body-vars max-depth)
+       (define-values (compiled-body num-body-vars)
          (compile-linklet-body linklet-e '#hasheq() 0))
        (vector #f
-               max-depth
                num-body-vars
                compiled-body)]
       [`(let* ,bindings ,body)
-       (define bindings-stk-i (stack-info 1 #f #hasheq() #f #f))
+       (define bindings-stk-i (stack-info #f #hasheq() #f #f 0))
        (let loop ([bindings bindings] [pos 0] [env '#hasheq()] [accum '()])
          (cond
            [(null? bindings)
-            (define-values (compiled-body num-body-vars max-depth)
+            (define-values (compiled-body num-body-vars)
               (compile-linklet-body body env 1))
             (vector (list->vector (reverse accum))
-                    (max max-depth (stack-info-max-depth bindings-stk-i))
                     num-body-vars
                     compiled-body)]
            [else
@@ -129,7 +140,7 @@
               (loop (cdr bindings)
                     (add1 pos)
                     (hash-set env (car binding) (indirect 0 pos))
-                    (cons (compile-expr (cadr binding) env 1 bindings-stk-i)
+                    (cons (compile-expr (cadr binding) env 1 bindings-stk-i #t)
                           accum)))]))]))
 
   (define (compile-linklet-body v env stack-depth)
@@ -157,12 +168,11 @@
                   (loop e env num-body-vars))]
                [`,_ (values env num-body-vars)]))))
        (define body-stack-depth (+ num-body-vars num-args stack-depth))
-       (define stk-i (stack-info body-stack-depth #f #hasheq() #hasheq() #f))
+       (define stk-i (stack-info #f #hasheq() #hasheq() #f 0))
        (define new-body
          (compile-top-body body body-env body-stack-depth stk-i))
        (values new-body
-               num-body-vars
-               (stack-info-max-depth stk-i))]))
+               num-body-vars)]))
 
   ;; Like `compile-body`, but flatten top-level `begin`s
   (define (compile-top-body body env stack-depth stk-i)
@@ -173,7 +183,7 @@
                     (loop (append subs rest))]
                    [`(,e . ,rest)
                     (define new-rest (loop rest))
-                    (cons (compile-expr e env stack-depth stk-i)
+                    (cons (compile-expr e env stack-depth stk-i #t)
                           new-rest)])))
     (cond
       [(null? bs) '#(void)]
@@ -182,42 +192,42 @@
       [else
        (list->vector (cons 'begin bs))]))
 
-  (define (compile-body body env stack-depth stk-i)
+  (define (compile-body body env stack-depth stk-i tail?)
     (match body
-      [`(,e) (compile-expr e env stack-depth stk-i)]
+      [`(,e) (compile-expr e env stack-depth stk-i tail?)]
       [`,_
        (list->vector
-        (cons 'begin (compile-list body env stack-depth stk-i)))]))
+        (cons 'begin (compile-list body env stack-depth stk-i tail?)))]))
 
-  (define (compile-list body env stack-depth stk-i)
+  (define (compile-list body env stack-depth stk-i tail?)
     (let loop ([body body])
       (cond
         [(null? body) '()]
         [else
-         (define new-rest (loop (wrap-cdr body)))
-         (cons (compile-expr (wrap-car body) env stack-depth stk-i)
+         (define rest-body (wrap-cdr body))
+         (define new-rest (loop rest-body))
+         (cons (compile-expr (wrap-car body) env stack-depth stk-i (and tail? rest-body))
                new-rest)])))
 
-  (define (compile-expr e env stack-depth stk-i)
+  (define (compile-expr e env stack-depth stk-i tail?)
     (match e
       [`(lambda ,ids . ,body)
        (define-values (body-env count rest?)
          (args->env ids env stack-depth))
        (define cmap (make-hasheq))
        (define body-stack-depth (+ stack-depth count))
-       (define body-stk-i (stack-info body-stack-depth stack-depth cmap #hasheq() #f))
-       (define new-body (compile-body body body-env body-stack-depth body-stk-i))
+       (define body-stk-i (stack-info stack-depth cmap #hasheq() #f 0))
+       (define new-body (compile-body body body-env body-stack-depth body-stk-i #t))
        (define rev-cmap (for/hasheq ([(i pos) (in-hash cmap)]) (values (- -1 pos) i)))
        (vector 'lambda
                (count->mask count rest?)
                (for/vector #:length (hash-count cmap) ([i (in-range (hash-count cmap))])
                  (stack->pos (hash-ref rev-cmap i) stk-i stack-depth))
-               (- (stack-info-max-depth body-stk-i) stack-depth)
                new-body)]
       [`(case-lambda [,idss . ,bodys] ...)
        (define lams (for/list ([ids (in-list idss)]
                                [body (in-list bodys)])
-                      (compile-expr `(lambda ,ids . ,body) env stack-depth stk-i)))
+                      (compile-expr `(lambda ,ids . ,body) env stack-depth stk-i tail?)))
        (define mask (for/fold ([mask 0]) ([lam (in-list lams)])
                       (bitwise-ior mask (interp-match lam [#(lambda ,mask) mask]))))
        (list->vector (list* 'case-lambda mask lams))]
@@ -228,38 +238,38 @@
                                 [i (in-naturals)])
            (hash-set env (unwrap id) (+ stack-depth i))))
        (define body-stack-depth (+ stack-depth len))
-       (define new-body (compile-body body body-env body-stack-depth stk-i))
+       (define new-body (compile-body body body-env body-stack-depth stk-i tail?))
        (define pos (stack->pos stack-depth stk-i stack-depth #:nonuse? #t))
-       (stack-info-forget! stk-i pos len)
+       (stack-info-forget! stk-i stack-depth pos len)
        (define new-rhss (list->vector
-                         (compile-list rhss env stack-depth stk-i)))
+                         (compile-list rhss env stack-depth stk-i #f)))
        (vector 'let pos new-rhss new-body)]
-      [`(letrec . ,_) (compile-letrec e env stack-depth stk-i)]
-      [`(letrec* . ,_) (compile-letrec e env stack-depth stk-i)]
+      [`(letrec . ,_) (compile-letrec e env stack-depth stk-i tail?)]
+      [`(letrec* . ,_) (compile-letrec e env stack-depth stk-i tail?)]
       [`(begin . ,vs)
-       (compile-body vs env stack-depth stk-i)]
+       (compile-body vs env stack-depth stk-i tail?)]
       [`(begin0 ,e . ,vs)
-       (define new-body (compile-body vs env stack-depth stk-i))
+       (define new-body (compile-body vs env stack-depth stk-i #f))
        (vector 'begin0
-               (compile-expr e env stack-depth stk-i)
+               (compile-expr e env stack-depth stk-i #f)
                new-body)]
       [`(pariah ,e)
-       (compile-expr e env stack-depth stk-i)]
+       (compile-expr e env stack-depth stk-i tail?)]
       [`(if ,tst ,thn ,els)
        (define then-stk-i (stack-info-branch stk-i))
        (define else-stk-i (stack-info-branch stk-i))
-       (define new-then (compile-expr thn env stack-depth then-stk-i))
-       (define new-else (compile-expr els env stack-depth else-stk-i))
+       (define new-then (compile-expr thn env stack-depth then-stk-i tail?))
+       (define new-else (compile-expr els env stack-depth else-stk-i tail?))
        (define all-clear (stack-info-merge! stk-i (list then-stk-i else-stk-i)))
        (vector 'if
-               (compile-expr tst env stack-depth stk-i)
+               (compile-expr tst env stack-depth stk-i #f)
                (add-clears new-then then-stk-i all-clear)
                (add-clears new-else else-stk-i all-clear))]
       [`(with-continuation-mark ,key ,val ,body)
-       (define new-body (compile-expr body env stack-depth stk-i))
-       (define new-val (compile-expr val env stack-depth stk-i))
+       (define new-body (compile-expr body env stack-depth stk-i tail?))
+       (define new-val (compile-expr val env stack-depth stk-i #f))
        (vector 'wcm
-               (compile-expr key env stack-depth stk-i)
+               (compile-expr key env stack-depth stk-i #f)
                new-val
                new-body)]
       [`(quote ,v)
@@ -288,13 +298,15 @@
                                   `(set! ,id ,gen-id)))))
                      env
                      stack-depth
-                     stk-i)]
+                     stk-i
+                     tail?)]
       [`(call-with-values ,proc1 (lambda ,ids . ,body))
        (compile-expr `(call-with-values ,proc1 (case-lambda
                                                  [,ids . ,body]))
                      env
                      stack-depth
-                     stk-i)]
+                     stk-i
+                     tail?)]
       [`(call-with-values (lambda () . ,body) (case-lambda [,idss . ,bodys] ...))
        (define body-stk-is (for/list ([body (in-list bodys)])
                              (stack-info-branch stk-i)))
@@ -305,14 +317,14 @@
            (define-values (new-env count rest?)
              (args->env ids env stack-depth))
            (define new-stack-depth (+ stack-depth count))
-           (define new-body (compile-body body new-env new-stack-depth body-stk-i))
+           (define new-body (compile-body body new-env new-stack-depth body-stk-i tail?))
            (define pos (stack->pos stack-depth body-stk-i stack-depth #:nonuse? #t))
-           (stack-info-forget! body-stk-i pos count)
+           (stack-info-forget! body-stk-i stack-depth pos count)
            (vector (count->mask count rest?)
                    new-body)))
        (define all-clear (stack-info-merge! stk-i body-stk-is))
        (vector 'cwv
-               (compile-body body env stack-depth stk-i)
+               (compile-body body env stack-depth stk-i #f)
                (stack->pos stack-depth stk-i stack-depth #:nonuse? #t)
                (for/list ([initial-new-clause (in-list initial-new-clauses)]
                           [body-stk-i (in-list body-stk-is)])
@@ -320,16 +332,16 @@
                  (vector (vector-ref initial-new-clause 0)
                          (add-clears body body-stk-i all-clear))))]
       [`(call-with-module-prompt (lambda () . ,body))
-       (vector 'cwmp0 (compile-body body env stack-depth stk-i))]
+       (vector 'cwmp0 (compile-body body env stack-depth stk-i tail?))]
       [`(call-with-module-prompt (lambda () . ,body) ',ids ',constances ,vars ...)
        (vector 'cwmp
-               (compile-body body env stack-depth stk-i)
+               (compile-body body env stack-depth stk-i tail?)
                ids
                constances
-               (compile-list vars env stack-depth stk-i))]
+               (compile-list vars env stack-depth stk-i #f))]
       [`(variable-set! ,dest-id ,e ',constance)
        (define dest-var (hash-ref env (unwrap dest-id)))
-       (define new-expr (compile-expr e env stack-depth stk-i))
+       (define new-expr (compile-expr e env stack-depth stk-i #f))
        (vector 'set-variable!
                (stack->pos dest-var stk-i stack-depth)
                new-expr
@@ -340,8 +352,8 @@
       [`(variable-ref/no-check ,id)
        (define var (hash-ref env (unwrap id)))
        (vector 'ref-variable (stack->pos var stk-i stack-depth))]
-      [`(#%app ,_ ...) (compile-apply (wrap-cdr e) env stack-depth stk-i)]
-      [`(,rator ,_ ...)  (compile-apply e env stack-depth stk-i)]
+      [`(#%app ,_ ...) (compile-apply (wrap-cdr e) env stack-depth stk-i tail?)]
+      [`(,rator ,_ ...)  (compile-apply e env stack-depth stk-i tail?)]
       [`,id
        (define u (unwrap id))
        (define var (hash-ref env u #f))
@@ -362,7 +374,7 @@
          [else
           (stack->pos var stk-i stack-depth)])]))
 
-  (define (compile-letrec e env stack-depth stk-i)
+  (define (compile-letrec e env stack-depth stk-i tail?)
     (match e
       [`(,_ ([,ids ,rhss] ...) . ,body)
        (define count (length ids))
@@ -373,18 +385,21 @@
        (define rhs-env (make-env boxed/check))
        (define body-env (make-env boxed))
        (define body-stack-depth (+ stack-depth count))
-       (define new-body (compile-body body body-env body-stack-depth stk-i))
+       (define new-body (compile-body body body-env body-stack-depth stk-i tail?))
        (define new-rhss (list->vector
-                         (compile-list rhss rhs-env body-stack-depth stk-i)))
+                         (compile-list rhss rhs-env body-stack-depth stk-i #F)))
        (define pos (stack->pos stack-depth stk-i stack-depth #:nonuse? #t))
-       (stack-info-forget! stk-i pos count)
+       (stack-info-forget! stk-i stack-depth pos count)
        (vector 'letrec pos new-rhss new-body)]))
 
-  (define (compile-apply es env stack-depth stk-i)
-    (list->vector (cons 'app (compile-list es env stack-depth stk-i))))
+  (define (compile-apply es env stack-depth stk-i tail?)
+    (define new-es (compile-list es env stack-depth stk-i #f))
+    (unless tail?
+      (stack-info-non-tail! stk-i stack-depth))
+    (list->vector (cons 'app new-es)))
 
   (define (compile-assignment id rhs env stack-depth stk-i)
-    (define compiled-rhs (compile-expr rhs env stack-depth stk-i))
+    (define compiled-rhs (compile-expr rhs env stack-depth stk-i #f))
     (define u (unwrap id))
     (define var (hash-ref env u))
     (cond
@@ -416,10 +431,10 @@
     (define clears
       (for/list ([pos (in-hash-keys all-clear)]
                  #:unless (hash-ref local-use-map pos #f))
-        (box pos)))
+        pos))
     (cond
       [(null? clears) e]
-      [else (list->vector (cons 'begin (append clears (list e))))]))
+      [else (vector 'clear clears e)]))
 
   (start linklet-e))
 
@@ -429,7 +444,7 @@
                            make-arity-wrapper-procedure)
   (interp-match
    b
-   [#(,consts ,max-depth ,num-body-vars ,b)
+   [#(,consts ,num-body-vars ,b)
     (let ([consts (and consts
                        (let ([vec (make-vector (vector*-length consts))])
                          (define stack (list vec))
@@ -469,6 +484,9 @@
 
   (define (stack-set stack i v)
     (hash-set stack i v))
+  
+  (define (stack-clear stack i)
+    (hash-remove stack i))
   
   (define (interpret b stack [tail? #f])
     (cond
@@ -597,6 +615,13 @@
                      (apply values vals)
                      (apply values new-stack vals))
                  (loop (add1 i) new-stack)))))]
+        [#(clear ,clears ,e)
+         (let loop ([clears clears] [stack stack])
+           (cond
+             [(null? clears)
+              (interpret e stack tail?)]
+             [else
+              (loop (cdr clears) (stack-clear stack (car clears)))]))]
         [#(if ,tst ,thn ,els)
          (define-values (new-stack val) (interpret tst stack))
          (if val
@@ -637,7 +662,7 @@
                 constances
                 (for/list ([e (in-list var-es)])
                   (interpret e stack #t)))]
-        [#(lambda ,mask ,close-vec ,max-stack-depth ,_)
+        [#(lambda ,mask ,close-vec ,_)
          (define-values (new-stack captured) (capture-closure close-vec stack))
          (define val
            (make-arity-wrapper-procedure
@@ -732,7 +757,7 @@
   (define (apply-function b captured args)
     (interp-match
      b
-     [#(lambda ,mask ,close-vec ,max-stack-depth ,b)
+     [#(lambda ,mask ,close-vec ,b)
       (interpret b (push-stack captured 0 args mask) #t)]))
 
   (define (matching-argument-count? mask len)
