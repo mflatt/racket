@@ -29,7 +29,9 @@
                   [get-thread-id rumble:get-thread-id]
                   [set-ctl-c-handler! rumble:set-ctl-c-handler!]
                   [unsafe-root-continuation-prompt-tag rumble:unsafe-root-continuation-prompt-tag]
-                  [set-break-enabled-transition-hook! rumble:set-break-enabled-transition-hook!]))
+                  [set-break-enabled-transition-hook! rumble:set-break-enabled-transition-hook!]
+                  [set-reachable-size-increments-callback! rumble:set-reachable-size-increments-callback!]
+                  [set-custodian-memory-use-proc! rumble:set-custodian-memory-use-proc!]))
 
   (include "place-register.ss")
   (define-place-register-define place:define thread-register-start thread-register-count)
@@ -115,6 +117,8 @@
         'break-enabled-key break-enabled-key
         'set-break-enabled-transition-hook! rumble:set-break-enabled-transition-hook!
         'continuation-marks rumble:continuation-marks
+        'set-reachable-size-increments-callback! rumble:set-reachable-size-increments-callback!
+        'set-custodian-memory-use-proc! rumble:set-custodian-memory-use-proc!
         'exn:break/non-engine exn:break
         'exn:break:hang-up/non-engine exn:break:hang-up
         'exn:break:terminate/non-engine exn:break:terminate

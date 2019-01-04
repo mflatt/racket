@@ -403,15 +403,16 @@ As a result of these layers, there are multiple ways to implement
 atomic regions:
 
  * For critical sections with respect to Chez Scheme / OS threads, use
-   a mutex.
+   a mutex or a spinlock.
 
    For example, the implementation of `eq?` and `eqv?`-based hash
-   tables uses mutex to guard hash tables, so they can be accessed
-   concurrently from futures. In contrast, `equal?`-based hash table
-   operations are not atomic from the Racket perspective, so they
-   can't be locked by a mutex; they use Racket-thread locks, instead.
-   The "rumble/lock.ss" layer skips the `eq?`/`eqv?`-table mutex when
-   threads are not enabled at the Chez Scheme level.
+   tables uses a spinlock to guard hash tables, so they can be
+   accessed concurrently from futures. In contrast, `equal?`-based
+   hash table operations are not atomic from the Racket perspective,
+   so they can't be locked by a mutex or spinlock; they use
+   Racket-thread locks, instead. The "rumble/lock.ss" layer skips the
+   `eq?`/`eqv?`-table spinlock when threads are not enabled at the
+   Chez Scheme level.
 
  * For critical sections at the Racket level, there are multiple
    possibilities:

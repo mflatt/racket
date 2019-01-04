@@ -49,6 +49,9 @@
         [will-register host:will-register]
         [will-try-execute host:will-try-execute]
 
+        set-reachable-size-increments-callback!
+        set-custodian-memory-use-proc!
+
         ;; Just `exn:break`, etc., but the host may need
         ;; to distinguish breaks raised by the thread
         ;; implementation:

@@ -389,11 +389,11 @@
     (set-place-wakeup-handle! current-place (sandman-get-wakeup-handle))))
 
 ;; in atomic mode
-(define (wakeup-waiting k)
-  (host:mutex-acquire (place-lock k))
-  (unless (place-result k)
-    (sandman-wakeup (place-wakeup-handle k)))
-  (host:mutex-release (place-lock k)))
+(define (wakeup-waiting pl)
+  (host:mutex-acquire (place-lock pl))
+  (unless (place-result pl)
+    (sandman-wakeup (place-wakeup-handle pl)))
+  (host:mutex-release (place-lock pl)))
 
 ;; ----------------------------------------
 
@@ -414,3 +414,11 @@
      (set-place-post-shutdown! current-place
                                (cons proc
                                      (place-post-shutdown current-place))))))
+
+(void (set-place-custodian-procs!
+       (lambda ()
+         (atomically (ensure-wakeup-handle!))
+         current-place)
+       ;; in atomic mode
+       (lambda (pl)
+         (wakeup-waiting pl))))

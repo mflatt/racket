@@ -52,6 +52,7 @@
     (check-external-events 'fast)
     (call-pre-poll-external-callbacks)
     (check-place-activity)
+    (check-queued-custodian-shutdown)
     (when (and (null? callbacks)
                (all-threads-poll-done?)
                (waiting-on-external-or-idle?))

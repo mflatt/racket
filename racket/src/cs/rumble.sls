@@ -460,7 +460,9 @@
           phantom-bytes?
           make-phantom-bytes
           set-phantom-bytes!
-          set-garbage-collect-notify! ; not exported to Racket
+          set-garbage-collect-notify!             ; not exported to Racket
+          set-reachable-size-increments-callback! ; not exported to Racket
+          set-custodian-memory-use-proc!          ; not exported to Racket
           unsafe-add-collect-callbacks
           unsafe-remove-collect-callbacks
 
