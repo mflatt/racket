@@ -255,6 +255,9 @@
                   'pthread? (lambda args
                               (error "thread?: not ready"))
                   'get-thread-id (lambda () 0)
+                  'place-continuation-roots (lambda (p) '())
+                  'get-initial-place (lambda () #f)
+                  'call-with-current-place-continuation call/cc
                   'make-condition (lambda () (make-semaphore))
                   'condition-wait (lambda (c s)
                                     (semaphore-post s)

@@ -73,7 +73,7 @@
       (run-collect-callbacks cdr)
       (when (and reachable-size-increments-callback
                  (fx= gen (collect-maximum-generation)))
-        (reachable-size-increments-callback compute-size-increments)))))
+        (reachable-size-increments-callback (lambda (l) (compute-size-increments l #;'static)))))))
 
 (define collect-garbage
   (case-lambda

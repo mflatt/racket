@@ -27,6 +27,8 @@
                   [fork-pthread rumble:fork-thread]
                   [threaded? rumble:threaded?]
                   [get-thread-id rumble:get-thread-id]
+                  [get-initial-pthread rumble:get-initial-pthread]
+                  [pthread-continuation-roots rumble:pthread-continuation-roots]
                   [set-ctl-c-handler! rumble:set-ctl-c-handler!]
                   [unsafe-root-continuation-prompt-tag rumble:unsafe-root-continuation-prompt-tag]
                   [set-break-enabled-transition-hook! rumble:set-break-enabled-transition-hook!]
@@ -132,6 +134,9 @@
         'fork-place rumble:fork-place
         'start-place rumble:start-place
         'fork-pthread rumble:fork-thread
+        'get-initial-place rumble:get-initial-pthread
+        'place-continuation-roots rumble:pthread-continuation-roots
+        'call-with-current-pthread-continuation call/cc
         'exit place-exit
         'pthread? rumble:thread?
         'get-thread-id rumble:get-thread-id

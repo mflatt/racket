@@ -414,6 +414,12 @@ atomic regions:
    `eq?`/`eqv?`-table spinlock when threads are not enabled at the
    Chez Scheme level.
 
+   Chez Scheme deactivates a thread that is blocked on a mutex, so you
+   don't have to worry about waiting on a mutex blocking GCs. However,
+   if a lock guards a value that is also used by a GC callback, then
+   interrupts should be disabled before taking the lock to avoid
+   deadlock.
+
  * For critical sections at the Racket level, there are multiple
    possibilities:
 

@@ -1,5 +1,6 @@
 #lang racket/base
 (require "place-local.rkt"
+         "place-object.rkt"
          "atomic.rkt"
          "host.rkt"
          "internal-error.rkt"
@@ -72,6 +73,7 @@
   (set-thread-engine! t 'running)
   (set-thread-sched-info! t #f)
   (current-thread t)
+  (set-place-current-thread! current-place t)
   (run-callbacks-in-engine
    e callbacks
    (lambda (e)
@@ -88,6 +90,7 @@
           (start-implicit-atomic-mode)
           (accum-cpu-time! t)
           (current-thread #f)
+          (set-place-current-thread! current-place #f)
           (unless (zero? (current-atomic))
             (internal-error "terminated in atomic mode!"))
           (thread-dead! t)
@@ -101,6 +104,7 @@
             [(zero? (current-atomic))
              (accum-cpu-time! t)
              (current-thread #f)
+             (set-place-current-thread! current-place #f)
              (unless (eq? (thread-engine t) 'done)
                (set-thread-engine! t e))
              (select-thread!)]

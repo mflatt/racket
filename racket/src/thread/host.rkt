@@ -78,6 +78,9 @@
         [fork-place host:fork-place]
         [start-place host:start-place]
         [exit host:exit]
+        [place-continuation-roots host:place-continuation-roots]
+        [get-initial-place host:get-initial-place]
+        [call-with-current-pthread-continuation host:call-with-current-place-continuation]
 
         fork-pthread
         pthread?

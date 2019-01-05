@@ -665,6 +665,8 @@
           fork-pthread
           pthread?
           get-thread-id
+          get-initial-pthread
+          pthread-continuation-roots
           make-condition
           condition-wait
           condition-signal
