@@ -1,4 +1,4 @@
-;; The server half of this interaction is in "../main/cross-compile.ss".
+;; The server half of this interaction is in "../c/cross-serve.ss".
 
 ;; Currently, cross-compilation support in Chez Scheme replaces the
 ;; compiler for the build machine. Until that changes, we can't load
@@ -84,7 +84,7 @@
     (let clean-up ()
       (when (will-try-execute we)
         (clean-up)))
-    (let ([exe (car exe+x)]
+    (let ([exe (find-exe (car exe+x))]
           [xpatch (cdr exe+x)]
           [msg-ch (make-channel)]
           [c (unsafe-make-custodian-at-root)])
@@ -117,3 +117,43 @@
                  (channel-put (caddr msg) (string-> (read-line from)))
                  (loop)))))))
       (list machine msg-ch))))
+
+(define (find-exe exe)
+  (let-values ([(base name dir?) (split-path exe)])
+    (cond
+     [(eq? base 'relative)
+      (let loop ([paths (get-exe-search-path)])
+        (cond
+         [(null? paths) exe]
+         [else
+          (let ([f (build-path (car paths) exe)])
+            (if (file-exists? f)
+                f
+                (loop (cdr paths))))]))]
+     [else
+      (path->complete-path exe (find-system-path 'init-dir))])))
+
+(define (get-exe-search-path)
+  (define (accum->path one-accum)
+    (bytes->path (u8-list->bytevector (reverse one-accum))))
+  (let ([path (environment-variables-ref
+               (|#%app| current-environment-variables)
+               (string->utf8 "PATH"))])
+    (cond
+     [(not path) '()]
+     [else
+      (let loop ([bytes (bytevector->u8-list path)] [one-accum '()] [accum '()])
+        (cond
+         [(null? bytes) (let ([accum (if (null? one-accum)
+                                         accum
+                                         (cons (accum->path one-accum)
+                                               accum))])
+                          (reverse accum))]
+         [(eqv? (car bytes) (if (eq? 'windows (system-type))
+                                (char->integer #\;)
+                                (char->integer #\:)))
+          (if (null? one-accum)
+              (loop (cdr bytes) '() accum)
+              (loop (cdr bytes) '() (cons (accum->path one-accum) accum)))]
+         [else
+          (loop (cdr bytes) (cons (car bytes) one-accum) accum)]))])))

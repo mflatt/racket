@@ -30,7 +30,6 @@
           variable-reference-from-unsafe?
 
           add-cross-compiler!        ; not exported to racket
-          unmarshal-annotation       ; not exported to racket
 
           compile-enforce-module-constants
           compile-context-preservation-enabled
@@ -88,11 +87,15 @@
                 find-system-path
                 build-path
                 format
+                ;; Used by cross-compiler:
                 get-original-error-port
                 subprocess
                 write-string
                 flush-output
-                read-line)
+                read-line
+                split-path
+                path->complete-path
+                file-exists?)
           (only (thread)
                 current-process-milliseconds
                 ;; Used by cross-compiler:

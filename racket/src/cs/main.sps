@@ -46,8 +46,7 @@
                linklet-performance-report!
                current-compile-target-machine
                compile-target-machine?
-               add-cross-compiler!
-               unmarshal-annotation))
+               add-cross-compiler!))
 
  (linklet-performance-init!)
  (unless omit-debugging?
@@ -148,7 +147,6 @@
                                       (machine-type)))
    (define compiled-roots-path-list-string (getenv "PLTCOMPILEDROOTS"))
    (define embedded-load-in-places #f)
-   (define cross-compile-server-patch-file #f)
 
    (define (see saw . args)
      (let loop ([saw saw] [args args])
@@ -296,7 +294,6 @@
                  loads)))
 
    (include "main/help.ss")
-   (include "main/cross-compile.ss")
 
    (define-syntax string-case
      ;; Assumes that `arg` is a variable
@@ -540,10 +537,10 @@
                   (loop rest-args)))]
              [("--cross-server")
               (let-values ([(xpatch-file rest-args) (next-arg "xpatch path" arg within-arg args)])
-                (set! cross-compile-server-patch-file xpatch-file)
                 (when (or (saw-something? saw)
                           (not (null? rest-args)))
                   (raise-user-error 'racket "--cross-server <path> cannot be combined with any other arguments"))
+                (raise-user-error 'racket "--cross-server should have been handled earlier")
                 (flags-loop null (see saw 'non-config)))]
              [("-j" "--no-jit")
               (loop (cdr args))]
@@ -765,9 +762,6 @@
    (call-in-main-thread
     (lambda ()
       (initialize-place!)
-      (when cross-compile-server-patch-file
-        ;; does not return:
-        (serve-cross-compile cross-compile-server-patch-file))
 
       (when init-library
         (namespace-require+ init-library))
