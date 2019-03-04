@@ -362,14 +362,16 @@ run-cfg-cs:
 no-cfg-cs:
 	echo done
 
+BUILD_FOR_FOR_SCHEME_DIR = racket/src/build
+
 scheme-src:
-	$(MAKE) racket/src/build/ChezScheme
+	$(MAKE) $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme
 	$(MAKE) update-ChezScheme
 
-racket/src/build/ChezScheme:
-	mkdir -p racket/src/build
+$(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme:
+	mkdir -p $(BUILD_FOR_FOR_SCHEME_DIR)
 	if [ "$(EXTRA_REPOS_BASE)" = "" ] ; \
-          then cd racket/src/build && git clone $(GIT_CLONE_ARGS_qq) $(CHEZ_SCHEME_REPO) ChezScheme ; \
+          then cd $(BUILD_FOR_FOR_SCHEME_DIR) && git clone $(GIT_CLONE_ARGS_qq) $(CHEZ_SCHEME_REPO) ChezScheme ; \
           else $(MAKE) clone-ChezScheme-as-extra GIT_CLONE_ARGS_qq="" ; fi
 
 update-ChezScheme:
@@ -425,10 +427,10 @@ native-cs-for-cross:
          then $(MAKE) scheme-src-then-cross ; \
          else $(MAKE) native-cs-for-cross-after-scheme-src MAKE_BUILD_SCHEME=n ; fi
 
-CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="`pwd`/racket/src/build/ChezScheme" MAKE_BUILD_SCHEME=y
+CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="`pwd`/racket/src/build/cross/ChezScheme" MAKE_BUILD_SCHEME=y
 
 scheme-src-then-cross:
-	$(MAKE) scheme-src
+	$(MAKE) scheme-src BUILD_FOR_FOR_SCHEME_DIR="racket/src/build/cross/"
 	$(MAKE) native-cs-for-cross-after-scheme-src $(CS_CROSS_SCHEME_CONFIG)
 
 native-cs-for-cross-after-scheme-src:
@@ -436,8 +438,7 @@ native-cs-for-cross-after-scheme-src:
          then $(MAKE) native-for-cross-racket-then-cross ; \
          else $(MAKE) native-cs-for-cross-finish ; fi
 
-CS_CROSS_CONFIG_CONFIG = \
-  MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-csdefault --enable-scheme=$(CS_CROSS_SCHEME)"
+CS_CROSS_CONFIG_CONFIG = MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-csdefault"
 
 native-for-cross-racket-then-cross:
 	$(MAKE) native-for-cross $(CS_CROSS_CONFIG_CONFIG)
