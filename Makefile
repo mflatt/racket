@@ -426,8 +426,7 @@ native-cs-for-cross:
          else $(MAKE) native-cs-for-cross-after-scheme-src ; fi
 
 CS_CROSS_SCHEME = `pwd`/racket/src/build/ChezScheme
-CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="$(CS_CROSS_SCHEME)" \
-                         MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-scheme=$(CS_CROSS_SCHEME)"
+CS_CROSS_SCHEME_CONFIG = MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-scheme=$(CS_CROSS_SCHEME)"
 
 scheme-src-then-cross:
 	$(MAKE) scheme-src
