@@ -225,16 +225,17 @@ racket/src/build/Makefile: racket/src/$(SRC_MAKEFILE_CONFIG) racket/src/Makefile
 	mkdir -p racket/src/build
 	cd racket/src/build; ../$(SRC_MAKEFILE_CONFIG) $(CONFIGURE_ARGS_qq) $(MORE_CONFIGURE_ARGS)
 
+MORE_CROSS_CONFIGURE_ARGS =
 
 # For cross-compilation, build a native executable with no configure options:
 native-for-cross:
 	mkdir -p racket/src/build/cross
 	$(MAKE) racket/src/build/cross/Makefile
-	cd racket/src/build/cross; $(MAKE) reconfigure
+	cd racket/src/build/cross; $(MAKE) reconfigure MORE_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS)"
 	cd racket/src/build/cross/racket; $(MAKE)
 
 racket/src/build/cross/Makefile: racket/src/configure racket/src/Makefile.in
-	cd racket/src/build/cross; ../../configure
+	cd racket/src/build/cross; ../../configure $(MORE_CROSS_CONFIGURE_ARGS)
 
 # ------------------------------------------------------------
 # Racket-on-Chez build
@@ -431,13 +432,15 @@ scheme-src-then-cross:
 native-cs-for-cross-after-scheme-src:
 	if [ "$(RACKET)" = "" ] ; \
          then $(MAKE) native-for-cross-racket-then-cross ; \
-         else $(MAKE) native-cs-for-cross-after-scheme-src-and-racket ; fi
+         else $(MAKE) native-cs-for-cross-finish ; fi
+
+CS_CROSS_NOSUFFIX_CONFIG = MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-csdefault"
 
 native-for-cross-racket-then-cross:
-	$(MAKE) native-for-cross
-	$(MAKE) native-cs-for-cross-after-scheme-src-and-racket RACKET="`pwd`/racket/src/build/cross/racket/racket3m"
+	$(MAKE) native-for-cross $(CS_CROSS_NOSUFFIX_CONFIG)
+	$(MAKE) native-cs-for-cross-finish RACKET="`pwd`/racket/src/build/cross/racket/racket3m"
 
-native-cs-for-cross-after-scheme-src-and-racket:
+native-cs-for-cross-finish:
 	mkdir -p racket/src/build/cross/cs/c
 	$(MAKE) racket/src/build/cross/cs/c/Makefile
 	cd racket/src/build/cross/cs/c; $(MAKE) reconfigure
@@ -642,6 +645,9 @@ with-setup-flags:
 	if [ "$(SERVER_COMPILE_MACHINE)" = "-M" ] ; \
          then $(MAKE) $(NEXT_TARGET) $(ANY_COMPILE_MACHINE_ARGS_qq) ; \
          else $(MAKE) $(NEXT_TARGET) ; fi
+
+random:
+	echo $(MORE_CONFIGURE_ARGS)
 
 # ------------------------------------------------------------
 # On a server platform (for an installer build):
