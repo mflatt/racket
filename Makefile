@@ -375,13 +375,13 @@ $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme:
           else $(MAKE) clone-ChezScheme-as-extra GIT_CLONE_ARGS_qq="" ; fi
 
 update-ChezScheme:
-	cd racket/src/build/ChezScheme && git pull -q && git submodule -q update
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git pull -q && git submodule -q update
 
 clone-ChezScheme-as-extra:
-	cd racket/src/build && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)ChezScheme/.git
-	cd racket/src/build/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)nanopass/.git
-	cd racket/src/build/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)stex/.git
-	cd racket/src/build/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)zlib/.git
+	cd $(BUILD_FOR_FOR_SCHEME_DIR) && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)ChezScheme/.git
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)nanopass/.git
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)stex/.git
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)zlib/.git
 
 WIN32_CS_COPY_ARGS_EXCEPT_PKGS_SUT = SRC_CATALOG="$(SRC_CATALOG)" RACKETCS_SUFFIX="$(RACKETCS_SUFFIX)" \
                                      SCHEME_SRC="$(SCHEME_SRC)" EXTRA_REPOS_BASE="$(EXTRA_REPOS_BASE)"
