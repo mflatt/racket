@@ -425,9 +425,13 @@ native-cs-for-cross:
          then $(MAKE) scheme-src-then-cross ; \
          else $(MAKE) native-cs-for-cross-after-scheme-src ; fi
 
+CS_CROSS_SCHEME = `pwd`/racket/src/build/ChezScheme
+CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="$(CS_CROSS_SCHEME)" \
+                         MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-scheme=$(CS_CROSS_SCHEME)"
+
 scheme-src-then-cross:
 	$(MAKE) scheme-src
-	$(MAKE) native-cs-for-cross-after-scheme-src SCHEME_SRC="`pwd`/racket/src/build/ChezScheme"
+	$(MAKE) native-cs-for-cross-after-scheme-src $(CS_CROSS_SCHEME_CONFIG)
 
 native-cs-for-cross-after-scheme-src:
 	if [ "$(RACKET)" = "" ] ; \
