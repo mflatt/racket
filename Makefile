@@ -262,7 +262,10 @@ GIT_CLONE_ARGS_qq = -q --depth 1
 
 # Altenative source for Chez Scheme repo, normally set by
 # the distro-build client driver
-EXTRA_REPOS_BASE = 
+EXTRA_REPOS_BASE =
+
+# Set to "-cross" for a cross build:
+CS_CROSS_SUFFIX =
 
 # Redirected for `cs-as-is` and `cs-base`:
 CS_SETUP_TARGET = plain-in-place-after-base
@@ -336,7 +339,13 @@ cs-after-racket-with-abs-paths:
 	cd racket/src/build/cs/c; $(MAKE) RACKET="$(RACKET)" SCHEME_SRC="$(SCHEME_SRC)" MAKE_BUILD_SCHEME="$(MAKE_BUILD_SCHEME)"
 	$(MAKE) base-config
 	cd racket/src/build; $(MAKE) install-cs RACKET="$(RACKET)" CS_INSTALLED=$(RACKETCS_SUFFIX) $(INSTALL_SETUP_ARGS)
+	$(MAKE) cs-setup$(CS_CROSS_SUFFIX)
+
+cs-setup:
 	$(MAKE) $(CS_SETUP_TARGET) PLAIN_RACKET=racket/bin/racket$(RACKETCS_SUFFIX)
+
+cs-setup-cross:
+	$(MAKE) $(CS_SETUP_TARGET) PLAIN_RACKET="$(RACKET)"
 
 nothing-after-base:
 	echo base done
