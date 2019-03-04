@@ -425,9 +425,7 @@ native-cs-for-cross:
          then $(MAKE) scheme-src-then-cross ; \
          else $(MAKE) native-cs-for-cross-after-scheme-src MAKE_BUILD_SCHEME=n ; fi
 
-CS_CROSS_SCHEME = `pwd`/racket/src/build/ChezScheme
-CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="$(CS_CROSS_SCHEME)" MAKE_BUILD_SCHEME=y \
-                         MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-scheme=$(CS_CROSS_SCHEME)"
+CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="`pwd`/racket/src/build/ChezScheme" MAKE_BUILD_SCHEME=y
 
 scheme-src-then-cross:
 	$(MAKE) scheme-src
@@ -438,10 +436,11 @@ native-cs-for-cross-after-scheme-src:
          then $(MAKE) native-for-cross-racket-then-cross ; \
          else $(MAKE) native-cs-for-cross-finish ; fi
 
-CS_CROSS_NOSUFFIX_CONFIG = MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-csdefault"
+CS_CROSS_CONFIG_CONFIG = \
+  MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-csdefault --enable-scheme=$(CS_CROSS_SCHEME)"
 
 native-for-cross-racket-then-cross:
-	$(MAKE) native-for-cross $(CS_CROSS_NOSUFFIX_CONFIG)
+	$(MAKE) native-for-cross $(CS_CROSS_CONFIG_CONFIG)
 	$(MAKE) native-cs-for-cross-finish RACKET="`pwd`/racket/src/build/cross/racket/racket3m"
 
 native-cs-for-cross-finish:
