@@ -79,7 +79,7 @@
       (when (will-try-execute we)
         (clean-up)))
     (let ([exe (find-exe (car exe+x))]
-          [xpatch (cdr exe+x)]
+          [xpatch-dir (cdr exe+x)]
           [msg-ch (make-channel)]
           [c (unsafe-make-custodian-at-root)])
       (with-continuation-mark
@@ -92,11 +92,14 @@
         ;; At this point, we're under the root custodian
         (thread
          (lambda ()
+           (define (patchfile base)
+             (build-path xpatch-dir (string-append base "-xpatch." (symbol->string machine))))
            (let-values ([(subproc from to err)
                          (subprocess #f #f (get-original-error-port)
                                      exe
                                      "--cross-server"
-                                     xpatch)])
+                                     (patchfile "compile")
+                                     (patchfile "library"))])
              (define (->string v) (#%format "~s\n" v))
              (define (string-> str) (#%read (open-string-input-port str)))
              ;; If this compiler instance becomes unreachable because the
@@ -130,7 +133,7 @@
                 f
                 (loop (cdr paths))))]))]
      [else
-      (path->complete-path exe (find-system-path 'init-dir))])))
+      (path->complete-path exe (find-system-path 'orig-dir))])))
 
 (define (get-exe-search-path)
   (define (accum->path one-accum)

@@ -135,6 +135,7 @@ void racket_boot(int argc, char **argv, char *exec_file, char *run_file,
   const char *fw_path;
 #endif
   const char *cross_server_patch_file = NULL;
+  const char *cross_server_library_file = NULL;
 
 #ifdef WIN32
   if (dlldir)
@@ -145,8 +146,9 @@ void racket_boot(int argc, char **argv, char *exec_file, char *run_file,
 
   Sscheme_init(NULL);
 
-  if ((argc == 2) && !strcmp(argv[0], "--cross-server")) {
+  if ((argc == 3) && !strcmp(argv[0], "--cross-server")) {
     cross_server_patch_file = argv[1];
+    cross_server_library_file = argv[2];
 #ifdef RACKET_AS_BOOT
     skip_racket_boot = 1;
 #endif
@@ -192,6 +194,9 @@ void racket_boot(int argc, char **argv, char *exec_file, char *run_file,
     ptr c, a;
     c = Stop_level_value(Sstring_to_symbol("load"));
     a = Sstring(cross_server_patch_file);
+    (void)Scall1(c, a);
+    c = Stop_level_value(Sstring_to_symbol("load")); /* this is the patched load */
+    a = Sstring(cross_server_library_file);
     (void)Scall1(c, a);
     c = Stop_level_value(Sstring_to_symbol("serve-cross-compile"));
     (void)Scall0(c);

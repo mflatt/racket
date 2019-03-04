@@ -530,16 +530,17 @@
                 (loop rest-args))]
              [("--cross-compiler")
               (let-values ([(mach rest-args) (next-arg "target machine" arg within-arg args)])
-                (let-values ([(xpatch-file rest-args) (next-arg "cross-compiler path" arg within-arg (cons arg rest-args))])
+                (let-values ([(xpatch-dir rest-args) (next-arg "cross-compiler path" arg within-arg (cons arg rest-args))])
                   (add-cross-compiler! (string->symbol mach)
-                                       (path->complete-path (->path (find-original-bytes xpatch-file)))
+                                       (path->complete-path (->path (find-original-bytes xpatch-dir)))
                                        (find-system-path 'exec-file))
                   (loop rest-args)))]
              [("--cross-server")
-              (let-values ([(xpatch-file rest-args) (next-arg "xpatch path" arg within-arg args)])
-                (when (or (saw-something? saw)
-                          (not (null? rest-args)))
-                  (raise-user-error 'racket "--cross-server <path> cannot be combined with any other arguments"))
+              (let-values ([(scheme-xpatch-file rest-args) (next-arg "compiler xpatch path" arg within-arg args)])
+                (let-values ([(scheme-xpatch-file rest-args) (next-arg "library xpatch path" arg within-arg (cons arg rest-args))])
+                  (when (or (saw-something? saw)
+                            (not (null? rest-args)))
+                    (raise-user-error 'racket "--cross-server <path> cannot be combined with any other arguments")))
                 (raise-user-error 'racket "--cross-server should have been handled earlier")
                 (flags-loop null (see saw 'non-config)))]
              [("-j" "--no-jit")
