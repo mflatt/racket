@@ -423,10 +423,11 @@ win32-just-cs:
 native-cs-for-cross:
 	if [ "$(SCHEME_SRC)" = "" ] ; \
          then $(MAKE) scheme-src-then-cross ; \
-         else $(MAKE) native-cs-for-cross-after-scheme-src ; fi
+         else $(MAKE) native-cs-for-cross-after-scheme-src MAKE_BUILD_SCHEME=n ; fi
 
 CS_CROSS_SCHEME = `pwd`/racket/src/build/ChezScheme
-CS_CROSS_SCHEME_CONFIG = MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-scheme=$(CS_CROSS_SCHEME)"
+CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="$(CS_CROSS_SCHEME)" MAKE_BUILD_SCHEME=y \
+                         MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-scheme=$(CS_CROSS_SCHEME)"
 
 scheme-src-then-cross:
 	$(MAKE) scheme-src
