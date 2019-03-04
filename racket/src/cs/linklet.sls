@@ -537,7 +537,11 @@
                                            (lambda (expr arity-mask name)
                                              (performance-region
                                               'compile-nested
-                                              (let ([code ((if serializable? compile*-to-bytevector compile*)
+                                              (let ([code ((if serializable?
+                                                               (if cross-machine
+                                                                   (lambda (s) (cross-compile cross-machine s))
+                                                                   compile*-to-bytevector)
+                                                               compile*)
                                                            (show lambda-on? "lambda" (correlated->annotation expr)))])
                                                 (if serializable?
                                                     (make-wrapped-code code arity-mask name)

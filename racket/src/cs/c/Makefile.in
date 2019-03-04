@@ -325,8 +325,10 @@ library-xpatch.$(TARGET_MACH): $(RACKET_XPATCH)
 # ----------------------------------------
 # Common
 
-DEF_COLLECTS_DIR = -DINITIAL_COLLECTS_DIRECTORY='"'"`cd $(srcdir)/../../../collects; pwd`"'"'
-DEF_CONFIG_DIR = -DINITIAL_CONFIG_DIRECTORY='"'"`cd $(srcdir)/../../..; pwd`/etc"'"'
+DEF_COLLECTS_DIR@NOT_MINGW@ = -DINITIAL_COLLECTS_DIRECTORY='"'"`cd $(srcdir)/../../../collects; pwd`"'"'
+DEF_CONFIG_DIR@NOT_MINGW@ = -DINITIAL_CONFIG_DIRECTORY='"'"`cd $(srcdir)/../../..; pwd`/etc"'"'
+DEF_COLLECTS_DIR@MINGW@ =
+DEF_CONFIG_DIR@MINGW@ =
 DEF_C_DIRS = $(DEF_COLLECTS_DIR) $(DEF_CONFIG_DIR)
 COMP_SUBDIR = -DCS_COMPILED_SUBDIR=@CS_COMPILED_SUBDIR@
 
