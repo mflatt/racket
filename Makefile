@@ -299,11 +299,11 @@ cs-after-racket:
          then $(MAKE) cs-after-racket-with-racket RACKET="$(RACKET_BUILT_FOR_CS)" SETUP_BOOT_MODE=--boot ; \
          else $(MAKE) cs-after-racket-with-racket RACKET="$(RACKET)" CS_CONFIG_TARGET=run-cfg-cs ; fi
 
-RACKETCS_SUFFIX_CONFIG = MORE_CONFIGURE_ARGS="$(MORE_CONFIGURE_ARGS) --enable-csdefault" PLAIN_RACKET="$(PLAIN_RACKET)3m"
+RACKETCS_NOSUFFIX_CONFIG = MORE_CONFIGURE_ARGS="$(MORE_CONFIGURE_ARGS) --enable-csdefault"
 
 racket-then-cs:
 	if [ "$(RACKETCS_SUFFIX)" = "" ] ; \
-         then $(MAKE) racket-configured-then-cs $(RACKETCS_SUFFIX_CONFIG) ; \
+         then $(MAKE) racket-configured-then-cs $(RACKETCS_NOSUFFIX_CONFIG) PLAIN_RACKET="$(PLAIN_RACKET)3m" ; \
          else $(MAKE) racket-configured-then-cs ; fi
 
 racket-configured-then-cs:
@@ -312,7 +312,9 @@ racket-configured-then-cs:
 
 cs-only:
 	$(MAKE) racket/src/build/Makefile SRC_MAKEFILE_CONFIG=cfg-cs
-	$(MAKE) cs-after-racket-with-racket RACKET="$(RACKET)"
+	if [ "$(RACKETCS_SUFFIX)" = "" ] ; \
+	  then $(MAKE) cs-after-racket-with-racket $(RACKETCS_NOSUFFIX_CONFIG) RACKET="$(RACKET)" ; \
+	  else $(MAKE) cs-after-racket-with-racket RACKET="$(RACKET)" ; fi
 
 SETUP_BOOT_MODE = --chain
 ABS_SETUP_BOOT = -l- setup $(SETUP_BOOT_MODE) racket/src/setup-go.rkt racket/src/build/compiled
