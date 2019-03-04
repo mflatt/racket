@@ -435,7 +435,7 @@ native-cs-for-cross-after-scheme-src:
 
 native-for-cross-racket-then-cross:
 	$(MAKE) native-for-cross
-	$(MAKE) native-cs-for-cross-after-scheme-src-and-racket RACKET="`pwd`/racket/src/build/racket/racket3m"
+	$(MAKE) native-cs-for-cross-after-scheme-src-and-racket RACKET="`pwd`/racket/src/build/cross/racket/racket3m"
 
 native-cs-for-cross-after-scheme-src-and-racket:
 	mkdir -p racket/src/build/cross/cs/c
