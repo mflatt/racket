@@ -94,33 +94,3 @@
           s
           (cons a d)))]
    [else s]))
-
-;; --------------------------------------------------
-
-;; Used for cross-compiler communication
-
-;; Copied in "../c/cross-serve.ss"
-(define-record-type marshaled-annotation
-  (fields expression source-object)
-  (nongenerative #{marshaled-annotation gd3r4cl07w9emgzjvdmpf3qpq-0}))
-
-(define (marshal-annotation v)
-  (cond
-   [(annotation? v)
-    (make-marshaled-annotation (marshal-annotation (annotation-expression v))
-                               (mashal-source-object (annotation-source v)))]
-   [(pair? v)
-    (let ([a (marshal-annotation (car v))]
-          [d (marshal-annotation (cdr v))])
-      (if (and (eq? a (car v))
-               (eq? d (cdr v)))
-          v
-          (cons a d)))]
-   [else v]))
-
-(define (mashal-source-object s)
-  (vector (source-file-descriptor-path (source-object-sfd s))
-          (source-object-bfp s)
-          (source-object-efp s)
-          (source-object-line s)
-          (source-object-column s)))

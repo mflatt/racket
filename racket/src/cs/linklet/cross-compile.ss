@@ -52,22 +52,16 @@
    (unsafe-place-local-set! cross-machine-compiler-cache
                             (cons a (unsafe-place-local-ref cross-machine-compiler-cache)))))
 
-(define (do-cross machine msg v)
+(define (cross-compile machine v)
   (let* ([a (find-cross 'cross-compile machine)]
          [ch (cadr a)]
          [reply-ch (make-channel)])
-    (channel-put ch (list msg
-                          (marshal-annotation v)
+    (channel-put ch (list 'compile
+                          v
                           reply-ch))
     (begin0
      (channel-get reply-ch)
      (cache-cross-compiler a))))
-
-(define (cross-compile machine v)
-  (do-cross machine 'compile v))
-
-(define (cross-fasl-to-string machine v)
-  (do-cross machine 'fasl v))
 
 ;; Start a compiler as a Racket thread under the root custodian.
 ;; Using Racket's scheduler lets us use the event and I/O system,
@@ -112,11 +106,16 @@
                (let ([msg (channel-get msg-ch)])
                  ;; msg is (list <command> <value> <reply-channel>)
                  (write-string (->string (car msg)) to)
-                 (write-string (->string (cadr msg)) to)
+                 (write-string (->string (fasl-to-bytevector (cadr msg))) to)
                  (flush-output to)
                  (channel-put (caddr msg) (string-> (read-line from)))
                  (loop)))))))
       (list machine msg-ch))))
+
+(define (fasl-to-bytevector v)
+  (let-values ([(o get) (open-bytevector-output-port)])
+    (fasl-write v o)
+    (get)))
 
 (define (find-exe exe)
   (let-values ([(base name dir?) (split-path exe)])

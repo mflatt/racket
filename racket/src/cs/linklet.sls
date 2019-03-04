@@ -252,7 +252,9 @@
   (define (make-cross-compile-to-bytevector machine)
     (lambda (s paths format)
       (let ([bv (cond
-                 [(eq? format 'interpret) (cross-fasl-to-string machine s)]
+                 [(eq? format 'interpret)
+                  ;; fasl format is not machine-specific:
+                  (compile-to-bytevector s paths format)]
                  [else (cross-compile machine s)])])
         (if compress-code?
             (bytevector-compress bv)
