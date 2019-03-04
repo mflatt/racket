@@ -606,7 +606,7 @@ SVR_CAT = http://$(SVR_PRT)/$(SERVER_CATALOG_PATH)
 # Helper macros:
 USER_CONFIG = -G build/user/config -X racket/collects -A build/user $(SETUP_MACHINE_FLAGS)
 USER_RACKET = $(PLAIN_RACKET) $(USER_CONFIG)
-USER_RACO = $(PLAIN_RACKET) $(SETUP_MACHINE_FLAGS) $(USER_CONFIG) -N raco -l- raco
+USER_RACO = $(PLAIN_RACKET) $(USER_CONFIG) -N raco -l- raco
 WIN32_RACKET = $(WIN32_PLAIN_RACKET) $(USER_CONFIG)
 WIN32_RACO = $(WIN32_PLAIN_RACKET) $(USER_CONFIG) -N raco -l- raco
 X_AUTO_OPTIONS = --skip-installed --deps search-auto --pkgs $(JOB_OPTIONS)
@@ -827,7 +827,7 @@ bundle-from-server:
 # installing packages. The host build must have all native libraries
 # that installation will need.
 bundle-cross-from-server:
-	$(MAKE) bundle-from-server $(COPY_ARGS) IN_BUNDLE_RACO="$(BUNDLE_RACO)"
+	$(MAKE) bundle-from-server $(COPY_ARGS) IN_BUNDLE_RACO="$(PLAIN_RACKET) $(SETUP_MACHINE_FLAGS) $(BUNDLE_RACO_FLAGS)"
 
 UPLOAD_q = --readme "$(README)" --upload "$(UPLOAD)" --desc "$(DIST_DESC)"
 DIST_ARGS_q = $(UPLOAD_q) $(RELEASE_MODE) $(SOURCE_MODE) $(VERSIONLESS_MODE) \
