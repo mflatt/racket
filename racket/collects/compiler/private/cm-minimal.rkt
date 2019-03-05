@@ -457,8 +457,6 @@
         (build-path code-dir (path-add-suffix code-name #".zo"))
         orig-zo-name))
 
-  (trace-printf "about to zo file for ~a: ~a" (current-compile-target-machine) zo-name)
-
   ;; Compile the code:
   (define code
     (parameterize ([current-reader-guard
@@ -495,18 +493,15 @@
         (cond
           [(and (equal? recompile-from zo-name)
                 (not (current-compile-target-machine)))
-           (trace-printf "nada zo file: ~a" zo-name)
-         ;; We don't actually need to do anything, so
+           ;; We don't actually need to do anything, so
            ;; avoid updating the file
            #f]
           [recompile-from
-           (trace-printf "recompile zo file: ~a" zo-name)
            (recompile-module-code recompile-from
                                   path
                                   use-existing-deps
                                   collection-cache)]
           [else
-           (trace-printf "get zo file: ~a" zo-name)
            (get-module-code path (path->mode path) compile
                             #:choose (lambda (src zo so) 'src)
                             #:extension-handler (lambda (a b) #f)
@@ -589,7 +584,7 @@
            (write-deps code zo-name path->mode dest-roots path src-sha1
                        external-deps external-module-deps reader-deps 
                        up-to-date collection-cache read-src-syntax)])))
-    (trace-printf "wrote zo file for ~a: ~a" (current-compile-target-machine) zo-name))
+    (trace-printf "wrote zo file: ~a" zo-name))
 
   ;; Return generated ".zo" path:
   zo-name)
@@ -608,7 +603,6 @@
                   (if (path? base) base (current-directory))])
     (define code (parameterize ([read-accept-compiled #t])
                    (call-with-input-file* recompile-from read)))
-    (trace-printf "really recmopile zo from: ~a" recompile-from)
     (compiled-expression-recompile code)))
 
 (define (install-module-hashes! s [start 0] [len (bytes-length s)])
