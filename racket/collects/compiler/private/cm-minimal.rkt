@@ -372,7 +372,6 @@
                                    #:use-existing-deps use-existing-deps)
   (cond
     [(cross-multi-compile? roots)
-     (trace-printf "cross-multi for: ~a" path)
      (define running-root (car roots))
      (define target-root (cadr roots))
      ;; First, generate machine-independent form at the second root:
@@ -401,7 +400,6 @@
                       #:use-existing-deps mi-deps)))
      running-zo]
     [else
-     (trace-printf "single for: ~a" path)
      ;; Regular mode, just [re]compile:
      (compile-zo* path->mode roots path src-sha1 read-src-syntax orig-zo-name up-to-date collection-cache
                   #:recompile-from recompile-from
@@ -496,7 +494,9 @@
           [(and (equal? recompile-from zo-name)
                 (not (current-compile-target-machine)))
            ;; We don't actually need to do anything, so
-           ;; avoid updating the file
+           ;; avoid updating the file.
+           (check-recompile-module-dependencies use-existing-deps
+                                                collection-cache)
            #f]
           [recompile-from
            (recompile-module-code recompile-from
@@ -592,13 +592,7 @@
   zo-name)
 
 (define (recompile-module-code recompile-from src-path deps collection-cache)
-  ;; Force potential recompilation of dependencies. Otherwise, we
-  ;; end up relying on cross-module optimization demands, which might
-  ;; not happen and are unlikely to cover everything.
-  (for ([d (in-list (deps-imports deps))]
-        #:unless (external-dep? d))
-    (define path (collects-relative*->path (dep->encoded-path d) collection-cache))
-    (module-path-index-resolve (module-path-index-join path #f) #t))
+  (check-recompile-module-dependencies deps collection-cache)
   ;; Recompile the module:
   (define-values (base name dir?) (split-path src-path))
   (parameterize ([current-load-relative-directory
@@ -606,6 +600,15 @@
     (define code (parameterize ([read-accept-compiled #t])
                    (call-with-input-file* recompile-from read)))
     (compiled-expression-recompile code)))
+
+;; Force potential recompilation of dependencies. Otherwise, we
+;; end up relying on cross-module optimization demands, which might
+;; not happen and are unlikely to cover everything.
+(define (check-recompile-module-dependencies deps collection-cache)
+  (for ([d (in-list (deps-imports deps))]
+        #:unless (external-dep? d))
+    (define path (collects-relative*->path (dep->encoded-path d) collection-cache))
+    (module-path-index-resolve (module-path-index-join path #f) #t)))
 
 (define (install-module-hashes! s [start 0] [len (bytes-length s)])
   (define vlen (bytes-ref s (+ start 2)))
