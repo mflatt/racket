@@ -1093,7 +1093,7 @@
        (get-compilation-dir+name path #:modes (list (path->mode path)) #:roots (list (last roots))))
      (define alt-recompile-from
        (build-path code-dir (path-add-suffix code-name #".zo")))
-     (define deps (read-deps-file alt-recompile-from))
+     (define deps (read-deps-file (path-replace-suffix alt-recompile-from #".dep")))
      (and (not (deps-machine deps))
           alt-recompile-from)]
     [else #f]))
