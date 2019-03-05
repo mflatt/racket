@@ -827,6 +827,7 @@ bundle-from-server:
 # installing packages. The host build must have all native libraries
 # that installation will need.
 bundle-cross-from-server:
+	rm -rf "build/zo`pwd`/bundle"
 	$(MAKE) bundle-from-server $(COPY_ARGS) IN_BUNDLE_RACO="$(PLAIN_RACKET) $(SETUP_MACHINE_FLAGS) $(BUNDLE_RACO_FLAGS)"
 
 UPLOAD_q = --readme "$(README)" --upload "$(UPLOAD)" --desc "$(DIST_DESC)"
