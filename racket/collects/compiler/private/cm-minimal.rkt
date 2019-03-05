@@ -372,6 +372,7 @@
                                    #:use-existing-deps use-existing-deps)
   (cond
     [(cross-multi-compile? roots)
+     (trace-printf "cross-multi for: ~a" path)
      (define running-root (car roots))
      (define target-root (cadr roots))
      ;; First, generate machine-independent form at the second root:
@@ -400,6 +401,7 @@
                       #:use-existing-deps mi-deps)))
      running-zo]
     [else
+     (trace-printf "single for: ~a" path)
      ;; Regular mode, just [re]compile:
      (compile-zo* path->mode roots path src-sha1 read-src-syntax orig-zo-name up-to-date collection-cache
                   #:recompile-from recompile-from
