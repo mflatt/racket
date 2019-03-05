@@ -527,7 +527,7 @@
   ;; Write the code and dependencies:
   (when code
     (with-compiler-security-guard (make-directory* code-dir))
-    (trace-printf "about to zo file for ~a: ~a" (current-compile-target-machine) zo-name))
+    (trace-printf "about to zo file for ~a: ~a" (current-compile-target-machine) zo-name)
     (with-compile-output zo-name
       (lambda (out tmp-name)
         (with-handlers ([exn:fail?
