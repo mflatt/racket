@@ -584,7 +584,7 @@
            (write-deps code zo-name path->mode dest-roots path src-sha1
                        external-deps external-module-deps reader-deps 
                        up-to-date collection-cache read-src-syntax)])))
-    (trace-printf "wrote zo file: ~a" zo-name))
+    (trace-printf "wrote zo file for ~a: ~a" (current-compile-target-machine) zo-name))
 
   ;; Return generated ".zo" path:
   zo-name)
