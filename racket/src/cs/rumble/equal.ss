@@ -204,6 +204,14 @@
           (equal-hash-code (get-k k)))
         (equal-hash-code k))))
 
+(define (key-equal-secondary-hash-code k)
+  (let ([get-k (and (fx> (unbox key-equality-maybe-redirect) 0)
+                    (continuation-mark-set-first #f key-equality-wrap-key))])
+    (if get-k
+        (with-continuation-mark key-equality-wrap-key #f
+          (equal-secondary-hash-code (get-k k)))
+        (equal-secondary-hash-code k))))
+
 (define (key-equal? k1 k2)
   (let ([get-k (and (fx> (unbox key-equality-maybe-redirect) 0)
                     (continuation-mark-set-first #f key-equality-wrap-key))])

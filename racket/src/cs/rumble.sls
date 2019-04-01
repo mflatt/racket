@@ -726,6 +726,7 @@
   (include "rumble/object-name.ss")
   (include "rumble/arity.ss")
   (include "rumble/intmap.ss")
+  (include "rumble/mutable-hash.ss")
   (include "rumble/hash.ss")
   (include "rumble/datum.ss")
   (include "rumble/thread-cell.ss")

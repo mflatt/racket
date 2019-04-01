@@ -632,9 +632,17 @@
              ((record-type-hash-procedure
                (record-rtd (impersonator-val c)))
               c
+              hash-code)))]
+        [struct-impersonator-secondary-hash-code
+         (escapes-ok
+           (lambda (c hash-code)
+             ((record-secondary-hash-procedure (impersonator-val c))
+              c
               hash-code)))])
     (let ([add (lambda (rtd)
-                 (record-type-hash-procedure rtd struct-impersonator-hash-code))])
+                 (record-type-hash-procedure rtd struct-impersonator-hash-code)
+                 (struct-property-set! prop:equal+hash rtd
+                                       (list #f #f struct-impersonator-secondary-hash-code)))])
       (add (record-type-descriptor struct-impersonator))
       (add (record-type-descriptor struct-chaperone))
       (add (record-type-descriptor procedure-struct-impersonator))
@@ -646,7 +654,14 @@
                                                 [(record? (impersonator-val c))
                                                  (struct-impersonator-hash-code c hash-code)]
                                                 [else
-                                                 (hash-code (impersonator-next c))]))))])
+                                                 (hash-code (impersonator-next c))])))
+                 (struct-property-set! prop:equal+hash rtd
+                                       (list #f #f (lambda (c hash-code)
+                                                     (cond
+                                                      [(record? (impersonator-val c))
+                                                       (struct-impersonator-secondary-hash-code c hash-code)]
+                                                      [else
+                                                       (hash-code (impersonator-next c))])))))])
       (add (record-type-descriptor props-impersonator))
       (add (record-type-descriptor props-chaperone))
       (add (record-type-descriptor props-procedure-impersonator))

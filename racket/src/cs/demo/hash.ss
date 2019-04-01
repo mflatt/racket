@@ -313,6 +313,7 @@
        [else (loop (sub1 i))])))
   (collect)
   (printf "~s\n" (hash-count ht))
+  (printf "~s\n" (hash-ref ht "750"))
   (hash-set! ht "300" 'three-hundred)
   (hash-remove! ht "302")
   (for-each (lambda (e)

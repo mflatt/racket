@@ -323,11 +323,11 @@
                              "duplicate property binding"
                              "property" prop))
     (when (eq? prop prop:equal+hash)
-      (record-type-equal-procedure rtd (let ([p (cadr guarded-val)])
+      (record-type-equal-procedure rtd (let ([p (car guarded-val)])
                                          (if (#%procedure? p)
                                              p
                                              (lambda (v1 v2 e?) (|#%app| p v1 v2 e?)))))
-      (record-type-hash-procedure rtd (let ([p (caddr guarded-val)])
+      (record-type-hash-procedure rtd (let ([p (cadr guarded-val)])
                                         (if (#%procedure? p)
                                             p
                                             (lambda (v h) (|#%app| p v h))))))
@@ -574,7 +574,7 @@
 ;; Call with lock:
 (define (prefab-ref prefab-key+count code)
   (and prefabs
-       (weak-hash-ref prefabs prefab-key+count #f code equal?)))
+       (mutable-hash-ref prefabs prefab-key+count #f code)))
 
 (define (prefab-key+count->rtd prefab-key+count)
   (let ([code (equal-hash-code prefab-key+count)])
@@ -607,8 +607,8 @@
            => (lambda (rtd) rtd)]
           [else
            (putprop uid 'prefab-key+count prefab-key+count)
-           (unless prefabs (set! prefabs (make-weak-hash-with-lock #f)))
-           (weak-hash-set! prefabs prefab-key+count rtd code equal?)
+           (unless prefabs (set! prefabs (create-mutable-hash 'equal #t #f)))
+           (mutable-hash-set! prefabs prefab-key+count rtd code)
            (unless parent-rtd
              (record-type-equal-procedure rtd default-struct-equal?)
              (record-type-hash-procedure rtd default-struct-hash))
@@ -1013,7 +1013,13 @@
                                                  "        (procedure-arity-includes/c 2)\n"
                                                  "        (procedure-arity-includes/c 2))")
                                       val)
-                               (cons (gensym) val))))
+                               val)))
+
+(define (record-secondary-hash-procedure x)
+  (let ([v (struct-property-ref prop:equal+hash (record-rtd x) #f)])
+    (if v
+        (caddr v)
+        (#%$record-hash-procedure x))))
 
 (define-values (prop:authentic authentic? authentic-ref)
   (make-struct-type-property 'authentic (lambda (val info) #t)))

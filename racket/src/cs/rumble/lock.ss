@@ -19,22 +19,25 @@
   ;; threads; just create a Racket-visible lock for
   ;; `equal?`-based hash tables
   (define (make-lock for-kind)
-    (and (eq? for-kind 'equal?)
+    (and (eq? for-kind 'equal)
          (make-scheduler-lock)))
 
   (define lock-acquire
     (case-lambda ;; so it matches the one below
      [(lock)
-      (when lock
-        ;; Thread layer sets this callback to wait
-        ;; on a semaphore:
-        (scheduler-lock-acquire lock))]
+      (if lock
+          ;; Thread layer sets this callback to wait
+          ;; on a semaphore:
+          (scheduler-lock-acquire lock)
+          (disable-interrupts))]
      [(lock _)
-      (when lock
-        ;; Thread layer sets this callback to wait
-        ;; on a semaphore:
-        (scheduler-lock-acquire lock))]))
-  
+      (if lock
+          ;; Thread layer sets this callback to wait
+          ;; on a semaphore:
+          (scheduler-lock-acquire lock)
+          (enable-interrupts))
+      (void)]))
+
   (define (lock-release lock)
     (when lock
       (scheduler-lock-release lock)))
@@ -77,7 +80,7 @@
 
   (define (make-lock for-kind)
     (cond
-     [(eq? for-kind 'equal?)
+     [(eq? for-kind 'equal)
       (make-scheduler-lock)]
      [else
       (make-spinlock)]))
@@ -86,14 +89,14 @@
     (case-lambda
      [(lock)
       (cond
-       [(not lock) (#%void)]
+       [(not lock) (disable-interrupts)]
        [(spinlock? lock)
 	(spinlock-acquire lock)]
        [else
 	(scheduler-lock-acquire lock)])]
      [(lock block?)
       (cond
-       [(not lock) (#%void)]
+       [(not lock) (disable-interrupts)]
        [(spinlock? lock)
 	(spinlock-acquire lock block?)]
        [else
@@ -101,7 +104,7 @@
   
   (define (lock-release lock)
     (cond
-     [(not lock) (#%void)]
+     [(not lock) (enable-interrupts) (void)]
      [(spinlock? lock)
       (spinlock-release lock)]
      [else
