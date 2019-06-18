@@ -156,24 +156,23 @@
            [else (loop (cdr mc))])))))
 
 (define/who (maybe-future-barricade tag)
-  (when (future? (current-future)) ;; running in a future
-    (check who continuation-prompt-tag? tag)
+  (when (current-future)
     (let ([fp (strip-impersonator (current-future-prompt))]
           [tag (strip-impersonator tag)])
       (cond
        [(eq? tag the-root-continuation-prompt-tag)
-        (block)]
+        (block-future)]
        [else
         (let loop ([mc (current-metacontinuation)])
           (cond
            [(null? mc)
             ;; Won't happen normally, since every thread starts with a explicit prompt
-            (block)]
+            (block-future)]
            [(eq? tag (strip-impersonator (metacontinuation-frame-tag (car mc))))
             (void)]
            [(eq? (metacontinuation-frame-tag (car mc)) fp)
             ;; tag must be above future prompt
-            (block)]
+            (block-future)]
            [else
             (loop (cdr mc))]))]))))
 

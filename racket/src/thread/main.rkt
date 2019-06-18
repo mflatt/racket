@@ -1,5 +1,6 @@
 #lang racket/base
-(require "thread.rkt"
+(require (except-in "thread.rkt"
+                    current-thread)
          "thread-group.rkt"
          (only-in "evt.rkt"
                   evt? prop:evt
@@ -188,11 +189,11 @@
          would-be-future
          current-future
          future-block
-         future-wait
          current-future-prompt
          reset-future-logs-for-tracing!
          mark-future-trace-end!
-
+         set-processor-count!
+         
          fsemaphore?
          make-fsemaphore
          fsemaphore-post

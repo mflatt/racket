@@ -3,6 +3,7 @@
          "host.rkt"
          "place-local.rkt"
          "internal-error.rkt"
+         "parameter.rkt"
          "debug.rkt")
 
 (provide atomically
@@ -21,12 +22,12 @@
 
          start-implicit-atomic-mode
          end-implicit-atomic-mode
-         assert-atomic-mode)
+         assert-atomic-mode
 
-;; This definition is specially recognized for Racket on
-;; Chez Scheme and converted to use a virtual register:
-(define current-atomic (make-pthread-parameter 0))
+         set-future-block!)
 
+;; "atomically" is atomic within a place; when a future-running
+;; pthread tries to enter atomic mode, it is suspended
 (define-syntax-rule (atomically expr ...)
   (begin
     (start-atomic)
@@ -42,6 +43,8 @@
      (end-atomic/no-interrupts))))
 
 (define (start-atomic)
+  (when (current-future)
+    (future-block-for-atomic))
   (current-atomic (fx+ (current-atomic) 1)))
 
 (define (end-atomic)
@@ -96,6 +99,13 @@
   (host:disable-interrupts)
   (end-atomic-callback (cons cb (end-atomic-callback)))
   (host:enable-interrupts))
+
+;; ----------------------------------------
+
+(define future-block-for-atomic (lambda () (void)))
+
+(define (set-future-block! block)
+  (set! future-block-for-atomic block))
 
 ;; ----------------------------------------
 

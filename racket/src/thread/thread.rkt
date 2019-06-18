@@ -54,15 +54,14 @@
 
          thread-ignore-break-cell!
          thread-remove-ignored-break-cell!
+
+         thread-representative-custodian
          
          thread-send
          thread-receive
          thread-try-receive
          thread-rewind-receive
-         thread-receive-evt
-
-         thread-condition-awaken
-         thread-condition-wait)
+         thread-receive-evt)
 
 ;; Exports needed by "schedule.rkt":
 (module* scheduling #f
@@ -92,6 +91,9 @@
            do-break-thread
            break>?
            thread-did-work!))
+
+(module* for-future #f
+  (provide break-enabled-default-cell))
 
 ;; ----------------------------------------
 
@@ -152,6 +154,7 @@
                 (current-thread-group)))
   (define e (make-engine proc
                          (default-continuation-prompt-tag)
+                         #f
                          (if (or initial? at-root?)
                              break-enabled-default-cell
                              (current-break-enabled-cell))
@@ -317,6 +320,12 @@
        (do-thread-suspend t)]
       [else
        (do-kill-thread t)])))
+
+(define (thread-representative-custodian t)
+  (atomically
+   (define cs (thread-custodian-references t))
+   (and (pair? cs)
+        (custodian-reference->custodian (car cs)))))
 
 ;; Called in atomic mode:
 (define (run-kill-callbacks! t)
@@ -911,33 +920,6 @@
        fail-thunk]
       [else
        (lambda () #f)]))))
-
-(define/who (thread-condition-awaken thd)
-  (check who thread? thd)
-  ((atomically
-    (cond
-      [(not (thread-dead? thd))
-       (define wakeup (thread-condition-wakeup thd))
-       (set-thread-condition-wakeup! thd void)
-       wakeup] ;; should be called outside of atomic mode?
-      [else
-       (lambda () #f)]))))
-
-(define (thread-condition-wait lock-release)
-  ((atomically
-    (define t (current-thread))
-    (set-thread-condition-wakeup! t (sandman-condition-wait t))
-    (lock-release)
-    (define do-yield
-      (thread-deschedule! t
-                          #f
-                          void
-                          (lambda ()
-                            ;; try again?
-                            (do-yield))
-                          ))
-    (lambda ()
-      (do-yield)))))
 
 (define (thread-receive)
   ((atomically

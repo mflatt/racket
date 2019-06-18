@@ -1,5 +1,6 @@
 #lang racket/base
-(require "place-local.rkt"
+(require "config.rkt"
+         "place-local.rkt"
          "place-object.rkt"
          "atomic.rkt"
          "host.rkt"
@@ -25,8 +26,6 @@
          set-atomic-timeout-callback!
          set-check-place-activity!
          thread-swap-count)
-
-(define TICKS 100000)
 
 ;; Initializes the thread system:
 (define (call-in-main-thread thunk)
@@ -137,7 +136,6 @@
                      #:custodian #f)
      (select-thread! callbacks)]
     [(and (not (sandman-any-sleepers?))
-          (not (sandman-any-waiters?))
           (not (any-idle-waiters?)))
     ;; all threads done or blocked
     (cond
@@ -161,10 +159,6 @@
                 (lambda (t)
                   (thread-reschedule! t)
                   (set! did? #t)))
-  (sandman-condition-poll mode
-                          (lambda (t)
-                            (thread-reschedule! t)
-                            (set! did? #t)))
   (when did?
     (thread-did-work!))
   did?)

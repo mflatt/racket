@@ -697,7 +697,8 @@
           mutex-acquire
           mutex-release
           threaded?
-          set-future-callbacks!)
+          set-future-callbacks!
+          current-continuation-operation)
   (import (rename (chezpart)
                   [define define/no-lift])
 	  (rename (only (chezscheme) sleep)

@@ -9,9 +9,17 @@
                     [poll-guard-evt raw:poll-guard-evt]
                     [choice-evt raw:choice-evt])
          (only-in "sync.rkt"
-                  sync/enable-break))
+                  sync/enable-break)
+         (only-in "parameter.rkt"
+                  [current-thread raw:current-thread]
+                  [current-future raw:current-future])
+         (only-in "future.rkt"
+                  future-block
+                  currently-running-future))
 
-(provide wrap-evt
+(provide current-thread
+         current-future
+         wrap-evt
          handle-evt
          handle-evt?
          guard-evt
@@ -22,6 +30,15 @@
          semaphore-wait/enable-break
          call-with-semaphore
          call-with-semaphore/enable-break)
+
+(define (current-thread)
+  (when (raw:current-future)
+    (future-block))
+  (raw:current-thread))
+
+(define (current-future)
+  (or (raw:current-future)
+      (currently-running-future)))
 
 (define/who (choice-evt . args)
   (for ([arg (in-list args)])

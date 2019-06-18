@@ -533,44 +533,29 @@
    (lambda (slow-k l)
      l)))
 
-(define (continuation->trace* k)
-  (call-with-values
-   (lambda ()
-     (let loop ([k k] [slow-k k] [move? #f])
+;; Simplified variant of `continuation->trace` that can be called to
+;; get an approximate operation to blame for a blocking future.
+(define (current-continuation-operation ignore-names)
+  (call/cc
+   (lambda (k)
+     (let loop ([k k])
        (cond
          [(or (not (#%$continuation? k))
               (eq? k #%$null-continuation))
-          (values slow-k '())]
+          #f]
          [else
           (let* ([name (or (let ([n #f])
                              (and n
                                   (string->symbol (format "body of ~a" n))))
                            (let* ([c (#%$continuation-return-code k)]
                                   [n (#%$code-name c)])
-                             n))]
-                 [desc
-                  (let* ([ci (#%$code-info (#%$continuation-return-code k))]
-                         [src (and
-                               (code-info? ci)
-                               (or
-                                ;; when per-expression inspector info is available:
-                                (find-rpi (#%$continuation-return-offset k) ci)
-                                ;; when only per-function source location is available:
-                                (code-info-src ci)))])
-                    (and (or name src)
-                         (cons name src)))])
-            (#%$split-continuation k 0)
-            (call-with-values
-             (lambda () (loop (#%$continuation-link k) (if move? (#%$continuation-link slow-k) slow-k) (not move?)))
-             (lambda (slow-k l)
-               (let ([l (if desc
-                            (cons desc l)
-                            l)])
-                 (when (eq? k slow-k)
-                   (hashtable-set! cached-traces k l))
-                 (values slow-k l)))))])))
-   (lambda (slow-k l)
-     l)))
+                             (and n (string->symbol n))))])
+            (cond
+             [(and name (not (#%memq name ignore-names)))
+              name]
+             [else
+              (#%$split-continuation k 0)
+              (loop (#%$continuation-link k))]))])))))
 
 (define (traces->context ls)
   (let loop ([l '()] [ls ls])

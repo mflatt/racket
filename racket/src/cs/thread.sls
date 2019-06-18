@@ -32,7 +32,8 @@
                   [set-break-enabled-transition-hook! rumble:set-break-enabled-transition-hook!]
                   [set-reachable-size-increments-callback! rumble:set-reachable-size-increments-callback!]
                   [set-custodian-memory-use-proc! rumble:set-custodian-memory-use-proc!]
-                  [set-immediate-allocation-check-proc! rumble:set-immediate-allocation-check-proc!]))
+                  [set-immediate-allocation-check-proc! rumble:set-immediate-allocation-check-proc!]
+                  [current-continuation-operation rumble:current-continuation-operation]))
 
   (include "place-register.ss")
   (define-place-register-define place:define thread-register-start thread-register-count)
@@ -40,7 +41,7 @@
   ;; Special handling of `current-atomic`: use the last virtual register;
   ;; we rely on the fact that the register's default value is 0.
   (define-syntax (define stx)
-    (syntax-case stx (current-atomic end-atomic-callback make-pthread-parameter unsafe-make-place-local)
+    (syntax-case stx (current-atomic end-atomic-callback current-future make-pthread-parameter unsafe-make-place-local)
       ;; Recognize definition of `current-atomic`:
       [(_ current-atomic (make-pthread-parameter 0))
        (with-syntax ([(_ id _) stx]
@@ -53,6 +54,14 @@
       [(_ end-atomic-callback (make-pthread-parameter 0))
        (with-syntax ([(_ id _) stx]
                      [n (datum->syntax #'here (- (virtual-register-count) 2))])
+         #'(define-syntax id
+             (syntax-rules ()
+               [(_) (virtual-register n)]
+               [(_ v) (set-virtual-register! n v)])))]
+      ;; Recognize definition of `current-future`:
+      [(_ current-future (make-pthread-parameter #f))
+       (with-syntax ([(_ id _) stx]
+                     [n (datum->syntax #'here (- (virtual-register-count) 3))])
          #'(define-syntax id
              (syntax-rules ()
                [(_) (virtual-register n)]
@@ -99,7 +108,7 @@
        ;; directly in "compiled/thread.scm". To make that work, the
        ;; entries need to be registered as built-in names with the
        ;; expander, and they need to be listed in
-       ;; "primitives/internal.ss".
+       ;; "primitive/internal.ss".
        (hasheq
         'make-pthread-parameter make-pthread-parameter
         'unsafe-root-continuation-prompt-tag unsafe-root-continuation-prompt-tag
@@ -155,7 +164,8 @@
         'make-mutex rumble:make-mutex
         'mutex-acquire rumble:mutex-acquire
         'mutex-release rumble:mutex-release
-        'threaded? rumble:threaded?)]
+        'threaded? rumble:threaded?
+        'current-continuation-operation rumble:current-continuation-operation)]
       [else #f]))
 
   ;; Tie knots:
@@ -178,5 +188,4 @@
                                       (lambda ()
                                         (current-atomic (fx- (current-atomic) 1))))
 
-  (set-future-callbacks! 1/future? 1/current-future
-                         future-block future-wait current-future-prompt))
+  (set-future-callbacks! future-block current-future-prompt))
