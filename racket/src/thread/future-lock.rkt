@@ -32,12 +32,12 @@
 
 (define (start-future-uninterrupted)
   (if (current-future)
-      (void) ; FIXME: disable future-pthread timer when added
+      (current-atomic (add1 (current-atomic))) ; see `run-future-in-worker`
       (start-atomic)))
 
 (define (end-future-uninterrupted)
   (if (current-future)
-      (void) ; FIXME: disable future-pthread timer when added
+      (current-atomic (sub1 (current-atomic))) ; see `run-future-in-worker`
       (end-atomic)))
 
 (define (lock-acquire lock)

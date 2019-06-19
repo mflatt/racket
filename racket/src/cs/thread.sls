@@ -41,7 +41,7 @@
   ;; Special handling of `current-atomic`: use the last virtual register;
   ;; we rely on the fact that the register's default value is 0.
   (define-syntax (define stx)
-    (syntax-case stx (current-atomic end-atomic-callback current-future make-pthread-parameter unsafe-make-place-local)
+    (syntax-case stx (current-atomic end-atomic-callback current-future$1 make-pthread-parameter unsafe-make-place-local)
       ;; Recognize definition of `current-atomic`:
       [(_ current-atomic (make-pthread-parameter 0))
        (with-syntax ([(_ id _) stx]
@@ -59,7 +59,7 @@
                [(_) (virtual-register n)]
                [(_ v) (set-virtual-register! n v)])))]
       ;; Recognize definition of `current-future`:
-      [(_ current-future (make-pthread-parameter #f))
+      [(_ current-future$1 (make-pthread-parameter #f))
        (with-syntax ([(_ id _) stx]
                      [n (datum->syntax #'here (- (virtual-register-count) 3))])
          #'(define-syntax id

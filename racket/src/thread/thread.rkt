@@ -770,9 +770,12 @@
     ((atomically
       (cond
         [(and (thread-pending-break t)
+              ;; check atomicity early to avoid nested break checks,
+              ;; since `continuation-mark-set-first` inside `break-enabled`
+              ;; can take a while
+              (>= (add1 (current-breakable-atomic)) (current-atomic))
               (break-enabled)
-              (not (thread-ignore-break-cell? t (current-break-enabled-cell)))
-              (>= (add1 (current-breakable-atomic)) (current-atomic)))
+              (not (thread-ignore-break-cell? t (current-break-enabled-cell))))
          (define exn:break* (case (thread-pending-break t)
                               [(hang-up) exn:break:hang-up/non-engine]
                               [(terminate) exn:break:terminate/non-engine]

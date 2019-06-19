@@ -56,7 +56,6 @@
 
 (struct future* (id
                  lock
-                 prompt-tag
                  custodian          ; don't run in future pthread if custodian is shut down
                  would-be?
                  [thunk #:mutable]  ; thunk or continuation
@@ -83,7 +82,6 @@
 (define (create-future thunk cust would-be?)
   (future* (get-next-id)           ; id
            (make-lock)             ; lock
-           (make-continuation-prompt-tag 'future) ; prompt
            cust
            would-be?
            thunk
@@ -96,9 +94,12 @@
 (define (future? v)
   (future*? v))
 
+(define future-scheduler-prompt-tag (make-continuation-prompt-tag 'future-scheduler))
+(define future-start-prompt-tag (make-continuation-prompt-tag 'future-star))
+
 (define (current-future-prompt)
   (if (current-future)
-      (future*-prompt-tag (current-future))
+      future-scheduler-prompt-tag
       (internal-error "not running in a future")))
 
 (define currently-running-future-key (gensym 'future))
@@ -129,24 +130,30 @@
     ;; that dependents get rescheduled
     (future-notify-dependents deps)
     (end-future-uninterrupted))
-  (call-with-continuation-prompt
-   (lambda ()
-     (define results
-       (call-with-values (lambda ()
-                           (with-continuation-mark
-                            currently-running-future-key f
-                            ;; Any inspection of the continuation
-                            ;; that stays wihin this dynamic region
-                            ;; is ok to perform in a future pthread
-                            (call-with-continuation-prompt
-                             thunk
-                             (future*-prompt-tag f))))
-                         list))
-     (finish! results 'done))
-   (default-continuation-prompt-tag)
-   (lambda vs
-     (finish! #f 'aborted)
-     (apply abort-current-continuation (default-continuation-prompt-tag) vs))))
+  (cond
+    [(current-future)
+     ;; An attempt to escape will cause the future to block, so
+     ;; we only need to handle succees
+     (call-with-values (lambda ()
+                         (call-with-continuation-prompt
+                          thunk
+                          future-start-prompt-tag
+                          (lambda args (void))))
+                       (lambda results
+                         (finish! results 'done)))]
+    [else
+     ;; No need for the future prompt tag
+     (dynamic-wind
+      (lambda () (void))
+      (lambda ()
+        (with-continuation-mark
+         currently-running-future-key f
+         (call-with-values thunk
+                           (lambda results
+                             (finish! results 'done)))))
+      (lambda ()
+        (unless (eq? (future*-state f) 'done)
+          (finish! #f 'aborted))))]))
 
 (define/who (future thunk)
   (check who (procedure-arity-includes/c 0) thunk)
@@ -172,11 +179,15 @@
 
 ;; When two futures interact, we may need to adjust both;
 ;; to keep locks ordered, take lock of future with the
-;; lower ID, first
+;; lower ID, first; beware that the two futures make be
+;; the same (in which case we're headed for a circular
+;; dependency)
 (define (lock-acquire-both f)
   (define me-f (current-future))
   (cond
-    [(not me-f) (lock-acquire (future*-lock f))]
+    [(or (not me-f)
+         (eq? me-f f))
+     (lock-acquire (future*-lock f))]
     [((future*-id me-f) . < . (future*-id f))
      (lock-acquire (future*-lock me-f))
      (lock-acquire (future*-lock f))]
@@ -249,7 +260,7 @@
     [(future? s)
      (cond
        [(current-future)
-        ;; Lots to wait on, so give up on the current futuer for now
+        ;; Waiting on `s` on, so give up on the current future for now
         (dependent-on-future f)]
        [else
         ;; Maybe we can start running `s` to get `f` moving...
@@ -274,11 +285,14 @@
 ;; called with lock held for both `f` and the current future
 (define (dependent-on-future f)
   ;; in a future pthread, so set up a dependency and on `f` and
-  ;; bail out; The current future pthread can do other things
+  ;; bail out, so the current future pthread can do other things;
+  ;; note that `me-f` might be the same as `f`, in which case we'll
+  ;; create a circular dependency
   (define me-f (current-future))
   (set-future*-dependents! f (hash-set (future*-dependents f) me-f #t))
   (set-future*-state! me-f f)
-  (lock-release (future*-lock f))
+  (unless (eq? me-f f)
+    (lock-release (future*-lock f)))
   ;; almost the same as being blocked, but when `f` completes,
   ;; it will reschedule `me-f`
   (future-suspend)
@@ -301,13 +315,11 @@
      (set-future*-thunk! me-f k)
      (lock-release (future*-lock me-f))
      (abort-current-continuation future-scheduler-prompt-tag (void)))
-   (future*-prompt-tag me-f)))
+   future-start-prompt-tag))
 
 ;; ------------------------------------- future scheduler ----------------------------------------
 
 (define pthread-count 1)
-
-(define future-scheduler-prompt-tag (make-continuation-prompt-tag 'future-scheduler))
 
 (define (set-processor-count! n)
   (set! pthread-count n))
@@ -361,20 +373,26 @@
 
 ;; called in any pthread
 ;; called maybe holding an fsemaphore lock, but nothing else
-(define (schedule-future! f)
+(define (schedule-future! f #:front? [front? #f])
   (define s the-scheduler)
   (with-lock (future*-lock f)
     (host:mutex-acquire (scheduler-mutex s))
     (set-future*-state! f #f)
-    (define tail (scheduler-futures-tail s))
+    (define old (if front?
+                    (scheduler-futures-head s)
+                    (scheduler-futures-tail s)))
     (cond
-      [(not tail)
+      [(not old)
        (set-scheduler-futures-head! s f)
        (set-scheduler-futures-tail! s f)
        (host:condition-signal (scheduler-cond s))]
+      [front?
+       (set-future*-next! f old)
+       (set-future*-prev! old f)
+       (set-scheduler-futures-head! s f)]
       [else
-       (set-future*-prev! f tail)
-       (set-future*-next! tail f)
+       (set-future*-prev! f old)
+       (set-future*-next! old f)
        (set-scheduler-futures-tail! s f)])
     (host:mutex-release (scheduler-mutex s))))
 
@@ -399,10 +417,9 @@
       [(eq? f (scheduler-futures-head s))
        (set-scheduler-futures-head! s #f)
        (set-scheduler-futures-tail! s #f)
-       (set-future*-prev! f #f)
-       (set-future*-next! f #f)
        #t]
-      [else #f]))
+      [else
+       (internal-error "future with #f state is not in queue")]))
   (host:mutex-release (scheduler-mutex s))
   ok?)
 
@@ -417,7 +434,7 @@
 ;; called in any pthread
 ;; called maybe holding an fsemaphore lock, but nothing else
 (define (future-notify-dependent f)
-  (schedule-future! f))
+  (schedule-future! f #:front? #t))
 
 ;; ----------------------------------------
 
@@ -476,6 +493,8 @@
   ;;     void)
   ;; But use an engine so we can periodically check that he future is
   ;; still supposed to run.
+  ;; We take advantage of `current-atomic`, which would otherwise
+  ;; be unused, to disable interruptions.
   (define e (make-engine (lambda () (run-future f))
                          future-scheduler-prompt-tag
                          void
@@ -485,7 +504,8 @@
     (e TICKS
        (lambda ()
          ;; Check that the future should still run
-         (when (custodian-shut-down? (future*-custodian f))
+         (when (and (custodian-shut-down? (future*-custodian f))
+                    (zero? (current-atomic)))
            (lock-acquire (future*-lock f))
            (set-future*-state! f #f)
            (future-suspend)))

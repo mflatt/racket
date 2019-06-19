@@ -1030,7 +1030,7 @@
     [(marks key none-v orig-prompt-tag)
      (check who continuation-mark-set? :or-false marks)
      (check who continuation-prompt-tag? orig-prompt-tag)
-     (maybe-future-barricade orig-prompt-tag)
+     (unless marks (maybe-future-barricade orig-prompt-tag))
      (let ([prompt-tag (strip-impersonator orig-prompt-tag)])
        (let-values ([(key wrapper) (extract-continuation-mark-key-and-wrapper 'continuation-mark-set-first key)])
          (let* ([v0 (if marks
