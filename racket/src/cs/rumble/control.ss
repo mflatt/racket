@@ -160,6 +160,9 @@
     (let ([fp (strip-impersonator (current-future-prompt))]
           [tag (strip-impersonator tag)])
       (cond
+       [(eq? fp tag)
+        ;; shortcut: boundary is the future prompt
+        (void)]
        [(eq? tag the-root-continuation-prompt-tag)
         (block-future)]
        [else

@@ -82,7 +82,7 @@
   (define e (thread-engine t))
   (set-thread-engine! t 'running)
   (set-thread-sched-info! t #f)
-  (current-thread t)
+  (current-thread/in-atomic t)
   (set-place-current-thread! current-place t)
   (set! thread-swap-count (add1 thread-swap-count))
   (run-callbacks-in-engine
@@ -100,7 +100,7 @@
         (lambda args
           (start-implicit-atomic-mode)
           (accum-cpu-time! t #t)
-          (current-thread #f)
+          (current-thread/in-atomic #f)
           (set-place-current-thread! current-place #f)
           (unless (zero? (current-atomic))
             (internal-error "terminated in atomic mode!"))
@@ -114,7 +114,7 @@
           (cond
             [(zero? (current-atomic))
              (accum-cpu-time! t timeout?)
-             (current-thread #f)
+             (current-thread/in-atomic #f)
              (set-place-current-thread! current-place #f)
              (unless (eq? (thread-engine t) 'done)
                (set-thread-engine! t e))

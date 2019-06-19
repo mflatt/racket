@@ -11,8 +11,8 @@
 ;; when multiple locks are held at once, they must be acquired
 ;; in this order):
 ;;    - fsemaphore [one at a time]
-;;    - futures, lower ID first
-;;    - future schedule queue
+;;    - schedule queue
+;;    - futures, lower ID before higher ID
 
 (provide with-lock
          make-lock

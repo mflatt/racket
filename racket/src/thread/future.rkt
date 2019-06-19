@@ -164,7 +164,7 @@
      (define me-f (current-future))
      (define cust (if me-f
                       (future*-custodian me-f)
-                      (thread-representative-custodian (current-thread))))
+                      (thread-representative-custodian (current-thread/in-atomic))))
      (define f (create-future thunk cust #f))
      (when cust
        (unless me-f
@@ -237,6 +237,9 @@
         ;; we may pick `f` next the queue (or maybe later)
         (dependent-on-future f)]
        [else
+        ;; Give up locks in hope of geting `f` off the
+        ;; schedule queue
+        (lock-release (future*-lock f))
         (cond
           [(try-deschedule-future? f)
            ;; lock on `f` is held...
@@ -244,7 +247,6 @@
            (apply values (future*-results f))]
           [else
            ;; Contention, so try again
-           (lock-release (future*-lock f))
            (touch f)])])]
     [(eq? s 'running)
      (cond
@@ -264,7 +266,7 @@
         (dependent-on-future f)]
        [else
         ;; Maybe we can start running `s` to get `f` moving...
-        (lock-release-both f)
+        (lock-release (future*-lock f))
         (touch s)
         (touch f)])]
     [(box? s) ; => dependent on fsemaphore
@@ -291,6 +293,7 @@
   (define me-f (current-future))
   (set-future*-dependents! f (hash-set (future*-dependents f) me-f #t))
   (set-future*-state! me-f f)
+  (on-transition-to-unfinished)
   (unless (eq? me-f f)
     (lock-release (future*-lock f)))
   ;; almost the same as being blocked, but when `f` completes,
@@ -299,12 +302,13 @@
   ;; on return from `future-suspend`, no locks are held
   (touch f))
 
-;; called in a futurre pthread;
+;; called in a future pthread;
 ;; can be called from Rumble layer
 (define (future-block)
   (define me-f (current-future))
   (lock-acquire (future*-lock me-f))
   (set-future*-state! me-f 'blocked)
+  (on-transition-to-unfinished)
   (future-suspend))
 
 ;; called with lock held on the current future
@@ -375,51 +379,63 @@
 ;; called maybe holding an fsemaphore lock, but nothing else
 (define (schedule-future! f #:front? [front? #f])
   (define s the-scheduler)
-  (with-lock (future*-lock f)
-    (host:mutex-acquire (scheduler-mutex s))
-    (set-future*-state! f #f)
-    (define old (if front?
-                    (scheduler-futures-head s)
-                    (scheduler-futures-tail s)))
-    (cond
-      [(not old)
-       (set-scheduler-futures-head! s f)
-       (set-scheduler-futures-tail! s f)
-       (host:condition-signal (scheduler-cond s))]
-      [front?
-       (set-future*-next! f old)
-       (set-future*-prev! old f)
-       (set-scheduler-futures-head! s f)]
-      [else
-       (set-future*-prev! f old)
-       (set-future*-next! old f)
-       (set-scheduler-futures-tail! s f)])
-    (host:mutex-release (scheduler-mutex s))))
+  (host:mutex-acquire (scheduler-mutex s))
+  (define old (if front?
+                  (scheduler-futures-head s)
+                  (scheduler-futures-tail s)))
+  (cond
+    [(not old)
+     (set-scheduler-futures-head! s f)
+     (set-scheduler-futures-tail! s f)
+     (host:condition-signal (scheduler-cond s))]
+    [front?
+     (set-future*-next! f old)
+     (set-future*-prev! old f)
+     (set-scheduler-futures-head! s f)]
+    [else
+     (set-future*-prev! f old)
+     (set-future*-next! old f)
+     (set-scheduler-futures-tail! s f)])
+  (host:mutex-release (scheduler-mutex s)))
 
-;; called with lock on f held
+;; called with queue lock held
+(define (deschedule-future f)
+  (define s the-scheduler)
+  (cond
+    [(or (future*-prev f)
+         (future*-next f))
+     (if (future*-prev f)
+         (set-future*-next! (future*-prev f) (future*-next f))
+         (set-scheduler-futures-head! s (future*-next f)))
+     (if (future*-next f)
+         (set-future*-prev! (future*-next f) (future*-prev f))
+         (set-scheduler-futures-tail! s (future*-prev f)))
+     (set-future*-prev! f #f)
+     (set-future*-next! f #f)]
+    [(eq? f (scheduler-futures-head s))
+     (set-scheduler-futures-head! s #f)
+     (set-scheduler-futures-tail! s #f)]
+    [else
+     (internal-error "future is not in queue")]))
+
+;; called with no locks held; if successful,
+;; returns with lock held on f
 (define (try-deschedule-future? f)
   (define s the-scheduler)
   (host:mutex-acquire (scheduler-mutex s))
   (define ok?
     (cond
-      [(future*-state f) #f]
-      [(or (future*-prev f)
-           (future*-next f))
-       (if (future*-prev f)
-           (set-future*-next! (future*-prev f) (future*-next f))
-           (set-scheduler-futures-head! s (future*-next f)))
-       (if (future*-next f)
-           (set-future*-prev! (future*-next f) (future*-prev f))
-           (set-scheduler-futures-tail! s (future*-prev f)))
-       (set-future*-prev! f #f)
-       (set-future*-next! f #f)
-       #t]
-      [(eq? f (scheduler-futures-head s))
-       (set-scheduler-futures-head! s #f)
-       (set-scheduler-futures-tail! s #f)
-       #t]
+      [(and (not (future*-prev f))
+            (not (future*-next f))
+            (not (eq? f (scheduler-futures-head s))))
+       ;; Was descheduled by someone else already, or maybe
+       ;; hasn't yet made it back into the schedule after a
+       ;; dependency triggered `future-notify-dependent`
+       #f]
       [else
-       (internal-error "future with #f state is not in queue")]))
+       (deschedule-future f)
+       (lock-acquire (future*-lock f))
+       #t]))
   (host:mutex-release (scheduler-mutex s))
   ok?)
 
@@ -434,6 +450,9 @@
 ;; called in any pthread
 ;; called maybe holding an fsemaphore lock, but nothing else
 (define (future-notify-dependent f)
+  (with-lock (future*-lock f)
+    (set-future*-state! f #f))
+  (on-transition-to-unfinished)
   (schedule-future! f #:front? #t))
 
 ;; ----------------------------------------
@@ -443,8 +462,8 @@
   (fork-pthread
    (lambda ()
      (current-future 'worker)
+     (host:mutex-acquire (scheduler-mutex s))
      (let loop ()
-       (host:mutex-acquire (scheduler-mutex s))
        (or (box-cas! (worker-sync-state w) 'idle 'running)
            (box-cas! (worker-sync-state w) 'pending 'running))
        (cond
@@ -453,24 +472,19 @@
           (box-cas! (worker-sync-state w) 'running 'idle)]
          [(scheduler-futures-head s)
           => (lambda (f)
+               (deschedule-future f)
                (host:mutex-release (scheduler-mutex s))
                (lock-acquire (future*-lock f))
-               (cond
-                 [(try-deschedule-future? f)
-                  ;; lock is held on f; run the future
-                  (maybe-run-future-in-worker f w)
-                  ;; look for more work
-                  (loop)]
-                 [else
-                  ;; we didn't get `f`, so look for more work
-                  (lock-release (future*-lock f))
-                  (loop)]))]
+               ;; lock is held on f; run the future
+               (maybe-run-future-in-worker f w)
+               ;; look for more work
+               (host:mutex-acquire (scheduler-mutex s))
+               (loop))]
          [else
           ;; wait for work
           (or (box-cas! (worker-sync-state w) 'pending 'idle)
               (box-cas! (worker-sync-state w) 'running 'idle))
           (host:condition-wait (scheduler-cond s) (scheduler-mutex s))
-          (host:mutex-release (scheduler-mutex s))
           (loop)])))))
 
 ;; called with lock on f
@@ -480,6 +494,8 @@
   ;; 'running without an intervening check
   (cond
     [(custodian-shut-down? (future*-custodian f))
+     (set-future*-state! f 'blocked)
+     (on-transition-to-unfinished)
      (lock-release (future*-lock f))]
     [else
      (run-future-in-worker f w)]))
@@ -508,6 +524,7 @@
                     (zero? (current-atomic)))
            (lock-acquire (future*-lock f))
            (set-future*-state! f #f)
+           (on-transition-to-unfinished)
            (future-suspend)))
        (lambda (leftover-ticks result)
          ;; Done --- completed or suspend (e.g., blocked)
@@ -544,6 +561,12 @@
   (void))
 
 ;; ----------------------------------------
+
+;; When a future changes from a state where the main thread may be
+;; waiting for it, then make sure there's a wakeup signal
+(define (on-transition-to-unfinished)
+  (when (current-future)
+    (wakeup-this-place)))
 
 (define wakeup-this-place (lambda () (void)))
 (define ensure-place-wakeup-handle (lambda () (void)))

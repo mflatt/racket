@@ -1,6 +1,5 @@
 #lang racket/base
-(require (except-in "thread.rkt"
-                    current-thread)
+(require "thread.rkt"
          "thread-group.rkt"
          (only-in "evt.rkt"
                   evt? prop:evt

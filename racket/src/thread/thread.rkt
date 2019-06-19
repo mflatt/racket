@@ -139,6 +139,10 @@
 
 (define-place-local root-thread #f)
 
+(define (current-thread)
+  (future-barrier)
+  (current-thread/in-atomic))
+
 ;; ----------------------------------------
 ;; Thread creation
 
@@ -272,13 +276,13 @@
 ;; Called in atomic mode:
 (define (thread-push-kill-callback! cb)
   (assert-atomic-mode)
-  (define t (current-thread))
+  (define t (current-thread/in-atomic))
   (set-thread-kill-callbacks! t (cons cb (thread-kill-callbacks t))))
 
 ;; Called in atomic mode:
 (define (thread-pop-kill-callback!)
   (assert-atomic-mode)
-  (define t (current-thread))
+  (define t (current-thread/in-atomic))
   (set-thread-kill-callbacks! t (cdr (thread-kill-callbacks t))))
 
 (define/who (kill-thread t)
@@ -295,7 +299,7 @@
     [else
      (atomically
       (do-kill-thread t))
-     (when (eq? t (current-thread))
+     (when (eq? t (current-thread/in-atomic))
        (when (eq? t root-thread)
          (force-exit 0))
        (engine-block))
@@ -416,7 +420,7 @@
   (thread-group-remove! (thread-parent t) t)
   (when timeout-at
     (add-to-sleeping-threads! t (sandman-merge-timeout #f timeout-at)))
-  (when (eq? t (current-thread))
+  (when (eq? t (current-thread/in-atomic))
     (thread-did-work!))
   ;; Beware that this thunk is not used when a thread is descheduled
   ;; by a custodian callback
@@ -601,14 +605,14 @@
 ;; Given callbacks are also called in atomic mode
 (define (thread-push-suspend+resume-callbacks! s-cb r-cb)
   (assert-atomic-mode)
-  (define t (current-thread))
+  (define t (current-thread/in-atomic))
   (set-thread-suspend+resume-callbacks! t (cons (cons s-cb r-cb)
                                                 (thread-suspend+resume-callbacks t))))
 
 ;; Called in atomic mode:
 (define (thread-pop-suspend+resume-callbacks!)
   (assert-atomic-mode)
-  (define t (current-thread))
+  (define t (current-thread/in-atomic))
   (set-thread-suspend+resume-callbacks! t (cdr (thread-suspend+resume-callbacks t))))
 
 ;; Called in atomic mode:
@@ -684,7 +688,7 @@
          (schedule-info-did-work? sched-info))
      (thread-did-work!)]
     [else (thread-did-no-work!)])
-   (set-thread-sched-info! (current-thread) sched-info))
+   (set-thread-sched-info! (current-thread/in-atomic) sched-info))
   (engine-block))
 
 ;; Sleep for a while
@@ -761,35 +765,36 @@
 ;; changed, or when a thread is just swapped in, then
 ;; `check-for-break` should be called.
 (define (check-for-break)
-  (define t (current-thread))
-  (when (and
-         ;; allow `check-for-break` before threads are running:
-         t
-         ;; quick pre-test before going atomic:
-         (thread-pending-break t))
-    ((atomically
-      (cond
-        [(and (thread-pending-break t)
-              ;; check atomicity early to avoid nested break checks,
-              ;; since `continuation-mark-set-first` inside `break-enabled`
-              ;; can take a while
-              (>= (add1 (current-breakable-atomic)) (current-atomic))
-              (break-enabled)
-              (not (thread-ignore-break-cell? t (current-break-enabled-cell))))
-         (define exn:break* (case (thread-pending-break t)
-                              [(hang-up) exn:break:hang-up/non-engine]
-                              [(terminate) exn:break:terminate/non-engine]
-                              [else exn:break/non-engine]))
-         (set-thread-pending-break! t #f)
-         (lambda ()
-           ;; Out of atomic mode
-           (call-with-escape-continuation
-            (lambda (k)
-              (raise (exn:break*
-                      "user break"
-                      (current-continuation-marks)
-                      k)))))]
-        [else void])))))
+  (unless (current-future)
+    (define t (current-thread))
+    (when (and
+           ;; allow `check-for-break` before threads are running:
+           t
+           ;; quick pre-test before going atomic:
+           (thread-pending-break t))
+      ((atomically
+        (cond
+          [(and (thread-pending-break t)
+                ;; check atomicity early to avoid nested break checks,
+                ;; since `continuation-mark-set-first` inside `break-enabled`
+                ;; can take a while
+                (>= (add1 (current-breakable-atomic)) (current-atomic))
+                (break-enabled)
+                (not (thread-ignore-break-cell? t (current-break-enabled-cell))))
+           (define exn:break* (case (thread-pending-break t)
+                                [(hang-up) exn:break:hang-up/non-engine]
+                                [(terminate) exn:break:terminate/non-engine]
+                                [else exn:break/non-engine]))
+           (set-thread-pending-break! t #f)
+           (lambda ()
+             ;; Out of atomic mode
+             (call-with-escape-continuation
+              (lambda (k)
+                (raise (exn:break*
+                        "user break"
+                        (current-continuation-marks)
+                        k)))))]
+          [else void]))))))
 
 ;; The break-enabled transition hook is called by the host
 ;; system when a control transfer (such as a continuation jump)
@@ -926,7 +931,7 @@
 
 (define (thread-receive)
   ((atomically
-    (define t (current-thread))
+    (define t (current-thread/in-atomic))
     (cond
       [(is-mail? t)
        (define v (dequeue-mail! t))
@@ -951,7 +956,7 @@
  
 (define (thread-try-receive)
   (atomically
-   (define t (current-thread))
+   (define t (current-thread/in-atomic))
    (if (is-mail? t)
        (dequeue-mail! t)
        #f)))
@@ -959,7 +964,7 @@
 (define/who (thread-rewind-receive lst)
   (check who list? lst)
   (atomically
-   (define t (current-thread))
+   (define t (current-thread/in-atomic))
    (for-each (lambda (msg)
                (push-mail! t msg))
              lst)))
@@ -971,7 +976,7 @@
                        ;; in atomic mode:
                        (lambda (self poll-ctx)
                          (assert-atomic-mode)
-                         (define t (current-thread))
+                         (define t (current-thread/in-atomic))
                          (cond
                            [(is-mail? t) (values (list self) #f)]
                            [(poll-ctx-poll? poll-ctx) (values #f self)]

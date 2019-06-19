@@ -2,7 +2,8 @@
 
 (require scheme/future 
          scheme/list 
-         rackunit)
+         (rename-in rackunit
+                    [check-equal? real:check-equal?]))
 
 #|Need to add expressions which raise exceptions inside a 
 future thunk which can be caught at the touch site 
@@ -12,7 +13,12 @@ Both future and touch should be called from within a future thunk.
 
 We should also test deep continuations.
 
-|# 
+|#
+
+(define-syntax-rule (check-equal? e ...)
+  (begin
+    (writeln `(check-equal? e ...))
+    (real:check-equal? e ...)))
 
 ;Tests specific to would-be-future 
 (define-struct future-event (future-id process-id what time prim-name target-fid) 
@@ -75,7 +81,7 @@ We should also test deep continuations.
 
 ;; ----------------------------------------
 
-(define (run-tests func) 
+(define (run-tests func)
   (check-equal?
    'yes
    (let/ec k
@@ -854,7 +860,8 @@ We should also test deep continuations.
       (define f (func (lambda () (loop i))))
       (sleep 0.1)
       (with-handlers ([exn:fail? (lambda (exn)
-                                   (unless (regexp-match #rx"expected number of values not received" (exn-message exn))
+                                   (unless (or (regexp-match #rx"expected number of values not received" (exn-message exn))
+                                               (regexp-match #rx"returned two values to single value return context" (exn-message exn)))
                                      (raise exn)))])
         (touch f))))
 

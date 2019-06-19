@@ -18,6 +18,8 @@
 
          in-atomic-mode?
 
+         future-barrier
+
          add-end-atomic-callback!
 
          start-implicit-atomic-mode
@@ -43,8 +45,7 @@
      (end-atomic/no-interrupts))))
 
 (define (start-atomic)
-  (when (current-future)
-    (future-block-for-atomic))
+  (future-barrier)
   (current-atomic (fx+ (current-atomic) 1)))
 
 (define (end-atomic)
@@ -84,6 +85,10 @@
 
 (define (in-atomic-mode?)
   (positive? (current-atomic)))
+
+(define (future-barrier)
+  (when (current-future)
+    (future-block-for-atomic)))
 
 ;; ----------------------------------------
 
