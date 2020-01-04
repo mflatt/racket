@@ -141,20 +141,27 @@
                          (hash-iterate-next v i)
                          (or diff? (not (and (eq? key new-key) (eq? val new-val)))))))])))]
        [(hash-placeholder? v)
-        (let* ([orig-p (cond
-                        [(hasheq-placeholder? v) (make-intmap-shell 'eq)]
-                        [(hasheqv-placeholder? v) (make-intmap-shell 'eqv)]
-                        [else (make-intmap-shell 'equal)])])
-          (hashtable-set! ht v orig-p)
-          (let hloop ([p orig-p] [alst (hash-placeholder-alist v)])
+        (let ([alst (hash-placeholder-alist v)])
+          (cond
+           [(null? alst)
             (cond
-             [(null? alst)
-              (unless (zero? (hash-count p))
-                (intmap-shell-sync! orig-p p))
-              orig-p]
-             [else
-              (hloop (hash-set p (loop (caar alst)) (loop (cdar alst)))
-                     (cdr alst))])))]
+             [(hasheq-placeholder? v) empty-hasheq]
+             [(hasheqv-placeholder? v) empty-hasheqv]
+             [else empty-hash])]
+           [else
+            (let* ([orig-p (cond
+                            [(hasheq-placeholder? v) (make-intmap-shell 'eq)]
+                            [(hasheqv-placeholder? v) (make-intmap-shell 'eqv)]
+                            [else (make-intmap-shell 'equal)])])
+              (hashtable-set! ht v orig-p)
+              (let hloop ([p orig-p] [alst alst])
+                (cond
+                 [(null? alst)
+                  (intmap-shell-sync! orig-p p)
+                  orig-p]
+                 [else
+                  (hloop (hash-set p (loop (caar alst)) (loop (cdar alst)))
+                         (cdr alst))])))]))]
        [(prefab-struct-key v)
         => (lambda (key)
              (let ([args (cdr (vector->list (struct->vector v)))])

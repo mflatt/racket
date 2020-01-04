@@ -140,6 +140,11 @@
     ;; Ensure that `ht` stays live until here
     (check (hash? ht) #t)))
 
+(let ([ph (make-hasheq-placeholder null)])
+  (check (make-reader-graph ph) (hasheq)))
+(let ([ph (make-hasheq-placeholder (list (cons 1 2) (cons 'a 'b)))])
+  (check (make-reader-graph ph) (hasheq 1 2 'a 'b)))
+
 (define (shuffle l)
   (define a (make-vector (length l)))
   (let loop ([l l] [i 0])
@@ -500,8 +505,6 @@
     (report "equal-hash-code" r-coll))
   (time (for-each (lambda (i) (for-each equal-hash l)) l))
   (time (for-each (lambda (i) (for-each equal-hash-code l)) l)))
-
-
 
 ;; ----------------------------------------
 ;; Stress text:

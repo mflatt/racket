@@ -88,10 +88,10 @@
                          (eql? (unbox orig-a) (unbox orig-b))
                          (let ([ctx (deeper-context ctx)])
                            (equal? (unbox orig-a) (unbox orig-b) ctx)))))]
-           [(hash? a)
-            (and (hash? b)
+           [(authentic-hash? a)
+            (and (authentic-hash? b)
                  (let ([ctx (deeper-context ctx)])
-                   (hash=? a b
+                   (hash=? orig-a orig-b
                            (lambda (a b)
                              (equal? a b ctx)))))]
            [(record? a)

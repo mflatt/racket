@@ -20,9 +20,11 @@
 ;; low bit set. After that "static field", the order is as above:
 ;; children, keys, then values.
 ;;
-;; Keys in a bnode are "wrapped". A wrapped key differs from a key only
-;; in an `eq?`-based hash table; if the key is complex enough, then it
-;; is pairs with its hash code.
+;; Keys in a bnode are "wrapped". A wrapped key differs from a key
+;; only in an `equal?`-based hash table, where if a key is complex
+;; enough --- so that keeping a hash code is worthwhile to speed up
+;; comparions --- then it is paired with its hash code for future
+;; reference.
 ;;
 ;; The high bit in the stencil vector's stencil is used to indicate a
 ;; "shell" indirection to support cyclic hash tables.
@@ -291,7 +293,10 @@
                                     [(eq) HAMT-EQTYPE-EQ]
                                     [(eqv) HAMT-EQTYPE-EQV]
                                     [else HAMT-EQTYPE-EQUAL]))
-                  #f))
+                  (case eqtype
+                    [(eq) empty-hasheq]
+                    [(eqv) empty-hasheqv]
+                    [else empty-hash])))
 
 (define (intmap-shell-sync! dest src)
   (stencil-vector-set! dest HAMT-STATIC-FIELD-COUNT src)
@@ -402,9 +407,12 @@
              [v (bnode-val-ref node bit)])
         (cond
          [(hamt-key=? node key keyhash k)
-          (if (eq? val v)
-              node
-              (bnode-replace-val node bit val))]
+          ;; For consistency, we're required to discard the old key and keep the new one
+          (if (eq? key k)
+              (if (eq? val v)
+                  node
+                  (bnode-replace-val node bit val))
+              (bnode-replace-key+val node bit (hamt-wrap-key node key keyhash) val))]
          [else
           (let* ([h (hamt-wrapped-hash-code node k)]
                  [child (node-merge node (hamt-unwrap-key node k) v h key val keyhash (bnode-down shift))])
@@ -502,20 +510,39 @@
 
 (define (bnode-replace-val node bit val)
   (let ([val-bit (fxsll 1 (fx+ bit HAMT-VAL-OFFSET))])
+     (cond
+      [(fx= 0 (fxand (stencil-vector-mask node) val-bit))
+       ;; old value was #t
+       (cond
+        [(eq? val #t)
+         node]
+        [else
+         (stencil-vector-update node 0 val-bit val)])]
+      [else
+       (cond
+        [(eq? val #t)
+         (stencil-vector-update node val-bit 0)]
+        [else
+         (stencil-vector-update node val-bit val-bit val)])])))
+
+(define (bnode-replace-key+val node bit wrapped-key val)
+  (let* ([key-bit (fxsll 1 (fx+ bit HAMT-KEY-OFFSET))]
+         [val-bit (fxsll 1 (fx+ bit HAMT-VAL-OFFSET))]
+         [key+val-bits (fxior key-bit val-bit)])
     (cond
      [(fx= 0 (fxand (stencil-vector-mask node) val-bit))
       ;; old value was #t
       (cond
        [(eq? val #t)
-        node]
+        (stencil-vector-update node key-bit key-bit wrapped-key)]
        [else
-        (stencil-vector-update node 0 val-bit val)])]
+        (stencil-vector-update node key-bit key+val-bits wrapped-key val)])]
      [else
       (cond
        [(eq? val #t)
-        (stencil-vector-update node val-bit 0)]
+        (stencil-vector-update node key+val-bits key-bit wrapped-key)]
        [else
-        (stencil-vector-update node val-bit val-bit val)])])))
+        (stencil-vector-update node key+val-bits key+val-bits wrapped-key val)])])))
 
 (define (bnode-remove-key-add-child node child bit)
   (let ([val-bit (fxsll 1 (fx+ bit HAMT-VAL-OFFSET))])
