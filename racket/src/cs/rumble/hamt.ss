@@ -20,6 +20,10 @@
 ;; low bit set. After that "static field", the order is as above:
 ;; children, keys, then values.
 ;;
+;; Keys in a bnode are "wrapped". A wrapped key differs from a key only
+;; in an `eq?`-based hash table; if the key is complex enough, then it
+;; is pairs with its hash code.
+;;
 ;; The high bit in the stencil vector's stencil is used to indicate a
 ;; "shell" indirection to support cyclic hash tables.
 ;;
@@ -198,12 +202,57 @@
 
 ;; key comparison and hashing
 
-(define (hamt-key=? n k1 k2)
+(define (hamt-wrap-key n k k-hash)
+  (eqtype-case
+   n
+   [(eq)  k]
+   [(eqv) k]
+   [else  (if (fast-equal-hash-code? k) ; must not include pairs
+              k
+              (cons k-hash k))]))
+
+(define (hamt-unwrap-key n k)
+  (eqtype-case
+   n
+   [(eq)  k]
+   [(eqv) k]
+   [else  (if (pair? k) (cdr k) k)]))
+
+;; second key is wrapped
+(define (hamt-key=? n k1 k1-hash wrapped-k2)
+  (eqtype-case
+   n
+   [(eq)  (eq? k1 wrapped-k2)]
+   [(eqv) (eqv? k1 wrapped-k2)]
+   [else  (if (pair? wrapped-k2)
+              (and (fx= k1-hash (car wrapped-k2))
+                   (key-equal? k1 (cdr wrapped-k2)))
+              (key-equal? k1 wrapped-k2))]))
+
+(define (hamt-unwrapped-key=? n k1 k2)
   (eqtype-case
    n
    [(eq)  (eq? k1 k2)]
    [(eqv) (eqv? k1 k2)]
    [else  (key-equal? k1 k2)]))
+
+(define (hamt-wrapped-key=? n k1 k2)
+  (eqtype-case
+   n
+   [(eq)  (eq? k1 k2)]
+   [(eqv) (eqv? k1 k2)]
+   [else  (cond
+           [(pair? k1)
+            (cond
+             [(pair? k2)
+              (and (fx= (car k1) (car k2))
+                   (key-equal? (cdr k1) (cdr k2)))]
+             [else (key-equal? (cdr k1) k2)])]
+           [else
+            (cond
+             [(pair? k2)
+              (key-equal? k1 (cdr k2))]
+             [else (key-equal? k1 k2)])])]))
 
 (define (hamt-hash-code n k)
   (eqtype-case
@@ -211,6 +260,15 @@
    [(eq)  (eq-hash-code k)]
    [(eqv) (eqv-hash-code k)]
    [else  (key-equal-hash-code k)]))
+
+(define (hamt-wrapped-hash-code n k)
+  (eqtype-case
+   n
+   [(eq)  (eq-hash-code k)]
+   [(eqv) (eqv-hash-code k)]
+   [else  (if (pair? k)
+              (car k)
+              (key-equal-hash-code k))]))
 
 ;; Should only be called three times to create the canonical empty
 ;; hashes:
@@ -298,7 +356,7 @@
     (cond
      [(bnode-maps-key? node bit)
       (let* ([k (bnode-key-ref node bit)])
-        (if (hamt-key=? node key k)
+        (if (hamt-key=? node key keyhash k)
             (bnode-val-ref node bit)
             default))]
 
@@ -318,8 +376,8 @@
     (cond
      [(bnode-maps-key? node bit)
       (let* ([k (bnode-key-ref node bit)])
-        (if (hamt-key=? node key k)
-            k
+        (if (hamt-key=? node key keyhash k)
+            (hamt-unwrap-key node k)
             default))]
 
      [(bnode-maps-child? node bit)
@@ -343,14 +401,13 @@
       (let* ([k (bnode-key-ref node bit)]
              [v (bnode-val-ref node bit)])
         (cond
-         [(hamt-key=? node key k)
+         [(hamt-key=? node key keyhash k)
           (if (eq? val v)
               node
               (bnode-replace-val node bit val))]
          [else
-          (let* ([h (hamt-hash-code node k)]
-                 [eqtype (hamt-eqtype node)]
-                 [child (node-merge eqtype k v h key val keyhash (bnode-down shift))])
+          (let* ([h (hamt-wrapped-hash-code node k)]
+                 [child (node-merge node (hamt-unwrap-key node k) v h key val keyhash (bnode-down shift))])
             (bnode-remove-key-add-child node child bit))]))]
 
      [(bnode-maps-child? node bit)
@@ -365,7 +422,7 @@
             (bnode-replace-child node child new-child bit)))]
 
      [else
-      (bnode-add-key node key val bit)])))
+      (bnode-add-key node (hamt-wrap-key node key keyhash) val bit)])))
 
 (define (bnode-remove node key keyhash shift)
   (let ([bit (bnode-bit-pos keyhash shift)])
@@ -374,7 +431,7 @@
      [(bnode-maps-key? node bit)
       (let* ([k (bnode-key-ref node bit)])
         (cond
-         [(hamt-key=? node key k)
+         [(hamt-key=? node key keyhash k)
           (let ([mask (stencil-vector-mask node)])
             (cond
              [(and (fx= (fxand mask HAMT-KEY-MASK) (fxsll 1 (fx+ bit HAMT-KEY-OFFSET)))
@@ -407,16 +464,14 @@
                (null? (cdr (cnode-content new-child))))
           ;; Replace child with its sole key and value
           (let ([p (car (cnode-content new-child))])
-            (bnode-remove-child-add-key node (car p) (cdr p) bit))]
+            (bnode-remove-child-add-key node (hamt-wrap-key node (car p) (cnode-hash new-child)) (cdr p) bit))]
          [else
           (bnode-replace-child node child new-child bit)]))]
 
      [else
       node])))
 
-
-
-(define (bnode-add-key node key val bit)
+(define (bnode-add-key node wrapped-key val bit)
   (if (eq? val #t)
       (stencil-vector-update node
                              HAMT-COUNT+EQTYPE-BIT
@@ -424,7 +479,7 @@
                                     (fxsll 1 (fx+ bit HAMT-KEY-OFFSET)))
                              (fx+ (stencil-vector-ref node HAMT-COUNT+EQTYPE-INDEX)
                                   ONE-COUNT-IN-COUNT+EQTYPE)
-                             key)
+                             wrapped-key)
       (stencil-vector-update node
                              HAMT-COUNT+EQTYPE-BIT
                              (fxior HAMT-COUNT+EQTYPE-BIT
@@ -432,7 +487,7 @@
                                     (fxsll 1 (fx+ bit HAMT-VAL-OFFSET)))
                              (fx+ (stencil-vector-ref node HAMT-COUNT+EQTYPE-INDEX)
                                   ONE-COUNT-IN-COUNT+EQTYPE)
-                             key
+                             wrapped-key
                              val)))
 
 (define (bnode-remove-key node bit)
@@ -474,7 +529,7 @@
                                 ONE-COUNT-IN-COUNT+EQTYPE)
                            child)))
 
-(define (bnode-remove-child-add-key node key val bit)
+(define (bnode-remove-child-add-key node wrapped-key val bit)
   (cond
    [(eq? val #t)
     (stencil-vector-update node
@@ -484,7 +539,7 @@
                                   (fxsll 1 (fx+ bit HAMT-KEY-OFFSET)))
                            (fx- (stencil-vector-ref node HAMT-COUNT+EQTYPE-INDEX)
                                 ONE-COUNT-IN-COUNT+EQTYPE)
-                           key)]
+                           wrapped-key)]
    [else
     (stencil-vector-update node
                            (fxior HAMT-COUNT+EQTYPE-BIT
@@ -494,7 +549,7 @@
                                   (fxsll 1 (fx+ bit HAMT-VAL-OFFSET)))
                            (fx- (stencil-vector-ref node HAMT-COUNT+EQTYPE-INDEX)
                                 ONE-COUNT-IN-COUNT+EQTYPE)
-                           key
+                           wrapped-key
                            val)]))
 
 (define (bnode-replace-child node old-child new-child bit)
@@ -523,7 +578,7 @@
 
 (define HASHCODE-BITS (fxbit-count (most-positive-fixnum)))
 
-(define (node-merge eqtype k1 v1 h1 k2 v2 h2 shift)
+(define (node-merge parent k1 v1 h1 k2 v2 h2 shift)
   (cond
    [(and (fx< HASHCODE-BITS shift)
          (fx= h1 h2))
@@ -539,17 +594,20 @@
       (cond
        [(fx= m1 m2)
         ;; partial collision: descend
-        (let* ([child (node-merge eqtype k1 v1 h1 k2 v2 h2 (bnode-down shift))]
+        (let* ([child (node-merge parent k1 v1 h1 k2 v2 h2 (bnode-down shift))]
                [cm (bnode-bit-pos h1 shift)])
           (stencil-vector (fxior HAMT-COUNT+EQTYPE-BIT
                                  (fxsll 1 (fx+ cm HAMT-CHILD-OFFSET)))
-                          (count+eqtype 2 eqtype)
+                          (count+eqtype 2 (hamt-eqtype parent))
                           child))]
 
        [else
         ;; no collision, make a bnode
         (let ([bit1 (bnode-bit-pos h1 shift)]
-              [bit2 (bnode-bit-pos h2 shift)])
+              [bit2 (bnode-bit-pos h2 shift)]
+              [k1 (hamt-wrap-key parent k1 h1)]
+              [k2 (hamt-wrap-key parent k2 h2)]
+              [eqtype (hamt-eqtype parent)])
           (let ([finish
                  (lambda (k1 v1 bit1 k2 v2 bit2)
                    (let ([key-bits (fxior (fxsll 1 (fx+ bit1 HAMT-KEY-OFFSET))
@@ -590,6 +648,83 @@
                 (finish k1 v1 bit1 k2 v2 bit2)
                 (finish k2 v2 bit2 k1 v1 bit1))))]))]))
 
+(define (cnode-ref node bnode key keyhash default)
+  (cond
+   [(fx= keyhash (cnode-hash node))
+    (let ([p (cnode-assoc (cnode-content node) key bnode)])
+      (if p
+          (cdr p)
+          default))]
+   [else default]))
+
+(define (cnode-ref-key node bnode key keyhash default)
+  (cond
+   [(fx= keyhash (cnode-hash node))
+    (let ([p (cnode-assoc (cnode-content node) key bnode)])
+      (if p
+          (car p)
+          default))]
+   [else default]))
+
+(define (cnode-has-key? n bnode key keyhash)
+  (and (fx= keyhash (cnode-hash n))
+       (cnode-assoc (cnode-content n) key bnode)
+       #t))
+
+(define (cnode-assoc alist key bnode)
+  (cond
+   [(null? alist) #f]
+   [(hamt-unwrapped-key=? bnode key (caar alist))
+    (car alist)]
+   [else (cnode-assoc (cdr alist) key bnode)]))
+
+(define (cnode-set node bnode key val keyhash)
+  (make-cnode (cnode-hash node)
+              (cnode-assoc-update (cnode-content node) key bnode (cons key val))))
+
+(define (cnode-remove node bnode key keyhash)
+  (make-cnode (cnode-hash node)
+              (cnode-assoc-update (cnode-content node) key bnode #f)))
+
+(define (cnode-assoc-update alist key bnode new-p)
+  (cond
+   [(null? alist) (if new-p
+                      (list new-p)
+                      null)]
+   [(hamt-unwrapped-key=? bnode key (caar alist))
+    (if new-p
+        (cons new-p (cdr alist))
+        (cdr alist))]
+   [else
+    (cons (car alist)
+          (cnode-assoc-update (cdr alist) key bnode new-p))]))
+
+(define (cnode=? a b anode eql?)
+  (or
+   (eq? a b)
+   (and
+    (cnode? b)
+    (cnode-keys-subset/equal? a b anode eql?)
+    (fx= (length (cnode-content a))
+         (length (cnode-content b))))))
+
+(define (cnode-keys-subset/equal? a b bnode eql?)
+  (or
+   (eq? a b)
+   (and
+    (cnode? b)
+    (fx= (cnode-hash a) (cnode-hash b))
+    (let ([ac (cnode-content a)]
+          [bc (cnode-content b)])
+      (let loop ([ac ac])
+        (cond
+         [(null? ac) #t]
+         [else
+          (let ([p (cnode-assoc bc (caar ac) bnode)])
+            (and p
+                 (or (not eql?) (eql? (cdar ac) (cdr p)))
+                 (loop (cdr ac))))]))))))
+
 ;; ----------------------------------------
 ;; generic iteration by counting
 
@@ -629,7 +764,7 @@
        [(fx= i child-count)
         (cond
          [(fx< pos key-count)
-          (let ([get-key (lambda () (bnode-key-index-ref n (fx+ pos child-count)))]
+          (let ([get-key (lambda () (hamt-unwrap-key n (bnode-key-index-ref n (fx+ pos child-count))))]
                 [get-value (lambda () (bnode-val-index-ref n (fx+ pos child-count)))])
             (case mode
               [(key) (get-key)]
@@ -726,7 +861,8 @@
       ;; in a cnode
       (caar (unbox p))]
      [else
-      (bnode-key-index-ref (car p) (cdr p))])))
+      (let ([h (car p)])
+        (hamt-unwrap-key h (bnode-key-index-ref h (cdr p))))])))
 
 (define (unsafe-intmap-iterate-value h pos)
   ;; (unwrap-shell h) - not needed
@@ -749,7 +885,7 @@
      [else
       (let ([n (car p)]
             [i (cdr p)])
-        (values (bnode-key-index-ref n i)
+        (values (hamt-unwrap-key n (bnode-key-index-ref n i))
                 (bnode-val-index-ref n i)))])))
 
 (define (unsafe-intmap-iterate-pair h pos)
@@ -762,7 +898,7 @@
      [else
       (let ([n (car p)]
             [i (cdr p)])
-        (cons (bnode-key-index-ref n i)
+        (cons (hamt-unwrap-key n (bnode-key-index-ref n i))
               (bnode-val-index-ref n i)))])))
 
 (define (intmap=? a b eql?)
@@ -793,7 +929,7 @@
                    (let ([i (fx+ j child-count)])
                      (let ([ak (bnode-key-index-ref a i)]
                            [bk (bnode-key-index-ref b i)])
-                       (and (hamt-key=? a ak bk)
+                       (and (hamt-wrapped-key=? a ak bk)
                             (eql? (bnode-val-index-ref a i) (bnode-val-index-ref b i))
                             (loop (fx+ j 1)))))])))]
             [else
@@ -823,8 +959,8 @@
      ;; it doesn't have any collisions
      (and (fx= (hamt-count a) 1)
           (let* ([k (bnode-only-key-ref a)]
-                 [hashcode (hamt-hash-code a k)])
-            (cnode-has-key? b a k hashcode)))]
+                 [hashcode (hamt-wrapped-hash-code a k)])
+            (cnode-has-key? b a (hamt-unwrap-key a k) hashcode)))]
     [(fx> (hamt-count a) (hamt-count b))
      #f]
     [else
@@ -845,7 +981,7 @@
             (cond
              [(fxbit-set? bkm bit)
               (and
-               (hamt-key=? a (bnode-key-index-ref a aki) (bnode-key-index-ref b bki))
+               (hamt-wrapped-key=? a (bnode-key-index-ref a aki) (bnode-key-index-ref b bki))
                (loop (fxsrl abm 1) (fx1+ bit) (fx1+ aki) (fx1+ bki) aci bci))]
              [else
               (and
@@ -853,9 +989,9 @@
                      [bchild (bnode-child-index-ref b bci)])
                  (cond
                   [(bnode? bchild)
-                   (bnode-has-key? bchild akey (hamt-hash-code a akey) (bnode-down shift))]
+                   (bnode-has-key? bchild (hamt-unwrap-key a akey) (hamt-wrapped-hash-code a akey) (bnode-down shift))]
                   [else
-                   (cnode-has-key? bchild b akey (hamt-hash-code a akey))]))
+                   (cnode-has-key? bchild b (hamt-unwrap-key a akey) (hamt-wrapped-hash-code a akey))]))
                (loop (fxsrl abm 1) (fx1+ bit) (fx1+ aki) bki aci (fx1+ bci)))])]
            [(fxbit-set? acm bit)
             (cond
@@ -929,7 +1065,7 @@
             nil]
            [else
             (loop (fx+ i 1)
-                  (f (bnode-key-index-ref n (fx+ i child-count))
+                  (f (hamt-unwrap-key n (bnode-key-index-ref n (fx+ i child-count)))
                      (bnode-val-index-ref n (fx+ i child-count))
                      nil))]))]
        [else
@@ -948,80 +1084,3 @@
                          (f (caar alist)
                             (cdar alist)
                             nil)))]))]))]))))
-
-(define (cnode-ref node bnode key keyhash default)
-  (cond
-   [(fx= keyhash (cnode-hash node))
-    (let ([p (cnode-assoc (cnode-content node) key bnode)])
-      (if p
-          (cdr p)
-          default))]
-   [else default]))
-
-(define (cnode-ref-key node bnode key keyhash default)
-  (cond
-   [(fx= keyhash (cnode-hash node))
-    (let ([p (cnode-assoc (cnode-content node) key bnode)])
-      (if p
-          (car p)
-          default))]
-   [else default]))
-
-(define (cnode-has-key? n bnode key keyhash)
-  (and (fx= keyhash (cnode-hash n))
-       (cnode-assoc (cnode-content n) key bnode)
-       #t))
-
-(define (cnode-assoc alist key bnode)
-  (cond
-   [(null? alist) #f]
-   [(hamt-key=? bnode key (caar alist))
-    (car alist)]
-   [else (cnode-assoc (cdr alist) key bnode)]))
-
-(define (cnode-set node bnode key val keyhash)
-  (make-cnode (cnode-hash node)
-              (cnode-assoc-update (cnode-content node) key bnode (cons key val))))
-
-(define (cnode-remove node bnode key keyhash)
-  (make-cnode (cnode-hash node)
-              (cnode-assoc-update (cnode-content node) key bnode #f)))
-
-(define (cnode-assoc-update alist key bnode new-p)
-  (cond
-   [(null? alist) (if new-p
-                      (list new-p)
-                      null)]
-   [(hamt-key=? bnode key (caar alist))
-    (if new-p
-        (cons new-p (cdr alist))
-        (cdr alist))]
-   [else
-    (cons (car alist)
-          (cnode-assoc-update (cdr alist) key bnode new-p))]))
-
-(define (cnode=? a b anode eql?)
-  (or
-   (eq? a b)
-   (and
-    (cnode? b)
-    (cnode-keys-subset/equal? a b anode eql?)
-    (fx= (length (cnode-content a))
-         (length (cnode-content b))))))
-
-(define (cnode-keys-subset/equal? a b bnode eql?)
-  (or
-   (eq? a b)
-   (and
-    (cnode? b)
-    (fx= (cnode-hash a) (cnode-hash b))
-    (let ([ac (cnode-content a)]
-          [bc (cnode-content b)])
-      (let loop ([ac ac])
-        (cond
-         [(null? ac) #t]
-         [else
-          (let ([p (cnode-assoc bc (caar ac) bnode)])
-            (and p
-                 (or (not eql?) (eql? (cdar ac) (cdr p)))
-                 (loop (cdr ac))))]))))))
