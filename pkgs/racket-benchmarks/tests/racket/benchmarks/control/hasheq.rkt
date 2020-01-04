@@ -8,70 +8,70 @@
 
 '----------------------------------------
 
-'hash-add-remove
+'hasheq-add-remove
 (times
- (let loop ([ht #hash()] [i L])
+ (let loop ([ht #hasheq()] [i L])
    (if (zero? i)
        (void (f ht))
-       (loop (hash-remove (hash-set ht '(a) #t) 'a)
+       (loop (hash-remove (hash-set ht 'a #t) 'a)
              (sub1 i)))))
 
-'hash-adds
+'hasheq-adds
 (times
  (for ([i (in-range Q)])
-   (let loop ([ht #hash()] [i 100])
+   (let loop ([ht #hasheq()] [i 100])
      (if (zero? i)
          (void (f ht))
-         (loop (hash-set ht (box i) 'true)
+         (loop (hash-set ht i 'true)
                (sub1 i))))))
 
-'hash-adds/#t
+'hasheq-adds/#t
 (times
  (for ([i (in-range Q)])
-   (let loop ([ht #hash()] [i 100])
+   (let loop ([ht #hasheq()] [i 100])
      (if (zero? i)
          (void (f ht))
-         (loop (hash-set ht (box i) #t)
+         (loop (hash-set ht i #t)
                (sub1 i))))))
 
-'hash-addsame
+'hasheq-addsame
 (times
  (for ([i (in-range Q)])
-   (let loop ([ht #hash()] [i 100])
+   (let loop ([ht #hasheq()] [i 100])
      (if (zero? i)
          (void (f ht))
-         (loop (hash-set ht (box 'a) 'true)
+         (loop (hash-set ht 'a 'true)
                (sub1 i))))))
 
-'hash-removes
+'hasheq-removes
 (times
- (let ([ht (for/hash ([i (in-range 100)])
-             (values (box i) i))])
+ (let ([ht (for/hasheq ([i (in-range 100)])
+             (values i i))])
    (for ([i (in-range Q)])
      (let loop ([ht ht] [i 100])
        (if (zero? i)
            (void (f ht))
-           (loop (hash-remove ht (box i))
+           (loop (hash-remove ht i)
                  (sub1 i)))))))
 
-'hash-ref
+'hasheq-ref
 (times
- (let ([ht (for/hash ([i (in-range 100)])
+ (let ([ht (for/hasheq ([i (in-range 100)])
              (values i i))])
    (for ([i (in-range Q)])
      (let loop ([v #f] [i 100])
        (if (zero? i)
            (void (f v))
-           (loop (hash-ref ht (box i) #f)
+           (loop (hash-ref ht i #f)
                  (sub1 i)))))))
 
-'hash-reffail
+'hasheq-reffail
 (times
- (let ([ht (for/hash ([i (in-range 100)])
+ (let ([ht (for/hasheq ([i (in-range 100)])
              (values i i))])
    (for ([i (in-range Q)])
      (let loop ([v #f] [i 100])
        (if (zero? i)
            (void (f v))
-           (loop (hash-ref ht '(not-there) #f)
+           (loop (hash-ref ht 'not-there #f)
                  (sub1 i)))))))
