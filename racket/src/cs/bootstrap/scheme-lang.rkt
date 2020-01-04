@@ -83,6 +83,7 @@
          record?
          record-type-uid
          $object-ref
+         stencil-vector?
          (rename-out [s:vector-sort vector-sort]
                      [s:vector-sort! vector-sort!])
          vector-for-each
@@ -745,6 +746,8 @@
        (proc e))]
     [(proc . vecs)
      (list->vector (apply map proc (map vector->list vecs)))]))
+
+(define (stencil-vector? v) #f)
 
 (define (logbit? m n)
   (bitwise-bit-set? n m))

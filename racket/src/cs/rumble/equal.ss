@@ -88,6 +88,12 @@
                          (eql? (unbox orig-a) (unbox orig-b))
                          (let ([ctx (deeper-context ctx)])
                            (equal? (unbox orig-a) (unbox orig-b) ctx)))))]
+           [(hash? a)
+            (and (hash? b)
+                 (let ([ctx (deeper-context ctx)])
+                   (hash=? a b
+                           (lambda (a b)
+                             (equal? a b ctx)))))]
            [(record? a)
             (and (record? b)
                  ;; Check for `prop:impersonator-of`
