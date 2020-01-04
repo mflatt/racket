@@ -25,6 +25,22 @@
 (define-values (struct:trans trans trans? trans-ref trans-set!)
   (make-struct-type 'top #f 2 0 #f '() #f))
 
+(define-values (struct:collide collide collide? collide-ref collide-set!)
+  (make-struct-type 'collide #f 2 0 #f
+                    (list (cons prop:equal+hash
+                                (list
+                                 (lambda (a b eql?)
+                                   (and (eql? (collide-1 a)
+                                              (collide-1 b))
+                                        (eql? (collide-2 a)
+                                              (collide-2 b))))
+                                 (lambda (a hc)
+                                   (hc (collide-1 a)))
+                                 (lambda (a hc)
+                                   (hc (collide-1 a))))))))
+(define collide-1 (make-struct-field-accessor collide-ref 0))
+(define collide-2 (make-struct-field-accessor collide-ref 1))
+
 (define-syntax check
   (syntax-rules ()
     [(_ a b)
@@ -32,7 +48,7 @@
            [bv b])
        (unless (equal? av bv)
          (error 'check (format "failed ~s = ~s [expected ~s]" 'a av bv))))]))
-
+                           
 (check (equal? (top 1 2) (top 1 3)) #t)
 (check (equal? (top 1 2) (top 2 2)) #f)
 (check (hash-ref (hash-set (hash) (top 1 2) 'ok) (top 1 3) #f) 'ok)
@@ -42,8 +58,69 @@
 (check (hash-ref (hash-set (hash) (trans 1 2) 'ok) (trans 1 2) #f) 'ok)
 (check (hash-ref (hash-set (hash) (trans 1 2) 'ok) (trans 1 3) #f) #f)
 
+(check (equal? (collide 1 2) (collide 1 2)) #t)
+(check (equal? (collide 1 2) (collide 1 3)) #f)
+(check (equal? (equal-hash-code (collide 1 2)) (equal-hash-code (collide 1 3))) #t)
+
 (check (equal? (hash 1 'x 2 'y) (hash 2 'y 1 'x)) #t)
 (check (hash-ref (hash (hash 1 'x 2 'y) 7) (hash 2 'y 1 'x) #f) 7)
+
+(let ([simple (hash (cons 1 2) 2 (cons 1 3) 3)])
+  (define (check-map l)
+    (check (or (equal? l (list (cons (cons 1 2) 2) (cons (cons 1 3) 3)))
+               (equal? l (list (cons (cons 1 3) 3) (cons (cons 1 2) 2))))
+           #t))
+  (check-map (hash-map simple cons))
+  (check-map (let loop ([i (hash-iterate-first simple)])
+               (if (not i)
+                   '()
+                   (cons (cons (hash-iterate-key simple i)
+                               (hash-iterate-value simple i))
+                         (loop (hash-iterate-next simple i))))))
+  (check-map (let loop ([i (unsafe-immutable-hash-iterate-first simple)])
+               (if (not i)
+                   '()
+                   (cons (cons (unsafe-immutable-hash-iterate-key simple i)
+                               (unsafe-immutable-hash-iterate-value simple i))
+                         (loop (unsafe-immutable-hash-iterate-next simple i)))))))
+
+(check (hash-ref (hash (collide 1 2) 2 (collide 1 3) 3) (collide 1 2)) 2)
+(let ([collides (hash (collide 1 2) 2 (collide 1 3) 3)])
+  (define (check-map l)
+    (check (or (equal? l (list (cons (collide 1 2) 2) (cons (collide 1 3) 3)))
+               (equal? l (list (cons (collide 1 3) 3) (cons (collide 1 2) 2))))
+           #t))
+  (check-map (hash-map collides cons))
+  (check-map (let loop ([i (hash-iterate-first collides)])
+               (if (not i)
+                   '()
+                   (cons (cons (hash-iterate-key collides i)
+                               (hash-iterate-value collides i))
+                         (loop (hash-iterate-next collides i))))))
+  (check-map (let loop ([i (unsafe-immutable-hash-iterate-first collides)])
+               (if (not i)
+                   '()
+                   (cons (cons (unsafe-immutable-hash-iterate-key collides i)
+                               (unsafe-immutable-hash-iterate-value collides i))
+                         (loop (unsafe-immutable-hash-iterate-next collides i)))))))
+
+(let ([mixed (hash 1 #t 2 'true 3 #t 4 'true)])
+  (define (check-map l)
+    (check (list-sort (lambda (a b) (< (car a) (car b))) l)
+           '((1 . #t) (2 . true) (3 . #t) (4 . true))))
+  (check-map (hash-map mixed cons))
+  (check-map (let loop ([i (hash-iterate-first mixed)])
+               (if (not i)
+                   '()
+                   (cons (cons (hash-iterate-key mixed i)
+                               (hash-iterate-value mixed i))
+                         (loop (hash-iterate-next mixed i))))))
+  (check-map (let loop ([i (unsafe-immutable-hash-iterate-first mixed)])
+               (if (not i)
+                   '()
+                   (cons (cons (unsafe-immutable-hash-iterate-key mixed i)
+                               (unsafe-immutable-hash-iterate-value mixed i))
+                         (loop (unsafe-immutable-hash-iterate-next mixed i)))))))
 
 ;; Check `equal?`-based weak hash tables
 (let ([ht (make-weak-hash)]
@@ -78,33 +155,6 @@
                      (if (zero? i)
                          '()
                          (cons i (loop (sub1 i)))))))
-
-(hasheqv 1000 #t 8 #t 264 #t 776 #t)
-
-(let ([l '(1000 8 264 776 520
-             24 280 792 536
-             40 296 808 552
-             56 312 824 568
-             72 328 840 584
-             88 344 856 600
-             104 360 872 616
-             120 376 888 632
-             136 392 904 648
-             152 408 920 664
-             168 424 936 680
-             184 440 952 696
-             200 456 968 712
-             17 216 472 728
-             232 488 984 744
-             248 760 504)])
-  (let loop ([l l] [ht (hasheqv)])
-    (cond
-     [(null? l) (hash-ref ht 1000)]
-     [else
-      (loop (cdr l)
-            (hash-set ht (car l) #t))])))
-
-;; search 1000 #stencil[1966081](17 232 488 984 744) 1000 8
 
 (printf "large tables\n")
 (time
@@ -450,3 +500,49 @@
     (report "equal-hash-code" r-coll))
   (time (for-each (lambda (i) (for-each equal-hash l)) l))
   (time (for-each (lambda (i) (for-each equal-hash-code l)) l)))
+
+
+
+;; ----------------------------------------
+;; Stress text:
+
+; (random-seed 77889955)
+(let loop ([n 1])
+  (unless (fx= n 0)
+    (let ([nums (let loop ([l null] [n 0])
+                  (if (= n 1000)
+                      l
+                      (let ([r (collide (#%random #xFFFFF)
+                                        (#%random #xFFFFF))])
+                        (if (member r l)
+                            (loop l n)
+                            (loop (cons r l) (add1 n))))))]
+          [dup (lambda (x)
+                 (if (collide? x)
+                     (collide (collide-1 x) (collide-2 x))
+                     x))])
+      (let ([ht (let loop ([ht (hash)] [l nums] [n 0])
+                  (check (hash-count ht) n)
+                  (if (null? l)
+                      ht
+                      (loop (hash-set ht (dup (car l)) (car l)) (cdr l) (add1 n))))]
+            [rev-ht (let loop ([ht (hash)] [l (reverse nums)])
+                      (if (null? l)
+                          ht
+                          (loop (hash-set ht (dup (car l)) (car l)) (cdr l))))])
+        (check (equal? ht rev-ht) #t)
+        (check (equal? (equal-hash-code ht) (equal-hash-code  rev-ht)) #t)
+        (check (length nums) (hash-count ht))
+        (for-each (lambda (i)
+                    (check i (hash-ref ht i #f)))
+                  nums)
+        (let loop ([sub-ht ht] [sub-rev-ht rev-ht] [l nums] [n (length nums)])
+          (unless (null? l)
+            (check (hash-count sub-ht) n)
+            (check (hash-count sub-rev-ht) n)
+            (check (hash-keys-subset? sub-ht ht) #t)
+            (check (hash-keys-subset? sub-rev-ht ht) #t)
+            (check (equal? sub-ht sub-rev-ht) #t)
+            (check (equal? (equal-hash-code sub-ht) (equal-hash-code sub-rev-ht)) #t)
+            (loop (hash-remove sub-ht (car l)) (hash-remove sub-rev-ht (car l)) (cdr l) (sub1 n))))))
+    (loop (fx- n 1))))

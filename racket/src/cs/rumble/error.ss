@@ -59,6 +59,8 @@
                           (symbol? v))
                       (chez:format "~s" v)]
                      [else
+                      (chez:format "~s" v)
+                      #;
                       "[?error-value->string-handler not ready?]"]))
                   (lambda (v)
                     (check who (procedure-arity-includes/c 2) v)

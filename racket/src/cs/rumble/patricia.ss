@@ -33,8 +33,6 @@
   [nongenerative #{Co pfwguidjcvqbvofiirp097jco-3}]
   [sealed #t])
 
-(define immutable-hash? intmap?)
-
 (define empty-hash (make-intmap 'equal #f))
 (define empty-hasheqv (make-intmap 'eqv #f))
 (define empty-hasheq (make-intmap 'eq #f))
@@ -365,7 +363,7 @@
   (intmap-fold t (void) (lambda (k v _) (|#%app| proc k v) (void))))
 
 (define (intmap-map t proc)
-  (intmap-fold t '() (lambda (k v xs) (cons (|#%app| proc k v) xs))))
+  (#%reverse (intmap-fold t '() (lambda (k v xs) (cons (|#%app| proc k v) xs)))))
 
 ;; equality
 (define (intmap=? a b eql?)
