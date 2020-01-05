@@ -663,12 +663,12 @@
 (define (intmap-for-each h proc)
   (eqtype-dispatch
    h
-   (bnode-fold h (lambda (k v _) (proc k v) (void)) (void))))
+   (bnode-fold h (lambda (k v _) (|#%app| proc k v) (void)) (void))))
 
 (define (intmap-map h proc)
   (eqtype-dispatch
    h [bnode-fold]
-   (#%reverse (bnode-fold h (lambda (k v xs) (cons (proc k v) xs)) '()))))
+   (#%reverse (bnode-fold h (lambda (k v xs) (cons (|#%app| proc k v) xs)) '()))))
 
 ;; ----------------------------------------
 ;; eqtype-paramerized definitions
