@@ -90,10 +90,11 @@
                            (equal? (unbox orig-a) (unbox orig-b) ctx)))))]
            [(authentic-hash? a)
             (and (authentic-hash? b)
-                 (let ([ctx (deeper-context ctx)])
-                   (hash=? orig-a orig-b
-                           (lambda (a b)
-                             (equal? a b ctx)))))]
+                 (or (check-union-find ctx a b)
+                     (let ([ctx (deeper-context ctx)])
+                       (hash=? orig-a orig-b
+                               (lambda (a b)
+                                 (equal? a b ctx))))))]
            [(record? a)
             (and (record? b)
                  ;; Check for `prop:impersonator-of`

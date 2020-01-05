@@ -1,9 +1,9 @@
-;; HAMT
+;; See also "intmap.ss"
 
-;; A HAMT "bnode" is implemented here a stencil vector. A stencil
-;; vector has 26 or 58 slots, so we make each node in the HAMT
-;; of size 8 (32-bit platforms) or 16 (64-bit platforms). That way,
-;; we have use three bits per slot: child, key, and value.
+;; A HAMT node is implemented as a Chez Scheme stencil vector. A
+;; stencil vector has 26 or 58 slots, so we make each node in the HAMT
+;; of size 8 (32-bit platforms) or 16 (64-bit platforms) entries. That
+;; way, we have use three bits per node entry: child, key, and value.
 ;;
 ;;  * A child bit set means that the trie continues with a child node.
 ;;
@@ -24,7 +24,9 @@
 ;; only in an `equal?`-based hash table, where if a key is complex
 ;; enough --- so that keeping a hash code is worthwhile to speed up
 ;; comparions --- then it is paired with its hash code for future
-;; reference.
+;; reference. (This is not obviously a good idea, since it trades
+;; space for speed, but right choice for `equal?`-based tables may be
+;; different than for `eq?` and `eqv?`-based tables.)
 ;;
 ;; The high bit in the stencil vector's stencil is used to indicate a
 ;; "shell" indirection to support cyclic hash tables.

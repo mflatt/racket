@@ -1,4 +1,4 @@
-;; HAMT that does not use stencil vectors
+;; See also "intmap.ss"
 
 (define (popcount x)
   (fxpopcount16 x))
@@ -396,7 +396,8 @@
          [(key=? node key k)
           (if (eq? val v)
               node
-              (bnode-replace-val node ki val))]
+              ;; for consistency, we're required to keep the new key:
+              (bnode-replace-val node ki val key (not (eq? key k))))]
          [else
           (let* ([h (hash-code node k)]
                  [eqtype (hnode-eqtype node)]
@@ -599,20 +600,25 @@
                 (fxxor (bnode-keymap node) bit)
                 (bnode-childmap node))))
 
-(define (bnode-replace-val node ki val)
+(define (bnode-replace-val node ki val key update-key?)
   (let* ([vals (hnode-vals node)]
          [new-vals
           (if vals
               (#%vector-copy vals)
               (pariah ; reify values
                (let ([pop (popcount (bnode-keymap node))])
-                 (#%make-vector pop #t))))])
+                 (#%make-vector pop #t))))]
+         [new-keys (if update-key?
+                       (#%vector-copy keys)
+                       (hnode-keys node))])
 
     (#%vector-set! new-vals ki val)
+    (when update-key?
+      (#%vector-set! new-keys ki key))
 
     (make-bnode (hnode-eqtype node)
                 (hnode-count node)
-                (hnode-keys node)
+                new-keys
                 new-vals
                 (bnode-keymap node)
                 (bnode-childmap node))))

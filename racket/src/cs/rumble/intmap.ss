@@ -1,13 +1,20 @@
 
-(include "rumble/hamt.ss")
+;; We have several implementations of immutable hash tables. Pick one...
 
-;; or
+(include "rumble/hamt-stencil.ss")
+;;
+;; The HAMT implementaiton using stencil vectors tends to use the last
+;; memory, often by a lot. It's a little slow than the others, though.
+
 ;; (include "rumble/patricia.ss")
-;; which is a much simpler and prettier implementation that runs
-;; about as fast, but uses more memory
+;;
+;; The Patricia-trie implementation is the prettiest and fastest. It
+;; uses the most memory, though --- typically much more than the
+;; vector-stencil HAMT.
 
-;; or
 ;; (include "rumble/hamt-vector.ss")
-;; which was the starting point for "hamt.ss" and uses plain vectors
-;; instead of stencil vectors; it runs about as fast, too, but also
-;; uses more memory
+;;
+;; This HAMT implementaiton uses plain vectors instead of stencil
+;; vectors. Its speed and memory use are intermediate, but its speed
+;; is closer to the stencil-vector HAMT implementation, and memory use
+;; is closer to the Patrica trie implementation.

@@ -1,3 +1,5 @@
+;; See also "intmap.ss"
+
 ;; Immutable maps represented as big-endian Patricia tries.
 ;; Based on Okasaki & Gill's "Fast Mergeable Integer Maps,"
 ;; (1998) with an added collision node.
