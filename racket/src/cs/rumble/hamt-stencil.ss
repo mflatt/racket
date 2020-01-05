@@ -1032,8 +1032,9 @@
        (eq? a b)
        (cond
         [(cnode? b)
-         ;; only possible if `anode` has just one key, since
-         ;; it doesn't have any collisions
+         ;; only possible if `a` has just one key, since if it
+         ;; has multiple keys, they have different hash code and
+         ;; can be a subset of the the keys of `c`
          (and (fx= (hamt-count a) 1)
               (let* ([k (bnode-only-key-ref a)]
                      [hashcode (hamt-wrapped-key-hash-code a k)])
