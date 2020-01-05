@@ -144,6 +144,11 @@
   (check (make-reader-graph ph) (hasheq)))
 (let ([ph (make-hasheq-placeholder (list (cons 1 2) (cons 'a 'b)))])
   (check (make-reader-graph ph) (hasheq 1 2 'a 'b)))
+(let* ([ph1 (make-placeholder #f)]
+       [ph (make-hasheq-placeholder (list (cons ph1 2) (cons 'a 'b)))])
+  (placeholder-set! ph1 ph)
+  (let ([g (make-reader-graph ph)])
+    (check (hash-count g) 2)))
 
 (define (shuffle l)
   (define a (make-vector (length l)))

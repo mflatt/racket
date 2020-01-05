@@ -28,9 +28,6 @@
 ;; space for speed, but right choice for `equal?`-based tables may be
 ;; different than for `eq?` and `eqv?`-based tables.)
 ;;
-;; The high bit in the stencil vector's stencil is used to indicate a
-;; "shell" indirection to support cyclic hash tables.
-;;
 ;; A "cnode" collision node is an association list. It's never a root
 ;; node, but it can be a child at any non-root depth.
 
@@ -61,16 +58,19 @@
 (define HAMT-COUNT-OFFSET (integer-length HAMT-EQTYPE-MASK))
 (define ONE-COUNT-IN-COUNT+EQTYPE (fxsll 1 HAMT-COUNT-OFFSET))
 
-(define (hamt-eqtype h)
-  (fxand (stencil-vector-ref h HAMT-COUNT+EQTYPE-INDEX) HAMT-EQTYPE-MASK))
-(define (hamt-count h)
-  (fxsrl (stencil-vector-ref h HAMT-COUNT+EQTYPE-INDEX) HAMT-COUNT-OFFSET))
-(define (hamt-count+eqtype h)
-  (stencil-vector-ref h HAMT-COUNT+EQTYPE-INDEX))
-
-;; packs count and eqtype into a fixnum:
 (define (count+eqtype c t)
   (fxior (fxsll c HAMT-COUNT-OFFSET) t))
+(define (count+eqtype-eqtype x)
+  (fxand x HAMT-EQTYPE-MASK))
+(define (count+eqtype-count x)
+  (fxsrl x HAMT-COUNT-OFFSET))
+
+(define (hamt-count+eqtype h)
+  (stencil-vector-ref h HAMT-COUNT+EQTYPE-INDEX))
+(define (hamt-eqtype h)
+  (count+eqtype-eqtype (hamt-count+eqtype h)))
+(define (hamt-count h)
+  (count+eqtype-count (hamt-count+eqtype h)))
 
 ;; to dispatch on a bnode's equality type:
 (define-syntax eqtype-case
@@ -86,9 +86,6 @@
 (define HAMT-CHILD-OFFSET HAMT-STATIC-FIELD-COUNT)
 (define HAMT-KEY-OFFSET (fx+ HAMT-CHILD-OFFSET HAMT-WIDTH))
 (define HAMT-VAL-OFFSET (fx+ HAMT-KEY-OFFSET HAMT-WIDTH))
-
-(define HAMT-SHELL-OFFSET (fx+ HAMT-VAL-OFFSET HAMT-WIDTH))
-(define HAMT-SHELL-BIT (fxsll 1 HAMT-SHELL-OFFSET))
 
 (define HAMT-CHILD-MASK (fxsll HAMT-GROUP-MASK HAMT-CHILD-OFFSET))
 (define HAMT-KEY-MASK (fxsll HAMT-GROUP-MASK HAMT-KEY-OFFSET))
@@ -414,24 +411,29 @@
 (define empty-hasheqv (make-empty-bnode HAMT-EQTYPE-EQV))
 (define empty-hash (make-empty-bnode HAMT-EQTYPE-EQUAL))
 
-;; A "shell" intmap, used to create graphs, is a stencil vector with
-;; the `HAMT-SHELL-BIT` entry as another (non-empty) intmap
-(define (make-intmap-shell eqtype)
-  (let ([mask (fxior HAMT-COUNT+EQTYPE-BIT
-                     HAMT-SHELL-BIT)])
-    (case eqtype
-      [(eq)  (stencil-vector mask HAMT-EQTYPE-EQ    empty-hasheq)]
-      [(eqv) (stencil-vector mask HAMT-EQTYPE-EQV   empty-hasheqv)]
-      [else  (stencil-vector mask HAMT-EQTYPE-EQUAL empty-hash)])))
+(define intmap-shell-falses (let loop ([n (fx* 2 HAMT-WIDTH)])
+                              (if (fx= n 0)
+                                  '()
+                                  (cons #f (loop (fx- n 1))))))
+
+(define (make-intmap-shell eqtype-sym)
+  ;; a shell is a maximally sized node that claims to have 0 items
+  (let ([mask (fx- (fxsll 1 (fx+ HAMT-STATIC-FIELD-COUNT
+                                 (fx* 2 HAMT-WIDTH)))
+                   1)]
+        [eqtype (case eqtype-sym
+                  [(eq)  HAMT-EQTYPE-EQ]
+                  [(eqv) HAMT-EQTYPE-EQV]
+                  [else  HAMT-EQTYPE-EQUAL])])
+    (#%apply stencil-vector mask eqtype intmap-shell-falses)))
 
 (define (intmap-shell-sync! dest src)
-  (stencil-vector-set! dest HAMT-STATIC-FIELD-COUNT src)
-  (stencil-vector-set! dest HAMT-COUNT+EQTYPE-INDEX (stencil-vector-ref src HAMT-COUNT+EQTYPE-INDEX)))
-
-(define (unwrap-shell h)
-  (if (fxbit-set? (stencil-vector-mask h) HAMT-SHELL-OFFSET)
-      (stencil-vector-ref h HAMT-STATIC-FIELD-COUNT)
-      h))
+  (let ([mask (stencil-vector-mask src)])
+    (stencil-vector-truncate! dest mask)
+    (let loop ([i (fx- (fxpopcount mask) 1)])
+      (stencil-vector-set! dest i (stencil-vector-ref src i))
+      (unless (fx= i 0)
+        (loop (fx- i 1))))))
 
 (define (intmap-eq? h)
   (eq? (hamt-eqtype h) HAMT-EQTYPE-EQ))
@@ -486,90 +488,84 @@
      #'(eqtype-dispatch h [f] (f arg ...))]))
 
 (define (intmap-has-key? h key)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h [bnode-has-key? bnode-key-hash-code]
-     (bnode-has-key? h key (bnode-key-hash-code key) 0))))
+  (eqtype-dispatch
+   h [bnode-has-key? bnode-key-hash-code]
+   (bnode-has-key? h key (bnode-key-hash-code key) 0)))
 
 (define (intmap-ref h key default)
-  (cond
-   [(intmap-empty? h)
-    ;; Access on an empty HAMT is common, so don't even hash in that case
-    default]
-   [else
-    (let ([h (unwrap-shell h)])
-      (eqtype-dispatch
-       h [bnode-ref bnode-key-hash-code]
-       (bnode-ref h key (bnode-key-hash-code key) 0 default)))]))
+  (let ([count+eqtype (hamt-count+eqtype h)])
+    (cond
+     [(fx= 0 (count+eqtype-count count+eqtype))
+      ;; Access on an empty HAMT is common, so don't even hash in that case
+      default]
+     [else
+      (let ([eqtype (count+eqtype-eqtype count+eqtype)])
+        (cond
+         [(fx= eqtype HAMT-EQTYPE-EQ)
+          (eq:bnode-ref h key (eq:bnode-key-hash-code key) 0 default)]
+         [(fx= eqtype HAMT-EQTYPE-EQV)
+          (eqv:bnode-ref h key (eqv:bnode-key-hash-code key) 0 default)]
+         [else
+          (equal:bnode-ref h key (equal:bnode-key-hash-code key) 0 default)]))])))
 
 (define (intmap-ref-key h key default)
   (cond
    [(intmap-empty? h)
     default]
    [else
-    (let ([h (unwrap-shell h)])
-      (eqtype-dispatch
-       h [bnode-ref-key bnode-key-hash-code]
-       (bnode-ref-key h key (bnode-key-hash-code key) 0 default)))]))
+    (eqtype-dispatch
+     h [bnode-ref-key bnode-key-hash-code]
+     (bnode-ref-key h key (bnode-key-hash-code key) 0 default))]))
 
 (define (intmap-set h key val)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h [bnode-set bnode-key-hash-code]
-     (bnode-set h key val (bnode-key-hash-code key) 0))))
+  (eqtype-dispatch
+   h [bnode-set bnode-key-hash-code]
+   (bnode-set h key val (bnode-key-hash-code key) 0)))
 
 (define (intmap-remove h key)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h [bnode-remove bnode-key-hash-code]
-     (bnode-remove h key (bnode-key-hash-code key) 0))))
+  (eqtype-dispatch
+   h [bnode-remove bnode-key-hash-code]
+   (bnode-remove h key (bnode-key-hash-code key) 0)))
 
 ;; ----------------------------------------
 ;; generic iteration by counting
 
 (define (intmap-iterate-first h)
-  (let ([h (unwrap-shell h)])
-    (and (not (intmap-empty? h))
-         0)))
+  (and (not (intmap-empty? h))
+       0))
 
 (define (intmap-iterate-next h pos)
-  (let ([h (unwrap-shell h)])
-    (let ([pos (fx1+ pos)])
-      (and (not (fx= pos (intmap-count h)))
-           pos))))
+  (let ([pos (fx1+ pos)])
+    (and (not (fx= pos (intmap-count h)))
+         pos)))
 
 (define (intmap-iterate-key h pos fail)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h
-     (bnode-entry-at-position h pos 'key fail))))
+  (eqtype-dispatch
+   h
+   (bnode-entry-at-position h pos 'key fail)))
 
 (define (intmap-iterate-value h pos fail)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h
-     (bnode-entry-at-position h pos 'val fail))))
+  (eqtype-dispatch
+   h
+   (bnode-entry-at-position h pos 'val fail)))
 
 (define (intmap-iterate-key+value h pos fail)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h
-     (bnode-entry-at-position h pos 'both fail))))
+  (eqtype-dispatch
+   h
+   (bnode-entry-at-position h pos 'both fail)))
 
 (define (intmap-iterate-pair h pos fail)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h
-     (bnode-entry-at-position h pos 'pair fail))))
+  (eqtype-dispatch
+   h
+   (bnode-entry-at-position h pos 'pair fail)))
 
 ;; ----------------------------------------
 ;; unsafe iteration; position is a stack
 ;; represented by a list of (cons node index)
 
 (define (unsafe-intmap-iterate-first h)
-  (let ([h (unwrap-shell h)])
-    (and (not (intmap-empty? h))
-         (unsafe-node-iterate-first h '()))))
+  (and (not (intmap-empty? h))
+       (unsafe-node-iterate-first h '())))
 
 (define (unsafe-node-iterate-first n stack)
   (cond
@@ -586,7 +582,6 @@
           stack)]))
 
 (define (unsafe-intmap-iterate-next h pos)
-  ;; (unwrap-shell h) - not needed
   (unsafe-node-iterate-next pos))
 
 (define (unsafe-node-iterate-next pos)
@@ -617,70 +612,63 @@
             ;; Move to next (lower) index in the current node
             (let ([i (fx1- i)])
               (let ([child-count (hamt-mask->child-count (stencil-vector-mask n))]
-                    [key-count (hamt-mask->key-count (stencil-vector-mask n))]
                     [stack (cons (cons n i) stack)])
                 (if (fx< i child-count)
                     (unsafe-node-iterate-first (bnode-child-index-ref n i) stack)
                     stack)))]))]))]))
 
 (define (unsafe-intmap-iterate-key h pos)
-  ;; (unwrap-shell h) - not needed
   (eqtype-dispatch
    h
    (bnode-unsafe-intmap-iterate-key pos)))
 
 (define (unsafe-intmap-iterate-value h pos)
-  ;; (unwrap-shell h) - not needed
   (eqtype-dispatch
    h
    (bnode-unsafe-intmap-iterate-value pos)))
 
 (define (unsafe-intmap-iterate-key+value h pos)
-  ;; (unwrap-shell h) - not needed
   (eqtype-dispatch
    h
    (bnode-unsafe-intmap-iterate-key+value pos)))
 
 (define (unsafe-intmap-iterate-pair h pos)
-  ;; (unwrap-shell h) - not needed
   (eqtype-dispatch
    h
    (bnode-unsafe-intmap-iterate-pair pos)))
 
 (define (intmap=? a b eql?)
-  (let ([a (unwrap-shell a)]
-        [b (unwrap-shell b)])
-    (and (eq? (hamt-count+eqtype a)
-              (hamt-count+eqtype b))
-         (eqtype-dispatch
-          a
-          (bnode=? a b eql? 0)))))
+  (and (fx= (hamt-count+eqtype a)
+            (hamt-count+eqtype b))
+       (or (intmap-empty? a) ; explicit test in case `a` or `b` is a shell
+           (eqtype-dispatch
+            a
+            (bnode=? a b eql? 0)))))
 
 (define (intmap-keys-subset? a b)
-  (let ([a (unwrap-shell a)])
-    (or (intmap-empty? a)
-        (let ([b (unwrap-shell b)])
-          (eqtype-dispatch
-           a
-           (bnode-keys-subset? a b 0))))))
+  (or (intmap-empty? a)
+      (eqtype-dispatch
+       a
+       (bnode-keys-subset? a b 0))))
 
 (define (intmap-hash-code a hash)
-  (let ([a (unwrap-shell a)])
+  (cond
+   [(intmap-empty? a) ;; explicit test in `a` is a shell
+    (hamt-count+eqtype a)]
+   [else
     (eqtype-dispatch
      a
-     (bnode-hash-code a hash 0))))
+     (bnode-hash-code a hash 0))]))
 
 (define (intmap-for-each h proc)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h
-     (bnode-fold h (lambda (k v _) (proc k v) (void)) (void)))))
+  (eqtype-dispatch
+   h
+   (bnode-fold h (lambda (k v _) (proc k v) (void)) (void))))
 
 (define (intmap-map h proc)
-  (let ([h (unwrap-shell h)])
-    (eqtype-dispatch
-     h [bnode-fold]
-     (#%reverse (bnode-fold h (lambda (k v xs) (cons (proc k v) xs)) '())))))
+  (eqtype-dispatch
+   h [bnode-fold]
+   (#%reverse (bnode-fold h (lambda (k v xs) (cons (proc k v) xs)) '()))))
 
 ;; ----------------------------------------
 ;; eqtype-paramerized definitions
@@ -924,21 +912,21 @@
 
     (define (bnode-entry-at-position n pos mode fail)
       (let* ([mask (stencil-vector-mask n)]
-             [child-count (hamt-mask->child-count mask)]
-             [key-count (hamt-mask->key-count mask)])
+             [child-count (hamt-mask->child-count mask)])
         (let loop ([i 0] [pos pos])
           (cond
            [(fx= i child-count)
-            (cond
-             [(fx< pos key-count)
-              (let ([get-key (lambda () (hamt-unwrap-key (bnode-key-index-ref n (fx+ pos child-count))))]
-                    [get-value (lambda () (bnode-val-index-ref n (fx+ pos child-count)))])
-                (case mode
-                  [(key) (get-key)]
-                  [(val) (get-value)]
-                  [(both) (values (get-key) (get-value))]
-                  [else (cons (get-key) (get-value))]))]
-             [else fail])]
+            (let ([key-count (hamt-mask->key-count mask)])
+              (cond
+               [(fx< pos key-count)
+                (let ([get-key (lambda () (hamt-unwrap-key (bnode-key-index-ref n (fx+ pos child-count))))]
+                      [get-value (lambda () (bnode-val-index-ref n (fx+ pos child-count)))])
+                  (case mode
+                    [(key) (get-key)]
+                    [(val) (get-value)]
+                    [(both) (values (get-key) (get-value))]
+                    [else (cons (get-key) (get-value))]))]
+               [else fail]))]
            [else
             (let ([c (bnode-child-index-ref n i)])
               (cond
