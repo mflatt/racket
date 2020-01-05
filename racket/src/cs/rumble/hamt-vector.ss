@@ -609,7 +609,7 @@
                (let ([pop (popcount (bnode-keymap node))])
                  (#%make-vector pop #t))))]
          [new-keys (if update-key?
-                       (#%vector-copy keys)
+                       (#%vector-copy (hnode-keys node))
                        (hnode-keys node))])
 
     (#%vector-set! new-vals ki val)
