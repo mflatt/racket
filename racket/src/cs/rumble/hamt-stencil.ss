@@ -731,7 +731,7 @@
       (let ([bit (bnode-bit-pos keyhash shift)])
         (cond
          [(bnode-maps-key? node bit)
-          (let* ([k (bnode-key-ref node bit)])
+          (let ([k (bnode-key-ref node bit)])
             (if (hamt-key=? key keyhash k)
                 (hamt-unwrap-key k)
                 default))]
@@ -747,8 +747,22 @@
          [else
           default])))
 
-    (define (bnode-has-key? n key keyhash shift)
-      (not (eq? none2 (bnode-ref-key n key keyhash shift none2))))
+    (define (bnode-has-key? node key keyhash shift)
+      (let ([bit (bnode-bit-pos keyhash shift)])
+        (cond
+         [(bnode-maps-key? node bit)
+          (let ([k (bnode-key-ref node bit)])
+            (hamt-key=? key keyhash k))]
+
+         [(bnode-maps-child? node bit)
+          (let* ([c (bnode-child-ref node bit)])
+            (cond
+             [(bnode? c)
+              (bnode-has-key? c key keyhash (bnode-down shift))]
+             [else
+              (cnode-has-key? c key keyhash)]))]
+
+         [else #f])))
 
     (define (bnode-set node key val keyhash shift)
       (let ([bit (bnode-bit-pos keyhash shift)])

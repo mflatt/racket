@@ -4,6 +4,7 @@
 (define elems
   (parameterize ([current-pseudo-random-generator
                   (make-pseudo-random-generator)])
+    (random-seed 12745)
     (hash-keys
      (for/fold ([ht #hasheqv()]) ([i 200])
        (let loop ()
@@ -43,7 +44,7 @@
  (let ([ht (gen 6)]
        [sub-ht (gen 3)])
    (check-false
-    (for/or ([i (in-range M)])
+    (for/or ([i (in-range L)])
       (hash-keys-subset? ht sub-ht)))))
 
 'eq:subset-shared-medium+small
@@ -51,7 +52,7 @@
  (let* ([sub-ht (gen 10)]
         [ht (gen-more 1 sub-ht)])
    (check-true
-    (for/and ([i (in-range M)])
+    (for/and ([i (in-range L)])
       (hash-keys-subset? sub-ht ht)))))
 
 'eq:subset-shared-medium+medium
@@ -59,14 +60,14 @@
  (let* ([sub-ht (gen 10)]
         [ht (gen-more 10 sub-ht)])
    (check-true
-    (for/and ([i (in-range M)])
+    (for/and ([i (in-range L)])
       (hash-keys-subset? sub-ht ht)))))
 
 'eq:subset-same-large
 (times
  (let* ([sub-ht (gen 100)])
    (check-true
-    (for/and ([i (in-range M)])
+    (for/and ([i (in-range L)])
       (hash-keys-subset? sub-ht sub-ht)))))
 
 'eq:subset-shared-large+small
@@ -74,7 +75,7 @@
  (let* ([sub-ht (gen 100)]
         [ht (gen-more 3 sub-ht)])
    (check-true
-    (for/and ([i (in-range M)])
+    (for/and ([i (in-range L)])
       (hash-keys-subset? sub-ht ht)))))
 
 'eq:subset-shared-large+medium
@@ -82,7 +83,7 @@
  (let* ([sub-ht (gen 100)]
         [ht (gen-more 10 sub-ht)])
    (check-true
-    (for/and ([i (in-range M)])
+    (for/and ([i (in-range L)])
       (hash-keys-subset? sub-ht ht)))))
 
 'eq:subset-shared-large+large
@@ -90,5 +91,5 @@
  (let* ([sub-ht (gen 100)]
         [ht (gen-more 100 sub-ht)])
    (check-true
-    (for/and ([i (in-range M)])
+    (for/and ([i (in-range L)])
       (hash-keys-subset? sub-ht ht)))))
