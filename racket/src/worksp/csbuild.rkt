@@ -325,3 +325,18 @@
           (format "../../lib/system~a.rktd" cs-suffix)
           machine
           "machine")
+
+(system*! (find-exe)
+          "../cs/c/add-terminator.rkt"
+          "../build/petite-v.boot"
+          "../../lib/petite.boot")
+
+(system*! (find-exe)
+          "../cs/c/add-terminator.rkt"
+          "../build/scheme-v.boot"
+          "../../lib/scheme.boot")
+
+(system*! (find-exe)
+          "../cs/c/add-terminator.rkt"
+          "../build/racket-v.boot"
+          "../../lib/racket.boot")
