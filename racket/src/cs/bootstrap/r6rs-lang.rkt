@@ -118,6 +118,7 @@
                      [bitwise-copy-bit-field fxcopy-bit-field]
                      [bitwise-copy-bit fxcopy-bit]
                      [make-hasheq make-eq-hashtable]
+                     [make-hasheqv make-eqv-hashtable]
                      [hash-ref/pair hashtable-ref]
                      [hash-set!/pair hashtable-set!]
                      [hash-set!/pair eq-hashtable-set!]
