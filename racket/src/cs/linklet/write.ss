@@ -24,12 +24,15 @@
           (let ([new-v (cond
                         [(linklet? v)
                          (cond
-                          [(pair? (linklet-paths v))
+                          [(or (pair? (linklet-paths v))
+                               (fxpositive? (#%vector-length (linklet-more-paths v))))
                            (adjust-cross-perparation
                             (set-linklet-paths
                              v
-                             (map path->compiled-path
-                                  (linklet-paths v))))]
+                             (#%map path->compiled-path
+                                    (linklet-paths v))
+                             (#%vector-map (lambda (p) (path->compiled-path p #t))
+                                           (linklet-more-paths v))))]
                           [else (adjust-cross-perparation v)])]
                         [else v])])
             (when (linklet? new-v)
