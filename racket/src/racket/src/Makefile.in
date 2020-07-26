@@ -12,7 +12,8 @@ MZSRC = $(srcdir)
 CFLAGS = @CFLAGS@ @COMPFLAGS@ @PROFFLAGS@
 CPPFLAGS = @PREFLAGS@
 RKTIO_INC = -I$(srcdir)/../../rktio -I../../rktio
-ALL_CFLAGS = $(CFLAGS) -I$(builddir)/.. -I$(srcdir)/../include  $(RKTIO_INC) $(CPPFLAGS) @OPTIONS@ @MZOPTIONS@
+BOOTSTRAPPED_INC = -I$(srcdir)/../../bootstrapped
+ALL_CFLAGS = $(CFLAGS) -I$(builddir)/.. -I$(srcdir)/../include $(RKTIO_INC) $(BOOTSTRAPPED_INC) $(CPPFLAGS) @OPTIONS@ @MZOPTIONS@
 LTO=@LTO@ # Need for replacement of EXTRA_GMP_OBJ which carries the variable
 
 OBJS =  salloc.@LTO@ \
@@ -429,7 +430,7 @@ sfs.@LTO@: $(COMMON_HEADERS) \
 sort.@LTO@: $(COMMON_HEADERS) \
          $(srcdir)/stypes.h
 startup.@LTO@: $(COMMON_HEADERS) $(srcdir)/schvers.h \
-         $(srcdir)/stypes.h  $(srcdir)/schminc.h $(srcdir)/startup.inc ../cstartup.inc \
+         $(srcdir)/stypes.h  $(srcdir)/schminc.h $(srcdir)/../../bootstrapped/startup.inc ../cstartup.inc \
          $(srcdir)/startup-glue.inc
 string.@LTO@: $(COMMON_HEADERS) $(RKTIO_HEADERS) \
          $(srcdir)/stypes.h    $(srcdir)/schvers.h $(srcdir)/mzmark_string.inc $(srcdir)/strops.inc \

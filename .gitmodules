@@ -1,0 +1,6 @@
+[submodule "racket/src/bootstrapped"]
+	path = racket/src/bootstrapped
+	url = https://github.com/mflatt/bootstrapped-1
+[submodule "racket/src/ChezScheme"]
+	path = racket/src/ChezScheme
+	url = https://github.com/racket/ChezScheme

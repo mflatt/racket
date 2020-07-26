@@ -53,7 +53,7 @@ static void scheme_set_dll_procs(scheme_dll_open_proc open,
 # define embedded_dll_close NULL
 #endif
 
-char *boot_file_data = "BooT FilE OffsetS:xxxxyyyyyzzzz";
+char *boot_file_data = "BooT FilE OffsetS:\0\0\0\0\0\0\0\0\0\0\0\0";
 static int boot_file_offset = 18;
 
 #define USE_GENERIC_GET_SELF_PATH
@@ -406,6 +406,21 @@ static void *extract_dlldir()
 }
 #endif
 
+static char *path_replace(const char *s, const char *new_file)
+{
+  int len1 = strlen(s), len2 = strlen(new_file);
+  char *r;
+
+  while ((len1 > 0) && (s[len1-1] != '/') && (s[len1-1] != '\\'))
+    len1--;
+
+  r = malloc(len1+len2+1);
+  memcpy(r, (void *)s, len1);
+  memcpy(r+len1, (void *)new_file, len2+1);
+
+  return r;
+}
+
 #ifndef do_pre_filter_cmdline_arguments
 # define do_pre_filter_cmdline_arguments(argc, argv) /* empty */
 #endif
@@ -493,11 +508,24 @@ static int bytes_main(int argc, char **argv,
   }
 #endif
 
+  if ((boot1_offset == 0)
+      && (boot2_offset == 0)
+      && (boot3_offset == 0)
+      && (boot1_path == boot2_path)
+      && (boot1_path == boot3_path)) {
+    /* No offsets have been set, so we must be trying to run
+       something like `raw_racketcs` during the build process.
+       Look for boot files adjacent to the executable. */
+    boot1_path = path_replace(boot_exe, "petite-v.boot");
+    boot2_path = path_replace(boot_exe, "scheme-v.boot");
+    boot3_path = path_replace(boot_exe, "racket-v.boot");
+  }
+
   {
     racket_boot_arguments_t ba;
 
     memset(&ba, 0, sizeof(ba));
-
+    
     ba.boot1_path = boot1_path;
     ba.boot1_offset = boot1_offset;
     ba.boot2_path = boot2_path;

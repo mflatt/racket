@@ -333,7 +333,7 @@ cstartup@STARTUP_AS_AUTO@:
 
 # For compiling the startup code to bytecode
 cstartup@STARTUP_AS_BYTECODE@:
-	@RUN_RACKET_CGC@ -cu $(srcdir)/src/compile-startup.rkt $(CSTARTUPDEST) cstartup.zo $(srcdir)/src/startup.inc $(srcdir)/src/schvers.h
+	@RUN_RACKET_CGC@ -cu $(srcdir)/src/compile-startup.rkt $(CSTARTUPDEST) cstartup.zo $(srcdir)/../bootstrapped/startup.inc $(srcdir)/src/schvers.h
 
 # For compiling the startup code to C
 cstartup@STARTUP_AS_C@:
@@ -346,8 +346,8 @@ cstartup_:
 
 # Running "cify-startup.rkt" through "$(SETUP_BOOT)" generates more
 # dependencies in "cstartup.d" for `$(CSTARTUPDEST)`
-$(CSTARTUPDEST): $(srcdir)/src/startup.inc $(srcdir)/src/schvers.h
-	@RUN_RACKET_CGC@ $(SELF_RACKET_FLAGS) $(SETUP_BOOT) cstartup.inc cstartup.d $(srcdir)/src/cify-startup.rkt $(srcdir)/src/startup.inc $(srcdir)/src/schvers.h
+$(CSTARTUPDEST): $(srcdir)/../bootstrapped/startup.inc $(srcdir)/src/schvers.h
+	@RUN_RACKET_CGC@ $(SELF_RACKET_FLAGS) $(SETUP_BOOT) cstartup.inc cstartup.d $(srcdir)/src/cify-startup.rkt $(srcdir)/../bootstrapped/startup.inc $(srcdir)/src/schvers.h
 @INCLUDEDEP@ cstartup.d
 
 mark:

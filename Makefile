@@ -74,6 +74,7 @@ ALL_PLT_SETUP_OPTIONS = $(JOB_OPTIONS) $(PLT_SETUP_OPTIONS)
 IN_PLACE_SETUP_OPTIONS =
 
 plain-in-place:
+	$(MAKE) bootstrapped-repo
 	$(MAKE) plain-minimal-in-place
 	$(MAKE) in-place-setup
 
@@ -153,6 +154,7 @@ cpus-unix-style:
 	$(MAKE) -j $(CPUS) plain-unix-style JOB_OPTIONS="-j $(CPUS)"
 
 plain-unix-style:
+	$(MAKE) bootstrapped-repo
 	if [ "$(PREFIX)" = "" ] ; then $(MAKE) error-need-prefix ; fi
 	$(MAKE) plain-base $(UNIXSTYLE_CONFIG_qq) $(UNIX_BASE_ARGS)
 	$(MAKE) set-src-catalog
@@ -250,9 +252,9 @@ racket/src/build/cross/Makefile: racket/src/configure racket/src/cfg-racket rack
 	cd racket/src/build/cross; ../../configure $(MORE_CROSS_CONFIGURE_ARGS)
 
 # ------------------------------------------------------------
-# Racket-on-Chez build
+# Racket CS (Racket on Chez Scheme) build
 
-# If `RACKETCS_SUFFIX` is set to the empty string, the Racket-on-Chez
+# If `RACKETCS_SUFFIX` is set to the empty string, the Racket CS
 # is build as `racket` instead of `racketcs`; also, if `RACKET`
 # is not set, then `--enable-csdefault` is added to configure
 # arguments
@@ -265,19 +267,11 @@ RACKET =
 # The built traditional Racket:
 RACKET_BUILT_FOR_CS = racket/src/build/racket/racket3m
 
-# If `SCHEME_SRC` is not set, then we'll download a copy of
-# Chez Scheme from `CHEZ_SCHEME_REPO`
-SCHEME_SRC = 
-DEFAULT_SCHEME_SRC = racket/src/build/ChezScheme
 MAKE_BUILD_SCHEME = checkout
 
-# Set `CHEZ_SCHEME_REPO` to change the repo that can be cloned
-# for Chez Scheme, and add `-b <branch>` to `GIT_CLONE_ARGS_qq`
-# to clone a particular branch from that repo
-CHEZ_SCHEME_REPO = https://github.com/racket/ChezScheme
-GIT_CLONE_ARGS_qq = -q --recurse-submodules --depth 1
+GIT_CLONE_ARGS_qq = --depth 1
 
-# Altenative source for Chez Scheme repo, normally set by
+# Alternative source for bootstrapped and ChezScheme repos, normally set by
 # the distro-build client driver
 EXTRA_REPOS_BASE =
 
@@ -294,11 +288,9 @@ cs:
          else $(MAKE) cpus-cs CPUS="$(CPUS)" ; fi
 
 plain-cs:
-	if [ "$(SCHEME_SRC)" = "" ] ; \
-         then $(MAKE) scheme-src ; fi
-	if [ "$(RACKET)" = "" ] ; \
-         then $(MAKE) racket-then-cs ; \
-         else $(MAKE) cs-only RACKET="$(RACKET)" ; fi
+	$(MAKE) bootstrapped-repo
+	$(MAKE) ChezScheme-repo
+	$(MAKE) cs-after-repo
 
 cpus-cs:
 	$(MAKE) -j $(CPUS) plain-cs JOB_OPTIONS="-j $(CPUS)"
@@ -310,52 +302,21 @@ cs-base:
 	$(MAKE) cs CS_SETUP_TARGET=nothing-after-base
 
 cs-as-is:
-	$(MAKE) cs CS_SETUP_TARGET=in-place-setup MAKE_BUILD_SCHEME=finish
-
-CS_CONFIG_TARGET = no-cfg-cs
-
-cs-after-racket:
-	if [ "$(RACKET)" = "" ] ; \
-         then $(MAKE) cs-after-racket-with-racket RACKET="$(RACKET_BUILT_FOR_CS)" SETUP_BOOT_MODE=--boot ; \
-         else $(MAKE) cs-after-racket-with-racket RACKET="$(RACKET)" CS_CONFIG_TARGET=run-cfg-cs ; fi
+	$(MAKE) cs CS_SETUP_TARGET=in-place-setup
 
 RACKETCS_NOSUFFIX_CONFIG = MORE_CONFIGURE_ARGS="$(MORE_CONFIGURE_ARGS) --enable-csdefault"
 
-racket-then-cs:
+cs-after-repo:
 	if [ "$(RACKETCS_SUFFIX)" = "" ] ; \
-         then $(MAKE) racket-configured-then-cs $(RACKETCS_NOSUFFIX_CONFIG) PLAIN_RACKET="$(PLAIN_RACKET)3m" ; \
-         else $(MAKE) racket-configured-then-cs ; fi
+	  then $(MAKE) cs-with-configure $(RACKETCS_NOSUFFIX_CONFIG) ; \
+	  else $(MAKE) cs-with-configure ; fi
 
-racket-configured-then-cs:
-	$(MAKE) plain-base BASE_INSTALL_TARGET=nothing-after-base
-	$(MAKE) cs-after-racket-with-racket RACKET="$(RACKET_BUILT_FOR_CS)" SETUP_BOOT_MODE=--boot
-
-cs-only:
+cs-with-configure:
 	$(MAKE) racket/src/build/Makefile SRC_MAKEFILE_CONFIG=cfg-cs
-	if [ "$(RACKETCS_SUFFIX)" = "" ] ; \
-	  then $(MAKE) cs-after-racket-with-racket $(RACKETCS_NOSUFFIX_CONFIG) RACKET="$(RACKET)" ; \
-	  else $(MAKE) cs-after-racket-with-racket RACKET="$(RACKET)" ; fi
-
-SETUP_BOOT_MODE = --chain
-ABS_SETUP_BOOT = -l- setup $(SETUP_BOOT_MODE) racket/src/setup-go.rkt racket/src/build/compiled
-ABS_BOOT = $(ABS_SETUP_BOOT) ignored racket/src/build/ignored.d
-ABS_RACKET = `$(RACKET) $(ABS_BOOT) racket/src/cs/absify.rkt --exec $(RACKET)`
-ABS_SCHEME_SRC = `$(RACKET) $(ABS_BOOT) racket/src/cs/absify.rkt $(SCHEME_SRC)`
-
-cs-after-racket-with-racket:
-	if [ "$(SCHEME_SRC)" = "" ] ; \
-	  then $(MAKE) cs-after-racket-with-racket-and-scheme-src RACKET="$(RACKET)" SCHEME_SRC="$(DEFAULT_SCHEME_SRC)" ; \
-	  else $(MAKE) cs-after-racket-with-racket-and-scheme-src RACKET="$(RACKET)" SCHEME_SRC="$(SCHEME_SRC)" MAKE_BUILD_SCHEME=none ; fi
-
-cs-after-racket-with-racket-and-scheme-src:
-	$(RACKET) -O "info@compiler/cm" $(ABS_BOOT) racket/src/cs/absify.rkt just-to-compile-absify
-	$(MAKE) cs-after-racket-with-abs-paths RACKET="$(ABS_RACKET)" SCHEME_SRC="$(ABS_SCHEME_SRC)"
-
-cs-after-racket-with-abs-paths:
 	$(MAKE) racket/src/build/cs/c/Makefile
-	cd racket/src/build/cs/c; $(MAKE) RACKET="$(RACKET)" SCHEME_SRC="$(SCHEME_SRC)" MAKE_BUILD_SCHEME="$(MAKE_BUILD_SCHEME)"
+	cd racket/src/build/cs/c; $(MAKE)
 	$(MAKE) base-config
-	cd racket/src/build; $(MAKE) install-cs RACKET="$(RACKET)" CS_INSTALLED=$(RACKETCS_SUFFIX) $(INSTALL_SETUP_ARGS)
+	cd racket/src/build; $(MAKE) install-cs CS_INSTALLED=$(RACKETCS_SUFFIX) $(INSTALL_SETUP_ARGS)
 	$(MAKE) cs-setup$(CS_CROSS_SUFFIX)
 
 cs-setup:
@@ -366,6 +327,8 @@ cs-setup-cross:
 
 nothing-after-base:
 	echo base done
+
+CS_CONFIG_TARGET = run-cfg-cs
 
 racket/src/build/cs/c/Makefile: racket/src/cs/c/configure racket/src/cs/c/Makefile.in racket/src/cfg-cs
 	mkdir -p cd racket/src/build/cs/c
@@ -378,17 +341,24 @@ run-cfg-cs:
 no-cfg-cs:
 	echo done
 
-BUILD_FOR_FOR_SCHEME_DIR = racket/src/build
-
-scheme-src:
-	$(MAKE) $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme
-	$(MAKE) update-ChezScheme
-
-$(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme:
-	mkdir -p $(BUILD_FOR_FOR_SCHEME_DIR)
+ChezScheme-repo:
 	if [ "$(EXTRA_REPOS_BASE)" = "" ] ; \
-          then cd $(BUILD_FOR_FOR_SCHEME_DIR) && git clone $(GIT_CLONE_ARGS_qq) $(CHEZ_SCHEME_REPO) ChezScheme ; \
-          else $(MAKE) clone-ChezScheme-as-extra GIT_CLONE_ARGS_qq="" ; fi
+          then $(MAKE) update-ChezScheme-normal ; \
+          else $(MAKE) update-ChezScheme-as-extra GIT_CLONE_ARGS_qq="" ; fi
+
+update-ChezScheme-normal:
+	git submodule -q init && git submodule -q update $(GIT_CLONE_ARGS_qq)
+	cd racket/src/ChezScheme && git submodule -q init && git submodule -q update $(GIT_CLONE_ARGS_qq)
+
+update-ChezScheme-as-extra:
+	if [ ! -d racket/src/ChezScheme ] ; \
+	 then $(MAKE) clone-ChezScheme-as-extra GIT_CLONE_ARGS_qq="" ; \
+	fi
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git pull -q
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/nanopass && git pull origin master -q
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/stex && git pull origin master -q
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/zlib && git pull origin master -q
+	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/lz4 && git pull origin master -q
 
 # For this target, `GIT_CLONE_ARGS_qq` normally should not include "--depth 1",
 # because `EXTRA_REPOS_BASE` is likely to be a dumb transport that does not
@@ -400,23 +370,8 @@ clone-ChezScheme-as-extra:
 	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)zlib/.git
 	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git clone $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)lz4/.git
 
-update-ChezScheme:
-	if [ "$(EXTRA_REPOS_BASE)" = "" ] ; \
-         then $(MAKE) update-ChezScheme-normal ; \
-         else $(MAKE) update-ChezScheme-as-extra ; fi
-
-update-ChezScheme-normal:
-	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git pull -q && git submodule -q init && git submodule -q update
-
-update-ChezScheme-as-extra:
-	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme && git pull -q
-	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/nanopass && git pull origin master -q
-	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/stex && git pull origin master -q
-	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/zlib && git pull origin master -q
-	cd $(BUILD_FOR_FOR_SCHEME_DIR)/ChezScheme/lz4 && git pull origin master -q
-
 WIN32_CS_COPY_ARGS_EXCEPT_PKGS_SUT = SRC_CATALOG="$(SRC_CATALOG)" RACKETCS_SUFFIX="$(RACKETCS_SUFFIX)" \
-                                     SCHEME_SRC="$(SCHEME_SRC)" EXTRA_REPOS_BASE="$(EXTRA_REPOS_BASE)" \
+                                     EXTRA_REPOS_BASE="$(EXTRA_REPOS_BASE)" \
                                      PLT_SETUP_OPTIONS="$(PLT_SETUP_OPTIONS)" \
                                      DISABLE_STATIC_LIBS="$(DISABLE_STATIC_LIBS)"
 WIN32_CS_COPY_ARGS_EXCEPT_SUT = PKGS="$(PKGS)" $(WIN32_CS_COPY_ARGS_EXCEPT_PKGS_SUT)
@@ -436,7 +391,7 @@ win32-racket-then-cs:
 	$(MAKE) win32-base PKGS="" $(WIN32_CS_COPY_ARGS_EXCEPT_PKGS_SUT) WIN32_BUILD_LEVEL="$(WIN32_BUILD_LEVEL)"
 	$(MAKE) win32-just-cs RACKET=$(WIN32_PLAIN_RACKET) $(WIN32_CS_COPY_ARGS_BOOT)
 
-CSBUILD_ARGUMENTS = --scheme-dir "$(SCHEME_SRC)" --pull \
+CSBUILD_ARGUMENTS = --pull \
                     --racketcs-suffix "$(RACKETCS_SUFFIX)" $(DISABLE_STATIC_LIBS) \
                     --boot-mode "$(SETUP_BOOT_MODE)" \
                     --extra-repos-base "$(EXTRA_REPOS_BASE)" \
@@ -457,28 +412,8 @@ win32-just-cs:
 
 # For cross-compilation, build a native executable with no configure options:
 native-cs-for-cross:
-	if [ "$(SCHEME_SRC)" = "" ] ; \
-         then $(MAKE) scheme-src-then-cross ; \
-         else $(MAKE) native-cs-for-cross-after-scheme-src MAKE_BUILD_SCHEME=none ; fi
-
-CS_CROSS_SCHEME_CONFIG = SCHEME_SRC="`pwd`/racket/src/build/cross/ChezScheme" MAKE_BUILD_SCHEME=checkout
-
-scheme-src-then-cross:
-	$(MAKE) scheme-src BUILD_FOR_FOR_SCHEME_DIR="racket/src/build/cross/"
-	$(MAKE) native-cs-for-cross-after-scheme-src $(CS_CROSS_SCHEME_CONFIG)
-
-native-cs-for-cross-after-scheme-src:
-	if [ "$(RACKET)" = "" ] ; \
-         then $(MAKE) native-for-cross-racket-then-cross ; \
-         else $(MAKE) native-cs-for-cross-finish ; fi
-
-CS_CROSS_CONFIG_CONFIG = MORE_CROSS_CONFIGURE_ARGS="$(MORE_CROSS_CONFIGURE_ARGS) --enable-csdefault"
-
-native-for-cross-racket-then-cross:
-	$(MAKE) native-for-cross $(CS_CROSS_CONFIG_CONFIG)
-	$(MAKE) native-cs-for-cross-finish RACKET="`pwd`/racket/src/build/cross/racket/racket3m"
-
-native-cs-for-cross-finish:
+	$(MAKE) bootstrapped-repo
+	$(MAKE) ChezScheme-repo
 	mkdir -p racket/src/build/cross/cs/c
 	$(MAKE) racket/src/build/cross/cs/c/Makefile
 	cd racket/src/build/cross/cs/c; $(MAKE) reconfigure
@@ -496,7 +431,7 @@ both:
 	$(MAKE) also-cs IN_PLACE_SETUP_OPTIONS="--error-in build/step"
 
 also-cs:
-	$(MAKE) cs CS_SETUP_TARGET=in-place-setup PLT_SETUP_OPTIONS="-D $(PLT_SETUP_OPTIONS)"
+	$(MAKE) cs CS_SETUP_TARGET=in-place-setup PLT_SETUP_OPTIONS="-D $(PLT_SETUP_OPTIONS)" CS_CONFIG_TARGET=no-cfg-cs
 
 win32-both:
 	$(MAKE) win32-in-place
@@ -504,6 +439,23 @@ win32-both:
 
 win32-also-cs:
 	$(MAKE) win32-cs WIN32_CS_SETUP_TARGET=win32-in-place-setup PLT_SETUP_OPTIONS="-D $(PLT_SETUP_OPTIONS)"
+
+# ------------------------------------------------------------
+# Get/update the "bootstrapped" Git submodule
+
+bootstrapped-repo:
+	if [ "$(EXTRA_REPOS_BASE)" = "" ] ; \
+         then $(MAKE) update-bootstrapped-normal ; \
+         else $(MAKE) update-bootstrapped-as-extra GIT_CLONE_ARGS_qq="" ; fi
+
+update-bootstrapped-normal:
+	git submodule -q init && git submodule -q update $(GIT_CLONE_ARGS_qq)
+
+update-bootstrapped-as-extra:
+	if [ ! -d racket/src/bootstrapped ] ; \
+	 then cd racket/src && git clone -q $(GIT_CLONE_ARGS_qq) $(EXTRA_REPOS_BASE)bootstrapped/.git ; \
+	fi
+	cd racket/src/bootstrapped && git pull -q
 
 # ------------------------------------------------------------
 # Clean (which just gives advice)
