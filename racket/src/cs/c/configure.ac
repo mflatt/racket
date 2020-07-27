@@ -145,6 +145,7 @@ FRAMEWORK_INSTALL_DIR='$(libpltdir)'
 FRAMEWORK_PREFIX='@executable_path/../lib/'
 
 RACKET='$(DEFAULT_RACKET)'
+BOOTFILE_RACKET='$(RACKET)'
 RUN_RACKET='$(RUN_THIS_RACKET)'
 SETUP_BOOT_MODE=--boot
 
@@ -443,8 +444,14 @@ else
 fi
 
 if test "${enable_racket}" != "" ; then
-  RACKET="${enable_racket}"
-  SETUP_BOOT_MODE=--chain
+  # In non-cross mode, we interpret `--enable-racket` to supply a
+  # Racket used only for generating Chez Scheme boot files
+  if test "${CROSS_MODE}" = "cross" ; then
+    RACKET="${enable_racket}"
+    SETUP_BOOT_MODE=--chain
+  else
+    BOOTFILE_RACKET="${enable_racket}"
+  fi
 fi
 
 if test "${enable_compress}" != "no" ; then
@@ -721,6 +728,7 @@ AC_SUBST(INCLUDEDEP)
 AC_SUBST(RKTL_PRE)
 AC_SUBST(RKTL_POST)
 AC_SUBST(RACKET)
+AC_SUBST(BOOTFILE_RACKET)
 AC_SUBST(SCHEME_DIR)
 AC_SUBST(MACH)
 AC_SUBST(TARGET_MACH)

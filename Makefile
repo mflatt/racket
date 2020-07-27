@@ -258,9 +258,16 @@ racket/src/build/cross/Makefile: racket/src/configure racket/src/cfg-racket rack
 # arguments
 RACKETCS_SUFFIX = cs
 
-# If `RACKET` is not set, then we bootstrap by first building the
-# traditional virtual machine
+# If `RACKET` and `BOOTFILE_RACKET` are not set, the build uses the
+# `pb` repo to get initial portable-byte Chez Scheme boot files.
+# If `RACKET` is set, then it is always run in preference to the
+# built Racket, so it's useful for cross-compilation, and it needs
+# to be essentially the same version and variant as being built.
+# If only `BOOTFILE_RACKET` is set, then it doesn't have to be so
+# similar to the one being built, because it's used only to create
+# initial Chez Scheme boot files.
 RACKET =
+BOOTFILE_RACKET = $(RACKET)
 
 # The built traditional Racket:
 RACKET_BUILT_FOR_CS = racket/src/build/racket/racket3m
@@ -281,7 +288,7 @@ CS_CROSS_SUFFIX =
 # Redirected for `cs-as-is` and `cs-base`:
 CS_SETUP_TARGET = plain-in-place-after-base
 WIN32_CS_SETUP_TARGET = win32-in-place-after-base
-FETCH_PB_TARGET = fetch-pb
+FETCH_PB_TARGET = maybe-fetch-pb
 
 cs:
 	if [ "$(CPUS)" = "" ] ; \
@@ -345,6 +352,10 @@ fetch-pb:
 	if [ "$(EXTRA_REPOS_BASE)" = "" ] ; \
           then $(MAKE) fetch-pb-from ; \
           else $(MAKE) fetch-pb-from PB_REPO="$(EXTRA_REPOS_BASE)pb/.git" ; fi
+
+maybe-fetch-pb:
+	if [ "$(BOOTFILE_RACKET)" = "" ] ; \
+          then $(MAKE) fetch-pb ; fi
 
 PB_DIR = racket/src/ChezScheme/boot/pb
 

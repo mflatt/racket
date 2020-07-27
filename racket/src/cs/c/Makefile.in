@@ -28,8 +28,19 @@ STRIP_LIB_DEBUG = @STRIP_LIB_DEBUG@
 ICP=@ICP@
 ICP_LIB=@ICP_LIB@
 
+# If `RACKET` is set to something different than `DEFAULT_RACKET`, it
+# must be a compatible Racket to the curent build in the sense that
+# `require`s here to collection-based modules will work. The Racket
+# built here will never be run, so it's suitable as a part of a
+# cross-compile setup.
+#
+# If `BOOTFILE_RACKET` is different than `DEFAULT_RACKET`, then it
+# needs only to be a Racket that is recent enough to run
+# "../../ChezScheme/rktboot/main.rkt".
+#
 DEFAULT_RACKET = ./racketcs
-RACKET_CS = @RACKET@
+RACKET = @RACKET@
+BOOTFILE_RACKET = @BOOTFILE_RACKET@
 
 CS_INSTALLED = @CS_INSTALLED@
 
@@ -60,13 +71,14 @@ cs:
 	$(MAKE) racket-so
 	cd rktio; $(MAKE)
 	$(MAKE) racketcs
-	$(MAKE) check-racketcs@CROSS_MODE@
+	$(MAKE) maybe-check-racketcs
 	$(MAKE) gracketcs
 	$(MAKE) starter
 	$(MAKE) repack-@INSTALL_LIBS_ENABLE@-libs
 
 SETUP_BOOT_MODE = @SETUP_BOOT_MODE@
-SETUP_COMMON_BOOT = -l- setup $(SETUP_BOOT_MODE) $(srcdir)/../../setup-go.rkt $(builddir)/compiled
+BOOT_COMPILED_SUBDIR = 
+SETUP_COMMON_BOOT = -l- setup $(SETUP_BOOT_MODE) $(srcdir)/../../setup-go.rkt $(builddir)/compiled$(BOOT_COMPILED_SUBDIR)
 
 ABS_SCHEME_SRC = "`$(SCHEME) --script $(srcdir)/../absify.ss $(SCHEME_SRC)`"
 ABS_BUILDDIR = "`$(SCHEME) --script $(srcdir)/../absify.ss --no-trailing-sep $(builddir)`"
@@ -75,7 +87,8 @@ SETUP_BOOT = -O 'info@compiler/cm' $(SETUP_COMMON_BOOT)
 
 # We don't try to track dependencies through makefiles for things
 # built with the expander extractor, hence "ignored"
-BOOTSTRAP_RACKET_CS = ./raw_racketcs $(SETUP_BOOT) ignored $(builddir)/ignored.d
+BOOTSTRAP_RACKET = $(RACKET) $(SETUP_BOOT) ignored $(builddir)/ignored.d
+BOOTSTRAP_BOOTFILE_RACKET = $(BOOTFILE_RACKET) $(SETUP_BOOT) ignored $(builddir)/ignored.d
 
 racket-so:
 	$(MAKE) bounce TARGET=build-racket-so
@@ -93,6 +106,21 @@ bounce:
 	$(MAKE) SCHEME_SRC="$(ABS_SCHEME_SRC)" builddir="$(ABS_BUILDDIR)" $(TARGET)
 
 scheme:
+	if [ "$(BOOTFILE_RACKET)" != "$(DEFAULT_RACKET)" ] ; \
+          then $(MAKE) scheme-via-rktboot ; \
+          else $(MAKE) scheme-via-pb ; fi
+
+scheme-via-rktboot:
+	if [ "$(BOOTFILE_RACKET)" != "$(RACKET)" ] ; \
+          then $(MAKE) scheme-via-rktboot-at BOOT_COMPILED_SUBDIR=/bf ; \
+          else $(MAKE) scheme-via-rktboot-at ; fi
+
+scheme-via-rktboot-at:
+	SCHEME_SRC="$(SCHEME_SRC)" MACH="$(MACH)" $(BOOTSTRAP_BOOTFILE_RACKET) $(SCHEME_SRC)/rktboot/make-boot.rkt
+	/bin/sh $(srcdir)/reset_boot.sh $(MACH) "$(srcdir)/../../ChezScheme"
+	$(MAKE) mach-make
+
+scheme-via-pb:
 	/bin/sh $(srcdir)/check_boot.sh $(MACH) "$(srcdir)/../../ChezScheme"
 	if [ -f boot_pending ] ; then $(MAKE) pb-bootquick ; fi
 	$(MAKE) mach-make
@@ -118,9 +146,8 @@ config-scheme:
 	cd $(SCHEME_SRC) && ./configure $(CONFIG_SCHEME_MODE) @SCHEME_CONFIG_ARGS@ $(SCHEME_CONFIG_VARS)
 
 scheme-cross:
-	cd $(SCHEME_SRC) && git submodule -q init && git submodule -q update
 	env MAKE_BOOT_FOR_CROSS=yes SCHEME_SRC="$(SCHEME_SRC)" MACH="$(TARGET_MACH)" $(BOOTSTRAP_RACKET) "$(SCHEME_SRC)"/rktboot/make-boot.rkt
-	$(MAKE) sync-bootfiles MACH="$(TARGET_MACH)"
+	/bin/sh $(srcdir)/reset_boot.sh $(TARGET_MACH) "$(srcdir)/../../ChezScheme"
 	cd $(SCHEME_SRC) && ./configure @SCHEME_CROSS_CONFIG_ARGS@ $(SCHEME_CONFIG_VARS)
 	cd $(SCHEME_SRC)/$(TARGET_MACH)/c && $(MAKE) o=o cross=t
 	$(MAKE) $(SCHEME_SRC)/$(TARGET_MACH)/s/xpatch
@@ -150,11 +177,11 @@ racket.boot: racket.so
 EMBED_DEPS = $(srcdir)/embed-boot.rkt
 
 racketcs@NOT_OSX@@NOT_MINGW@: raw_racketcs petite-v.boot scheme-v.boot racket-v.boot $(EMBED_DEPS)
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/embed-boot.rkt @ELF_COMP@ @BOOT_COMPRESS_COMP@ raw_racketcs racketcs petite-v.boot scheme-v.boot racket-v.boot
+	$(BOOTSTRAP_RACKET) $(srcdir)/embed-boot.rkt @ELF_COMP@ @BOOT_COMPRESS_COMP@ raw_racketcs racketcs petite-v.boot scheme-v.boot racket-v.boot
 	@POST_LINKER@ racketcs
 
 gracketcs@NOT_OSX@@NOT_MINGW@: raw_gracketcs petite-v.boot scheme-v.boot racket-v.boot $(EMBED_DEPS)
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/embed-boot.rkt @ELF_COMP@ @BOOT_COMPRESS_COMP@ raw_gracketcs gracketcs petite-v.boot scheme-v.boot racket-v.boot
+	$(BOOTSTRAP_RACKET) $(srcdir)/embed-boot.rkt @ELF_COMP@ @BOOT_COMPRESS_COMP@ raw_gracketcs gracketcs petite-v.boot scheme-v.boot racket-v.boot
 	@POST_LINKER@ gracketcs
 
 OWN_Z_LIB = $(SCHEME_TARGET_INC)/../../zlib/libz.a
@@ -214,7 +241,7 @@ $(GRACKET_BIN): grmain.o $(RKTFW) $(GRAPPSKEL)
 	/usr/bin/install_name_tool -change "Racket.framework/Versions/$(FWVERSION)_CS/Racket" "@executable_path/../../../Racket.framework/Versions/$(FWVERSION)_CS/Racket" $(GRACKET_BIN)
 
 $(GRAPPSKEL): $(srcdir)/../../mac/osx_appl.rkt  $(srcdir)/../../racket/src/schvers.h $(srcdir)/../../mac/icon/GRacket.icns
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/../../mac/osx_appl.rkt $(srcdir)/../.. "CS"
+	$(BOOTSTRAP_RACKET) $(srcdir)/../../mac/osx_appl.rkt $(srcdir)/../.. "CS"
 
 BOOT_FILES = $(SCHEME_TARGET_INC)/petite.boot $(SCHEME_TARGET_INC)/scheme.boot racket.boot
 FW_BOOT_DEST = Racket.framework/Versions/$(FWVERSION)_CS/boot
@@ -230,13 +257,13 @@ $(RKTFW): $(BOOT_OBJ_DEPS) $(BOOT_FILES)
 	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ @TT_CROSS_MODE@ racket.boot $(FW_BOOT_DEST)/racket.boot petite scheme
 
 adjust-framework-boot-compress:
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/adjust-compress.rkt @BOOT_COMPRESS_COMP@ $(FW_BOOT_DEST)/petite.boot $(FW_BOOT_DEST)/scheme.boot $(FW_BOOT_DEST)/racket.boot
+	$(BOOTSTRAP_RACKET) $(srcdir)/adjust-compress.rkt @BOOT_COMPRESS_COMP@ $(FW_BOOT_DEST)/petite.boot $(FW_BOOT_DEST)/scheme.boot $(FW_BOOT_DEST)/racket.boot
 
 mac-embed-boot-fw:
 	$(NOOP)
 
 mac-embed-boot-static:
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/embed-boot.rkt @BOOT_COMPRESS_COMP@ "" $(EMBED_DEST) $(FW_BOOT_DEST)/petite.boot $(FW_BOOT_DEST)/scheme.boot $(FW_BOOT_DEST)/racket.boot
+	$(BOOTSTRAP_RACKET) $(srcdir)/embed-boot.rkt @BOOT_COMPRESS_COMP@ "" $(EMBED_DEST) $(FW_BOOT_DEST)/petite.boot $(FW_BOOT_DEST)/scheme.boot $(FW_BOOT_DEST)/racket.boot
 
 # ----------------------------------------
 # MinGW
@@ -405,7 +432,7 @@ common-install:
 	$(ICP) starter "$(DESTDIR)$(libpltdir)/starter"
 	$(STRIP_DEBUG) "$(DESTDIR)$(libpltdir)/starter"
 	$(ICP) $(srcdir)/../../start/starter-sh "$(DESTDIR)$(libpltdir)/starter-sh"
-	$(RACKET_CS) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(libpltdir)/starter" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
+	$(RACKET) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(libpltdir)/starter" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
 	$(MAKE) system-install
 	$(ICP) $(srcdir)/api.h "$(DESTDIR)$(includepltdir)/racketcs.h"
 	$(ICP) $(srcdir)/boot.h "$(DESTDIR)$(includepltdir)/racketcsboot.h"
@@ -413,7 +440,7 @@ common-install:
 	$(MAKE) common-@INSTALL_LIBS_ENABLE@-libs
 
 system-install:
-	$(RACKET_CS) -cu "$(srcdir)/gen-system.rkt" $(DESTDIR)$(libpltdir)/system$(CS_INSTALLED).rktd $(TARGET_MACH) @CROSS_COMPILE_TARGET_KIND@
+	$(RACKET) -cu "$(srcdir)/gen-system.rkt" $(DESTDIR)$(libpltdir)/system$(CS_INSTALLED).rktd $(TARGET_MACH) @CROSS_COMPILE_TARGET_KIND@
 
 common-install-libs:
 	$(ICP_LIB) libracketcs.a "$(DESTDIR)$(libdir)/libracketcs.a"
@@ -426,17 +453,17 @@ unix-install:
 	$(MAKE) common-install
 	rm -f "$(DESTDIR)$(libpltdir)/gracket$(CS_INSTALLED)"
 	$(ICP) gracketcs "$(DESTDIR)$(libpltdir)/gracket$(CS_INSTALLED)"
-	$(RACKET_CS) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(bindir)/racket$(CS_INSTALLED)" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
-	$(RACKET_CS) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(libpltdir)/gracket$(CS_INSTALLED)" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
+	$(RACKET) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(bindir)/racket$(CS_INSTALLED)" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
+	$(RACKET) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(libpltdir)/gracket$(CS_INSTALLED)" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
 	$(MAKE) unix-@INSTALL_LIBS_ENABLE@-libs
 
 unix-install-libs:
 	$(MAKE) unix-install-boot-files
 
 unix-install-boot-files:
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/add-terminator.rkt petite-v.boot "$(DESTDIR)$(libpltdir)/petite.boot"
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/add-terminator.rkt scheme-v.boot "$(DESTDIR)$(libpltdir)/scheme.boot"
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/add-terminator.rkt racket-v.boot "$(DESTDIR)$(libpltdir)/racket.boot"
+	$(BOOTSTRAP_RACKET) $(srcdir)/add-terminator.rkt petite-v.boot "$(DESTDIR)$(libpltdir)/petite.boot"
+	$(BOOTSTRAP_RACKET) $(srcdir)/add-terminator.rkt scheme-v.boot "$(DESTDIR)$(libpltdir)/scheme.boot"
+	$(BOOTSTRAP_RACKET) $(srcdir)/add-terminator.rkt racket-v.boot "$(DESTDIR)$(libpltdir)/racket.boot"
 
 unix-no-install-libs:
 	$(NOOP)
@@ -449,7 +476,7 @@ macos-install:
 	$(MAKE) common-install
 	rm -f $(DESTDIR)$(RKTFWDEST)/Racket
 	rm -rf $(DESTDIR)$(RKTFWDEST)/Versions/$(FWVERSION)_CS
-	if [ @FRAMEWORK_REL_INSTALL@ = yes ] ; then $(RACKET_CS) -cu "$(srcdir)/../../mac/clean-fw.rkt" $(DESTDIR)$(RKTFWDEST) ; fi
+	if [ @FRAMEWORK_REL_INSTALL@ = yes ] ; then $(RACKET) -cu "$(srcdir)/../../mac/clean-fw.rkt" $(DESTDIR)$(RKTFWDEST) ; fi
 	mkdir -p $(DESTDIR)"$(RKTFWDEST)/Versions/$(FWVERSION)_CS"
 	cp $(RKTFW) $(DESTDIR)$(RKTFWDEST)/Versions/$(FWVERSION)_CS/
 	mkdir -p $(DESTDIR)"$(RKTFWDEST)/Versions/$(FWVERSION)_CS/boot"
@@ -459,7 +486,7 @@ macos-install:
 	cp $(RKTFWDIR)/boot/petite.boot $(DESTDIR)$(RKTFWDEST)/Versions/$(FWVERSION)_CS/boot/
 	cp $(RKTFWDIR)/boot/scheme.boot $(DESTDIR)$(RKTFWDEST)/Versions/$(FWVERSION)_CS/boot/
 	cp $(RKTFWDIR)/boot/racket.boot $(DESTDIR)$(RKTFWDEST)/Versions/$(FWVERSION)_CS/boot/
-	$(RACKET_CS) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(bindir)/racket$(CS_INSTALLED)" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
+	$(RACKET) -cu "$(srcdir)/../../racket/collects-path.rkt" "$(DESTDIR)$(bindir)/racket$(CS_INSTALLED)" $(DESTDIR)@COLLECTS_PATH@ $(DESTDIR)@CONFIG_PATH@
 	$(MAKE) macos-install-gracket CS_GR_INSTALLED="`echo $(CS_INSTALLED) | tr a-z A-Z`"
 	$(MAKE) macos-@INSTALL_LIBS_ENABLE@-libs
 
@@ -467,17 +494,17 @@ macos-install-gracket:
 	/usr/bin/install_name_tool -change "@executable_path/Racket.framework/Versions/$(FWVERSION)_CS/Racket" "@FRAMEWORK_PREFIX@Racket.framework/Versions/$(FWVERSION)_CS/Racket" $(DESTDIR)"$(bindir)/racket$(CS_INSTALLED)"
 	rm -rf $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app"
 	$(ICP) -r "GRacketCS.app" $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app"
-	$(BOOTSTRAP_RACKET_CS) "$(srcdir)/../../mac/rename-app.rkt" $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app" "GRacketCS" "GRacket$(CS_GR_INSTALLED)" no-up
+	$(BOOTSTRAP_RACKET) "$(srcdir)/../../mac/rename-app.rkt" $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app" "GRacketCS" "GRacket$(CS_GR_INSTALLED)" no-up
 	/usr/bin/install_name_tool -change "@executable_path/../../../../racket/Racket.framework/Versions/$(FWVERSION)_CS/Racket" "@FRAMEWORK_PREFIX@Racket.framework/Versions/$(FWVERSION)_CS/Racket" $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app/Contents/MacOS/GRacket$(CS_GR_INSTALLED)"
-	$(RACKET_CS) -cu "$(srcdir)/../../racket/collects-path.rkt" $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app/Contents/MacOS/GRacket$(CS_GR_INSTALLED)" ../../../../collects ../../../../etc
+	$(RACKET) -cu "$(srcdir)/../../racket/collects-path.rkt" $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app/Contents/MacOS/GRacket$(CS_GR_INSTALLED)" ../../../../collects ../../../../etc
 	$(STRIP_DEBUG) $(DESTDIR)"$(libpltdir)/GRacket$(CS_GR_INSTALLED).app/Contents/MacOS/GRacket$(CS_GR_INSTALLED)"
 	rm -rf $(DESTDIR)"$(libpltdir)/Starter.app"
 	$(ICP) -r Starter.app $(DESTDIR)"$(libpltdir)/."
 
 macos-install-libs:
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/add-terminator.rkt $(RKTFWDIR)/boot/petite.boot "$(DESTDIR)$(libpltdir)/petite.boot"
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/add-terminator.rkt $(RKTFWDIR)/boot/scheme.boot "$(DESTDIR)$(libpltdir)/scheme.boot"
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/add-terminator.rkt $(RKTFWDIR)/boot/racket.boot "$(DESTDIR)$(libpltdir)/racket.boot"
+	$(BOOTSTRAP_RACKET) $(srcdir)/add-terminator.rkt $(RKTFWDIR)/boot/petite.boot "$(DESTDIR)$(libpltdir)/petite.boot"
+	$(BOOTSTRAP_RACKET) $(srcdir)/add-terminator.rkt $(RKTFWDIR)/boot/scheme.boot "$(DESTDIR)$(libpltdir)/scheme.boot"
+	$(BOOTSTRAP_RACKET) $(srcdir)/add-terminator.rkt $(RKTFWDIR)/boot/racket.boot "$(DESTDIR)$(libpltdir)/racket.boot"
 
 macos-no-install-libs:
 	$(NOOP)
@@ -485,11 +512,12 @@ macos-no-install-libs:
 # ----------------------------------------
 # Check
 
-check-racketcs:
-	$(BOOTSTRAP_RACKET_CS) $(srcdir)/../known.rkt $(srcdir)/..
+maybe-check-racketcs:
+	if [ "$(RACKET)" = "$(DEFAULT_RACKET)" ] ; \
+         then $(MAKE) check-racketcs ; fi
 
-check-racketcscross:
-	$(NOOP)
+check-racketcs:
+	$(BOOTSTRAP_RACKET) $(srcdir)/../known.rkt $(srcdir)/..
 
 # ----------------------------------------
 # Reconfigure
