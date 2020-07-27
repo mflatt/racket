@@ -106,6 +106,7 @@ pb-bootquick:
 	/bin/sh $(srcdir)/ready_boot.sh $(MACH) "$(srcdir)/../../ChezScheme"
 
 mach-make:
+	$(MAKE) config-scheme
 	cd $(SCHEME_SRC) && $(MAKE)
 
 SCHEME_CONFIG_VARS = CC="$(CC)" CFLAGS="$(BASE_CFLAGS)" LDFLAGS="$(LDFLAGS)" \
