@@ -80,7 +80,7 @@ BOOTSTRAP_RACKET_CS = ./raw_racketcs $(SETUP_BOOT) ignored $(builddir)/ignored.d
 racket-so:
 	$(MAKE) bounce TARGET=build-racket-so
 
-RACKET_SO_ENV = @CONFIGURE_RACKET_SO_COMPILE@ env COMPILED_SCM_DIR="$(builddir)/compiled/"
+RACKET_SO_ENV = @CONFIGURE_RACKET_SO_COMPILE@
 
 CS_PROGS = SCHEME="$(SCHEME)"
 CS_OPTS = COMPRESS_COMP=@COMPRESS_COMP@
