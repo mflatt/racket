@@ -475,30 +475,6 @@ if [ "$m" = "" -o ! -f boot/$m/scheme.boot ] ; then
   exit 1
 fi
 
-if [ ! -f 'nanopass/nanopass.ss' ] ; then
-    echo "nanopass source is missing; you may need to check out git submodules"
-    exit 1
-fi
-
-if [ "${zlibDep}" != "" ] ; then
-    if [ ! -f 'zlib/configure' ] ; then
-        echo "zlib source is missing; you may need to check out git submodules"
-        exit 1
-    fi
-fi
-  
-if [ "${LZ4Dep}" != "" ] ; then
-    if [ ! -f 'lz4/lib/Makefile' ] ; then
-        echo "lz4 source is missing; you may need to check out git submodules"
-        exit 1
-    fi
-fi
-
-if [ ! -f 'stex/Mf-stex' ] ; then
-    echo "stex source is missing; you may need to check out git submodules"
-    exit 1
-fi
-
 ./workarea $m $w $mpbhost
 
 sed -e 's/$(m)/'$m'/g'\
