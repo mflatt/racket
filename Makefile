@@ -422,8 +422,7 @@ win32-just-cs:
 
 # For cross-compilation, build a native executable with no configure options:
 native-cs-for-cross:
-	$(MAKE) bootstrapped-repo
-	$(MAKE) ChezScheme-repo
+	$(MAKE) maybe-fetch-pb
 	mkdir -p racket/src/build/cross/cs/c
 	$(MAKE) racket/src/build/cross/cs/c/Makefile
 	cd racket/src/build/cross/cs/c; $(MAKE) reconfigure
