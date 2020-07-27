@@ -128,7 +128,7 @@ static const char *get_framework_path() {
     }
   }
 
-  return "???";
+  return NULL;
 }
 
 static char *path_append(const char *p1, char *p2) {
@@ -501,10 +501,12 @@ static int bytes_main(int argc, char **argv,
 #if defined(OS_X) && !defined(RACKET_XONX)
   if (!boot_images_in_exe) {
     const char *fw_path = get_framework_path();
-    boot1_path = path_append(fw_path, "petite.boot");
-    boot2_path = path_append(fw_path, "scheme.boot");
-    boot3_path = path_append(fw_path, "racket.boot");
-    boot1_offset = boot2_offset = boot3_offset = 0;
+    if (fw_path) {
+      boot1_path = path_append(fw_path, "petite.boot");
+      boot2_path = path_append(fw_path, "scheme.boot");
+      boot3_path = path_append(fw_path, "racket.boot");
+      boot1_offset = boot2_offset = boot3_offset = 0;
+    }
   }
 #endif
 

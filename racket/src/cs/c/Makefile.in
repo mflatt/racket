@@ -38,7 +38,7 @@ ICP_LIB=@ICP_LIB@
 # needs only to be a Racket that is recent enough to run
 # "../../ChezScheme/rktboot/main.rkt".
 #
-DEFAULT_RACKET = ./racketcs
+DEFAULT_RACKET = ./raw_racketcs
 RACKET = @RACKET@
 BOOTFILE_RACKET = @BOOTFILE_RACKET@
 
@@ -222,6 +222,7 @@ MACLIBRKT_LINK_static = $(BOOT_OBJS) $(LDFLAGS) $(LIBS)
 
 racketcs@OSX@: main.o $(RKTFW)
 	$(CC) $(CFLAGS) -o racketcs main.o $(MACLIBRKT_LINK_@MACLIBRKT_LINK_MODE@)
+	$(MAKE) link-fw-bootfiles-@MACLIBRKT_LINK_MODE@
 	$(MAKE) raw_racketcs
 	$(MAKE) adjust-framework-boot-compress
 	$(MAKE) mac-embed-boot-@MACLIBRKT_LINK_MODE@ EMBED_DEST=racketcs
@@ -264,6 +265,17 @@ mac-embed-boot-fw:
 
 mac-embed-boot-static:
 	$(BOOTSTRAP_RACKET) $(srcdir)/embed-boot.rkt @BOOT_COMPRESS_COMP@ "" $(EMBED_DEST) $(FW_BOOT_DEST)/petite.boot $(FW_BOOT_DEST)/scheme.boot $(FW_BOOT_DEST)/racket.boot
+
+link-fw-bootfiles-fw:
+	$(NOOP)
+
+link-fw-bootfiles-static:
+	rm -f petite-v.boot
+	rm -f scheme-v.boot
+	rm -f racket-v.boot
+	ln -s $(FW_BOOT_DEST)/petite.boot petite-v.boot
+	ln -s $(FW_BOOT_DEST)/scheme.boot scheme-v.boot
+	ln -s $(FW_BOOT_DEST)/racket.boot racket-v.boot
 
 # ----------------------------------------
 # MinGW
@@ -517,7 +529,7 @@ maybe-check-racketcs:
          then $(MAKE) check-racketcs ; fi
 
 check-racketcs:
-	$(BOOTSTRAP_RACKET) $(srcdir)/../known.rkt $(srcdir)/..
+	./racketcs $(SETUP_BOOT) ignored $(builddir)/ignored.d $(srcdir)/../known.rkt $(srcdir)/..
 
 # ----------------------------------------
 # Reconfigure
