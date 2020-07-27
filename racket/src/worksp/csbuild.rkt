@@ -10,8 +10,7 @@
 
 (define-runtime-path here ".")
 
-(define scheme-dir-provided? #f)
-(define abs-scheme-dir (build-path here 'up "ChezScheme"))
+(define scheme-dir (build-path 'up "ChezScheme"))
 (define pull? #f)
 (define static-libs? #t)
 (define machine (if (= 32 (system-type 'word))
@@ -24,10 +23,6 @@
 
 (command-line
  #:once-each
- [("--scheme-dir") dir "Select the Chez Scheme build directory, unless <dir> is \"\""
-                   (unless (equal? dir "")
-                     (set! scheme-dir-provided? #t)
-                     (set! abs-scheme-dir (path->complete-path dir)))]
  [("--pull") "Use `git pull` on auto-cloned Chez Scheme repo"
              (set! pull? #t)]
  [("--racketcs-suffix") str "Select the suffix for RacketCS"
@@ -46,9 +41,6 @@
  (set! git-clone-args clone-arg))
 
 (current-directory here)
-
-(define scheme-dir (find-relative-path (current-directory)
-                                       (simplify-path abs-scheme-dir)))
 
 (define (system*! prog . args)
   (printf "{in ~a}\n" (current-directory))

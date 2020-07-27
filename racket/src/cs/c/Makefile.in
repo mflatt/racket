@@ -3,14 +3,14 @@ builddir = @builddir@
 
 PACKAGE = racket
 
-SCHEME_SRC = $(srcdir)/../../ChezScheme
+SCHEME_DIR = $(srcdir)/../../ChezScheme
 MACH = @MACH@
-SCHEME_BIN = $(SCHEME_SRC)/$(MACH)/bin/$(MACH)/scheme
-SCHEME_INC = $(SCHEME_SRC)/$(MACH)/boot/$(MACH)
+SCHEME_BIN = $(SCHEME_DIR)/$(MACH)/bin/$(MACH)/scheme
+SCHEME_INC = $(SCHEME_DIR)/$(MACH)/boot/$(MACH)
 SCHEME = $(SCHEME_BIN) -b $(SCHEME_INC)/petite.boot -b $(SCHEME_INC)/scheme.boot
 
 TARGET_MACH = @TARGET_MACH@
-SCHEME_TARGET_INC = $(SCHEME_SRC)/$(TARGET_MACH)/boot/$(TARGET_MACH)
+SCHEME_TARGET_INC = $(SCHEME_DIR)/$(TARGET_MACH)/boot/$(TARGET_MACH)
 
 CC = @CC@
 BASE_CFLAGS = @CFLAGS@ @CPPFLAGS@
@@ -80,7 +80,6 @@ SETUP_BOOT_MODE = @SETUP_BOOT_MODE@
 BOOT_COMPILED_SUBDIR = 
 SETUP_COMMON_BOOT = -l- setup $(SETUP_BOOT_MODE) $(srcdir)/../../setup-go.rkt $(builddir)/compiled$(BOOT_COMPILED_SUBDIR)
 
-ABS_SCHEME_SRC = "`$(SCHEME) --script $(srcdir)/../absify.ss $(SCHEME_SRC)`"
 ABS_BUILDDIR = "`$(SCHEME) --script $(srcdir)/../absify.ss --no-trailing-sep $(builddir)`"
 
 SETUP_BOOT = -O 'info@compiler/cm' $(SETUP_COMMON_BOOT)
@@ -97,13 +96,13 @@ RACKET_SO_ENV = @CONFIGURE_RACKET_SO_COMPILE@
 
 CS_PROGS = SCHEME="$(SCHEME)"
 CS_OPTS = COMPRESS_COMP=@COMPRESS_COMP@
-CS_OPTScross = $(CS_OPTS) CSO=$(MACH) CROSS_COMP="--xpatch $(SCHEME_SRC)/$(TARGET_MACH)/s/xpatch"
+CS_OPTScross = $(CS_OPTS) CSO=$(MACH) CROSS_COMP="--xpatch $(SCHEME_DIR)/$(TARGET_MACH)/s/xpatch"
 
 build-racket-so:
 	cd $(srcdir)/.. && $(RACKET_SO_ENV) $(MAKE) "$(builddir)/racket.so" $(CS_PROGS) $(CS_OPTS@CROSS_MODE@) BUILDDIR="$(builddir)/" BOOTSTRAPPED="done"
 
 bounce:
-	$(MAKE) SCHEME_SRC="$(ABS_SCHEME_SRC)" builddir="$(ABS_BUILDDIR)" $(TARGET)
+	$(MAKE) builddir="$(ABS_BUILDDIR)" $(TARGET)
 
 scheme:
 	if [ "$(BOOTFILE_RACKET)" != "$(DEFAULT_RACKET)" ] ; \
@@ -116,7 +115,7 @@ scheme-via-rktboot:
           else $(MAKE) scheme-via-rktboot-at ; fi
 
 scheme-via-rktboot-at:
-	SCHEME_SRC="$(SCHEME_SRC)" MACH="$(MACH)" $(BOOTSTRAP_BOOTFILE_RACKET) $(SCHEME_SRC)/rktboot/make-boot.rkt
+	SCHEME_SRC="$(SCHEME_DIR)" MACH="$(MACH)" $(BOOTSTRAP_BOOTFILE_RACKET) $(SCHEME_DIR)/rktboot/make-boot.rkt
 	/bin/sh $(srcdir)/reset_boot.sh $(MACH) "$(srcdir)/../../ChezScheme"
 	$(MAKE) mach-make
 
@@ -127,15 +126,15 @@ scheme-via-pb:
 
 pb-bootquick:
 	$(MAKE) config-scheme MACH=pb CONFIG_SCHEME_MODE=--pb
-	cd $(SCHEME_SRC) && $(MAKE) reset
-	cd $(SCHEME_SRC) && $(MAKE) ${MACH}.bootquick
+	cd $(SCHEME_DIR) && $(MAKE) reset
+	cd $(SCHEME_DIR) && $(MAKE) ${MACH}.bootquick
 	$(MAKE) config-scheme
-	cd $(SCHEME_SRC) && $(MAKE) reset
+	cd $(SCHEME_DIR) && $(MAKE) reset
 	/bin/sh $(srcdir)/ready_boot.sh $(MACH) "$(srcdir)/../../ChezScheme"
 
 mach-make:
 	$(MAKE) config-scheme
-	cd $(SCHEME_SRC) && $(MAKE)
+	cd $(SCHEME_DIR) && $(MAKE)
 
 SCHEME_CONFIG_VARS = CC="$(CC)" CFLAGS="$(BASE_CFLAGS)" LDFLAGS="$(LDFLAGS)" \
                      AR="$(AR)" ARFLAGS="$(ARFLAGS)" RANLIB="$(RANLIB)" \
@@ -143,23 +142,23 @@ SCHEME_CONFIG_VARS = CC="$(CC)" CFLAGS="$(BASE_CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 CONFIG_SCHEME_MODE =
 
 config-scheme:
-	cd $(SCHEME_SRC) && ./configure $(CONFIG_SCHEME_MODE) @SCHEME_CONFIG_ARGS@ $(SCHEME_CONFIG_VARS)
+	cd $(SCHEME_DIR) && ./configure $(CONFIG_SCHEME_MODE) @SCHEME_CONFIG_ARGS@ $(SCHEME_CONFIG_VARS)
 
 scheme-cross:
-	env MAKE_BOOT_FOR_CROSS=yes SCHEME_SRC="$(SCHEME_SRC)" MACH="$(TARGET_MACH)" $(BOOTSTRAP_RACKET) "$(SCHEME_SRC)"/rktboot/make-boot.rkt
+	env MAKE_BOOT_FOR_CROSS=yes SCHEME_SRC="$(SCHEME_DIR)" MACH="$(TARGET_MACH)" $(BOOTSTRAP_RACKET) "$(SCHEME_DIR)"/rktboot/make-boot.rkt
 	/bin/sh $(srcdir)/reset_boot.sh $(TARGET_MACH) "$(srcdir)/../../ChezScheme"
-	cd $(SCHEME_SRC) && ./configure @SCHEME_CROSS_CONFIG_ARGS@ $(SCHEME_CONFIG_VARS)
-	cd $(SCHEME_SRC)/$(TARGET_MACH)/c && $(MAKE) o=o cross=t
-	$(MAKE) $(SCHEME_SRC)/$(TARGET_MACH)/s/xpatch
+	cd $(SCHEME_DIR) && ./configure @SCHEME_CROSS_CONFIG_ARGS@ $(SCHEME_CONFIG_VARS)
+	cd $(SCHEME_DIR)/$(TARGET_MACH)/c && $(MAKE) o=o cross=t
+	$(MAKE) $(SCHEME_DIR)/$(TARGET_MACH)/s/xpatch
 
 # Rebuild patch file and cross "petite.boot" and "scheme.boot" when older
 # than the build-host "scheme.boot"
-$(SCHEME_SRC)/$(TARGET_MACH)/s/xpatch: $(SCHEME_SRC)/$(MACH)/boot/$(MACH)/scheme.boot
-	rm -f $(SCHEME_SRC)/$(TARGET_MACH)/s/nanopass.so $(SCHEME_SRC)/$(TARGET_MACH)/s/nanopass/*.so
-	cd $(SCHEME_SRC)/$(TARGET_MACH)/s && $(MAKE) -f Mf-cross m=$(MACH) xm=$(TARGET_MACH) Scheme="$(SCHEME_BIN)" SCHEMEHEAPDIRS="$(SCHEME_INC)"
+$(SCHEME_DIR)/$(TARGET_MACH)/s/xpatch: $(SCHEME_DIR)/$(MACH)/boot/$(MACH)/scheme.boot
+	rm -f $(SCHEME_DIR)/$(TARGET_MACH)/s/nanopass.so $(SCHEME_DIR)/$(TARGET_MACH)/s/nanopass/*.so
+	cd $(SCHEME_DIR)/$(TARGET_MACH)/s && $(MAKE) -f Mf-cross m=$(MACH) xm=$(TARGET_MACH) Scheme="$(SCHEME_BIN)" SCHEMEHEAPDIRS="$(SCHEME_INC)"
 
 XPATCH =
-XPATCHcross = --xpatch $(SCHEME_SRC)/$(TARGET_MACH)/s/xpatch
+XPATCHcross = --xpatch $(SCHEME_DIR)/$(TARGET_MACH)/s/xpatch
 
 racket.boot: racket.so
 	$(SCHEME) --script $(srcdir)/convert-to-boot.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) racket.so racket.boot $(TARGET_MACH)
@@ -353,7 +352,7 @@ plain-install-upcased:
 	$(MAKE) compile-xpatch.$(TARGET_MACH)
 	$(MAKE) library-xpatch.$(TARGET_MACH)
 
-SCHEME_XPATCH = $(SCHEME_SRC)/$(TARGET_MACH)/s/xpatch
+SCHEME_XPATCH = $(SCHEME_DIR)/$(TARGET_MACH)/s/xpatch
 
 compile-xpatch.$(TARGET_MACH): $(SCHEME_XPATCH) $(srcdir)/mk-cross-serve.ss $(srcdir)/cross-serve.ss $(srcdir)/../expander/env.ss
 	$(SCHEME) --script $(srcdir)/mk-cross-serve.ss $(srcdir)/cross-serve.ss $(srcdir)/../expander/env.ss
@@ -391,7 +390,7 @@ starter@NOT_MINGW@: $(srcdir)/../../start/ustart.c
 
 
 repack-install-libs:
-	$(MAKE) libracketcs.a SCHEME_SRC="$(ABS_SCHEME_SRC)"
+	$(MAKE) libracketcs.a
 
 libracketcs.a: $(SCHEME_LIB_DEPS) rktio/librktio.a boot.o
 	mkdir -p repack
@@ -399,7 +398,7 @@ libracketcs.a: $(SCHEME_LIB_DEPS) rktio/librktio.a boot.o
 	cd repack && @Z_LIB_UNPACK@
 	cd repack && @LZ4_LIB_UNPACK@
 	cd repack && $(AR) x ../rktio/librktio.a
-	cd repack && $(AR) x $(SCHEME_TARGET_INC)/libkernel.a
+	cd repack && $(AR) x ../$(SCHEME_TARGET_INC)/libkernel.a
 	$(AR) $(ARFLAGS) libracketcs.a repack/*.o boot.o
 
 repack-no-install-libs:

@@ -427,20 +427,11 @@ fi
 
 ############## Racket and Chez Scheme ################
 
-SCHEME_SRC=../../ChezScheme
-SCHEME_SRC_NOW="$SCHEME_SRC"
+SCHEME_DIR=../../ChezScheme
 MAKE_BUILD_SCHEME=checkout
 
 if test "${enable_scheme}" != "" ; then
-  SCHEME_SRC="${enable_scheme}"
-  SCHEME_SRC_NOW="$SCHEME_SRC"
-  MAKE_BUILD_SCHEME=none
-else
-  # Check for a directory packaged with a source distribution
-  if test -d "${srcdir}/../../ChezScheme" ; then
-    MAKE_BUILD_SCHEME=copy
-    SCHEME_SRC_NOW="${srcdir}/../../ChezScheme"
-  fi
+  echo Warning: --enable-scheme=... is obsolete and unsupported
 fi
 
 if test "${enable_racket}" != "" ; then
@@ -530,14 +521,14 @@ fi
 ############## zlib and LZ4 ################
 
 if test "${enable_libz}" != "no" ; then
-  if test ! -d "$SCHEME_SRC_NOW/zlib" ; then
+  if test ! -d "$SCHEME_DIR/zlib" ; then
     echo "No libz in Scheme directory, so trying installed"
     enable_libz=yes
   fi
 fi
 
 if test "${enable_liblz4}" != "no" ; then
-  if test ! -d "$SCHEME_SRC_NOW/lz4" ; then
+  if test ! -d "$SCHEME_DIR/lz4" ; then
     echo "No lz4 in Scheme directory, so trying installed"
     enable_liblz4=yes
   fi
@@ -751,7 +742,6 @@ AC_SUBST(CONFIGURE_RACKET_SO_COMPILE)
 AC_SUBST(COMPRESS_COMP)
 AC_SUBST(BOOT_COMPRESS_COMP)
 AC_SUBST(ELF_COMP)
-AC_SUBST(SCHEME_SRC)
 AC_SUBST(MAKE_BUILD_SCHEME)
 AC_SUBST(SCHEME_CONFIG_ARGS)
 AC_SUBST(SCHEME_CROSS_CONFIG_ARGS)
