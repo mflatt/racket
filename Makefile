@@ -313,10 +313,13 @@ cs-base:
 cs-as-is:
 	$(MAKE) cs CS_SETUP_TARGET=in-place-setup FETCH_PB_TARGET=no-fetch-pb
 
+cs-only:
+	$(MAKE) racket/src/build/Makefile SRC_MAKEFILE_CONFIG=cfg-cs
+	$(MAKE) cs
+
 RACKETCS_NOSUFFIX_CONFIG = MORE_CONFIGURE_ARGS="$(MORE_CONFIGURE_ARGS) --enable-csdefault"
 
 cs-with-configure:
-	$(MAKE) racket/src/build/Makefile SRC_MAKEFILE_CONFIG=cfg-cs
 	$(MAKE) racket/src/build/cs/c/Makefile
 	cd racket/src/build/cs/c; $(MAKE)
 	$(MAKE) base-config
