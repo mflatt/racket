@@ -80,6 +80,7 @@ SETUP_BOOT_MODE = @SETUP_BOOT_MODE@
 BOOT_COMPILED_SUBDIR = 
 SETUP_COMMON_BOOT = -l- setup $(SETUP_BOOT_MODE) $(srcdir)/../../setup-go.rkt $(builddir)/compiled$(BOOT_COMPILED_SUBDIR)
 
+ABS_SCHEME_DIR = "`$(SCHEME) --script $(srcdir)/../absify.ss --no-trailing-sep $(SCHEME_DIR)`"
 ABS_BUILDDIR = "`$(SCHEME) --script $(srcdir)/../absify.ss --no-trailing-sep $(builddir)`"
 
 SETUP_BOOT = -O 'info@compiler/cm' $(SETUP_COMMON_BOOT)
@@ -102,7 +103,7 @@ build-racket-so:
 	cd $(srcdir)/.. && $(RACKET_SO_ENV) $(MAKE) "$(builddir)/racket.so" $(CS_PROGS) $(CS_OPTS@CROSS_MODE@) BUILDDIR="$(builddir)/" BOOTSTRAPPED="done"
 
 bounce:
-	$(MAKE) builddir="$(ABS_BUILDDIR)" $(TARGET)
+	$(MAKE) builddir="$(ABS_BUILDDIR)" SCHEME_DIR="$(ABS_SCHEME_DIR)" $(TARGET)
 
 scheme:
 	if [ "$(BOOTFILE_RACKET)" != "$(DEFAULT_RACKET)" ] ; \
