@@ -395,7 +395,7 @@ WIN32_BOOT_ARGS = SETUP_BOOT_MODE=--boot WIN32_BUILD_LEVEL=3m WIN32_PLAIN_RACKET
 
 win32-cs:
 	IF "$(RACKET)" == "" $(MAKE) win32-racket-then-cs $(WIN32_BOOT_ARGS) $(WIN32_CS_COPY_ARGS)
-	IF not "$(RACKET)" == "" $(MAKE) win32-just-cs RACKET="$(RACKET)" $(WIN32_CS_COPY_ARGS)
+	IF not "$(RACKET)" == "" $(MAKE) win32-just-cs RACKET="$(RACKET)" SETUP_BOOT_MODE=--chain $(WIN32_CS_COPY_ARGS)
 
 win32-cs-base:
 	$(MAKE) win32-cs $(WIN32_CS_COPY_ARGS_EXCEPT_SUT) RACKET="$(RACKET)" WIN32_CS_SETUP_TARGET=nothing-after-base

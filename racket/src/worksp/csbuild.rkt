@@ -214,6 +214,7 @@
          "ignored" "../build/ignored.d"
          args))
 
+(make-directory* "../../lib")
 (bootstrap-racket! "../cs/c/embed-boot.rkt"
                    "++exe" "../build/raw_racketcs.exe" (format "../../Racket~a.exe" cs-suffix)
                    "++exe" "../build/raw_gracketcs.exe" (format "../../lib/GRacket~a.exe" cs-suffix)
