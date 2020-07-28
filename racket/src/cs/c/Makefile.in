@@ -391,7 +391,7 @@ starter@NOT_MINGW@: $(srcdir)/../../start/ustart.c
 
 
 repack-install-libs:
-	$(MAKE) libracketcs.a
+	$(MAKE) libracketcs.a SCHEME_DIR="$(ABS_SCHEME_DIR)"
 
 libracketcs.a: $(SCHEME_LIB_DEPS) rktio/librktio.a boot.o
 	mkdir -p repack
@@ -399,7 +399,7 @@ libracketcs.a: $(SCHEME_LIB_DEPS) rktio/librktio.a boot.o
 	cd repack && @Z_LIB_UNPACK@
 	cd repack && @LZ4_LIB_UNPACK@
 	cd repack && $(AR) x ../rktio/librktio.a
-	cd repack && $(AR) x ../$(SCHEME_TARGET_INC)/libkernel.a
+	cd repack && $(AR) x $(SCHEME_TARGET_INC)/libkernel.a
 	$(AR) $(ARFLAGS) libracketcs.a repack/*.o boot.o
 
 repack-no-install-libs:
