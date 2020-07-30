@@ -48,6 +48,11 @@ RACKET = racket
 RUN_THIS_RACKET_CGC = ./racket@CGC@
 RUN_THIS_RACKET_MMM = ./racket@MMM@
 
+# Intended for configuration by an external makefile that drives this one:
+SELF_ROOT_CONFIG_FLAG = -Z
+SELF_ROOT_CONFIG_DIR = ../../../../build/config
+SELF_ROOT_CONFIG = $(SELF_ROOT_CONFIG_FLAG) $(SELF_ROOT_CONFIG_DIR)
+
 SETUP_BOOT = -O "info@compiler/cm" -l- setup @BOOT_MODE@ $(srcdir)/../setup-go.rkt ../compiled
 
 MZSRC = $(srcdir)/src
@@ -347,7 +352,7 @@ cstartup_:
 # Running "cify-startup.rkt" through "$(SETUP_BOOT)" generates more
 # dependencies in "cstartup.d" for `$(CSTARTUPDEST)`
 $(CSTARTUPDEST): $(srcdir)/src/startup.inc $(srcdir)/src/schvers.h
-	@RUN_RACKET_CGC@ $(SELF_RACKET_FLAGS) $(SETUP_BOOT) cstartup.inc cstartup.d $(srcdir)/src/cify-startup.rkt $(srcdir)/src/startup.inc $(srcdir)/src/schvers.h
+	@RUN_RACKET_CGC@ $(SELF_ROOT_CONFIG) $(SETUP_BOOT) cstartup.inc cstartup.d $(srcdir)/src/cify-startup.rkt $(srcdir)/src/startup.inc $(srcdir)/src/schvers.h
 @INCLUDEDEP@ cstartup.d
 
 mark:
