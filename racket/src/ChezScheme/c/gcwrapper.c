@@ -969,9 +969,10 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
    /* now transfer old_g info to new_g, and clear old_g info */
     S_G.bytes_of_generation[new_g] = S_G.bytes_of_generation[old_g]; S_G.bytes_of_generation[old_g] = 0;
     for (s = 0; s <= max_real_space; s += 1) {
-      S_G.first_loc[new_g][s] = S_G.first_loc[old_g][s]; S_G.first_loc[old_g][s] = FIX(0);
+      S_G.to_sweep[new_g][s] = S_G.to_sweep[old_g][s]; S_G.to_sweep[old_g][s] = NULL;
       S_G.base_loc[new_g][s] = S_G.base_loc[old_g][s]; S_G.base_loc[old_g][s] = FIX(0);
       S_G.next_loc[new_g][s] = S_G.next_loc[old_g][s]; S_G.next_loc[old_g][s] = FIX(0);
+      S_G.sweep_loc[new_g][s] = S_G.sweep_loc[old_g][s]; S_G.sweep_loc[old_g][s] = FIX(0);
       S_G.bytes_left[new_g][s] = S_G.bytes_left[old_g][s]; S_G.bytes_left[old_g][s] = 0;
       S_G.bytes_of_space[new_g][s] = S_G.bytes_of_space[old_g][s]; S_G.bytes_of_space[old_g][s] = 0;
       S_G.occupied_segments[new_g][s] = S_G.occupied_segments[old_g][s]; S_G.occupied_segments[old_g][s] = NULL;
