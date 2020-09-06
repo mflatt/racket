@@ -35,6 +35,8 @@ void S_thread_init() {
     s_thread_cond_init(&S_collect_cond);
     s_thread_cond_init(&S_collect_thread0_cond);
     S_tc_mutex_depth = 0;
+    s_thread_mutex_init(&S_gc_tc_mutex.pmutex);
+    S_use_gc_tc_mutex = 0;
 #endif /* PTHREADS */
   }
 }
@@ -134,6 +136,8 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
     BYTESLEFT(tc, i) = 0;
     SWEEPLOC(tc, i) = (ptr)0;
   }
+
+  LOCKSTATUS(tc) = Strue;
 
   tc_mutex_release()
 
@@ -270,7 +274,7 @@ ptr S_fork_thread(thunk) ptr thunk; {
   thread = S_create_thread_object("fork-thread", get_thread_context());
   CP(THREADTC(thread)) = thunk;
 
-  if ((status = s_thread_create(start_thread, (void *)THREADTC(thread))) != 0) {
+  if ((status = s_thread_create(start_thread, TO_VOIDP(THREADTC(thread)))) != 0) {
     destroy_thread((ptr)THREADTC(thread));
     S_error1("fork-thread", "failed: ~a", S_strerror(status));
   }
@@ -468,6 +472,9 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
   is_collect = (c == &S_collect_cond || c == &S_collect_thread0_cond);
 
   if (is_collect || DISABLECOUNT(tc) == 0) {
+    if (S_collect_waiting_threads < maximum_parallel_collect_threads)
+      S_collect_waiting_tcs[S_collect_waiting_threads] = tc;
+    S_collect_waiting_threads++;
     deactivate_thread_signal_collect(tc, !is_collect)
   }
 
@@ -479,6 +486,7 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
 
   if (is_collect || DISABLECOUNT(tc) == 0) {
     reactivate_thread(tc)
+      --S_collect_waiting_threads;
   }
 
   if (status == 0) {

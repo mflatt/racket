@@ -166,6 +166,9 @@ typedef struct _seginfo {
   octet min_dirty_byte;                     /* dirty byte for full segment, effectively min(dirty_bytes) */
   octet *list_bits;                         /* for `$list-bits-ref` and `$list-bits-set!` */
   uptr number;                              /* the segment number */
+#ifdef PTHREADS
+  ptr lock;                                 /* for parallel GC */
+#endif
   struct _chunkinfo *chunk;                 /* the chunk this segment belongs to */
   struct _seginfo *next;                    /* pointer to the next seginfo (used in occupied_segments and unused_segs) */
   struct _seginfo *sweep_next;              /* next in list of segments allocated during GC => need to sweep */
@@ -414,13 +417,25 @@ typedef struct {
   S_tc_mutex_depth -= 1;\
   S_mutex_release(&S_tc_mutex);\
 }
+#define gc_tc_mutex_acquire() S_mutex_acquire(&S_gc_tc_mutex);
+#define gc_tc_mutex_release() S_mutex_release(&S_gc_tc_mutex);
+#define S_cas_store_release_voidp(a, old, new) __sync_bool_compare_and_swap(a, old, new)
+#define S_cas_load_acquire_voidp(a, old, new) __sync_bool_compare_and_swap(a, old, new)
 #else
 #define get_thread_context() TO_PTR(S_G.thread_context)
 #define deactivate_thread(tc) {}
 #define reactivate_thread(tc) {}
 #define tc_mutex_acquire() {}
 #define tc_mutex_release() {}
+#define gc_tc_mutex_acquire() {}
+#define gc_tc_mutex_release() {}
+#define S_cas_store_release_voidp(a, old, new) (*(a) = new, 1)
+#define S_cas_load_acquire_voidp(a, old, new) (*(a) = new, 1)
 #endif
+
+#define S_cas_store_release_ptr(a, old, new) S_cas_store_release_voidp(a, old, new)
+#define S_cas_load_acquire_ptr(a, old, new) S_cas_load_acquire_voidp(a, old, new)
+#define S_store_release() do { } while (0)
 
 #ifdef __MINGW32__
 /* With MinGW on 64-bit Windows, setjmp/longjmp is not reliable. Using

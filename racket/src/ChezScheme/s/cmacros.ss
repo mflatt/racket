@@ -1496,6 +1496,7 @@
 (define-constant static-generation 7)
 (define-constant num-thread-local-allocation-segments (fx* (fx+ 1 (constant static-generation))
                                                            (fx+ 1 (constant max-real-space))))
+(define-constant maximum-parallel-collect-threads 8)
 
 ;;; make sure gc sweeps all ptrs
 (define-primitive-structure-disps tc typemod
@@ -1577,7 +1578,8 @@
    [xptr base-loc (constant num-thread-local-allocation-segments)]
    [xptr next-loc (constant num-thread-local-allocation-segments)]
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
-   [xptr sweep-loc (constant num-thread-local-allocation-segments)]))
+   [xptr sweep-loc (constant num-thread-local-allocation-segments)]
+   [xptr lock-status]))
 
 (define tc-field-list
   (let f ([ls (oblist)] [params '()])

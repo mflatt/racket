@@ -221,9 +221,10 @@ static void close_off_segment(ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN
 
     /* add to sweep list */
     si = SegInfo(addr_get_segment(base_loc));
-    si->sweep_next = S_G.to_sweep[g][s];
     si->sweep_start = sweep_loc;
-    S_G.to_sweep[g][s] = si;
+    do {
+      si->sweep_next = S_G.to_sweep[g][s];
+    } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
   }
 }
 
@@ -274,7 +275,11 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   ptr new;
   iptr new_bytes;
 
-  tc_mutex_acquire()
+  if (S_use_gc_tc_mutex) {
+    gc_tc_mutex_acquire()
+  } else {
+    tc_mutex_acquire()
+  }
 
   /* closing off segment effectively moves to global space: */
   close_off_segment(old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
@@ -288,8 +293,12 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
 
   more_room_done(g);
 
-  tc_mutex_release()
-
+  if (S_use_gc_tc_mutex) {
+    gc_tc_mutex_release()
+  } else {
+    tc_mutex_release()
+  }
+  
   return new;
 }
 

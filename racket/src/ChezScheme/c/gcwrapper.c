@@ -961,6 +961,7 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
   Slock_object(code);
 
  /* Scheme side grabs mutex before calling S_do_gc */
+  S_use_gc_tc_mutex = 1;
   S_pants_down += 1;
 
   if (S_G.new_max_nonstatic_generation > S_G.max_nonstatic_generation) {
@@ -1082,6 +1083,7 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
   S_reset_allocation_pointer(tc);
 
   S_pants_down -= 1;
+  S_use_gc_tc_mutex = 0;
 
   Sunlock_object(code);
 
@@ -1091,13 +1093,18 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
 ptr S_gc(ptr tc, IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
   if (min_tg == static_generation
       || S_G.enable_object_counts || S_G.enable_object_backreferences
-      || (count_roots != Sfalse))
+      || (count_roots != Sfalse)) {
     return S_gc_oce(tc, max_cg, min_tg, max_tg, count_roots);
-  else if (max_cg == 0 && min_tg == 1 && max_tg == 1
+  } else if (max_cg == 0 && min_tg == 1 && max_tg == 1
            && !S_G.must_mark_gen0 && S_G.locked_objects[0] == Snil
            && (S_G.min_mark_gen > 0)) {
     S_gc_011(tc);
     return Svoid;
-  } else
+#if defined(PTHREADS)
+  } else if (S_collect_waiting_threads != 0) {
+    return S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
+#endif
+  } else {
     return S_gc_ocd(tc, max_cg, min_tg, max_tg, Sfalse);
+  }
 }

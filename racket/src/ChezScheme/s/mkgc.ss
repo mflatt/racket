@@ -96,6 +96,7 @@
 ;;  - (as-mark-end <statment> ...) : declares that <statement>s implement counting,
 ;;       which means that it's included for mark mode
 ;;  - (skip-forwarding) : disable forward-pointer installation in copy mode
+;;  - (check-lock-failed) : bail out if a lock aquire failed
 ;;  - (assert <expr>) : assertion
 ;;
 ;; In the above declarations, nonterminals like <space> can be
@@ -611,7 +612,7 @@
     (cond
       [(&& (!= cdr_p _)
            (&& (== (TYPEBITS cdr_p) type_pair)
-               (&& (= (ptr_get_segment cdr_p) (ptr_get_segment _))
+               (&& (== (ptr_get_segment cdr_p) (ptr_get_segment _))
                    (&& (!= (FWDMARKER cdr_p) forward_marker)
                        ;; Checking `marked_mask`, in
                        ;; case the cdr pair is locked
@@ -1388,6 +1389,7 @@
        (case (lookup 'mode config)
          [(copy)
           (code-block
+           "ENABLE_LOCK_ACQUIRE"
            "change = 1;"
            "check_triggers(si);"
            (code-block
@@ -1402,6 +1404,7 @@
             "return tg;"))]
          [(mark)
           (code-block
+           "ENABLE_LOCK_ACQUIRE"
            "change = 1;"
            "check_triggers(si);"
            (ensure-segment-mark-mask "si" "" '())
@@ -1410,6 +1413,7 @@
            "return si->generation;")]
          [(sweep)
           (code-block
+           "ENABLE_LOCK_ACQUIRE"
            (and (lookup 'maybe-backreferences? config #f)
                 "PUSH_BACKREFERENCE(p)")
            (body)
@@ -1417,6 +1421,10 @@
                 "POP_BACKREFERENCE()")
            (and (lookup 'as-dirty? config #f)
                 "return youngest;"))]
+         [(sweep-in-old)
+          (code-block
+           "ENABLE_LOCK_ACQUIRE"
+           (body))]
          [(measure)
           (body)]
          [(self-test)
@@ -1548,6 +1556,7 @@
                   (statements (cdr l) config))]
            [`(trace-early ,field)
             (code (trace-statement field config #t 'pure)
+                  (check-lock-failure-statement config)
                   (statements (cdr l) (if (symbol? field)
                                           (cons `(copy-extra ,field) config)
                                           config)))]
@@ -1808,6 +1817,10 @@
                   (statements (list count-stmt) config)))]
               [else
                (statements (cdr l) config)])]
+           [`(check-lock-failed)
+            (code
+             (check-lock-failure-statement config)
+             (statements (cdr l) config))]
            [`(define ,id : ,type ,rhs)
             (let* ([used (lookup 'used config)]
                    [prev-used? (hashtable-ref used id #f)])
@@ -2247,6 +2260,20 @@
                (code "if (!is_counting_root(si, p))"
                      (code-block push))]
               [else push]))]))))
+
+  (define (check-lock-failure-statement config)
+    (let ([mode (lookup 'mode config)])
+      (case mode
+        [(copy mark sweep sweep-in-old)
+         (code
+          "if (CHECK_LOCK_FAILED(tc_in))"
+          (case mode
+            [(copy mark) (code-block "return 0xff;")]
+            [(sweep sweep-in-old)
+             (if (lookup 'as-dirty? config #f)
+                 (code-block "return 0xff;")
+                 (code-block "return;"))]))]
+        [else #f])))
 
   (define (field-expression field config arg protect?)
     (if (symbol? field)

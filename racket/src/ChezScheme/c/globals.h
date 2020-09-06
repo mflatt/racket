@@ -40,6 +40,10 @@ EXTERN scheme_mutex_t S_tc_mutex;
 EXTERN s_thread_cond_t S_collect_cond;
 EXTERN s_thread_cond_t S_collect_thread0_cond;
 EXTERN INT S_tc_mutex_depth;
+EXTERN scheme_mutex_t S_gc_tc_mutex;
+EXTERN IBOOL S_use_gc_tc_mutex;
+EXTERN int S_collect_waiting_threads;
+EXTERN ptr S_collect_waiting_tcs[maximum_parallel_collect_threads];
 #endif
 
 /* segment.c */
