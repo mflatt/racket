@@ -234,6 +234,9 @@ static void initialize_seginfo(seginfo *si, ISPC s, IGEN g) {
   si->old_space = 0;
   si->use_marks = 0;
   si->must_mark = 0;
+#ifdef PTHREADS
+  si->lock = 0;
+#endif
   si->list_bits = NULL;
   si->min_dirty_byte = 0xff;
   for (d = 0; d < cards_per_segment; d += sizeof(ptr)) {
