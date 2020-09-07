@@ -478,7 +478,8 @@
        [(copy) (when (CHECK_LOCK_FAILED _tc_)
                  ;; create failed relocates so that the heap checker isn't unhappy
                  (set! (ratnum-numerator _copy_) (cast ptr 0))
-                  (set! (ratnum-denominator _copy_) (cast ptr 0)))]
+                 (set! (ratnum-denominator _copy_) (cast ptr 0)))]
+       [(mark) (check-lock-failed)]
        [else])
       (mark)
       (vfasl-pad-word)
@@ -496,6 +497,7 @@
                  ;; create failed relocates so that the heap checker isn't unhappy
                  (set! (exactnum-real _copy_) (cast ptr 0))
                  (set! (exactnum-imag _copy_) (cast ptr 0)))]
+       [(mark) (check-lock-failed)]
        [else])
       (mark)
       (vfasl-pad-word)
@@ -589,9 +591,11 @@
          (count countof-phantom)
          ;; Separate from `count`, because we want to track sizes even
          ;; if counting is not enabled:
+         (GC_TC_MUTEX_ACQUIRE)
          (set! (array-ref (array-ref S_G.bytesof _tg_) countof-phantom)
                +=
-               (phantom-length _)))]
+               (phantom-length _))
+         (GC_TC_MUTEX_RELEASE))]
        [measure (set! measure_total += (phantom-length _))]
        [else])])]))
 
@@ -2248,7 +2252,7 @@
                "    ENABLE_LOCK_ACQUIRE"
                "    SEGMENT_LOCK_MUST_ACQUIRE(mark_si);"
                (ensure-segment-mark-mask "mark_si" "    " '())
-               "    /* no need to set a bit: just make sure `marked_mask` is non-NULL */"
+               "    /* no need to set a bit: it's enough to have made `marked_mask` non-NULL */"
                "    mark_si->marked_count += addr + p_sz - (uptr)build_ptr(end_seg,0);"
                "    SEGMENT_LOCK_RELEASE(mark_si);"
                "  }"

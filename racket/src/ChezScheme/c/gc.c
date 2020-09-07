@@ -343,7 +343,6 @@ static ptr sweep_from;
 # define RECORD_LOCK_FAILED(tc, si) LOCKSTATUS(tc) = Sfalse
 # define CLEAR_LOCK_FAILED(tc) LOCKSTATUS(tc) = Strue
 # define CHECK_LOCK_FAILED(tc) (LOCKSTATUS(tc) == Sfalse)
-# define RECORD_LOCK_SUCCESS(tc) do {} while (0)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) S_cas_load_acquire_ptr(a, old, new)
 # define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire() 
 # define GC_TC_MUTEX_RELEASE() gc_tc_mutex_release()
@@ -373,7 +372,6 @@ static int num_sweepers;
 # define RECORD_LOCK_FAILED(tc, si) do { } while (0)
 # define CLEAR_LOCK_FAILED(tc) do { } while (0)
 # define CHECK_LOCK_FAILED(tc) 0
-# define RECORD_LOCK_SUCCESS(tc) do {} while (0)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) (*(a) = new, 1)
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
 # define GC_TC_MUTEX_RELEASE() do { } while (0)
@@ -820,7 +818,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
 (void)printf("max_cg = %x;  go? ", MAX_CG); (void)fflush(stdout); (void)getc(stdin);
 #endif
 
- SWEEPSTACKSTART(tc_in) = SWEEPSTACK(tc_in) = SWEEPSTACKLIMIT(tc_in) = (ptr)0;
+    SWEEPSTACKSTART(tc_in) = SWEEPSTACK(tc_in) = SWEEPSTACKLIMIT(tc_in) = (ptr)0;
     resweep_weak_segments = NULL;
     for (g = MIN_TG; g <= MAX_TG; g++) fully_marked_mask[g] = NULL;
 
@@ -1638,7 +1636,6 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           body                                                    \
         }                                                         \
       } while (CHECK_LOCK_FAILED(tc_in));                         \
-      RECORD_LOCK_SUCCESS(tc_in);                                 \
     }                                                             \
   }
 
@@ -1652,7 +1649,6 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           while ((p = *pp) != forward_marker)                           \
             body                                                        \
         } while (CHECK_LOCK_FAILED(tc_in));                             \
-        RECORD_LOCK_SUCCESS(tc_in);                                     \
       }                                                                 \
     }                                                                   \
     if (can_sweep_global) {                                             \
@@ -1905,7 +1901,6 @@ void sweep_from_stack(ptr tc_in) {
         CLEAR_LOCK_FAILED(tc_in);
         sweep(tc_in, p, si->generation);
       } while (CHECK_LOCK_FAILED(tc_in));
-      RECORD_LOCK_SUCCESS(tc_in);
     }
   }
 }
@@ -2649,7 +2644,9 @@ static void gather_active_sweepers() {
   /* assign a tc for each sweeper to run in parallel */
   for (n = 0, i = 0; (n < maximum_parallel_collect_threads) && (i < S_collect_waiting_threads); i++) {
     if ((i < maximum_parallel_collect_threads) && (S_collect_waiting_tcs[i] != (ptr)0)) {
-      sweepers[n].sweep_tc = S_collect_waiting_tcs[i];
+      ptr tc = S_collect_waiting_tcs[i];
+      sweepers[n].sweep_tc = tc;
+      SWEEPSTACKSTART(tc) = SWEEPSTACK(tc) = SWEEPSTACKLIMIT(tc) = (ptr)0;
       n++;
     }
   }
@@ -2659,6 +2656,7 @@ static void gather_active_sweepers() {
 
 static s_thread_rv_t start_sweeper(void *_data) {
   gc_thread_data *data = _data;
+  ptr tc;
 
   s_thread_mutex_lock(&sweep_mutex);
   while (1) {
@@ -2666,16 +2664,18 @@ static s_thread_rv_t start_sweeper(void *_data) {
       s_thread_cond_wait(&data->sweep_cond, &sweep_mutex);
     }
     s_thread_mutex_unlock(&sweep_mutex);
-    
-    s_thread_setspecific(S_tc_key, data->sweep_tc);
-    sweep_generation_pass(data->sweep_tc, 0);
+
+    tc = data->sweep_tc;
+    s_thread_setspecific(S_tc_key, tc);
+
+    sweep_generation_pass(tc, 0);
 
     /* ensure terminators on any segment where sweeper may have allocated: */
     {
       ISPC s; IGEN g;
       for (s = 0; s <= max_real_space; s++) {
         for (g = MIN_TG; g <= MAX_TG; g++) {
-          ptr old = NEXTLOC_AT(data->sweep_tc, s, g);
+          ptr old = NEXTLOC_AT(tc, s, g);
           if (old != (ptr)0)
             *(ptr*)TO_VOIDP(old) = forward_marker;
         }
