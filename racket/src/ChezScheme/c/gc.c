@@ -343,12 +343,17 @@ static ptr sweep_from;
 # define RECORD_LOCK_FAILED(tc, si) LOCKSTATUS(tc) = Sfalse
 # define CLEAR_LOCK_FAILED(tc) LOCKSTATUS(tc) = Strue
 # define CHECK_LOCK_FAILED(tc) (LOCKSTATUS(tc) == Sfalse)
+# define SAVE_SWEEP_RANGE_FOR_LATER(tc, slp, sl, nl) save_sweep_range_for_later(tc, slp, sl, nl)
+# define SAVE_SWEEP_SEGMENT_FOR_LATER(tc, si) save_sweep_segment_for_later(tc, si)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) S_cas_load_acquire_ptr(a, old, new)
 # define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire() 
 # define GC_TC_MUTEX_RELEASE() gc_tc_mutex_release()
 
 static void gather_active_sweepers();
 static void parallel_sweep_generation(ptr tc);
+static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl);
+static void save_sweep_segment_for_later(ptr tc_in, seginfo *si);
+static void gate_postponed(ptr tc);
 
 #define SWEEPER_NONE     0
 #define SWEEPER_READY    1
@@ -372,13 +377,19 @@ static int num_sweepers;
 # define RECORD_LOCK_FAILED(tc, si) do { } while (0)
 # define CLEAR_LOCK_FAILED(tc) do { } while (0)
 # define CHECK_LOCK_FAILED(tc) 0
+# define SAVE_SWEEP_RANGE_FOR_LATER(tc, slp, sl, nl) do { } while (0)
+# define SAVE_SWEEP_SEGMENT_FOR_LATER(tc, si) do { } while (0)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) (*(a) = new, 1)
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
 # define GC_TC_MUTEX_RELEASE() do { } while (0)
 # define gather_active_sweepers() do { } while (0)
 # define parallel_sweep_generation(tc) sweep_generation(tc)
 #endif
-  
+
+#define SWEEP_NO_CHANGE        0
+#define SWEEP_CHANGE_PROGRESS  1
+#define SWEEP_CHANGE_POSTPONED 2
+
 #if ptr_alignment == 2
 # define record_full_marked_mask 0x55
 # define record_high_marked_bit  0x40
@@ -1628,27 +1639,30 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
 #define sweep_space_range(s, from_g, body) {                      \
     while ((sl = TO_VOIDP(*slp)) != (nl = TO_VOIDP(*nlp))) {      \
       *slp = TO_PTR(nl);                                          \
-      do {                                                        \
-        CLEAR_LOCK_FAILED(tc_in);                                 \
-        pp = sl;                                                  \
-        while (pp != nl) {                                        \
-          p = *pp;                                                \
-          body                                                    \
-        }                                                         \
-      } while (CHECK_LOCK_FAILED(tc_in));                         \
+      pp = sl;                                                    \
+      while (pp != nl) {                                          \
+        p = *pp;                                                  \
+        body                                                      \
+      }                                                           \
+      if (CHECK_LOCK_FAILED(tc_in)) {                             \
+        SAVE_SWEEP_RANGE_FOR_LATER(tc_in, slp, sl, nl);           \
+        break;                                                    \
+      }                                                           \
     }                                                             \
   }
 
 #define sweep_space(s, from_g, body) {                  \
     while ((si = S_G.to_sweep[from_g][s]) != NULL) {    \
       if (LOCK_CAS_LOAD_ACQUIRE(&S_G.to_sweep[from_g][s], si, si->sweep_next)) {      \
-        save_resweep(s, si);                                            \
-        do {                                                            \
-          pp = TO_VOIDP(si->sweep_start);                               \
-          CLEAR_LOCK_FAILED(tc_in);                                     \
-          while ((p = *pp) != forward_marker)                           \
-            body                                                        \
-        } while (CHECK_LOCK_FAILED(tc_in));                             \
+        pp = TO_VOIDP(si->sweep_start);                                 \
+        while ((p = *pp) != forward_marker)                             \
+          body                                                          \
+        if (CHECK_LOCK_FAILED(tc_in)) {                                 \
+          SAVE_SWEEP_SEGMENT_FOR_LATER(tc_in, si);                      \
+          break;                                                        \
+        } else {                                                        \
+          save_resweep(s, si);                                          \
+        }                                                               \
       }                                                                 \
     }                                                                   \
     if (can_sweep_global) {                                             \
@@ -1661,6 +1675,40 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     sweep_space_range(s, from_g, body)                                  \
   }
 
+#ifdef ENABLE_PARALLEL
+
+static void save_sweep_segment_for_later(ptr tc_in, seginfo *si) {
+  ISPC s = si->space; IGEN g = si->generation;
+  CLEAR_LOCK_FAILED(tc_in);
+  SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
+  do {
+    si->sweep_next = S_G.to_sweep[g][s];
+  } while (!S_cas_store_release_ptr(&S_G.to_sweep[g][s], si->sweep_next, si));
+}
+
+static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl) {
+  CLEAR_LOCK_FAILED(tc_in);
+  SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
+  /* check whether this segment is still the thread-local allocation segment: */
+  if (TO_VOIDP(*slp) == nl) {
+    *slp = sl;
+  } else {
+    /* need to set the sweep pointer in the segment, which must be one
+       of the ones queued in the thread */
+    seginfo *si = SWEEPNEXT(tc_in);
+    while (1) {
+      if (si == NULL) S_error_abort("coult not find segment for sweep range");
+      if (TO_VOIDP(si->sweep_start) == nl) {
+        si->sweep_start = TO_PTR(sl);
+        return;
+      }
+      si = si->sweep_next;
+    }
+  }
+}
+
+#endif
+    
 static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
     IGEN from_g;
     ptr *slp, *nlp; ptr *pp, p, *nl, *sl;
@@ -1766,7 +1814,7 @@ static void sweep_generation_pass(ptr tc_in, IBOOL can_sweep_global) {
   seginfo *si;
 
   do {
-    SWEEPCHANGE(tc_in) = 0;
+    SWEEPCHANGE(tc_in) = SWEEP_NO_CHANGE;
 
     sweep_from_stack(tc_in);
 
@@ -1857,7 +1905,7 @@ static void sweep_generation_pass(ptr tc_in, IBOOL can_sweep_global) {
     }
 
     transfer_sweep_next(tc_in);
-  } while (SWEEPCHANGE(tc_in));
+  } while (SWEEPCHANGE(tc_in) == SWEEP_CHANGE_PROGRESS);
 }
 
 static void sweep_generation(ptr tc_in) {
@@ -1869,7 +1917,7 @@ static void sweep_generation(ptr tc_in) {
        segment-specific trigger or gets triggered for recheck, but
        it doesn't change the worst-case complexity. */
     check_pending_ephemerons(tc_in);
-  } while (SWEEPCHANGE(tc_in));
+  } while (SWEEPCHANGE(tc_in) != SWEEP_NO_CHANGE);
 }
 
 void enlarge_sweep_stack(ptr tc_in) {
@@ -1887,7 +1935,7 @@ void enlarge_sweep_stack(ptr tc_in) {
 
 void sweep_from_stack(ptr tc_in) {
   if (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
-    SWEEPCHANGE(tc_in) = 1;
+    SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;
   
     while (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
       ptr p;
@@ -1897,10 +1945,14 @@ void sweep_from_stack(ptr tc_in) {
       /* Room for improvement: `si->generation` is needed only 
          for objects that have impure fields */
       si = SegInfo(ptr_get_segment(p));
-      do {
+      sweep(tc_in, p, si->generation);
+      if (CHECK_LOCK_FAILED(tc_in)) {
+        /* try doing something else for now and sweep `p` later */
         CLEAR_LOCK_FAILED(tc_in);
-        sweep(tc_in, p, si->generation);
-      } while (CHECK_LOCK_FAILED(tc_in));
+        SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
+        push_sweep(p)
+        break;
+      }
     }
   }
 }
@@ -2638,6 +2690,9 @@ void copy_and_clear_list_bits(ptr tc_in, seginfo *oldspacesegments) {
 static int sweep_mutex_initialized = 0;
 static s_thread_mutex_t sweep_mutex;
 
+static int num_running_sweepers;
+static s_thread_cond_t postpone_cond;
+
 static void gather_active_sweepers() {
   int i, n;
   
@@ -2663,12 +2718,16 @@ static s_thread_rv_t start_sweeper(void *_data) {
     while (data->status != SWEEPER_SWEEPING) {
       s_thread_cond_wait(&data->sweep_cond, &sweep_mutex);
     }
+    num_running_sweepers++;
     s_thread_mutex_unlock(&sweep_mutex);
 
     tc = data->sweep_tc;
     s_thread_setspecific(S_tc_key, tc);
 
-    sweep_generation_pass(tc, 0);
+    do {
+      sweep_generation_pass(tc, 0);
+      gate_postponed(tc);
+    } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
 
     /* ensure terminators on any segment where sweeper may have allocated: */
     {
@@ -2683,6 +2742,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     }
 
     s_thread_mutex_lock(&sweep_mutex);
+    --num_running_sweepers;
     data->status = SWEEPER_READY;
     s_thread_cond_signal(&data->done_cond);
   }
@@ -2693,6 +2753,7 @@ static void parallel_sweep_generation(ptr tc) {
 
   if (!sweep_mutex_initialized) {
     s_thread_mutex_init(&sweep_mutex);
+    s_thread_cond_init(&postpone_cond);
     sweep_mutex_initialized = 1;
   }
 
@@ -2718,7 +2779,7 @@ static void parallel_sweep_generation(ptr tc) {
     }
   }
 
-  fprintf(stderr, "GCing %d\n", num_sweepers);
+  // fprintf(stderr, "GCing %d\n", num_sweepers);
 
   while (1) {
     /* start other sweepers */
@@ -2727,13 +2788,18 @@ static void parallel_sweep_generation(ptr tc) {
       sweepers[i].status = SWEEPER_SWEEPING;
       s_thread_cond_signal(&sweepers[i].sweep_cond);
     }
+    num_running_sweepers++;
     s_thread_mutex_unlock(&sweep_mutex);
 
     /* sweep in the main thread */
-    sweep_generation_pass(tc, 1);
+    do {
+      sweep_generation_pass(tc, 1);
+      gate_postponed(tc);
+    } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
 
     /* wait for other sweepers */
     s_thread_mutex_lock(&sweep_mutex);
+    --num_running_sweepers;
     for (i = 0; i < num_sweepers; i++) {
       while (sweepers[i].status != SWEEPER_READY) {
         s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
@@ -2742,11 +2808,33 @@ static void parallel_sweep_generation(ptr tc) {
     s_thread_mutex_unlock(&sweep_mutex);
 
     check_pending_ephemerons(tc);
-    if (!SWEEPCHANGE(tc))
+    if (SWEEPCHANGE(tc) == SWEEP_NO_CHANGE)
       break;
   }
 
+  // fprintf(stderr, "done\n");
+
   S_use_gc_tc_mutex = 0;
+}
+
+static void gate_postponed(ptr tc) {
+  s_thread_mutex_lock(&sweep_mutex);
+  if (SWEEPCHANGE(tc) == SWEEP_CHANGE_POSTPONED) {
+    /* This thread wasn't able to make progress after a lock conflict.
+       Instead of spinning, which could create livelock, wait until
+       some thread makes progress. */
+    if (num_running_sweepers == 1)  {
+      /* All other threads postponed, so this one can make
+         progress after all. */
+    } else {
+      --num_running_sweepers;
+      s_thread_cond_wait(&postpone_cond, &sweep_mutex);
+      num_running_sweepers++;
+    }
+  } else {
+    s_thread_cond_broadcast(&postpone_cond);
+  }
+  s_thread_mutex_unlock(&sweep_mutex);
 }
 
 #endif

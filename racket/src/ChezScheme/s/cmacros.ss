@@ -1581,8 +1581,8 @@
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
    [iptr sweep-change]
-   [xptr lock-status]
-   [xptr sweep-next]))
+   [xptr sweep-next]
+   [xptr lock-status]))
 
 (define tc-field-list
   (let f ([ls (oblist)] [params '()])

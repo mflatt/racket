@@ -1417,7 +1417,7 @@
           (code-block
            "ENABLE_LOCK_ACQUIRE"
            "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
-           "SWEEPCHANGE(tc_in) = 1;"
+           "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
            "check_triggers(si);"
            (code-block
             "ptr new_p;"
@@ -1434,7 +1434,7 @@
           (code-block
            "ENABLE_LOCK_ACQUIRE"
            "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
-           "SWEEPCHANGE(tc_in) = 1;"
+           "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
            "check_triggers(si);"
            (ensure-segment-mark-mask "si" "" '())
            (body)
