@@ -489,6 +489,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
         if (!new_marked(si, pp))                \
           mark_or_copy_pure(&pp, pp, si);       \
       } ELSE_MEASURE_NONOLDSPACE(pp)            \
+      SEGMENT_LOCK_RELEASE(si);                 \
     } else                                      \
       RECORD_LOCK_FAILED(tc_in);                \
   } while (0)
@@ -510,6 +511,14 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 
 #else /* !NO_DIRTY_NEWSPACE_POINTERS */
 
+#ifdef ENABLE_PARALLEL
+/* In case we're retying and a pointer has already been forwarded: */
+# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp)      \
+  else if (SI->generation < from_g) S_record_new_dirty_card(tc_in, ppp, SI->generation);
+#else
+# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp) ELSE_MEASURE_NONOLDSPACE(pp)
+#endif
+
 #define relocate_impure(ppp, from_g) do {                       \
     ptr* PPP = ppp; ptr PP = *PPP; IGEN FROM_G = from_g;        \
     relocate_impure_help(PPP, PP, FROM_G);                      \
@@ -520,7 +529,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
     if (!IMMEDIATE(pp) && (SI = MaybeSegInfo(ptr_get_segment(pp))) != NULL) { \
       if (SI->old_space)                                                \
         relocate_impure_help_help(ppp, pp, from_g, SI);                 \
-      ELSE_MEASURE_NONOLDSPACE(pp)                                      \
+      ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp)         \
     }                                                                   \
   } while (0)
 
@@ -554,21 +563,15 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
     if (!IMMEDIATE(_pp) && (_si = MaybeSegInfo(ptr_get_segment(_pp))) != NULL) { \
       if (!_si->old_space) {                                            \
         _pg = _si->generation;                                          \
-      } else if (SEGMENT_LOCK_ACQUIRE(_si)) {                           \
-        if (FORWARDEDP(_pp, _si)) {                                     \
-          *_ppp = GET_FWDADDRESS(_pp);                                  \
-          _pg = TARGET_GENERATION(_si);                                 \
-        } else if (new_marked(_si, _pp)) {                              \
-          _pg = TARGET_GENERATION(_si);                                 \
-        } else if (CAN_MARK_AND(_si->use_marks)) {                      \
-          _pg = mark_object(tc_in, _pp, _si);                           \
-        } else {                                                        \
-          _pg = copy(tc_in, _pp, _si, _ppp);                            \
-        }                                                               \
-        SEGMENT_LOCK_RELEASE(_si);                                      \
+      } else if (FORWARDEDP(_pp, _si)) {                                \
+        *_ppp = GET_FWDADDRESS(_pp);                                    \
+        _pg = TARGET_GENERATION(_si);                                   \
+      } else if (new_marked(_si, _pp)) {                                \
+        _pg = TARGET_GENERATION(_si);                                   \
+      } else if (CAN_MARK_AND(_si->use_marks)) {                        \
+        _pg = mark_object(tc_in, _pp, _si);                             \
       } else {                                                          \
-        RECORD_LOCK_FAILED(tc_in);                                      \
-        _pg = 0xff;                                                     \
+        _pg = copy(tc_in, _pp, _si, _ppp);                              \
       }                                                                 \
       if (_pg < YOUNGEST) YOUNGEST = _pg;                               \
     }                                                                   \
@@ -1545,7 +1548,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       ptr vec = PTRFIELD(ht,eq_hashtable_vec_disp);
       uptr veclen = Svector_length(vec);
       ptr key = Scar(TLCKEYVAL(tlc));
-  
+
      /* scan to end of bucket to find the index */
       for (b = TLCNEXT(tlc); !Sfixnump(b); b = TLCNEXT(b));
       old_idx = UNFIX(b);
@@ -1630,8 +1633,8 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     while ((si = S_G.to_sweep[from_g][s]) != NULL) {    \
       if (LOCK_CAS_LOAD_ACQUIRE(&S_G.to_sweep[from_g][s], si, si->sweep_next)) {      \
         save_resweep(s, si);                                            \
-        pp = TO_VOIDP(si->sweep_start);                                 \
         do {                                                            \
+          pp = TO_VOIDP(si->sweep_start);                               \
           CLEAR_LOCK_FAILED(tc_in);                                     \
           while ((p = *pp) != forward_marker)                           \
             body                                                        \
@@ -1933,7 +1936,6 @@ static void record_dirty_segment(IGEN from_g, IGEN to_g, seginfo *si) {
 }
 
 static void sweep_dirty(ptr tc_in) {
-  ENABLE_LOCK_ACQUIRE
   ptr tc = tc_in;
   IGEN youngest, min_youngest;
   ptr *pp, *ppend, *nl, start, next_loc;
@@ -2451,7 +2453,6 @@ static void check_pending_ephemerons(ptr tc_in) {
    be less pessimistic than setting `youngest` to the target
    generation: */
 static IGEN check_dirty_ephemeron(ptr tc_in, ptr pe, IGEN youngest) {
-  ENABLE_LOCK_ACQUIRE
   ptr p;
   seginfo *si;
   IGEN pg;

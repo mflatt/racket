@@ -96,7 +96,8 @@
 ;;  - (as-mark-end <statment> ...) : declares that <statement>s implement counting,
 ;;       which means that it's included for mark mode
 ;;  - (skip-forwarding) : disable forward-pointer installation in copy mode
-;;  - (check-lock-failed) : bail out if a lock aquire failed
+;;  - (check-lock-failed) : bail out if a lock aquire failed; use this before dereferencing
+;;                          an object reference that might not have been relocated
 ;;  - (assert <expr>) : assertion
 ;;
 ;; In the above declarations, nonterminals like <space> can be
@@ -718,6 +719,7 @@
     (trace ref)]
    [(sweep sweep-in-old)
     (trace ref) ; can't trace `val` directly, because we need an impure relocate
+    (check-lock-failed)
     (define val : ptr (ref _))]
    [vfasl-copy
     (set! (ref _copy_) vfasl-val)]
@@ -732,6 +734,7 @@
     (case-flag as-dirty?
        [on (trace (just code))]
        [off (trace-pure (just code))])
+    (check-lock-failed)
     (INITSYMCODE _ code)]
    [measure]
    [vfasl-copy
@@ -801,6 +804,7 @@
             [(sweep sweep-in-old self-test)
              ;; Bignum pointer mask may need forwarding
              (trace-pure (record-type-pm rtd))
+             (check-lock-failed)
              (set! num (record-type-pm rtd))]
             [else])])
          (let* ([index : iptr (- (BIGLEN num) 1)]
@@ -1021,7 +1025,7 @@
              (set! mask >>= 1)))]
          [else
           (trace-pure (* (ENTRYNONCOMPACTLIVEMASKADDR oldret)))
-
+          (check-lock-failed)
           (let* ([num : ptr (ENTRYLIVEMASK oldret)]
                  [index : iptr (BIGLEN num)])
             (while
@@ -1055,6 +1059,7 @@
       (case-mode
        [sweep-in-old]
        [else
+        (check-lock-failed)
         (set! field (cast ptr (+ (cast uptr c_p) co)))]))]
    [else
     (trace-pure (just c_p))]))
@@ -1111,6 +1116,7 @@
 
     (case-mode
      [sweep
+      (check-lock-failed)
       (cond
         [(&& (== from_g static_generation)
              (&& (! S_G.retain_static_relocation)
@@ -1406,6 +1412,7 @@
          [(copy)
           (code-block
            "ENABLE_LOCK_ACQUIRE"
+           "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
            "SWEEPCHANGE(tc_in) = 1;"
            "check_triggers(si);"
            (code-block
@@ -1422,6 +1429,7 @@
          [(mark)
           (code-block
            "ENABLE_LOCK_ACQUIRE"
+           "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
            "SWEEPCHANGE(tc_in) = 1;"
            "check_triggers(si);"
            (ensure-segment-mark-mask "si" "" '())
@@ -1430,7 +1438,8 @@
            "return si->generation;")]
          [(sweep)
           (code-block
-           "ENABLE_LOCK_ACQUIRE"
+           (and (not (lookup 'as-dirty? config #f))
+                "ENABLE_LOCK_ACQUIRE")
            (and (lookup 'maybe-backreferences? config #f)
                 "PUSH_BACKREFERENCE(p)")
            (body)
@@ -2281,7 +2290,7 @@
   (define (check-lock-failure-statement config)
     (let ([mode (lookup 'mode config)])
       (case mode
-        [(copy mark sweep sweep-in-old)
+        [(copy mark sweep)
          (code
           "if (CHECK_LOCK_FAILED(tc_in))"
           (case mode

@@ -357,8 +357,10 @@ void S_reset_allocation_pointer(tc) ptr tc; {
 
 void S_record_new_dirty_card(ptr tc, ptr *ppp, IGEN to_g) {
   uptr card = (uptr)TO_PTR(ppp) >> card_offset_bits;
+  dirtycardinfo *ndc;
 
-  dirtycardinfo *ndc = S_G.new_dirty_cards;
+  gc_tc_mutex_acquire();
+  ndc = S_G.new_dirty_cards;
   if (ndc != NULL && ndc->card == card) {
     if (to_g < ndc->youngest) ndc->youngest = to_g;
   } else {
@@ -369,6 +371,7 @@ void S_record_new_dirty_card(ptr tc, ptr *ppp, IGEN to_g) {
     ndc->next = next;
     S_G.new_dirty_cards = ndc;
   }
+  gc_tc_mutex_release();
 }
 
 FORCEINLINE void mark_segment_dirty(seginfo *si, IGEN from_g, IGEN to_g) {
