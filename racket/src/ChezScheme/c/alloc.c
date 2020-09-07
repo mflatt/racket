@@ -251,7 +251,7 @@ static void more_room_done(IGEN g)
 ptr S_find_more_room(s, g, n, old) ISPC s; IGEN g; iptr n; ptr old; {
   ptr new;
   iptr new_bytes;
-  
+
   close_off_segment(old, S_G.base_loc[g][s], S_G.sweep_loc[g][s], s, g);
 
   new = more_room_segment(s, g, n, &new_bytes);
@@ -276,7 +276,7 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   iptr new_bytes;
 
   if (S_use_gc_tc_mutex) {
-    gc_tc_mutex_acquire()
+    gc_tc_mutex_acquire();
   } else {
     tc_mutex_acquire()
   }
@@ -294,7 +294,7 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   more_room_done(g);
 
   if (S_use_gc_tc_mutex) {
-    gc_tc_mutex_release()
+    gc_tc_mutex_release();
   } else {
     tc_mutex_release()
   }
@@ -349,7 +349,7 @@ void S_reset_allocation_pointer(tc) ptr tc; {
   S_pants_down -= 1;
 }
 
-void S_record_new_dirty_card(ptr *ppp, IGEN to_g) {
+void S_record_new_dirty_card(ptr tc, ptr *ppp, IGEN to_g) {
   uptr card = (uptr)TO_PTR(ppp) >> card_offset_bits;
 
   dirtycardinfo *ndc = S_G.new_dirty_cards;
@@ -357,7 +357,7 @@ void S_record_new_dirty_card(ptr *ppp, IGEN to_g) {
     if (to_g < ndc->youngest) ndc->youngest = to_g;
   } else {
     dirtycardinfo *next = ndc;
-    find_room_voidp(space_new, 0, ptr_align(sizeof(dirtycardinfo)), ndc);
+    thread_find_room_g_voidp(tc, space_new, 0, ptr_align(sizeof(dirtycardinfo)), ndc);
     ndc->card = card;
     ndc->youngest = to_g;
     ndc->next = next;
@@ -393,7 +393,7 @@ void S_dirty_set(ptr *loc, ptr x) {
       if (!IMMEDIATE(x)) {
         seginfo *t_si = SegInfo(ptr_get_segment(x));
         if (t_si->generation < si->generation)
-          S_record_new_dirty_card(loc, t_si->generation);
+          S_record_new_dirty_card(get_thread_context(), loc, t_si->generation);
       }
     } else {
       IGEN from_g = si->generation;

@@ -36,6 +36,8 @@ void S_thread_init() {
     s_thread_cond_init(&S_collect_thread0_cond);
     S_tc_mutex_depth = 0;
     s_thread_mutex_init(&S_gc_tc_mutex.pmutex);
+    S_tc_mutex.owner = 0;
+    S_tc_mutex.count = 0;
     S_use_gc_tc_mutex = 0;
 #endif /* PTHREADS */
   }
@@ -451,6 +453,7 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
   long nsec;
   INT status;
   IBOOL is_collect;
+  iptr collect_index = 0;
 
   if ((count = m->count) == 0 || !s_thread_equal(m->owner, self))
     S_error1("condition-wait", "thread does not own mutex ~s", m);
@@ -471,10 +474,18 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
 
   is_collect = (c == &S_collect_cond || c == &S_collect_thread0_cond);
 
+  if (is_collect) {
+    /* Remember the index where we record this tc, because a thread
+       might temporarily wait for collection, but then get woken
+       up (e.g., to make the main thread drive the collection) before
+       a collection actually happens. In that case, we may track fewer
+       tcs than possible, but it should be close enough on average. */
+    collect_index = S_collect_waiting_threads++;
+    if (collect_index < maximum_parallel_collect_threads)
+      S_collect_waiting_tcs[collect_index] = tc;
+  }
+
   if (is_collect || DISABLECOUNT(tc) == 0) {
-    if (S_collect_waiting_threads < maximum_parallel_collect_threads)
-      S_collect_waiting_tcs[S_collect_waiting_threads] = tc;
-    S_collect_waiting_threads++;
     deactivate_thread_signal_collect(tc, !is_collect)
   }
 
@@ -486,7 +497,12 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
 
   if (is_collect || DISABLECOUNT(tc) == 0) {
     reactivate_thread(tc)
-      --S_collect_waiting_threads;
+  }
+
+  if (is_collect) {
+    --S_collect_waiting_threads;
+    if (collect_index < maximum_parallel_collect_threads)
+      S_collect_waiting_tcs[collect_index] = (ptr)0;
   }
 
   if (status == 0) {

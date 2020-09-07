@@ -66,7 +66,7 @@ extern void S_reset_allocation_pointer PROTO((ptr tc));
 extern ptr S_compute_bytes_allocated PROTO((ptr xg, ptr xs));
 extern ptr S_bytes_finalized PROTO(());
 extern ptr S_find_more_room PROTO((ISPC s, IGEN g, iptr n, ptr old));
-extern void S_record_new_dirty_card PROTO((ptr *ppp, IGEN to_g));
+extern void S_record_new_dirty_card PROTO((ptr tc, ptr *ppp, IGEN to_g));
 extern ptr S_find_more_thread_room PROTO((ptr tc, IGEN g, ISPC s, iptr n, ptr old));
 extern void S_close_off_thread_local_segment PROTO((ptr tc, ISPC s, IGEN g));
 extern void S_dirty_set PROTO((ptr *loc, ptr x));

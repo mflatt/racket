@@ -961,7 +961,6 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
   Slock_object(code);
 
  /* Scheme side grabs mutex before calling S_do_gc */
-  S_use_gc_tc_mutex = 1;
   S_pants_down += 1;
 
   if (S_G.new_max_nonstatic_generation > S_G.max_nonstatic_generation) {
@@ -1083,7 +1082,6 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
   S_reset_allocation_pointer(tc);
 
   S_pants_down -= 1;
-  S_use_gc_tc_mutex = 0;
 
   Sunlock_object(code);
 

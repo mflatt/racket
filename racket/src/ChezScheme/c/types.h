@@ -417,8 +417,8 @@ typedef struct {
   S_tc_mutex_depth -= 1;\
   S_mutex_release(&S_tc_mutex);\
 }
-#define gc_tc_mutex_acquire() S_mutex_acquire(&S_gc_tc_mutex);
-#define gc_tc_mutex_release() S_mutex_release(&S_gc_tc_mutex);
+#define gc_tc_mutex_acquire() S_mutex_acquire(&S_gc_tc_mutex)
+#define gc_tc_mutex_release() S_mutex_release(&S_gc_tc_mutex)
 #define S_cas_store_release_voidp(a, old, new) __sync_bool_compare_and_swap(a, old, new)
 #define S_cas_load_acquire_voidp(a, old, new) __sync_bool_compare_and_swap(a, old, new)
 #else
@@ -427,8 +427,8 @@ typedef struct {
 #define reactivate_thread(tc) {}
 #define tc_mutex_acquire() {}
 #define tc_mutex_release() {}
-#define gc_tc_mutex_acquire() {}
-#define gc_tc_mutex_release() {}
+#define gc_tc_mutex_acquire() do {} while (0)
+#define gc_tc_mutex_release() do {} while (0)
 #define S_cas_store_release_voidp(a, old, new) (*(a) = new, 1)
 #define S_cas_load_acquire_voidp(a, old, new) (*(a) = new, 1)
 #endif

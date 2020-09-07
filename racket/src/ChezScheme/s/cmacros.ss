@@ -1579,6 +1579,7 @@
    [xptr next-loc (constant num-thread-local-allocation-segments)]
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
+   [iptr sweep-change]
    [xptr lock-status]))
 
 (define tc-field-list

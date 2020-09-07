@@ -741,7 +741,9 @@
     ;; determine if key is old, since keyval might or might not have been
     ;; swept already. NB: assuming keyvals are always pairs.
     (when (&& (!= next Sfalse) (OLDSPACE keyval))
-      (set! tlcs_to_rehash (S_cons_in space_new 0 _copy_ tlcs_to_rehash)))]
+      (GC_TC_MUTEX_ACQUIRE)
+      (set! tlcs_to_rehash (S_cons_in space_new 0 _copy_ tlcs_to_rehash))
+      (GC_TC_MUTEX_RELEASE))]
    [else
     (trace-nonself tlc-keyval)
     (trace-nonself tlc-next)]))
@@ -1390,12 +1392,13 @@
          [(copy)
           (code-block
            "ENABLE_LOCK_ACQUIRE"
-           "change = 1;"
+           "SWEEPCHANGE(tc_in) = 1;"
            "check_triggers(si);"
            (code-block
             "ptr new_p;"
             "IGEN tg = TARGET_GENERATION(si);"
             (body)
+            "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
             "FWDMARKER(p) = forward_marker;"
             "FWDADDRESS(p) = new_p;"
             (and (lookup 'maybe-backreferences? config #f)
@@ -1405,7 +1408,7 @@
          [(mark)
           (code-block
            "ENABLE_LOCK_ACQUIRE"
-           "change = 1;"
+           "SWEEPCHANGE(tc_in) = 1;"
            "check_triggers(si);"
            (ensure-segment-mark-mask "si" "" '())
            (body)

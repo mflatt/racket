@@ -233,7 +233,6 @@ static void check_pending_measure_ephemerons(ptr tc_in);
 /* #define DEBUG */
 
 /* initialized and used each gc cycle.  any others should be defined in globals.h */
-static IBOOL change;
 static ptr tlcs_to_rehash;
 static ptr conts_to_promote;
 static ptr recheck_guardians_ls;
@@ -322,7 +321,7 @@ static ptr sweep_from;
       S_store_release();                                        \
       si->lock = (ptr)0;                                        \
     }                                                           \
-  } while (0);
+  } while (0)
 # define RECORD_LOCK_FAILED(tc) LOCKSTATUS(tc) = Sfalse
 # define CLEAR_LOCK_FAILED(tc) LOCKSTATUS(tc) = Strue
 # define CHECK_LOCK_FAILED(tc) (LOCKSTATUS(tc) == Sfalse)
@@ -338,8 +337,8 @@ static void parallel_sweep_generation(ptr tc);
 # define CLEAR_LOCK_FAILED(tc) do { } while (0)
 # define CHECK_LOCK_FAILED(tc) 0
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) (*(a) = new, 1)
-# define GC_TC_MUTEX_ACQUIRE() /* empty */
-# define GC_TC_MUTEX_RELEASE() /* empty */
+# define GC_TC_MUTEX_ACQUIRE() do { } while (0)
+# define GC_TC_MUTEX_RELEASE() do { } while (0)
 # define parallel_sweep_generation(tc) sweep_generation(tc)
 #endif
   
@@ -497,10 +496,10 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       if (FORWARDEDP(pp, si)) {                                         \
         *ppp = GET_FWDADDRESS(pp);                                      \
         __to_g = TARGET_GENERATION(si);                                 \
-        if (__to_g < from_g) S_record_new_dirty_card(ppp, __to_g);      \
+        if (__to_g < from_g) S_record_new_dirty_card(tc_in, ppp, __to_g); \
       } else if (!new_marked(si, pp)) {                                 \
         mark_or_copy_impure(__to_g, ppp, pp, from_g, si);               \
-        if (__to_g < from_g) S_record_new_dirty_card(ppp, __to_g);      \
+        if (__to_g < from_g) S_record_new_dirty_card(tc_in, ppp, __to_g); \
       }                                                                 \
       SEGMENT_LOCK_RELEASE(si);                                         \
     } else                                                              \
@@ -1569,10 +1568,10 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
 
 #define save_resweep(s, si) do {                  \
     if (s == space_weakpair) {                    \
-      GC_TC_MUTEX_ACQUIRE()                       \
+      GC_TC_MUTEX_ACQUIRE();                      \
       si->sweep_next = resweep_weak_segments;     \
       resweep_weak_segments = si;                 \
-      GC_TC_MUTEX_RELEASE()                       \
+      GC_TC_MUTEX_RELEASE();                      \
     }                                             \
   } while (0)
 
@@ -1674,13 +1673,13 @@ static void forward_or_bwp(pp, p) ptr *pp; ptr p; {
   }
 }
 
-static void sweep_generation(ptr tc_in) {
+static void sweep_generation_pass(ptr tc_in) {
   ENABLE_LOCK_ACQUIRE
   ptr *slp, *nlp; ptr *pp, p, *nl, *sl; IGEN from_g;
   seginfo *si;
   
   do {
-    change = 0;
+    SWEEPCHANGE(tc_in) = 0;
 
     sweep_from_stack(tc_in);
 
@@ -1769,14 +1768,19 @@ static void sweep_generation(ptr tc_in) {
 
     /* don't sweep from space_count_pure or space_count_impure */
     }
+  } while (SWEEPCHANGE(tc_in));
+}
 
+static void sweep_generation(ptr tc_in) {
+  do {
+    sweep_generation_pass(tc_in);
+  
     /* Waiting until sweeping doesn't trigger a change reduces the
        chance that an ephemeron must be reigistered as a
        segment-specific trigger or gets triggered for recheck, but
        it doesn't change the worst-case complexity. */
-    if (!change)
-      check_pending_ephemerons(tc_in);
-  } while (change);
+    check_pending_ephemerons(tc_in);
+  } while (SWEEPCHANGE(tc_in));
 }
 
 void enlarge_sweep_stack(ptr tc_in) {
@@ -1794,7 +1798,7 @@ void enlarge_sweep_stack(ptr tc_in) {
 
 void sweep_from_stack(ptr tc_in) {
   if (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
-    change = 1;
+    SWEEPCHANGE(tc_in) = 1;
   
     while (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
       ptr p;
@@ -1804,7 +1808,10 @@ void sweep_from_stack(ptr tc_in) {
       /* Room for improvement: `si->generation` is needed only 
          for objects that have impure fields */
       si = SegInfo(ptr_get_segment(p));
-      sweep(tc_in, p, si->generation);
+      do {
+        CLEAR_LOCK_FAILED(tc_in);
+        sweep(tc_in, p, si->generation);
+      } while (CHECK_LOCK_FAILED(tc_in));
     }
   }
 }
@@ -2298,16 +2305,16 @@ static void add_ephemeron_to_pending(ptr pe) {
      of times that we have to trigger re-checking, especially since
      check_pending_pehemerons() is run only after all other sweep
      opportunities are exhausted. */
-  GC_TC_MUTEX_ACQUIRE()
+  GC_TC_MUTEX_ACQUIRE();
   if (EPHEMERONPREVREF(pe)) ephemeron_remove(pe);
   ephemeron_add(&pending_ephemerons, pe);
-  GC_TC_MUTEX_RELEASE()
+  GC_TC_MUTEX_RELEASE();
 }
 
 static void add_trigger_ephemerons_to_pending(ptr pe) {
-  GC_TC_MUTEX_ACQUIRE()
+  GC_TC_MUTEX_ACQUIRE();
   ephemeron_add(&pending_ephemerons, pe);
-  GC_TC_MUTEX_RELEASE()
+  GC_TC_MUTEX_RELEASE();
 }
 
 static void check_ephemeron(ptr tc_in, ptr pe) {
@@ -2319,43 +2326,48 @@ static void check_ephemeron(ptr tc_in, ptr pe) {
 
   EPHEMERONNEXT(pe) = 0;
   EPHEMERONPREVREF(pe) = 0;
-
+  
   from_g = GENERATION(pe);
-
+  
   p = Scar(pe);
   if (!IMMEDIATE(p) && (si = MaybeSegInfo(ptr_get_segment(p))) != NULL && si->old_space) {
-    if (new_marked(si, p)) {
+    if (SEGMENT_LOCK_ACQUIRE(si)) {
+      {
+        ENABLE_LOCK_ACQUIRE /* nested acquires here */
+        if (new_marked(si, p)) {
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
-      IGEN tg = TARGET_GENERATION(si);
-      if (tg < from_g) S_record_new_dirty_card(&INITCAR(pe), tg);
+          IGEN tg = TARGET_GENERATION(si);
+          if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
-      relocate_impure(&INITCDR(pe), from_g);
-    } else if (FORWARDEDP(p, si)) {
+          relocate_impure(&INITCDR(pe), from_g);
+        } else if (FORWARDEDP(p, si)) {
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
-      IGEN tg = TARGET_GENERATION(si);
-      if (tg < from_g) S_record_new_dirty_card(&INITCAR(pe), tg);
+          IGEN tg = TARGET_GENERATION(si);
+          if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
-      INITCAR(pe) = FWDADDRESS(p);
-      relocate_impure(&INITCDR(pe), from_g);
-    } else {
-      /* Not reached, so far; install as trigger */
-      ephemeron_add(&si->trigger_ephemerons, pe);
-      si->has_triggers = 1;
+          INITCAR(pe) = FWDADDRESS(p);
+          relocate_impure(&INITCDR(pe), from_g);
+        } else {
+          /* Not reached, so far; install as trigger */
+          ephemeron_add(&si->trigger_ephemerons, pe);
+          si->has_triggers = 1;
+        }
+      }
+      SEGMENT_LOCK_RELEASE(si);
     }
   } else {
     relocate_impure(&INITCDR(pe), from_g);
   }
-
+  
   POP_BACKREFERENCE();
 }
 
+/* non-parallel: */
 static void check_pending_ephemerons(ptr tc_in) {
   ptr pe, next_pe;
 
-  GC_TC_MUTEX_ACQUIRE()
   pe = pending_ephemerons;
   pending_ephemerons = 0;
-  GC_TC_MUTEX_RELEASE()
 
   while (pe != 0) {
     next_pe = EPHEMERONNEXT(pe);
@@ -2571,7 +2583,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     s_thread_mutex_unlock(&sweep_mutex);
     
     s_thread_setspecific(S_tc_key, data->sweep_tc);
-    sweep_generation(data->sweep_tc);
+    sweep_generation_pass(data->sweep_tc);
 
     /* ensure terminators on any segment where sweeper may have allocated: */
     {
@@ -2592,55 +2604,69 @@ static s_thread_rv_t start_sweeper(void *_data) {
 }
 
 static void parallel_sweep_generation(ptr tc) {
-  int i, n = S_collect_waiting_threads;
+  int i, n;
 
   if (!sweep_mutex_initialized) {
     s_thread_mutex_init(&sweep_mutex);
     sweep_mutex_initialized = 1;
   }
 
-  if (n > maximum_parallel_collect_threads)
-    n = maximum_parallel_collect_threads;
+  S_use_gc_tc_mutex = 1;
 
-  /* start sweeping threads, as needed, and tell each a tc to use for sweeping: */
-  for (i = 0; i < n; i++) {
-    if (sweepers[i].status == SWEEPER_NONE) {
-      int status;
+  /* start sweeping threads as needed, and assign a tc for each */
+  for (n = 0, i = 0; (n < maximum_parallel_collect_threads) && (i < S_collect_waiting_threads); i++) {
+    if (S_collect_waiting_tcs[i] != (ptr)0) {
+      if (sweepers[n].status == SWEEPER_NONE) {
+        int status;
 
-      sweepers[i].status = SWEEPER_READY;
-      s_thread_cond_init(&sweepers[i].sweep_cond);
-      s_thread_cond_init(&sweepers[i].done_cond);
+        sweepers[n].status = SWEEPER_READY;
+        s_thread_cond_init(&sweepers[n].sweep_cond);
+        s_thread_cond_init(&sweepers[n].done_cond);
         
-      if ((status = s_thread_create(start_sweeper, &sweepers[i])) != 0) {
-        /* eror creating a thread; just go with as many as we have */
-        sweepers[i].status = SWEEPER_NONE;
-        s_thread_cond_destroy(&sweepers[i].sweep_cond);
-        s_thread_cond_destroy(&sweepers[i].done_cond);
-        n = i;
-        break;
+        if ((status = s_thread_create(start_sweeper, &sweepers[n])) != 0) {
+          /* eror creating a thread; just go with as many as we have */
+          sweepers[n].status = SWEEPER_NONE;
+          s_thread_cond_destroy(&sweepers[n].sweep_cond);
+          s_thread_cond_destroy(&sweepers[n].done_cond);
+          n = i;
+          break;
+        }
       }
-    }
 
-    s_thread_mutex_lock(&sweep_mutex);
-    sweepers[i].status = SWEEPER_SWEEPING;
-    sweepers[i].sweep_tc = S_collect_waiting_tcs[i];
-    s_thread_cond_signal(&sweepers[i].sweep_cond);
-    s_thread_mutex_unlock(&sweep_mutex);
+      sweepers[n].sweep_tc = S_collect_waiting_tcs[i];
+      n++;
+    }
   }
 
   fprintf(stderr, "GCing %d\n", n);
 
-  /* sweep in the main thread */
-  sweep_generation(tc);
-
-  /* wait for other sweepers */
-  s_thread_mutex_lock(&sweep_mutex);
-  for (i = 0; i < n; i++) {
-    while (sweepers[i].status != SWEEPER_READY) {
-      s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
+  while (1) {
+    /* start other sweepers */
+    s_thread_mutex_lock(&sweep_mutex);
+    for (i = 0; i < n; i++) {
+      sweepers[i].status = SWEEPER_SWEEPING;
+      s_thread_cond_signal(&sweepers[i].sweep_cond);
     }
+    s_thread_mutex_unlock(&sweep_mutex);
+    
+    /* sweep in the main thread */
+    sweep_generation_pass(tc);
+    
+    /* wait for other sweepers */
+    s_thread_mutex_lock(&sweep_mutex);
+    for (i = 0; i < n; i++) {
+      while (sweepers[i].status != SWEEPER_READY) {
+        s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
+      }
+    }
+    s_thread_mutex_unlock(&sweep_mutex);
+
+    check_pending_ephemerons(tc);
+    if (!SWEEPCHANGE(tc))
+      break;
   }
-  s_thread_mutex_unlock(&sweep_mutex);
+
+  S_use_gc_tc_mutex = 0;
 }
 
 #endif
