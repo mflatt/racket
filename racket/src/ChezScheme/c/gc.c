@@ -128,7 +128,8 @@
 
     * There are no attempts to take tc_mutex suring sweeping. To the
       degree that locking is needed (e.g., to allocate new segments),
-      `S_use_gc_tc_mutex` redirects to gc_tc_mutex.
+      `S_use_gc_tc_mutex` redirects to gc_tc_mutex. No other locks
+      can be taken while that one is held.
 
     * Allocation must always be thread-local. Global allocation is not
       allowed, not only because it would require locking, but because
@@ -145,10 +146,17 @@
       retryable as the level of the object or segment sweep. For a
       segment sweep, objects may end up being swept multiple times.
 
+    * Lock acquisition must be failable everywhere, with one
+      exception: when an object spans multiple segments, then `mark`
+      may need to set mark bits on multiple segments. In that case, it
+      can wait on locks for the extra pages, because there's an order
+      of the lock taking: the first segment's lock followed by each
+      later segment.
+
     * A segment in the terget generation is exposes to the pool of
       collecting threads only after a copy to the target segment is
       complete. That's implemented by moving segments first to a
-      thread-specific sweep list, and then moving to the globbal list
+      thread-specific sweep list, and then moving to the global list
       at the end of a full sweep iteration.
 
     * A segment to sweep is taken through a kind of lock, but one
@@ -331,9 +339,11 @@ static ptr sweep_from;
       si->lock = (ptr)0;                                        \
     }                                                           \
   } while (0)
-# define RECORD_LOCK_FAILED(tc) LOCKSTATUS(tc) = Sfalse
+# define SEGMENT_LOCK_MUST_ACQUIRE(si) do { } while (!SEGMENT_LOCK_ACQUIRE(si))
+# define RECORD_LOCK_FAILED(tc, si) LOCKSTATUS(tc) = Sfalse
 # define CLEAR_LOCK_FAILED(tc) LOCKSTATUS(tc) = Strue
 # define CHECK_LOCK_FAILED(tc) (LOCKSTATUS(tc) == Sfalse)
+# define RECORD_LOCK_SUCCESS(tc) do {} while (0)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) S_cas_load_acquire_ptr(a, old, new)
 # define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire() 
 # define GC_TC_MUTEX_RELEASE() gc_tc_mutex_release()
@@ -358,10 +368,12 @@ static int num_sweepers;
 #else
 # define ENABLE_LOCK_ACQUIRE /* empty */
 # define SEGMENT_LOCK_ACQUIRE(si) 1
+# define SEGMENT_LOCK_MUST_ACQUIRE(si) do { } while (0)
 # define SEGMENT_LOCK_RELEASE(si) do { } while (0)
-# define RECORD_LOCK_FAILED(tc) do { } while (0)
+# define RECORD_LOCK_FAILED(tc, si) do { } while (0)
 # define CLEAR_LOCK_FAILED(tc) do { } while (0)
 # define CHECK_LOCK_FAILED(tc) 0
+# define RECORD_LOCK_SUCCESS(tc) do {} while (0)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) (*(a) = new, 1)
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
 # define GC_TC_MUTEX_RELEASE() do { } while (0)
@@ -478,7 +490,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
         mark_or_copy_pure(ppp, pp, si);              \
       SEGMENT_LOCK_RELEASE(si);                      \
     } else                                           \
-      RECORD_LOCK_FAILED(tc_in);                     \
+      RECORD_LOCK_FAILED(tc_in, si);                 \
   } while (0)
 
 #define relocate_code(pp, si) do {              \
@@ -491,7 +503,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       } ELSE_MEASURE_NONOLDSPACE(pp)            \
       SEGMENT_LOCK_RELEASE(si);                 \
     } else                                      \
-      RECORD_LOCK_FAILED(tc_in);                \
+      RECORD_LOCK_FAILED(tc_in, si);            \
   } while (0)
 
 #define mark_or_copy_pure(dest, p, si) do {   \
@@ -546,7 +558,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       }                                                                 \
       SEGMENT_LOCK_RELEASE(si);                                         \
     } else                                                              \
-      RECORD_LOCK_FAILED(tc_in);                                        \
+      RECORD_LOCK_FAILED(tc_in, si);                                    \
   } while (0)
 
 #define mark_or_copy_impure(to_g, dest, p, from_g, si) do {      \
@@ -1626,6 +1638,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           body                                                    \
         }                                                         \
       } while (CHECK_LOCK_FAILED(tc_in));                         \
+      RECORD_LOCK_SUCCESS(tc_in);                                 \
     }                                                             \
   }
 
@@ -1639,6 +1652,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           while ((p = *pp) != forward_marker)                           \
             body                                                        \
         } while (CHECK_LOCK_FAILED(tc_in));                             \
+        RECORD_LOCK_SUCCESS(tc_in);                                     \
       }                                                                 \
     }                                                                   \
     if (can_sweep_global) {                                             \
@@ -1754,7 +1768,7 @@ static void sweep_generation_pass(ptr tc_in, IBOOL can_sweep_global) {
   ENABLE_LOCK_ACQUIRE
   ptr *slp, *nlp; ptr *pp, p, *nl, *sl; IGEN from_g;
   seginfo *si;
-  
+
   do {
     SWEEPCHANGE(tc_in) = 0;
 
@@ -1891,6 +1905,7 @@ void sweep_from_stack(ptr tc_in) {
         CLEAR_LOCK_FAILED(tc_in);
         sweep(tc_in, p, si->generation);
       } while (CHECK_LOCK_FAILED(tc_in));
+      RECORD_LOCK_SUCCESS(tc_in);
     }
   }
 }

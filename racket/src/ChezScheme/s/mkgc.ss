@@ -2192,7 +2192,7 @@
            [no-sweep? (or (memq 'no-sweep flags)
                           (eq? known-space 'space-data))]
            [within-loop-statement
-            (lambda (decl si step count?)
+            (lambda (decl si step count? final)
               (code-block
                "uptr offset = 0;"
                "while (offset < p_sz) {"
@@ -2201,6 +2201,7 @@
                (format "  ~a->marked_mask[segment_bitmap_byte(mark_p)] |= segment_bitmap_bit(mark_p);" si)
                (and count? (format "  ~a->marked_count += ~a;" si step))
                (format "  offset += ~a;" step)
+               final
                "}"))]
            [type (let ([t (lookup 'basetype config)])
                    (if (eq? t 'typemod)
@@ -2230,18 +2231,27 @@
                "  seginfo *mark_si; IGEN g;"
                "  si->marked_count += ((uptr)build_ptr(seg+1,0)) - addr;"
                "  seg++;"
+               "  /* Note: taking a sequence of locks for a span of segments */"
                "  while (seg < end_seg) {"
+               "    ENABLE_LOCK_ACQUIRE"
                "    mark_si = SegInfo(seg);"
+               "    SEGMENT_LOCK_MUST_ACQUIRE(mark_si);"
                "    g = mark_si->generation;"
                "    if (!fully_marked_mask[g]) init_fully_marked_mask(tc_in, g);"
                "    mark_si->marked_mask = fully_marked_mask[g];"
                "    mark_si->marked_count = bytes_per_segment;"
+               "    SEGMENT_LOCK_RELEASE(mark_si);"
                "    seg++;"
                "  }"
                "  mark_si = SegInfo(end_seg);"
-               (ensure-segment-mark-mask "mark_si" "  " '())
+               "  {"
+               "    ENABLE_LOCK_ACQUIRE"
+               "    SEGMENT_LOCK_MUST_ACQUIRE(mark_si);"
+               (ensure-segment-mark-mask "mark_si" "    " '())
                "    /* no need to set a bit: just make sure `marked_mask` is non-NULL */"
-               "  mark_si->marked_count += addr + p_sz - (uptr)build_ptr(end_seg,0);"
+               "    mark_si->marked_count += addr + p_sz - (uptr)build_ptr(end_seg,0);"
+               "    SEGMENT_LOCK_RELEASE(mark_si);"
+               "  }"
                "}")]))]
          [within-segment?
           (code
@@ -2260,7 +2270,7 @@
                          "mark_p = (ptr)((uptr)mark_p + byte_alignment);"
                          (loop sz)))))))]
              [else
-              (within-loop-statement #f "si" "byte_alignment" #f)]))]
+              (within-loop-statement #f "si" "byte_alignment" #f #f)]))]
          [else
           (let ([step "byte_alignment"])
             (code-block
@@ -2268,14 +2278,17 @@
              "if (addr_get_segment(addr) == addr_get_segment(addr + p_sz - 1))"
              (code-block
               "si->marked_count += p_sz;"
-              (within-loop-statement #f "si" step #f))
+              (within-loop-statement #f "si" step #f #f))
              "else"
              (within-loop-statement (code
                                      "  seginfo *mark_si = SegInfo(ptr_get_segment(mark_p));"
+                                     "  ENABLE_LOCK_ACQUIRE"
+                                     "  SEGMENT_LOCK_MUST_ACQUIRE(mark_si);"
                                      (ensure-segment-mark-mask "mark_si" "  " '()))
                                     "mark_si"
                                     step
-                                    #t)))])
+                                    #t
+                                    "  SEGMENT_LOCK_RELEASE(mark_si);")))])
        (cond
          [no-sweep? #f]
          [else
