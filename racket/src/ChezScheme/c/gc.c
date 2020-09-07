@@ -126,7 +126,7 @@
    Parallel mode runs `sweep_generation` concurrently in multiple
    threads. It relies on a number of invariants:
 
-    * There ae no attempts to take tc_mutex suring sweeping. To the
+    * There are no attempts to take tc_mutex suring sweeping. To the
       degree that locking is needed (e.g., to allocate new segments),
       `S_use_gc_tc_mutex` redirects to gc_tc_mutex.
 
@@ -137,8 +137,7 @@
       object pointers that way.
 
     * To copy from or mark on a segment, a segment-specific lock must
-      be taken. The lock is re-entrant, but a thread can only hold up
-      to `thread_lock_stack_depth` lock entries.
+      be taken. The lock is re-entrant.
 
       The lock must be taken before checking anything about objects on
       the page, including whether the object starts with a forwarding
@@ -146,9 +145,15 @@
       retryable as the level of the object or segment sweep. For a
       segment sweep, objects may end up being swept multiple times.
 
-    * A segment to sweep is similarly taken through a kind of lock,
-      but one based on a CAS. On processors with a weak memory model,
-      a segment is added to the sweep list from a thread-local space
+    * A segment in the terget generation is exposes to the pool of
+      collecting threads only after a copy to the target segment is
+      complete. That's implemented by moving segments first to a
+      thread-specific sweep list, and then moving to the globbal list
+      at the end of a full sweep iteration.
+
+    * A segment to sweep is taken through a kind of lock, but one
+      based on a CAS. On processors with a weak memory model, a
+      segment is added to the sweep list from a thread-local space
       with a store-release CAS, and one is taken to sweep through a
       load-acquire CAS.
 
@@ -159,6 +164,9 @@
       fence associated with taking a segment lock doubles to ensure
       that a write has exposed the object, and the load-acquire CAS
       for a segment to sweep similarly implies a fence.
+
+   Currently, counting and backreference modes do not support
+   parallelism.
 
 */
 
@@ -311,6 +319,7 @@ static ptr sweep_from;
 #endif
 
 #ifdef ENABLE_PARALLEL
+
 # define ENABLE_LOCK_ACQUIRE int old_lock_state;
 # define SEGMENT_LOCK_ACQUIRE(si)                                      \
   ((si->lock == tc_in)                                                 \
@@ -328,7 +337,24 @@ static ptr sweep_from;
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) S_cas_load_acquire_ptr(a, old, new)
 # define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire() 
 # define GC_TC_MUTEX_RELEASE() gc_tc_mutex_release()
+
+static void gather_active_sweepers();
 static void parallel_sweep_generation(ptr tc);
+
+#define SWEEPER_NONE     0
+#define SWEEPER_READY    1
+#define SWEEPER_SWEEPING 2
+
+typedef struct {
+  int status;
+  s_thread_cond_t sweep_cond;
+  s_thread_cond_t done_cond;
+  ptr sweep_tc;
+} gc_thread_data;
+
+static gc_thread_data sweepers[maximum_parallel_collect_threads];
+static int num_sweepers;
+
 #else
 # define ENABLE_LOCK_ACQUIRE /* empty */
 # define SEGMENT_LOCK_ACQUIRE(si) 1
@@ -339,6 +365,7 @@ static void parallel_sweep_generation(ptr tc);
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) (*(a) = new, 1)
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
 # define GC_TC_MUTEX_RELEASE() do { } while (0)
+# define gather_active_sweepers() do { } while (0)
 # define parallel_sweep_generation(tc) sweep_generation(tc)
 #endif
   
@@ -387,7 +414,11 @@ uptr list_length(ptr ls) {
 #endif
 
 static void init_fully_marked_mask(ptr tc_in, IGEN g) {
-  init_mask(tc_in, fully_marked_mask[g], g, 0xFF);
+  GC_TC_MUTEX_ACQUIRE();
+  if (!fully_marked_mask[g]) {
+    init_mask(tc_in, fully_marked_mask[g], g, 0xFF);
+  }
+  GC_TC_MUTEX_RELEASE();
 }
 
 #ifdef PRESERVE_FLONUM_EQ
@@ -450,13 +481,16 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       RECORD_LOCK_FAILED(tc_in);                     \
   } while (0)
 
-#define relocate_code(pp, si) do {            \
-    if (FWDMARKER(pp) == forward_marker)      \
-      pp = GET_FWDADDRESS(pp);                \
-    else if (si->old_space) {                 \
-      if (!new_marked(si, pp))                \
-        mark_or_copy_pure(&pp, pp, si);       \
-    } ELSE_MEASURE_NONOLDSPACE(pp)            \
+#define relocate_code(pp, si) do {              \
+    if (SEGMENT_LOCK_ACQUIRE(si)) {             \
+      if (FWDMARKER(pp) == forward_marker)      \
+        pp = GET_FWDADDRESS(pp);                \
+      else if (si->old_space) {                 \
+        if (!new_marked(si, pp))                \
+          mark_or_copy_pure(&pp, pp, si);       \
+      } ELSE_MEASURE_NONOLDSPACE(pp)            \
+    } else                                      \
+      RECORD_LOCK_FAILED(tc_in);                \
   } while (0)
 
 #define mark_or_copy_pure(dest, p, si) do {   \
@@ -724,6 +758,9 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     S_G.new_dirty_cards = NULL;
 #endif /* !NO_DIRTY_NEWSPACE_POINTERS */
     S_G.must_mark_gen0 = 0;
+
+    /* map `tc`s of rendezvous threads to sweeping threads */
+    gather_active_sweepers();
 
     for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
       ptr t_tc = (ptr)THREADTC(Scar(ls));
@@ -1601,9 +1638,11 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
         } while (CHECK_LOCK_FAILED(tc_in));                             \
       }                                                                 \
     }                                                                   \
-    slp = &S_G.sweep_loc[from_g][s];                                    \
-    nlp = &S_G.next_loc[from_g][s];                                     \
-    sweep_space_range(s, from_g, body)                                  \
+    if (can_sweep_global) {                                             \
+      slp = &S_G.sweep_loc[from_g][s];                                  \
+      nlp = &S_G.next_loc[from_g][s];                                   \
+      sweep_space_range(s, from_g, body)                                \
+    }                                                                   \
     slp = &SWEEPLOC_AT(tc_in, s, from_g);                               \
     nlp = &NEXTLOC_AT(tc_in, s, from_g);                                \
     sweep_space_range(s, from_g, body)                                  \
@@ -1613,7 +1652,8 @@ static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
     IGEN from_g;
     ptr *slp, *nlp; ptr *pp, p, *nl, *sl;
     seginfo *si;
-
+    IBOOL can_sweep_global = 1;
+  
     for (from_g = MIN_TG; from_g <= MAX_TG; from_g += 1) {
       /* By starting from `base_loc`, we may needlessly sweep pairs in `MAX_TG`
          that were allocated before the GC, but that's ok. */
@@ -1624,6 +1664,24 @@ static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
           forward_or_bwp(pp, p);
           pp += 2;
       })
+
+#ifdef ENABLE_PARALLEL
+      /* For each sweeper thread, we need to similarly sweep from it's thread-local
+         regions that are not closed off. */
+      { 
+        int i;
+        for (i = 0; i < num_sweepers; i++) {
+          ptr tc = sweepers[i].sweep_tc;
+          SWEEPLOC_AT(tc, space_weakpair, from_g) = BASELOC_AT(tc, space_weakpair, from_g);
+          slp = &SWEEPLOC_AT(tc, space_weakpair, from_g);
+          nlp = &NEXTLOC_AT(tc, space_weakpair, from_g);
+          sweep_space_range(space_weakpair, from_g, {
+            forward_or_bwp(pp, p);
+            pp += 2;
+          })          
+        }
+      }
+#endif
     }
 
    for (si = resweep_weak_segments; si != NULL; si = si->sweep_next) {
@@ -1673,7 +1731,23 @@ static void forward_or_bwp(pp, p) ptr *pp; ptr p; {
   }
 }
 
-static void sweep_generation_pass(ptr tc_in) {
+static void transfer_sweep_next(ptr tc_in) {
+  seginfo *si;
+  ISPC s; IGEN g;
+
+  while ((si = TO_VOIDP(SWEEPNEXT(tc_in)))) {
+    SWEEPNEXT(tc_in) = TO_PTR(si->sweep_next);
+
+    s = si->space;
+    g = si->generation;
+  
+    do {
+      si->sweep_next = S_G.to_sweep[g][s];
+    } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+  }
+}
+
+static void sweep_generation_pass(ptr tc_in, IBOOL can_sweep_global) {
   ENABLE_LOCK_ACQUIRE
   ptr *slp, *nlp; ptr *pp, p, *nl, *sl; IGEN from_g;
   seginfo *si;
@@ -1768,12 +1842,14 @@ static void sweep_generation_pass(ptr tc_in) {
 
     /* don't sweep from space_count_pure or space_count_impure */
     }
+
+    transfer_sweep_next(tc_in);
   } while (SWEEPCHANGE(tc_in));
 }
 
 static void sweep_generation(ptr tc_in) {
   do {
-    sweep_generation_pass(tc_in);
+    sweep_generation_pass(tc_in, 1);
   
     /* Waiting until sweeping doesn't trigger a change reduces the
        chance that an ephemeron must be reigistered as a
@@ -2331,29 +2407,23 @@ static void check_ephemeron(ptr tc_in, ptr pe) {
   
   p = Scar(pe);
   if (!IMMEDIATE(p) && (si = MaybeSegInfo(ptr_get_segment(p))) != NULL && si->old_space) {
-    if (SEGMENT_LOCK_ACQUIRE(si)) {
-      {
-        ENABLE_LOCK_ACQUIRE /* nested acquires here */
-        if (new_marked(si, p)) {
+    if (new_marked(si, p)) {
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
-          IGEN tg = TARGET_GENERATION(si);
-          if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
+      IGEN tg = TARGET_GENERATION(si);
+      if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
-          relocate_impure(&INITCDR(pe), from_g);
-        } else if (FORWARDEDP(p, si)) {
+      relocate_impure(&INITCDR(pe), from_g);
+    } else if (FORWARDEDP(p, si)) {
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
-          IGEN tg = TARGET_GENERATION(si);
-          if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
+      IGEN tg = TARGET_GENERATION(si);
+      if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
-          INITCAR(pe) = FWDADDRESS(p);
-          relocate_impure(&INITCDR(pe), from_g);
-        } else {
-          /* Not reached, so far; install as trigger */
-          ephemeron_add(&si->trigger_ephemerons, pe);
-          si->has_triggers = 1;
-        }
-      }
-      SEGMENT_LOCK_RELEASE(si);
+      INITCAR(pe) = FWDADDRESS(p);
+      relocate_impure(&INITCDR(pe), from_g);
+    } else {
+      /* Not reached, so far; install as trigger */
+      ephemeron_add(&si->trigger_ephemerons, pe);
+      si->has_triggers = 1;
     }
   } else {
     relocate_impure(&INITCDR(pe), from_g);
@@ -2554,23 +2624,22 @@ void copy_and_clear_list_bits(ptr tc_in, seginfo *oldspacesegments) {
 
 #ifdef ENABLE_PARALLEL
 
-#define MAX_GC_PARALLELISM 8
-
 static int sweep_mutex_initialized = 0;
 static s_thread_mutex_t sweep_mutex;
 
-#define SWEEPER_NONE     0
-#define SWEEPER_READY    1
-#define SWEEPER_SWEEPING 2
+static void gather_active_sweepers() {
+  int i, n;
+  
+  /* assign a tc for each sweeper to run in parallel */
+  for (n = 0, i = 0; (n < maximum_parallel_collect_threads) && (i < S_collect_waiting_threads); i++) {
+    if ((i < maximum_parallel_collect_threads) && (S_collect_waiting_tcs[i] != (ptr)0)) {
+      sweepers[n].sweep_tc = S_collect_waiting_tcs[i];
+      n++;
+    }
+  }
 
-typedef struct {
-  int status;
-  s_thread_cond_t sweep_cond;
-  s_thread_cond_t done_cond;
-  ptr sweep_tc;
-} gc_thread_data;
-
-static gc_thread_data sweepers[maximum_parallel_collect_threads];
+  num_sweepers = n;
+}
 
 static s_thread_rv_t start_sweeper(void *_data) {
   gc_thread_data *data = _data;
@@ -2583,7 +2652,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     s_thread_mutex_unlock(&sweep_mutex);
     
     s_thread_setspecific(S_tc_key, data->sweep_tc);
-    sweep_generation_pass(data->sweep_tc);
+    sweep_generation_pass(data->sweep_tc, 0);
 
     /* ensure terminators on any segment where sweeper may have allocated: */
     {
@@ -2604,7 +2673,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
 }
 
 static void parallel_sweep_generation(ptr tc) {
-  int i, n;
+  int i;
 
   if (!sweep_mutex_initialized) {
     s_thread_mutex_init(&sweep_mutex);
@@ -2614,47 +2683,42 @@ static void parallel_sweep_generation(ptr tc) {
   S_use_gc_tc_mutex = 1;
 
   /* start sweeping threads as needed, and assign a tc for each */
-  for (n = 0, i = 0; (n < maximum_parallel_collect_threads) && (i < S_collect_waiting_threads); i++) {
-    if (S_collect_waiting_tcs[i] != (ptr)0) {
-      if (sweepers[n].status == SWEEPER_NONE) {
-        int status;
-
-        sweepers[n].status = SWEEPER_READY;
-        s_thread_cond_init(&sweepers[n].sweep_cond);
-        s_thread_cond_init(&sweepers[n].done_cond);
+  for (i = 0; i < num_sweepers; i++) {
+    if (sweepers[i].status == SWEEPER_NONE) {
+      int status;
+      
+      sweepers[i].status = SWEEPER_READY;
+      s_thread_cond_init(&sweepers[i].sweep_cond);
+      s_thread_cond_init(&sweepers[i].done_cond);
         
-        if ((status = s_thread_create(start_sweeper, &sweepers[n])) != 0) {
-          /* eror creating a thread; just go with as many as we have */
-          sweepers[n].status = SWEEPER_NONE;
-          s_thread_cond_destroy(&sweepers[n].sweep_cond);
-          s_thread_cond_destroy(&sweepers[n].done_cond);
-          n = i;
-          break;
-        }
+      if ((status = s_thread_create(start_sweeper, &sweepers[i])) != 0) {
+        /* eror creating a thread; just go with as many as we have */
+        sweepers[i].status = SWEEPER_NONE;
+        s_thread_cond_destroy(&sweepers[i].sweep_cond);
+        s_thread_cond_destroy(&sweepers[i].done_cond);
+        num_sweepers = i;
+        break;
       }
-
-      sweepers[n].sweep_tc = S_collect_waiting_tcs[i];
-      n++;
     }
   }
 
-  fprintf(stderr, "GCing %d\n", n);
+  fprintf(stderr, "GCing %d\n", num_sweepers);
 
   while (1) {
     /* start other sweepers */
     s_thread_mutex_lock(&sweep_mutex);
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < num_sweepers; i++) {
       sweepers[i].status = SWEEPER_SWEEPING;
       s_thread_cond_signal(&sweepers[i].sweep_cond);
     }
     s_thread_mutex_unlock(&sweep_mutex);
-    
+
     /* sweep in the main thread */
-    sweep_generation_pass(tc);
-    
+    sweep_generation_pass(tc, 1);
+
     /* wait for other sweepers */
     s_thread_mutex_lock(&sweep_mutex);
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < num_sweepers; i++) {
       while (sweepers[i].status != SWEEPER_READY) {
         s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
       }

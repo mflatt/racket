@@ -206,7 +206,7 @@ static ptr more_room_segment(ISPC s, IGEN g, iptr n, iptr *_new_bytes)
   return new;
 }
 
-static void close_off_segment(ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
+static void close_off_segment(ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
 {
   if (base_loc) {
     seginfo *si;
@@ -222,9 +222,15 @@ static void close_off_segment(ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN
     /* add to sweep list */
     si = SegInfo(addr_get_segment(base_loc));
     si->sweep_start = sweep_loc;
-    do {
-      si->sweep_next = S_G.to_sweep[g][s];
-    } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+
+    if (S_use_gc_tc_mutex) {
+      si->sweep_next = SWEEPNEXT(tc);
+      SWEEPNEXT(tc) = si;
+    } else {
+      do {
+        si->sweep_next = S_G.to_sweep[g][s];
+      } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+    }
   }
 }
 
@@ -252,7 +258,7 @@ ptr S_find_more_room(s, g, n, old) ISPC s; IGEN g; iptr n; ptr old; {
   ptr new;
   iptr new_bytes;
 
-  close_off_segment(old, S_G.base_loc[g][s], S_G.sweep_loc[g][s], s, g);
+  close_off_segment((ptr)0, old, S_G.base_loc[g][s], S_G.sweep_loc[g][s], s, g);
 
   new = more_room_segment(s, g, n, &new_bytes);
 
@@ -282,7 +288,7 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   }
 
   /* closing off segment effectively moves to global space: */
-  close_off_segment(old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
+  close_off_segment(tc, old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
 
   new = more_room_segment(s, g, n, &new_bytes);
 
@@ -305,7 +311,7 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
 /* tc_mutex must be held */
 void S_close_off_thread_local_segment(ptr tc, ISPC s, IGEN g) {
   /* closing off segment effectively moves to global space: */
-  close_off_segment(NEXTLOC_AT(tc, s, g), BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
+  close_off_segment((ptr)0, NEXTLOC_AT(tc, s, g), BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
 
   BASELOC_AT(tc, s, g) = (ptr)0;
   BYTESLEFT_AT(tc, s, g) = 0;

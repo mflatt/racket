@@ -1572,6 +1572,7 @@
    [ptr DSTBV]
    [ptr SRCBV]
    [double fpregs (constant asm-fpreg-max)]
+   ;; thread-local allocation and parallel collection:
    [xptr sweep-stack]
    [xptr sweep-stack-start]
    [xptr sweep-stack-limit]
@@ -1580,7 +1581,8 @@
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
    [iptr sweep-change]
-   [xptr lock-status]))
+   [xptr lock-status]
+   [xptr sweep-next]))
 
 (define tc-field-list
   (let f ([ls (oblist)] [params '()])

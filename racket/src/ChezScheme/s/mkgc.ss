@@ -473,6 +473,12 @@
       (copy-type ratnum-type)
       (trace-now ratnum-numerator)
       (trace-now ratnum-denominator)
+      (case-mode
+       [(copy) (when (CHECK_LOCK_FAILED _tc_)
+                 ;; create failed relocates so that the heap checker isn't unhappy
+                 (set! (ratnum-numerator _copy_) (cast ptr 0))
+                  (set! (ratnum-denominator _copy_) (cast ptr 0)))]
+       [else])
       (mark)
       (vfasl-pad-word)
       (count countof-ratnum)]
@@ -484,6 +490,12 @@
       (copy-type exactnum-type)
       (trace-now exactnum-real)
       (trace-now exactnum-imag)
+      (case-mode
+       [(copy) (when (CHECK_LOCK_FAILED _tc_)
+                 ;; create failed relocates so that the heap checker isn't unhappy
+                 (set! (exactnum-real _copy_) (cast ptr 0))
+                 (set! (exactnum-imag _copy_) (cast ptr 0)))]
+       [else])
       (mark)
       (vfasl-pad-word)
       (count countof-exactnum)]
@@ -692,7 +704,9 @@
       [(== (continuation-stack-length _) opportunistic-1-shot-flag)
        (set! (continuation-stack-length _copy_) (continuation-stack-clength _))
        ;; May need to recur at end to promote link:
-       (set! conts_to_promote (S_cons_in space_new 0 _copy_ conts_to_promote))]
+       (GC_TC_MUTEX_ACQUIRE)
+       (set! conts_to_promote (S_cons_in space_new 0 _copy_ conts_to_promote))
+       (GC_TC_MUTEX_RELEASE)]
       [else
        (copy continuation-stack-length)])]
    [else
