@@ -182,7 +182,7 @@ void Sforeign_symbol(s, v) const char *s; void *v; {
 void Sregister_symbol(s, v) const char* s; void *v; {
   iptr b; ptr p;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   b = symhash(s);
   for (p = Svector_ref(S_G.foreign_static, b); p != Snil; p = Scdr(p))
