@@ -214,12 +214,11 @@ static ptr s_make_immobile_bytevector(uptr len) {
 }
 
 static ptr s_make_immobile_vector(uptr len, ptr fill) {
+  ptr tc = get_thread_context();
   ptr v;
   uptr i;
 
-  tc_mutex_acquire()
-  v = S_vector_in(space_immobile_impure, 0, len);
-  tc_mutex_release()
+  v = S_vector_in(tc, space_immobile_impure, 0, len);
 
   S_immobilize_object(v);
   
@@ -401,6 +400,7 @@ static void s_showalloc(IBOOL show_dump, const char *outfn) {
   static char spacechar[space_total+1] = { alloc_space_chars, '?', 't' };
   chunkinfo *chunk; seginfo *si; ISPC s; IGEN g;
   ptr sorted_chunks;
+  ptr tc = get_thread_context();
 
   tc_mutex_acquire()
 
@@ -434,8 +434,8 @@ static void s_showalloc(IBOOL show_dump, const char *outfn) {
       /* add in bytes previously recorded */
       bytes[g][s] += S_G.bytes_of_space[g][s];
       /* add in bytes in active segments */
-      if (S_G.next_loc[g][s] != FIX(0))
-        bytes[g][s] += (uptr)S_G.next_loc[g][s] - (uptr)S_G.base_loc[g][s];
+      if (NEXTLOC_AT(tc, s, g) != FIX(0))
+        bytes[g][s] += (uptr)NEXTLOC_AT(tc, s, g) - (uptr)BASELOC_AT(tc, s, g);
     }
   }
 

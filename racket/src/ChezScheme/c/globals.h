@@ -101,10 +101,6 @@ EXTERN struct S_G_struct {
     ptr *protected[max_protected];
     uptr protect_next;
     seginfo *to_sweep[static_generation+1][max_real_space+1];
-    ptr base_loc[static_generation+1][max_real_space+1];
-    ptr next_loc[static_generation+1][max_real_space+1];
-    ptr sweep_loc[static_generation+1][max_real_space+1];
-    iptr bytes_left[static_generation+1][max_real_space+1];
     uptr bytes_of_space[static_generation+1][max_real_space+1];
     uptr bytes_of_generation[static_generation+1];
     uptr bitmask_overhead[static_generation+1];

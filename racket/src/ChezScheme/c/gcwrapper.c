@@ -297,6 +297,7 @@ void Slock_object(x) ptr x; {
 
  /* weed out pointers that won't be relocated */
   if (!IMMEDIATE(x) && (si = MaybeSegInfo(ptr_get_segment(x))) != NULL && (g = si->generation) != static_generation) {
+    ptr tc = get_thread_context();
     tc_mutex_acquire()
     S_pants_down += 1;
     /* immobilize */
@@ -306,7 +307,7 @@ void Slock_object(x) ptr x; {
         S_G.must_mark_gen0 = 1;
     }
    /* add x to locked list. remove from unlocked list */
-    S_G.locked_objects[g] = S_cons_in((g == 0 ? space_new : space_impure), g, x, S_G.locked_objects[g]);
+    S_G.locked_objects[g] = S_cons_in(tc, (g == 0 ? space_new : space_impure), g, x, S_G.locked_objects[g]);
     if (S_G.enable_object_counts) {
       if (g != 0) S_G.countof[g][countof_pair] += 1;
     }
@@ -320,6 +321,7 @@ void Sunlock_object(x) ptr x; {
   seginfo *si; IGEN g;
 
   if (!IMMEDIATE(x) && (si = MaybeSegInfo(ptr_get_segment(x))) != NULL && (g = si->generation) != static_generation) {
+    ptr tc = get_thread_context();
     tc_mutex_acquire()
     S_pants_down += 1;
     /* mobilize, if we haven't lost track */
@@ -328,7 +330,7 @@ void Sunlock_object(x) ptr x; {
    /* remove first occurrence of x from locked list. if there are no
       others, add x to unlocked list */
     if (remove_first_nomorep(x, &S_G.locked_objects[g], (si->space == space_new) && (si->generation > 0))) {
-      S_G.unlocked_objects[g] = S_cons_in((g == 0 ? space_new : space_impure), g, x, S_G.unlocked_objects[g]);
+      S_G.unlocked_objects[g] = S_cons_in(tc, (g == 0 ? space_new : space_impure), g, x, S_G.unlocked_objects[g]);
       if (S_G.enable_object_counts) {
         if (g != 0) S_G.countof[g][countof_pair] += 1;
       }
@@ -564,6 +566,22 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
 
   check_dirty();
 
+  {
+    ptr ls;
+    for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
+      ptr t_tc = (ptr)THREADTC(Scar(ls));
+      for (s = 0; s <= max_real_space; s += 1) {
+        for (g = 0; g <= static_generation; INCRGEN(g)) {
+          if ((NEXTLOC_AT(t_tc, s, g) == (ptr)0) != (BASELOC_AT(t_tc, s, g) == (ptr)0)) {
+            S_checkheap_errors += 1;
+            printf("!!! inconsistent thread NEXT %p and BASE %p\n",
+                   TO_VOIDP(NEXTLOC_AT(t_tc, s, g)), TO_VOIDP(BASELOC_AT(t_tc, s, g)));
+          }
+        }
+      }
+    }
+  }
+
   for (i = PARTIAL_CHUNK_POOLS; i >= -1; i -= 1) {
     chunkinfo *chunk = i == -1 ? S_chunks_full : S_chunks[i];
     while (chunk != NULL) {
@@ -658,8 +676,7 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
           pp1 = TO_VOIDP(build_ptr(seg, 0));
           pp2 = TO_VOIDP(build_ptr(seg + 1, 0));
 
-          nl = TO_VOIDP(S_G.next_loc[g][s]);
-          if (!(pp1 <= nl && nl < pp2)) {
+          {
             ptr ls;
             for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
               ptr t_tc = (ptr)THREADTC(Scar(ls));
@@ -979,10 +996,6 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
     S_G.bytes_of_generation[new_g] = S_G.bytes_of_generation[old_g]; S_G.bytes_of_generation[old_g] = 0;
     for (s = 0; s <= max_real_space; s += 1) {
       S_G.to_sweep[new_g][s] = S_G.to_sweep[old_g][s]; S_G.to_sweep[old_g][s] = NULL;
-      S_G.base_loc[new_g][s] = S_G.base_loc[old_g][s]; S_G.base_loc[old_g][s] = FIX(0);
-      S_G.next_loc[new_g][s] = S_G.next_loc[old_g][s]; S_G.next_loc[old_g][s] = FIX(0);
-      S_G.sweep_loc[new_g][s] = S_G.sweep_loc[old_g][s]; S_G.sweep_loc[old_g][s] = FIX(0);
-      S_G.bytes_left[new_g][s] = S_G.bytes_left[old_g][s]; S_G.bytes_left[old_g][s] = 0;
       S_G.bytes_of_space[new_g][s] = S_G.bytes_of_space[old_g][s]; S_G.bytes_of_space[old_g][s] = 0;
       S_G.occupied_segments[new_g][s] = S_G.occupied_segments[old_g][s]; S_G.occupied_segments[old_g][s] = NULL;
       for (si = S_G.occupied_segments[new_g][s]; si != NULL; si = si->next) {

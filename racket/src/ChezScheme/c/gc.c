@@ -226,7 +226,7 @@ static uptr list_length PROTO((ptr ls));
 static uptr target_generation_space_so_far(ptr tc);
 
 #ifdef ENABLE_MEASURE
-static void init_measure(IGEN min_gen, IGEN max_gen);
+static void init_measure(ptr tc, IGEN min_gen, IGEN max_gen);
 static void finish_measure();
 static void measure(ptr tc_in, ptr p);
 static IBOOL flush_measure_stack(ptr tc_in);
@@ -307,8 +307,8 @@ static ptr sweep_from;
 # define ADD_BACKREFERENCE_FROM(p, from_p, tg) do { \
     IGEN TG = tg;                                                       \
     if ((S_G.enable_object_backreferences) && (TG < static_generation)) \
-      S_G.gcbackreference[TG] = S_cons_in(space_impure, TG,             \
-                                          S_cons_in(space_impure, TG, p, from_p), \
+      S_G.gcbackreference[TG] = S_cons_in(tc_in, space_impure, TG,       \
+                                          S_cons_in(tc_in, space_impure, TG, p, from_p), \
                                           S_G.gcbackreference[TG]);     \
   } while (0)
 # define ADD_BACKREFERENCE(p, tg) ADD_BACKREFERENCE_FROM(p, sweep_from, tg)
@@ -419,7 +419,7 @@ uptr list_length(ptr ls) {
 #endif
 
 #define init_mask(tc, dest, tg, init) {                                  \
-    thread_find_room_g_voidp(tc, space_data, tg, ptr_align(segment_bitmap_bytes), dest); \
+    find_room_voidp(tc, space_data, tg, ptr_align(segment_bitmap_bytes), dest); \
     memset(dest, init, segment_bitmap_bytes);                           \
     S_G.bitmask_overhead[tg] += ptr_align(segment_bitmap_bytes);        \
   }
@@ -706,7 +706,7 @@ static ptr copy_stack(ptr tc_in, ptr old, iptr *length, iptr clength) {
   if (n == 0) {
     return (ptr)0;
   } else {
-    thread_find_room_g(tc_in, space_data, newg, typemod, n, new);
+    find_room(tc_in, space_data, newg, typemod, n, new);
     n = ptr_align(clength);
     /* warning: stack may have been left non-double-aligned by split_and_resize */
     memcpy_aligned(TO_VOIDP(new), TO_VOIDP(old), n);
@@ -818,7 +818,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
         }
       } else {
         for (s = 0; s <= max_real_space; s++)
-          SWEEPLOC_AT(t_tc, s, MAX_TG) = BASELOC_AT(t_tc, s, MAX_TG);
+          SWEEPLOC_AT(t_tc, s, MAX_TG) = NEXTLOC_AT(t_tc, s, MAX_TG);
       }
     }
 
@@ -837,10 +837,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     for (g = 0; g <= MAX_CG; g++) {
       S_G.bytes_of_generation[g] = 0;
       for (s = 0; s <= max_real_space; s++) {
-        S_G.base_loc[g][s] = FIX(0);
         S_G.to_sweep[g][s] = NULL;
-        S_G.next_loc[g][s] = FIX(0);
-        S_G.bytes_left[g][s] = 0;
         S_G.bytes_of_space[g][s] = 0;
         S_G.bitmask_overhead[g] = 0;
       }
@@ -856,15 +853,10 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       pre_phantom_bytes += S_G.bytesof[g][countof_phantom];
     }
 
-  /* set up target generation sweep_loc pointers */
-    for (g = MIN_TG; g <= MAX_TG; g += 1) {
-      for (s = 0; s <= max_real_space; s++) {
-        /* for all but max_tg (and max_tg as well, if max_tg == max_cg), this
-           will set sweep_loc to 0 */
-        S_G.sweep_loc[g][s] = S_G.next_loc[g][s];
+  /* set up target generation to_sweep pointers */
+    for (g = MIN_TG; g <= MAX_TG; g += 1)
+      for (s = 0; s <= max_real_space; s++)
         S_G.to_sweep[g][s] = NULL;
-      }
-    }
 
   /* mark segments from which objects are to be copied or marked */
     oldspacesegments = oldweakspacesegments = (seginfo *)NULL;
@@ -962,7 +954,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
        iptr i;
 
        count_roots_len = list_length(count_roots_ls);
-       find_room_voidp(space_data, 0, ptr_align(count_roots_len*sizeof(count_root_t)), count_roots);
+       find_room_voidp(tc, space_data, 0, ptr_align(count_roots_len*sizeof(count_root_t)), count_roots);
 
        for (ls = count_roots_ls, i = 0; ls != Snil; ls = Scdr(ls), i++) {
          ptr p = Scar(ls);
@@ -996,7 +988,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
        iptr i;
 
 # ifdef ENABLE_MEASURE
-       init_measure(MAX_TG+1, static_generation);
+       init_measure(tc, MAX_TG+1, static_generation);
 # endif
 
        for (i = 0; i < count_roots_len; i++) {
@@ -1030,7 +1022,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
          }
 
          total = total_size_so_far();
-         p = S_cons_in(space_new, 0, FIX(total-prev_total), Snil);
+         p = S_cons_in(tc, space_new, 0, FIX(total-prev_total), Snil);
          if (prev != 0)
            Scdr(prev) = p;
          else
@@ -1086,7 +1078,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
              mark_object(tc, p, si);
            }
            /* non-`space_new` objects will be swept via new pair */
-           locked_objects = S_cons_in(space_impure, tg, p, locked_objects);
+           locked_objects = S_cons_in(tc, space_impure, tg, p, locked_objects);
 #ifdef ENABLE_OBJECT_COUNTS
            S_G.countof[tg][countof_pair] += 1;
            S_G.countof[tg][countof_locked] += 1;
@@ -1258,7 +1250,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
                   WITH_TOP_BACKREFERENCE(tconc, relocate_pure(&rep));
 
                   old_end = Scdr(tconc);
-                  new_end = S_cons_in(space_impure, 0, FIX(0), FIX(0));
+                  new_end = S_cons_in(tc, space_impure, 0, FIX(0), FIX(0));
 #ifdef ENABLE_OBJECT_COUNTS
                   S_G.countof[0][countof_pair] += 1;
 #endif /* ENABLE_OBJECT_COUNTS */
@@ -1313,7 +1305,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
                 /* In backreference mode, we rely on sweep of the guardian
                    entry not registering any backreferences. Otherwise,
                    bogus pair pointers would get created. */
-                find_room(space_pure, g, typemod, size_guardian_entry, p);
+                find_room(tc, space_pure, g, typemod, size_guardian_entry, p);
                 INITGUARDIANOBJ(p) = GUARDIANOBJ(ls);
                 INITGUARDIANREP(p) = rep;
                 INITGUARDIANTCONC(p) = tconc;
@@ -1415,7 +1407,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           si = SegInfo(ptr_get_segment(sym));
           if (new_marked(si, sym) || (FWDMARKER(sym) == forward_marker && ((sym = FWDADDRESS(sym)) || 1))) {
             IGEN g = si->generation;
-            find_room_voidp(space_data, g, ptr_align(sizeof(bucket)), b);
+            find_room_voidp(tc, space_data, g, ptr_align(sizeof(bucket)), b);
 #ifdef ENABLE_OBJECT_COUNTS
             S_G.countof[g][countof_oblist] += 1;
             S_G.bytesof[g][countof_oblist] += sizeof(bucket);
@@ -1424,7 +1416,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
             *pb = b;
             pb = &b->next;
             if (g != static_generation) {
-              find_room_voidp(space_data, g, ptr_align(sizeof(bucket_list)), bl);
+              find_room_voidp(tc, space_data, g, ptr_align(sizeof(bucket_list)), bl);
 #ifdef ENABLE_OBJECT_COUNTS
               S_G.countof[g][countof_oblist] += 1;
               S_G.bytesof[g][countof_oblist] += sizeof(bucket_list);
@@ -1451,14 +1443,14 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           si = SegInfo(ptr_get_segment(p));
           if (!si->old_space || new_marked(si, p)) {
             newg = TARGET_GENERATION(si);
-            S_G.rtds_with_counts[newg] = S_cons_in(space_impure, newg, p, S_G.rtds_with_counts[newg]);
+            S_G.rtds_with_counts[newg] = S_cons_in(tc, space_impure, newg, p, S_G.rtds_with_counts[newg]);
 #ifdef ENABLE_OBJECT_COUNTS
             S_G.countof[newg][countof_pair] += 1;
 #endif
           } else if (FWDMARKER(p) == forward_marker) {
             p = FWDADDRESS(p);
             newg = GENERATION(p);
-            S_G.rtds_with_counts[newg] = S_cons_in(space_impure, newg, p, S_G.rtds_with_counts[newg]);
+            S_G.rtds_with_counts[newg] = S_cons_in(tc, space_impure, newg, p, S_G.rtds_with_counts[newg]);
 #ifdef ENABLE_OBJECT_COUNTS
             S_G.countof[newg][countof_pair] += 1;
 #endif
@@ -1479,7 +1471,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           INT pid = UNFIX(Scar(ls)), status, retpid;
           retpid = waitpid(pid, &status, WNOHANG);
           if (retpid == 0 || (retpid == pid && !(WIFEXITED(status) || WIFSIGNALED(status)))) {
-            newls = S_cons_in(space_impure, newg, FIX(pid), newls);
+            newls = S_cons_in(tc, space_impure, newg, FIX(pid), newls);
 #ifdef ENABLE_OBJECT_COUNTS
             S_G.countof[newg][countof_pair] += 1;
 #endif /* ENABLE_OBJECT_COUNTS */
@@ -1665,11 +1657,6 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
         }                                                               \
       }                                                                 \
     }                                                                   \
-    if (can_sweep_global) {                                             \
-      slp = &S_G.sweep_loc[from_g][s];                                  \
-      nlp = &S_G.next_loc[from_g][s];                                   \
-      sweep_space_range(s, from_g, body)                                \
-    }                                                                   \
     slp = &SWEEPLOC_AT(tc_in, s, from_g);                               \
     nlp = &NEXTLOC_AT(tc_in, s, from_g);                                \
     sweep_space_range(s, from_g, body)                                  \
@@ -1713,12 +1700,10 @@ static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
     IGEN from_g;
     ptr *slp, *nlp; ptr *pp, p, *nl, *sl;
     seginfo *si;
-    IBOOL can_sweep_global = 1;
   
     for (from_g = MIN_TG; from_g <= MAX_TG; from_g += 1) {
       /* By starting from `base_loc`, we may needlessly sweep pairs in `MAX_TG`
          that were allocated before the GC, but that's ok. */
-      S_G.sweep_loc[from_g][space_weakpair] = S_G.base_loc[from_g][space_weakpair];
       SWEEPLOC_AT(tc_in, space_weakpair, from_g) = BASELOC_AT(tc_in, space_weakpair, from_g);
       S_G.to_sweep[space_weakpair][from_g] = NULL; /* in case there was new allocation */
       sweep_space(space_weakpair, from_g, {
@@ -1808,7 +1793,7 @@ static void transfer_sweep_next(ptr tc_in) {
   }
 }
 
-static void sweep_generation_pass(ptr tc_in, IBOOL can_sweep_global) {
+static void sweep_generation_pass(ptr tc_in) {
   ENABLE_LOCK_ACQUIRE
   ptr *slp, *nlp; ptr *pp, p, *nl, *sl; IGEN from_g;
   seginfo *si;
@@ -1910,7 +1895,7 @@ static void sweep_generation_pass(ptr tc_in, IBOOL can_sweep_global) {
 
 static void sweep_generation(ptr tc_in) {
   do {
-    sweep_generation_pass(tc_in, 1);
+    sweep_generation_pass(tc_in);
   
     /* Waiting until sweeping doesn't trigger a change reduces the
        chance that an ephemeron must be reigistered as a
@@ -1924,7 +1909,7 @@ void enlarge_sweep_stack(ptr tc_in) {
   uptr sz = ((uptr)SWEEPSTACKLIMIT(tc_in) - (uptr)SWEEPSTACKSTART(tc_in));
   uptr new_sz = 2 * ((sz == 0) ? 256 : sz);
   ptr new_sweep_stack;
-  thread_find_room_g(tc_in, space_data, 0, typemod, ptr_align(new_sz), new_sweep_stack);
+  find_room(tc_in, space_data, 0, typemod, ptr_align(new_sz), new_sweep_stack);
   if (sz != 0)
     memcpy(TO_VOIDP(new_sweep_stack), TO_VOIDP(SWEEPSTACKSTART(tc_in)), sz);
   S_G.bitmask_overhead[0] += ptr_align(new_sz);
@@ -2039,19 +2024,16 @@ static void sweep_dirty(ptr tc_in) {
         start = build_ptr(seg, 0);
         ppend = TO_VOIDP(start);
 
-        /* The current allocation pointer, either global or thread-local,
-           may be relevant as the ending point. We assume that thread-local
-           regions for all other threads aer terminated and won't get new
-           allocations while dirty sweeping runs. */
-        next_loc = S_G.next_loc[from_g][s];
-        if (((uptr)next_loc < (uptr)start)
-            || ((uptr)next_loc >= ((uptr)start + bytes_per_segment)))
-          next_loc = NEXTLOC_AT(tc, s, from_g);
+        /* The current allocation pointer may be relevant as the
+           ending point. We assume that thread-local regions for all
+           other threads aer terminated and won't get new allocations
+           while dirty sweeping runs. */
+        next_loc = NEXTLOC_AT(tc, s, from_g);
         nl = TO_VOIDP(next_loc);
 
         if (s == space_weakpair) {
           weakseginfo *next = weaksegments_to_resweep;
-          find_room_voidp(space_data, 0, ptr_align(sizeof(weakseginfo)), weaksegments_to_resweep);
+          find_room_voidp(tc, space_data, 0, ptr_align(sizeof(weakseginfo)), weaksegments_to_resweep);
           S_G.bitmask_overhead[0] += ptr_align(sizeof(weakseginfo));
           weaksegments_to_resweep->si = dirty_si;
           weaksegments_to_resweep->next = next;
@@ -2323,9 +2305,6 @@ static void resweep_dirty_weak_pairs(ptr tc) {
   /* Make sure terminator is in place for allocation areas relevant to this thread */
   for (from_g = MIN_TG; from_g <= static_generation; from_g++) {
     ptr old;
-    old = S_G.next_loc[from_g][space_weakpair];
-    if (old != (ptr)0)
-      *(ptr*)TO_VOIDP(old) = forward_marker;
     old = NEXTLOC_AT(tc, space_weakpair, from_g);
     if (old != (ptr)0)
       *(ptr*)TO_VOIDP(old) = forward_marker;
@@ -2606,8 +2585,6 @@ static uptr target_generation_space_so_far(ptr tc) {
     
     for (s = 0; s <= max_real_space; s++) {
       sz += S_G.bytes_of_space[g][s];
-      if (S_G.next_loc[g][s] != FIX(0))
-        sz += (uptr)S_G.next_loc[g][s] - (uptr)S_G.base_loc[g][s];
       if (NEXTLOC_AT(tc, s, g) != FIX(0))
         sz += (uptr)NEXTLOC_AT(tc, s, g) - (uptr)BASELOC_AT(tc, s, g);
     }
@@ -2641,7 +2618,7 @@ void copy_and_clear_list_bits(ptr tc_in, seginfo *oldspacesegments) {
               bits_si->marked_mask[segment_bitmap_byte(TO_PTR(si->list_bits))] |= segment_bitmap_bit(TO_PTR(si->list_bits));
             } else {
               octet *copied_bits;
-              thread_find_room_g_voidp(tc_in, space_data, bits_si->generation, ptr_align(segment_bitmap_bytes), copied_bits);
+              find_room_voidp(tc_in, space_data, bits_si->generation, ptr_align(segment_bitmap_bytes), copied_bits);
               memcpy_aligned(copied_bits, si->list_bits, segment_bitmap_bytes);
               si->list_bits = copied_bits;
               S_G.bitmask_overhead[bits_si->generation] += ptr_align(segment_bitmap_bytes);
@@ -2725,7 +2702,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     s_thread_setspecific(S_tc_key, tc);
 
     do {
-      sweep_generation_pass(tc, 0);
+      sweep_generation_pass(tc);
       gate_postponed(tc);
     } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
 
@@ -2748,6 +2725,8 @@ static s_thread_rv_t start_sweeper(void *_data) {
     data->status = SWEEPER_READY;
     s_thread_cond_signal(&data->done_cond);
   }
+
+  s_thread_return;
 }
 
 static void parallel_sweep_generation(ptr tc) {
@@ -2795,7 +2774,7 @@ static void parallel_sweep_generation(ptr tc) {
 
     /* sweep in the main thread */
     do {
-      sweep_generation_pass(tc, 1);
+      sweep_generation_pass(tc);
       gate_postponed(tc);
     } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
 
@@ -2847,13 +2826,13 @@ static void gate_postponed(ptr tc) {
 
 #ifdef ENABLE_MEASURE
 
-static void init_measure(IGEN min_gen, IGEN max_gen) {
+static void init_measure(ptr tc, IGEN min_gen, IGEN max_gen) {
   uptr init_stack_len = 1024;
 
   min_measure_generation = min_gen;
   max_measure_generation = max_gen;
   
-  find_room_voidp(space_data, 0, ptr_align(init_stack_len), measure_stack_start);
+  find_room_voidp(tc, space_data, 0, ptr_align(init_stack_len), measure_stack_start);
   S_G.bitmask_overhead[0] += ptr_align(init_stack_len);
   measure_stack = TO_VOIDP(measure_stack_start);
   measure_stack_limit = TO_VOIDP((uptr)TO_PTR(measure_stack_start) + init_stack_len);
@@ -2887,7 +2866,7 @@ static void init_counting_mask(ptr tc_in, seginfo *si) {
 
 static void init_measure_mask(ptr tc_in, seginfo *si) {
   init_mask(tc_in, si->measured_mask, 0, 0);
-  measured_seginfos = S_cons_in(space_new, 0, TO_PTR(si), measured_seginfos);
+  measured_seginfos = S_cons_in(tc_in, space_new, 0, TO_PTR(si), measured_seginfos);
 }
 
 #define measure_unreached(si, p) \
@@ -2938,7 +2917,7 @@ static void push_measure(ptr tc_in, ptr p)
     uptr sz = ptr_bytes * (measure_stack_limit - measure_stack_start);
     uptr new_sz = 2*sz;
     ptr *new_measure_stack;
-    thread_find_room_g_voidp(tc_in, space_data, 0, ptr_align(new_sz), new_measure_stack);
+    find_room_voidp(tc_in, space_data, 0, ptr_align(new_sz), new_measure_stack);
     S_G.bitmask_overhead[0] += ptr_align(new_sz);
     memcpy(new_measure_stack, measure_stack_start, sz);
     measure_stack_start = new_measure_stack;
@@ -3052,7 +3031,7 @@ ptr S_count_size_increments(ptr ls, IGEN generation) {
 
   tc_mutex_acquire();
 
-  init_measure(0, generation);
+  init_measure(tc, 0, generation);
 
   for (l = ls; l != Snil; l = Scdr(l)) {
     ptr p = Scar(l);

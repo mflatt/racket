@@ -710,7 +710,7 @@
        (set! (continuation-stack-length _copy_) (continuation-stack-clength _))
        ;; May need to recur at end to promote link:
        (GC_TC_MUTEX_ACQUIRE)
-       (set! conts_to_promote (S_cons_in space_new 0 _copy_ conts_to_promote))
+       (set! conts_to_promote (S_cons_in _tc_ space_new 0 _copy_ conts_to_promote))
        (GC_TC_MUTEX_RELEASE)]
       [else
        (copy continuation-stack-length)])]
@@ -763,7 +763,7 @@
     ;; swept already. NB: assuming keyvals are always pairs.
     (when (&& (!= next Sfalse) (OLDSPACE keyval))
       (GC_TC_MUTEX_ACQUIRE)
-      (set! tlcs_to_rehash (S_cons_in space_new 0 _copy_ tlcs_to_rehash))
+      (set! tlcs_to_rehash (S_cons_in _tc_ space_new 0 _copy_ tlcs_to_rehash))
       (GC_TC_MUTEX_RELEASE))]
    [else
     (trace-nonself tlc-keyval)
@@ -877,7 +877,7 @@
               (let* ([grtd : IGEN (GENERATION c_rtd)])
                 (set! (array-ref (array-ref S_G.countof grtd) countof_rtd_counts) += 1)
                 ;; Allocate counts struct in same generation as rtd. Initialize timestamp & counts.
-                (thread_find_room_g _tc_ space_data grtd type_typed_object size_rtd_counts counts)
+                (find_room _tc_ space_data grtd type_typed_object size_rtd_counts counts)
                 (set! (rtd-counts-type counts) type_rtd_counts)
                 (set! (rtd-counts-timestamp counts) (array-ref S_G.gctimestamp 0))
                 (let* ([g : IGEN 0])
@@ -890,7 +890,8 @@
                       ;; For max_copied_generation, the list will get copied again in `rtds_with_counts` fixup;
                       ;; meanwhile, allocating in `space_impure` would copy and sweep old list entries causing
                       ;; otherwise inaccessible rtds to be retained
-                      (S_cons_in (cond [(<= grtd MAX_CG) space_new] [else space_impure])
+                      (S_cons_in _tc_
+                                 (cond [(<= grtd MAX_CG) space_new] [else space_impure])
                                  (cond [(<= grtd MAX_CG) 0] [else grtd])
                                  c_rtd
                                  (array-ref S_G.rtds_with_counts grtd)))
@@ -1137,7 +1138,7 @@
                 (mark_typemod_data_object _tc_ t n t_si)]
                [else
                 (let* ([oldt : ptr t])
-                  (thread_find_room_g _tc_ space_data from_g typemod n t)
+                  (find_room _tc_ space_data from_g typemod n t)
                   (memcpy_aligned (TO_VOIDP t) (TO_VOIDP oldt) n))])))
          (set! (reloc-table-code t) _)
          (set! (code-reloc _) t)])
@@ -1765,7 +1766,7 @@
                        (hashtable-set! (lookup 'used config) 'p_sz #t)
                        (code (format "~a, ~a, p_sz, new_p);"
                                      (case mode
-                                       [(copy) "thread_find_room_g(tc_in, p_spc, tg"]
+                                       [(copy) "find_room(tc_in, p_spc, tg"]
                                        [(vfasl-copy) "FIND_ROOM(vfi, p_vspc"])
                                      (as-c 'type (lookup 'basetype config)))
                              (statements (let ([extra (lookup 'copy-extra config #f)])
@@ -2354,7 +2355,7 @@
   (define (ensure-segment-mark-mask si inset flags)
     (code
      (format "~aif (!~a->marked_mask) {" inset si)
-     (format "~a  thread_find_room_g_voidp(tc_in, space_data, ~a->generation, ptr_align(segment_bitmap_bytes), ~a->marked_mask);"
+     (format "~a  find_room_voidp(tc_in, space_data, ~a->generation, ptr_align(segment_bitmap_bytes), ~a->marked_mask);"
              inset si si)
      (if (memq 'no-clear flags)
          (format "~a  /* no clearing needed */" inset)

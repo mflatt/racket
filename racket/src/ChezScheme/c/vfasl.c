@@ -243,7 +243,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
 
   if (bv) {
     void *base_addr = &BVIT(bv, sizeof(vfasl_header) + offset);
-    thread_find_room(tc, typemod, header.data_size, data);
+    newspace_find_room(tc, typemod, header.data_size, data);
     memcpy(TO_VOIDP(data), base_addr, header.data_size);
     table = ptr_add(TO_PTR(base_addr), header.data_size);
   } else {
@@ -252,9 +252,9 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
         uptr sz = vspace_offsets[s+1] - vspace_offsets[s];
         if (sz > 0) {
           if ((s == vspace_reloc) && !S_G.retain_static_relocation) {
-            thread_find_room(tc, typemod, sz, vspaces[s])
+            newspace_find_room(tc, typemod, sz, vspaces[s]);
           } else {
-            find_room(vspace_spaces[s], static_generation, typemod, sz, vspaces[s])
+            find_room(tc, vspace_spaces[s], static_generation, typemod, sz, vspaces[s]);
           }
           if (S_fasl_stream_read(stream, TO_VOIDP(vspaces[s]), sz) < 0)
             S_error("fasl-read", "input truncated");
@@ -268,12 +268,12 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
       data = (ptr)0; /* => initialize below */
       to_static = 1;
     } else {
-      thread_find_room(tc, typemod, header.data_size, data)
+      newspace_find_room(tc, typemod, header.data_size, data);
       if (S_fasl_stream_read(stream, TO_VOIDP(data), header.data_size) < 0)
         S_error("fasl-read", "input truncated");
     }
 
-    thread_find_room(tc, typemod, ptr_align(header.table_size), table)
+    newspace_find_room(tc, typemod, ptr_align(header.table_size), table);
     if (S_fasl_stream_read(stream, TO_VOIDP(table), header.table_size) < 0)
       S_error("fasl-read", "input truncated");
   }
@@ -1427,7 +1427,7 @@ static ptr vfasl_hash_table_ref(vfasl_hash_table *ht, ptr key) {
 static void *vfasl_malloc(uptr sz) {
   ptr tc = get_thread_context();
   void *p;
-  thread_find_room_voidp(tc, ptr_align(sz), p)
+  newspace_find_room_voidp(tc, ptr_align(sz), p);
   return p;
 }
 

@@ -46,10 +46,7 @@ void S_thread_init() {
 /* this needs to be reworked.  currently, S_create_thread_object is
    called from main to create the base thread, from fork_thread when
    there is already an active current thread, and from S_activate_thread
-   when there is no current thread.  we have to avoid thread-local
-   allocation in at least the latter case, so we call vector_in and
-   cons_in and arrange for S_thread to use find_room rather than
-   thread_find_room.  scheme.c does part of the initialization of the
+   when there is no current thread.  scheme.c does part of the initialization of the
    base thread (e.g., parameters, current input/output ports) in one
    or more places. */
 ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
@@ -63,13 +60,22 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   } else { /* clone parent */
     ptr p_v = PARAMETERS(p_tc);
     iptr i, n = Svector_length(p_v);
-   /* use S_vector_in to avoid thread-local allocation */
-    ptr v = S_vector_in(space_new, 0, n);
+    ptr v;
 
     tc = TO_PTR(malloc(size_tc));
+
     if (tc == (ptr)0)
       S_error(who, "unable to malloc thread data structure");
     memcpy(TO_VOIDP(tc), TO_VOIDP(p_tc), size_tc);
+
+    for (i = 0; i < num_thread_local_allocation_segments; i++) {
+      BASELOC(tc, i) = (ptr)0;
+      NEXTLOC(tc, i) = (ptr)0;
+      BYTESLEFT(tc, i) = 0;
+      SWEEPLOC(tc, i) = (ptr)0;
+    }
+ 
+    v = S_vector_in(tc, space_new, 0, n);
 
     for (i = 0; i < n; i += 1)
       INITVECTIT(v, i) = Svector_ref(p_v, i);
@@ -114,10 +120,9 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
 
   DSTBV(tc) = SRCBV(tc) = Sfalse;
 
- /* S_thread had better not do thread-local allocation */
   thread = S_thread(tc);
 
-  S_threads = S_cons_in_global(space_new, 0, thread, S_threads);
+  S_threads = S_cons_in(tc, space_new, 0, thread, S_threads);
   S_nthreads += 1;
   SETSYMVAL(S_G.active_threads_id,
    FIX(UNFIX(SYMVAL(S_G.active_threads_id)) + 1));
@@ -131,13 +136,6 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   GUARDIANENTRIES(tc) = Snil;
 
   LZ4OUTBUFFER(tc) = 0;
-
-  for (i = 0; i < num_thread_local_allocation_segments; i++) {
-    BASELOC(tc, i) = (ptr)0;
-    NEXTLOC(tc, i) = (ptr)0;
-    BYTESLEFT(tc, i) = 0;
-    SWEEPLOC(tc, i) = (ptr)0;
-  }
 
   LOCKSTATUS(tc) = Strue;
 
