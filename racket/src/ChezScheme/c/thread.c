@@ -53,7 +53,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   ptr thread, tc;
   INT i;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   if (S_threads == Snil) {
     tc = TO_PTR(S_G.thread_context);
@@ -139,7 +139,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
 
   LOCKSTATUS(tc) = Strue;
 
-  tc_mutex_release()
+  tc_mutex_release();
 
   return thread;
 }
@@ -206,7 +206,7 @@ static IBOOL destroy_thread(tc) ptr tc; {
   ptr *ls; IBOOL status;
 
   status = 0;
-  tc_mutex_acquire()
+  tc_mutex_acquire();
   ls = &S_threads;
   while (*ls != Snil) {
     ptr thread = Scar(*ls);
@@ -262,7 +262,7 @@ static IBOOL destroy_thread(tc) ptr tc; {
     }
     ls = &Scdr(*ls);
   }
-  tc_mutex_release()
+  tc_mutex_release();
   return status;
 }
 

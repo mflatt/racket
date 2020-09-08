@@ -251,13 +251,12 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   iptr new_bytes;
 
 #ifdef PTHREADS
-  if (S_use_gc_tc_mutex) {
+  if (S_use_gc_tc_mutex)
     gc_tc_mutex_acquire();
-  } else {
-    tc_mutex_acquire()
-  }
+  else
+    tc_mutex_acquire();
 #else
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 #endif
   
   /* closing off segment effectively moves to global space: */
@@ -273,13 +272,12 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   more_room_done(g);
 
 #ifdef PTHREADS
-  if (S_use_gc_tc_mutex) {
+  if (S_use_gc_tc_mutex)
     gc_tc_mutex_release();
-  } else {
-    tc_mutex_release()
-  }
+  else
+    tc_mutex_release();
 #else
-  tc_mutex_release()
+  tc_mutex_release();
 #endif
   
   return new;
@@ -440,7 +438,7 @@ void S_scan_remembered_set() {
   ptr tc = get_thread_context();
   uptr ap, eap, real_eap;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   ap = (uptr)AP(tc);
   eap = (uptr)EAP(tc);
@@ -459,7 +457,7 @@ void S_scan_remembered_set() {
     S_reset_allocation_pointer(tc);
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 }
 
 /* S_get_more_room is called from genereated machine code when there is
@@ -487,7 +485,7 @@ ptr S_get_more_room_help(ptr tc, uptr ap, uptr type, uptr size) {
   eap = (uptr)EAP(tc);
   real_eap = (uptr)REAL_EAP(tc);
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   S_scan_dirty(TO_VOIDP(eap), TO_VOIDP(real_eap));
   eap = real_eap;
@@ -522,7 +520,7 @@ ptr S_get_more_room_help(ptr tc, uptr ap, uptr type, uptr size) {
     }
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 
   return x;
 }
@@ -547,14 +545,10 @@ void S_list_bits_set(p, bits) ptr p; iptr bits; {
     void *list_bits;
     ptr tc = get_thread_context();
 
-    if (si->generation == 0) {
+    if (si->generation == 0)
       newspace_find_room_voidp(tc, ptr_align(segment_bitmap_bytes), list_bits);
-    } else {
-      tc_mutex_acquire()
-
+    else
       find_room_voidp(tc, space_data, si->generation, ptr_align(segment_bitmap_bytes), list_bits);
-      tc_mutex_release()
-    }
 
     memset(list_bits, 0, segment_bitmap_bytes);
 
@@ -1074,7 +1068,7 @@ void S_phantom_bytevector_adjust(ph, new_sz) ptr ph; uptr new_sz; {
   seginfo *si;
   IGEN g;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   si = SegInfo(ptr_get_segment(ph));
   g = si->generation;
@@ -1083,5 +1077,5 @@ void S_phantom_bytevector_adjust(ph, new_sz) ptr ph; uptr new_sz; {
   S_adjustmembytes(new_sz - old_sz);
   PHANTOMLEN(ph) = new_sz;
 
-  tc_mutex_release()
+  tc_mutex_release();
 }

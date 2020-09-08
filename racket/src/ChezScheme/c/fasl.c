@@ -809,7 +809,7 @@ static void faslin(ptr tc, ptr *x, ptr t, ptr *pstrbuf, faslFile f) {
 
             faslin(tc, &rtd_uid, t, pstrbuf, f);
 
-            tc_mutex_acquire()
+            tc_mutex_acquire();
 
            /* look for rtd on uid's property list */
             plist = SYMSPLIST(rtd_uid);
@@ -824,7 +824,7 @@ static void faslin(ptr tc, ptr *x, ptr t, ptr *pstrbuf, faslFile f) {
                   if (!rtd_equiv(tmp, rtd))
                     S_error2("", "incompatible record type ~s in ~a", RECORDDESCNAME(tmp), f->uf->path);
                 }
-                tc_mutex_release()
+                tc_mutex_release();
                 return;
               }
             }
@@ -838,7 +838,7 @@ static void faslin(ptr tc, ptr *x, ptr t, ptr *pstrbuf, faslFile f) {
            /* register rtd on uid's property list */
             SETSYMSPLIST(rtd_uid, Scons(S_G.rtd_key, Scons(rtd, plist)));
 
-            tc_mutex_release()
+            tc_mutex_release();
 
             return;
         }

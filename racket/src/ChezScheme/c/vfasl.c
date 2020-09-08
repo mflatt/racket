@@ -390,7 +390,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
     ptr end_syms = TYPE(VSPACE_END(vspace_symbol), type_symbol);
 
     if (sym != end_syms) {
-      tc_mutex_acquire()
+      tc_mutex_acquire();
 
       while (sym < end_syms) {
         ptr isym;
@@ -432,7 +432,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
         in_seg_off += size_symbol;
       }
 
-      tc_mutex_release()
+      tc_mutex_release();
     }
   }
 
@@ -464,7 +464,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
     RECORDINSTTYPE(rtd) = S_G.base_rtd;
     RECORDDESCUID(rtd) = S_G.base_rtd;
 
-    tc_mutex_acquire()
+    tc_mutex_acquire();
 
     while (1) {
       ptr new_rtd, meta_rtd, parent_rtd;
@@ -497,7 +497,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
       }
     }
 
-    tc_mutex_release()
+    tc_mutex_release();
   }
   
   /* Replace rtd references to interned references */
@@ -1262,7 +1262,7 @@ static iptr vfasl_symbol_to_index(vfasl_info *vfi, ptr pp)
 
 static void fasl_init_entry_tables()
 {
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   if (!S_G.c_entries) {
     iptr i;
@@ -1286,7 +1286,7 @@ static void fasl_init_entry_tables()
     }
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 }
 
 static void vfasl_check_install_library_entry(vfasl_info *vfi, ptr name)

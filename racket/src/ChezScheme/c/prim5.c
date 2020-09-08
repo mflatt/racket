@@ -132,7 +132,7 @@ static ptr s_profile_release_counters PROTO((void));
 ptr S_strerror(INT errnum) {
   ptr p; char *msg;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 #ifdef WIN32
   msg = Swide_to_utf8(_wcserror(errnum));
   if (msg == NULL)
@@ -144,7 +144,7 @@ ptr S_strerror(INT errnum) {
 #else
   p = (msg = strerror(errnum)) == NULL ? Sfalse : Sstring_utf8(msg, -1);
 #endif
-  tc_mutex_release()
+  tc_mutex_release();
   return p;
 }
 
@@ -402,7 +402,7 @@ static void s_showalloc(IBOOL show_dump, const char *outfn) {
   ptr sorted_chunks;
   ptr tc = get_thread_context();
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   if (outfn == NULL) {
     out = stderr;
@@ -417,10 +417,10 @@ static void s_showalloc(IBOOL show_dump, const char *outfn) {
     if (out == NULL) {
       ptr msg = S_strerror(errno);
       if (msg != Sfalse) {
-        tc_mutex_release()
+        tc_mutex_release();
         S_error2("fopen", "open of ~s failed: ~a", Sstring_utf8(outfn, -1), msg);
       } else {
-        tc_mutex_release()
+        tc_mutex_release();
         S_error1("fopen", "open of ~s failed", Sstring_utf8(outfn, -1));
       }
     }
@@ -627,7 +627,7 @@ static void s_showalloc(IBOOL show_dump, const char *outfn) {
     fclose(out);
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 }
 
 #include <signal.h>
@@ -914,9 +914,7 @@ static ptr s_set_reloc(p, n, e) ptr p, n, e; {
 }
 
 static ptr s_flush_instruction_cache() {
-    tc_mutex_acquire()
     S_flush_instruction_cache(get_thread_context());
-    tc_mutex_release()
     return Svoid;
 }
 
@@ -924,9 +922,7 @@ static ptr s_make_code(flags, free, name, arity_mark, n, info, pinfos)
                        iptr flags, free, n; ptr name, arity_mark, info, pinfos; {
     ptr co;
 
-    tc_mutex_acquire()
     co = S_code(get_thread_context(), type_code | (flags << code_flags_offset), n);
-    tc_mutex_release()
     CODEFREE(co) = free;
     CODENAME(co) = name;
     CODEARITYMASK(co) = arity_mark;

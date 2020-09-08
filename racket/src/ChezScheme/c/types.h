@@ -368,7 +368,7 @@ typedef struct {
 #define deactivate_thread_signal_collect(tc, check_collect) {  \
   if (ACTIVE(tc)) {\
     ptr code;\
-    tc_mutex_acquire()\
+    tc_mutex_acquire();\
     code = CP(tc);\
     if (Sprocedurep(code)) CP(tc) = code = CLOSCODE(code);\
     Slock_object(code);\
@@ -387,7 +387,7 @@ typedef struct {
 #define deactivate_thread(tc) deactivate_thread_signal_collect(tc, 1) 
 #define reactivate_thread(tc) {\
   if (!ACTIVE(tc)) {\
-    tc_mutex_acquire()\
+    tc_mutex_acquire();                         \
     SETSYMVAL(S_G.active_threads_id,\
      FIX(UNFIX(SYMVAL(S_G.active_threads_id)) + 1));\
     Sunlock_object(CP(tc));\
@@ -399,14 +399,14 @@ typedef struct {
    C code on tc_mutex.  it is used by do_error to release tc_mutex
    the appropriate number of times.
 */
-#define tc_mutex_acquire() {\
-  S_mutex_acquire(&S_tc_mutex);\
-  S_tc_mutex_depth += 1;\
-}
-#define tc_mutex_release() {\
-  S_tc_mutex_depth -= 1;\
-  S_mutex_release(&S_tc_mutex);\
-}
+#define tc_mutex_acquire() do {                 \
+    S_mutex_acquire(&S_tc_mutex);               \
+    S_tc_mutex_depth += 1;                      \
+  } while (0);
+#define tc_mutex_release() do {                 \
+    S_tc_mutex_depth -= 1;                      \
+    S_mutex_release(&S_tc_mutex);               \
+  } while (0);
 #define gc_tc_mutex_acquire() S_mutex_acquire(&S_gc_tc_mutex)
 #define gc_tc_mutex_release() S_mutex_release(&S_gc_tc_mutex)
 #define S_cas_store_release_voidp(a, old, new) __sync_bool_compare_and_swap(a, old, new)
@@ -415,8 +415,8 @@ typedef struct {
 #define get_thread_context() TO_PTR(S_G.thread_context)
 #define deactivate_thread(tc) {}
 #define reactivate_thread(tc) {}
-#define tc_mutex_acquire() {}
-#define tc_mutex_release() {}
+#define tc_mutex_acquire() do {} while (0)
+#define tc_mutex_release() do {} while (0)
 #define gc_tc_mutex_acquire() do {} while (0)
 #define gc_tc_mutex_release() do {} while (0)
 #define S_cas_store_release_voidp(a, old, new) (*(a) = new, 1)

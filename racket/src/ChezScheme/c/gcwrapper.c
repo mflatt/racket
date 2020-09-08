@@ -188,7 +188,7 @@ void S_immobilize_object(x) ptr x; {
     si = MaybeSegInfo(ptr_get_segment(x));
  
   if ((si != NULL) && (si->generation != static_generation)) {
-    tc_mutex_acquire()
+    tc_mutex_acquire();
 
     /* Try a little to to support cancellation of segment-level
      * immobilzation --- but we don't try too hard */
@@ -202,7 +202,7 @@ void S_immobilize_object(x) ptr x; {
        objects must be marked; only those in the locked list must be
        marked. Non-locked objects on `space_new` cannot be immobilized. */
 
-    tc_mutex_release()
+    tc_mutex_release();
   }
 }
 
@@ -215,7 +215,7 @@ void S_mobilize_object(x) ptr x; {
     si = MaybeSegInfo(ptr_get_segment(x));
 
   if ((si != NULL) && (si->generation != static_generation)) {
-    tc_mutex_acquire()
+    tc_mutex_acquire();
 
     if (si->must_mark == 0)
       S_error_abort("S_mobilize_object(): object was definitely not immobilzed");
@@ -224,7 +224,7 @@ void S_mobilize_object(x) ptr x; {
     if (si->must_mark < MUST_MARK_INFINITY)
       --si->must_mark;
   
-    tc_mutex_release()
+    tc_mutex_release();
   }
 }
 
@@ -260,7 +260,7 @@ IBOOL Slocked_objectp(x) ptr x; {
 
   if (IMMEDIATE(x) || (si = MaybeSegInfo(ptr_get_segment(x))) == NULL || (g = si->generation) == static_generation) return 1;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   ans = 0;
   for (ls = S_G.locked_objects[g]; ls != Snil; ls = Scdr(ls)) {
@@ -270,7 +270,7 @@ IBOOL Slocked_objectp(x) ptr x; {
     }
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 
   return ans;
 }
@@ -278,7 +278,7 @@ IBOOL Slocked_objectp(x) ptr x; {
 ptr S_locked_objects(void) {
   IGEN g; ptr ans; ptr ls;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   ans = Snil;
   for (g = 0; g <= static_generation; INCRGEN(g)) {
@@ -287,7 +287,7 @@ ptr S_locked_objects(void) {
     }
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 
   return ans;
 }
@@ -298,7 +298,7 @@ void Slock_object(x) ptr x; {
  /* weed out pointers that won't be relocated */
   if (!IMMEDIATE(x) && (si = MaybeSegInfo(ptr_get_segment(x))) != NULL && (g = si->generation) != static_generation) {
     ptr tc = get_thread_context();
-    tc_mutex_acquire()
+    tc_mutex_acquire();
     S_pants_down += 1;
     /* immobilize */
     if (si->must_mark < MUST_MARK_INFINITY) {
@@ -313,7 +313,7 @@ void Slock_object(x) ptr x; {
     }
     (void)remove_first_nomorep(x, &S_G.unlocked_objects[g], 0);
     S_pants_down -= 1;
-    tc_mutex_release()
+    tc_mutex_release();
   }
 }
 
@@ -322,7 +322,7 @@ void Sunlock_object(x) ptr x; {
 
   if (!IMMEDIATE(x) && (si = MaybeSegInfo(ptr_get_segment(x))) != NULL && (g = si->generation) != static_generation) {
     ptr tc = get_thread_context();
-    tc_mutex_acquire()
+    tc_mutex_acquire();
     S_pants_down += 1;
     /* mobilize, if we haven't lost track */
     if (si->must_mark < MUST_MARK_INFINITY)
@@ -336,7 +336,7 @@ void Sunlock_object(x) ptr x; {
       }
     }
     S_pants_down -= 1;
-    tc_mutex_release()
+    tc_mutex_release();
   }
 }
 
@@ -355,7 +355,7 @@ ptr s_help_unregister_guardian(ptr *pls, ptr tconc, ptr result) {
 
 ptr S_unregister_guardian(ptr tconc) {
   ptr result, tc; IGEN g;
-  tc_mutex_acquire()
+  tc_mutex_acquire();
   tc = get_thread_context();
   /* in the interest of thread safety, gather entries only in the current thread, ignoring any others */
   result = s_help_unregister_guardian(&GUARDIANENTRIES(tc), tconc, Snil);
@@ -363,15 +363,15 @@ ptr S_unregister_guardian(ptr tconc) {
   for (g = 0; g <= static_generation; INCRGEN(g)) {
     result = s_help_unregister_guardian(&S_G.guardians[g], tconc, result);
   }
-  tc_mutex_release()
+  tc_mutex_release();
   return result;
 }
 
 #ifndef WIN32
 void S_register_child_process(INT child) {
-  tc_mutex_acquire()
+  tc_mutex_acquire();
   S_child_processes[0] = Scons(FIX(child), S_child_processes[0]);
-  tc_mutex_release()
+  tc_mutex_release();
 }
 #endif /* WIN32 */
 
@@ -386,7 +386,7 @@ void S_set_enable_object_counts(IBOOL eoc) {
 ptr S_object_counts(void) {
   IGEN grtd, g; ptr ls; iptr i; ptr outer_alist;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   outer_alist = Snil;
 
@@ -443,7 +443,7 @@ ptr S_object_counts(void) {
     }
   }
 
-  tc_mutex_release()
+  tc_mutex_release();
 
   return outer_alist;
 }
@@ -459,12 +459,12 @@ void S_set_enable_object_backreferences(IBOOL eoc) {
 ptr S_object_backreferences(void) {
   IGEN g; ptr ls = Snil;
 
-  tc_mutex_acquire()
+  tc_mutex_acquire();
 
   for (g = S_G.max_nonstatic_generation+1; g--; )
     ls = Scons(S_G.gcbackreference[g], ls);
 
-  tc_mutex_release()
+  tc_mutex_release();
 
   return ls;
 }
