@@ -2743,6 +2743,8 @@ static s_thread_rv_t start_sweeper(void *_data) {
 
     s_thread_mutex_lock(&sweep_mutex);
     --num_running_sweepers;
+    if (!num_running_sweepers)
+      s_thread_cond_broadcast(&postpone_cond);
     data->status = SWEEPER_READY;
     s_thread_cond_signal(&data->done_cond);
   }
@@ -2800,6 +2802,8 @@ static void parallel_sweep_generation(ptr tc) {
     /* wait for other sweepers */
     s_thread_mutex_lock(&sweep_mutex);
     --num_running_sweepers;
+    if (!num_running_sweepers)
+      s_thread_cond_broadcast(&postpone_cond);
     for (i = 0; i < num_sweepers; i++) {
       while (sweepers[i].status != SWEEPER_READY) {
         s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
@@ -2824,8 +2828,8 @@ static void gate_postponed(ptr tc) {
        Instead of spinning, which could create livelock, wait until
        some thread makes progress. */
     if (num_running_sweepers == 1)  {
-      /* All other threads postponed, so this one can make
-         progress after all. */
+      /* All other threads postponed, so this one should be able to
+         make progress after all. */
     } else {
       --num_running_sweepers;
       s_thread_cond_wait(&postpone_cond, &sweep_mutex);
