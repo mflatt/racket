@@ -466,6 +466,12 @@ typedef char tputsputcchar;
 # define WRITE write
 #endif
 
+#ifdef PTHREADS
+# define NO_THREADS_UNUSED /* empty */
+#else
+# define NO_THREADS_UNUSED UNUSED
+#endif
+
 /* Use "/dev/urandom" everywhere except Windows */
 #define USE_DEV_URANDOM_UUID
 

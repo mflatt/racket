@@ -206,7 +206,7 @@ static ptr more_room_segment(ISPC s, IGEN g, iptr n, iptr *_new_bytes)
   return new;
 }
 
-static void close_off_segment(ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
+static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
 {
   if (base_loc) {
     seginfo *si;
@@ -223,6 +223,7 @@ static void close_off_segment(ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC
     si = SegInfo(addr_get_segment(base_loc));
     si->sweep_start = sweep_loc;
 
+#ifdef PTHREADS
     if (S_use_gc_tc_mutex) {
       si->sweep_next = SWEEPNEXT(tc);
       SWEEPNEXT(tc) = si;
@@ -231,6 +232,10 @@ static void close_off_segment(ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC
         si->sweep_next = S_G.to_sweep[g][s];
       } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
     }
+#else
+    si->sweep_next = S_G.to_sweep[g][s];
+    S_G.to_sweep[g][s] = si;
+#endif
   }
 }
 
@@ -281,12 +286,16 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   ptr new;
   iptr new_bytes;
 
+#ifdef PTHREADS
   if (S_use_gc_tc_mutex) {
     gc_tc_mutex_acquire();
   } else {
     tc_mutex_acquire()
   }
-
+#else
+  tc_mutex_acquire()
+#endif
+  
   /* closing off segment effectively moves to global space: */
   close_off_segment(tc, old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
 
@@ -299,11 +308,15 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
 
   more_room_done(g);
 
+#ifdef PTHREADS
   if (S_use_gc_tc_mutex) {
     gc_tc_mutex_release();
   } else {
     tc_mutex_release()
   }
+#else
+  tc_mutex_release()
+#endif
   
   return new;
 }
