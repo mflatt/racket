@@ -1112,7 +1112,7 @@ ptr S_gc(ptr tc, IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
            && (S_G.min_mark_gen > 0)) {
     S_gc_011(tc);
     return Svoid;
-#if defined(PTHREADS)
+#if 0 && defined(PTHREADS)
   } else if (S_collect_waiting_threads != 0) {
     return S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
 #endif
