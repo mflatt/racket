@@ -2383,13 +2383,19 @@ static void add_pending_guardian(ptr gdn, ptr tconc)
 
 static void add_trigger_guardians_to_recheck(ptr ls)
 {
-  ptr last = ls, next = GUARDIANNEXT(ls);
+  ptr last = ls, next;
+
+  GC_TC_MUTEX_ACQUIRE();
+
+  next = GUARDIANNEXT(ls);
   while (next != 0) {
     last = next;
     next = GUARDIANNEXT(next);
   }
   INITGUARDIANNEXT(last) = recheck_guardians_ls;
   recheck_guardians_ls = ls;
+
+  GC_TC_MUTEX_RELEASE();
 }
 
 static ptr pending_ephemerons = 0;
@@ -2760,8 +2766,6 @@ static void parallel_sweep_generation(ptr tc) {
     }
   }
 
-  // fprintf(stderr, "GCing %d\n", num_sweepers);
-
   while (1) {
     /* start other sweepers */
     s_thread_mutex_lock(&sweep_mutex);
@@ -2794,8 +2798,6 @@ static void parallel_sweep_generation(ptr tc) {
     if (SWEEPCHANGE(tc) == SWEEP_NO_CHANGE)
       break;
   }
-
-  // fprintf(stderr, "done\n");
 
   S_use_gc_tc_mutex = 0;
 }

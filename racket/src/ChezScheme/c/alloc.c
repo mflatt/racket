@@ -186,26 +186,6 @@ static void maybe_fire_collector() {
     S_fire_collector();
 }
 
-static ptr more_room_segment(ISPC s, IGEN g, iptr n, iptr *_new_bytes)
-{
-  iptr nsegs, seg;
-  ptr new;
-
-  S_pants_down += 1;
-
-  nsegs = (uptr)(n + ptr_bytes + bytes_per_segment - 1) >> segment_offset_bits;
-
- /* block requests to minimize fragmentation and improve cache locality */
-  if (s == space_code && nsegs < 16) nsegs = 16;
-
-  seg = S_find_segments(s, g, nsegs);
-  new = build_ptr(seg, 0);
-
-  *_new_bytes = nsegs * bytes_per_segment;
-
-  return new;
-}
-
 /* suitable mutex (either tc_mutex or gc_tc_mutex) must be held */
 static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
 {
@@ -239,14 +219,8 @@ static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, p
   }
 }
 
-static void more_room_done(IGEN g)
-{
-  if (g == 0 && S_pants_down == 1) maybe_fire_collector();
-
-  S_pants_down -= 1;
-}
-
 ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
+  iptr nsegs, seg;
   ptr new;
   iptr new_bytes;
 
@@ -262,14 +236,26 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   /* closing off segment effectively moves to global space: */
   close_off_segment(tc, old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
 
-  new = more_room_segment(s, g, n, &new_bytes);
+  S_pants_down += 1;
+
+  nsegs = (uptr)(n + ptr_bytes + bytes_per_segment - 1) >> segment_offset_bits;
+
+ /* block requests to minimize fragmentation and improve cache locality */
+  if (s == space_code && nsegs < 16) nsegs = 16;
+
+  seg = S_find_segments(s, g, nsegs);
+  new = build_ptr(seg, 0);
+
+  new_bytes = nsegs * bytes_per_segment;
 
   BASELOC_AT(tc, s, g) = new;
   SWEEPLOC_AT(tc, s, g) = new;
   BYTESLEFT_AT(tc, s, g) = (new_bytes - n) - ptr_bytes;
   NEXTLOC_AT(tc, s, g) = (ptr)((uptr)new + n);
 
-  more_room_done(g);
+  if (g == 0 && S_pants_down == 1) maybe_fire_collector();
+
+  S_pants_down -= 1;
 
 #ifdef PTHREADS
   if (S_use_gc_tc_mutex)
