@@ -676,6 +676,7 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
           pp1 = TO_VOIDP(build_ptr(seg, 0));
           pp2 = TO_VOIDP(build_ptr(seg + 1, 0));
 
+          nl = NULL;
           {
             ptr ls;
             for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
