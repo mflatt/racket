@@ -1,0 +1,146 @@
+From a62b5e94a4cee765e9bdd27daf0109e5b932de4b Mon Sep 17 00:00:00 2001
+From: Matthew Flatt <mflatt@racket-lang.org>
+Date: Tue, 8 Sep 2020 15:10:14 -0600
+Subject: [PATCH] fix guardian race and other cleanup
+
+---
+ racket/src/ChezScheme/c/alloc.c     | 44 ++++++++++-------------------
+ racket/src/ChezScheme/c/gc.c        | 12 ++++----
+ racket/src/ChezScheme/c/gcwrapper.c |  2 +-
+ 3 files changed, 23 insertions(+), 35 deletions(-)
+
+diff --git a/racket/src/ChezScheme/c/alloc.c b/racket/src/ChezScheme/c/alloc.c
+index 1fbd82570f..a2af12bd8c 100644
+--- a/racket/src/ChezScheme/c/alloc.c
++++ b/racket/src/ChezScheme/c/alloc.c
+@@ -186,26 +186,6 @@ static void maybe_fire_collector() {
+     S_fire_collector();
+ }
+ 
+-static ptr more_room_segment(ISPC s, IGEN g, iptr n, iptr *_new_bytes)
+-{
+-  iptr nsegs, seg;
+-  ptr new;
+-
+-  S_pants_down += 1;
+-
+-  nsegs = (uptr)(n + ptr_bytes + bytes_per_segment - 1) >> segment_offset_bits;
+-
+- /* block requests to minimize fragmentation and improve cache locality */
+-  if (s == space_code && nsegs < 16) nsegs = 16;
+-
+-  seg = S_find_segments(s, g, nsegs);
+-  new = build_ptr(seg, 0);
+-
+-  *_new_bytes = nsegs * bytes_per_segment;
+-
+-  return new;
+-}
+-
+ /* suitable mutex (either tc_mutex or gc_tc_mutex) must be held */
+ static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
+ {
+@@ -239,14 +219,8 @@ static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, p
+   }
+ }
+ 
+-static void more_room_done(IGEN g)
+-{
+-  if (g == 0 && S_pants_down == 1) maybe_fire_collector();
+-
+-  S_pants_down -= 1;
+-}
+-
+ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
++  iptr nsegs, seg;
+   ptr new;
+   iptr new_bytes;
+ 
+@@ -262,14 +236,26 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
+   /* closing off segment effectively moves to global space: */
+   close_off_segment(tc, old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
+ 
+-  new = more_room_segment(s, g, n, &new_bytes);
++  S_pants_down += 1;
++
++  nsegs = (uptr)(n + ptr_bytes + bytes_per_segment - 1) >> segment_offset_bits;
++
++ /* block requests to minimize fragmentation and improve cache locality */
++  if (s == space_code && nsegs < 16) nsegs = 16;
++
++  seg = S_find_segments(s, g, nsegs);
++  new = build_ptr(seg, 0);
++
++  new_bytes = nsegs * bytes_per_segment;
+ 
+   BASELOC_AT(tc, s, g) = new;
+   SWEEPLOC_AT(tc, s, g) = new;
+   BYTESLEFT_AT(tc, s, g) = (new_bytes - n) - ptr_bytes;
+   NEXTLOC_AT(tc, s, g) = (ptr)((uptr)new + n);
+ 
+-  more_room_done(g);
++  if (g == 0 && S_pants_down == 1) maybe_fire_collector();
++
++  S_pants_down -= 1;
+ 
+ #ifdef PTHREADS
+   if (S_use_gc_tc_mutex)
+diff --git a/racket/src/ChezScheme/c/gc.c b/racket/src/ChezScheme/c/gc.c
+index 06952f1b88..c82f30a7f1 100644
+--- a/racket/src/ChezScheme/c/gc.c
++++ b/racket/src/ChezScheme/c/gc.c
+@@ -2383,13 +2383,19 @@ static void add_pending_guardian(ptr gdn, ptr tconc)
+ 
+ static void add_trigger_guardians_to_recheck(ptr ls)
+ {
+-  ptr last = ls, next = GUARDIANNEXT(ls);
++  ptr last = ls, next;
++
++  GC_TC_MUTEX_ACQUIRE();
++
++  next = GUARDIANNEXT(ls);
+   while (next != 0) {
+     last = next;
+     next = GUARDIANNEXT(next);
+   }
+   INITGUARDIANNEXT(last) = recheck_guardians_ls;
+   recheck_guardians_ls = ls;
++
++  GC_TC_MUTEX_RELEASE();
+ }
+ 
+ static ptr pending_ephemerons = 0;
+@@ -2760,8 +2766,6 @@ static void parallel_sweep_generation(ptr tc) {
+     }
+   }
+ 
+-  // fprintf(stderr, "GCing %d\n", num_sweepers);
+-
+   while (1) {
+     /* start other sweepers */
+     s_thread_mutex_lock(&sweep_mutex);
+@@ -2795,8 +2799,6 @@ static void parallel_sweep_generation(ptr tc) {
+       break;
+   }
+ 
+-  // fprintf(stderr, "done\n");
+-
+   S_use_gc_tc_mutex = 0;
+ }
+ 
+diff --git a/racket/src/ChezScheme/c/gcwrapper.c b/racket/src/ChezScheme/c/gcwrapper.c
+index fe4e79e327..1ad6a14ed8 100644
+--- a/racket/src/ChezScheme/c/gcwrapper.c
++++ b/racket/src/ChezScheme/c/gcwrapper.c
+@@ -1112,7 +1112,7 @@ ptr S_gc(ptr tc, IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
+            && (S_G.min_mark_gen > 0)) {
+     S_gc_011(tc);
+     return Svoid;
+-#if 0 && defined(PTHREADS)
++#if defined(PTHREADS)
+   } else if (S_collect_waiting_threads != 0) {
+     return S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
+ #endif
+-- 
+2.21.1 (Apple Git-122.3)
+

@@ -1418,13 +1418,13 @@
           (code-block
            "ENABLE_LOCK_ACQUIRE"
            "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
-           "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
            "check_triggers(si);"
            (code-block
             "ptr new_p;"
             "IGEN tg = TARGET_GENERATION(si);"
             (body)
             "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
+            "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
             "FWDMARKER(p) = forward_marker;"
             "FWDADDRESS(p) = new_p;"
             (and (lookup 'maybe-backreferences? config #f)
@@ -1435,10 +1435,10 @@
           (code-block
            "ENABLE_LOCK_ACQUIRE"
            "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
-           "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
            "check_triggers(si);"
            (ensure-segment-mark-mask "si" "" '())
            (body)
+           "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
            "ADD_BACKREFERENCE(p, si->generation);"
            "return si->generation;")]
          [(sweep)
@@ -1816,6 +1816,7 @@
                (unless (null? (cdr l))
                  (error 'skip-forwarding "not at end"))
                (code "*dest = new_p;"
+                     "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
                      "return tg;")]
               [else
                (statements (cdr l) config)])]

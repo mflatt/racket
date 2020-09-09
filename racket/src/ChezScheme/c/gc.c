@@ -1778,18 +1778,26 @@ static void forward_or_bwp(pp, p) ptr *pp; ptr p; {
 }
 
 static void transfer_sweep_next(ptr tc_in) {
-  seginfo *si;
+  seginfo *si, *next;
   ISPC s; IGEN g;
 
-  while ((si = TO_VOIDP(SWEEPNEXT(tc_in)))) {
-    SWEEPNEXT(tc_in) = TO_PTR(si->sweep_next);
+  si = TO_VOIDP(SWEEPNEXT(tc_in));
+  if (si != NULL) {
+    SWEEPNEXT(tc_in) = (ptr)0;
+    SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;
 
-    s = si->space;
-    g = si->generation;
+    while (si != NULL) {
+      next = si->sweep_next;
+
+      s = si->space;
+      g = si->generation;
   
-    do {
-      si->sweep_next = S_G.to_sweep[g][s];
-    } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+      do {
+        si->sweep_next = S_G.to_sweep[g][s];
+      } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+
+      si = next;
+    }
   }
 }
 
@@ -1920,8 +1928,6 @@ void enlarge_sweep_stack(ptr tc_in) {
 
 void sweep_from_stack(ptr tc_in) {
   if (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
-    SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;
-  
     while (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
       ptr p;
       seginfo *si;
