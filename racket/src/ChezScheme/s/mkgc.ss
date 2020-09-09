@@ -1130,16 +1130,22 @@
         [else
          (let* ([t_si : seginfo* (SegInfo (ptr_get_segment t))])
            (when (-> t_si old_space)
-             (set! n (size_reloc_table (reloc-table-size t)))
-             (count countof-relocation-table (just n) 1 sweep)
              (cond
-               [(-> t_si use_marks)
-                ;; Assert: (! (marked t_si t))
-                (mark_typemod_data_object _tc_ t n t_si)]
+               [(SEGMENT_LOCK_ACQUIRE t_si)
+                (set! n (size_reloc_table (reloc-table-size t)))
+                (count countof-relocation-table (just n) 1 sweep)
+                (cond
+                  [(-> t_si use_marks)
+                   ;; Assert: (! (marked t_si t))
+                   (mark_typemod_data_object _tc_ t n t_si)]
+                  [else
+                   (let* ([oldt : ptr t])
+                     (find_room _tc_ space_data from_g typemod n t)
+                     (memcpy_aligned (TO_VOIDP t) (TO_VOIDP oldt) n))])
+                (SEGMENT_LOCK_RELEASE t_si)]
                [else
-                (let* ([oldt : ptr t])
-                  (find_room _tc_ space_data from_g typemod n t)
-                  (memcpy_aligned (TO_VOIDP t) (TO_VOIDP oldt) n))])))
+                (RECORD_LOCK_FAILED _tc_ t_si)
+                (check-lock-failed)])))
          (set! (reloc-table-code t) _)
          (set! (code-reloc _) t)])
       (S_record_code_mod tc_in (cast uptr (TO_PTR (& (code-data _ 0)))) (cast uptr (code-length _)))]
