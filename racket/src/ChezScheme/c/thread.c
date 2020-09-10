@@ -137,6 +137,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
 
   LZ4OUTBUFFER(tc) = 0;
 
+  SWEEPNEXT(tc) = (ptr)0;
   LOCKSTATUS(tc) = Strue;
 
   tc_mutex_release();

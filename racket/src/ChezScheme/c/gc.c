@@ -2800,7 +2800,10 @@ static void parallel_sweep_generation(ptr tc) {
     }
     s_thread_mutex_unlock(&sweep_mutex);
 
+    /* check epehemerons in non-parallel mode */
     check_pending_ephemerons(tc);
+
+    /* if this thread is still done, then all threads are done */
     if (SWEEPCHANGE(tc) == SWEEP_NO_CHANGE)
       break;
   }
