@@ -42,12 +42,12 @@ FORCEINLINE int CAS_LOAD_ACQUIRE(volatile void *addr, void *old_val, void *new_v
                         "0:\n\t"
                         "ldaxr r12, [%1, #0]\n\t"
                         "cmp r12, %2\n\t"
-                        "bne 1\n\t"
+                        "bne 1f\n\t"
                         "stxr r7, %3, [%1, #0]\n\t"
                         "cmp r7, #0\n\t"
-                        "bne 1\n\t"
+                        "bne 1f\n\t"
                         "moveq %0, #1\n\t"
-                        "1:"
+                        "1:\n\t"
                         : "=&r" (ret)
                         : "r" (addr), "r" (old_val), "r" (new_val)
                         : "cc", "memory", "r12", "r7");
@@ -60,12 +60,12 @@ FORCEINLINE int CAS_STORE_RELEASE(volatile void *addr, void *old_val, void *new_
                         "0:\n\t"
                         "ldxr r12, [%1, #0]\n\t"
                         "cmp r12, %2\n\t"
-                        "bne 1\n\t"
+                        "bne 1f\n\t"
                         "stlxr r7, %3, [%1, #0]\n\t"
                         "cmp r7, #0\n\t"
-                        "bne 1\n\t"
+                        "bne 1f\n\t"
                         "moveq %0, #1\n\t"
-                        "1:"
+                        "1:\n\t"
                         : "=&r" (ret)
                         : "r" (addr), "r" (old_val), "r" (new_val)
                         : "cc", "memory", "r12", "r7");
@@ -79,12 +79,12 @@ FORCEINLINE int S_cas_any_fence(volatile void *addr, void *old_val, void *new_va
                         "0:\n\t"
                         "ldrex r12, [%1, #0]\n\t"
                         "cmp r12, %2\n\t"
-                        "bne 1\n\t"
+                        "bne 1f\n\t"
                         "strex r7, %3, [%1, #0]\n\t"
                         "cmp r7, #0\n\t"
-                        "bne 1\n\t"
+                        "bne 1f\n\t"
                         "moveq %0, #1\n\t"
-                        "1:"
+                        "1:\n\t"
                         : "=&r" (ret)
                         : "r" (addr), "r" (old_val), "r" (new_val)
                         : "cc", "memory", "r12", "r7");
