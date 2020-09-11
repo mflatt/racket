@@ -471,7 +471,14 @@ ptr S_get_more_room_help(ptr tc, uptr ap, uptr type, uptr size) {
   eap = (uptr)EAP(tc);
   real_eap = (uptr)REAL_EAP(tc);
 
+#ifdef PTHREADS
+  if (S_use_gc_tc_mutex)
+    gc_tc_mutex_acquire();
+  else
+    tc_mutex_acquire();
+#else
   tc_mutex_acquire();
+#endif
 
   S_scan_dirty(TO_VOIDP(eap), TO_VOIDP(real_eap));
   eap = real_eap;
@@ -506,7 +513,14 @@ ptr S_get_more_room_help(ptr tc, uptr ap, uptr type, uptr size) {
     }
   }
 
+#ifdef PTHREADS
+  if (S_use_gc_tc_mutex)
+    gc_tc_mutex_release();
+  else
+    tc_mutex_release();
+#else
   tc_mutex_release();
+#endif
 
   return x;
 }
