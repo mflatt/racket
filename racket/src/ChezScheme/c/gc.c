@@ -1684,7 +1684,7 @@ static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl) {
        of the ones queued in the thread */
     seginfo *si = SWEEPNEXT(tc_in);
     while (1) {
-      if (si == NULL) S_error_abort("coult not find segment for sweep range");
+      if (si == NULL) S_error_abort("could not find segment for sweep range");
       if (TO_VOIDP(si->sweep_start) == nl) {
         si->sweep_start = TO_PTR(sl);
         return;
