@@ -1782,8 +1782,8 @@ static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
     for (from_g = MIN_TG; from_g <= MAX_TG; from_g += 1) {
       /* By starting from `base_loc`, we may needlessly sweep pairs in `MAX_TG`
          that were allocated before the GC, but that's ok. */
-      pp = BASELOC_AT(tc_in, space_weakpair, from_g);
-      nl = NEXTLOC_AT(tc_in, space_weakpair, from_g);
+      pp = TO_VOIDP(BASELOC_AT(tc_in, space_weakpair, from_g));
+      nl = TO_VOIDP(NEXTLOC_AT(tc_in, space_weakpair, from_g));
       while (pp != nl) {
         p = *pp;
         forward_or_bwp(pp, p);
@@ -1797,8 +1797,8 @@ static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
         int i;
         for (i = 0; i < num_sweepers; i++) {
           ptr tc = sweepers[i].sweep_tc;
-          pp = BASELOC_AT(tc, space_weakpair, from_g);
-          nl = NEXTLOC_AT(tc, space_weakpair, from_g);
+          pp = TO_VOUDP(BASELOC_AT(tc, space_weakpair, from_g));
+          nl = TO_VOUDP(NEXTLOC_AT(tc, space_weakpair, from_g));
           while (pp != nl) {
             p = *pp;
             forward_or_bwp(pp, p);
