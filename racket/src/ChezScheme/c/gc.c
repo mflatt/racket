@@ -505,16 +505,16 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
   } while (0)
 
 #define relocate_code(pp, si) do {              \
-    if (SEGMENT_LOCK_ACQUIRE(si)) {             \
-      if (FWDMARKER(pp) == forward_marker)      \
-        pp = GET_FWDADDRESS(pp);                \
-      else if (si->old_space) {                 \
-        if (!new_marked(si, pp))                \
+    if (si->old_space) {                        \
+      if (SEGMENT_LOCK_ACQUIRE(si)) {           \
+        if (FWDMARKER(pp) == forward_marker)    \
+          pp = GET_FWDADDRESS(pp);              \
+        else if (!new_marked(si, pp))           \
           mark_or_copy_pure(&pp, pp, si);       \
-      } ELSE_MEASURE_NONOLDSPACE(pp)            \
-      SEGMENT_LOCK_RELEASE(si);                 \
-    } else                                      \
-      RECORD_LOCK_FAILED(tc_in, si);            \
+        SEGMENT_LOCK_RELEASE(si);               \
+      } else                                    \
+        RECORD_LOCK_FAILED(tc_in, si);          \
+    } ELSE_MEASURE_NONOLDSPACE(pp)              \
   } while (0)
 
 #define mark_or_copy_pure(dest, p, si) do {   \
