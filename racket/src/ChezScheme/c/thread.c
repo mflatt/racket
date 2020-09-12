@@ -39,6 +39,10 @@ void S_thread_init() {
     S_tc_mutex.owner = 0;
     S_tc_mutex.count = 0;
     S_use_gc_tc_mutex = 0;
+
+# ifdef IMPLICIT_ATOMIC_AS_EXPLICIT
+    s_thread_mutex_init(&S_implicit_mutex);
+# endif
 #endif /* PTHREADS */
   }
 }

@@ -44,6 +44,9 @@ EXTERN scheme_mutex_t S_gc_tc_mutex;
 EXTERN IBOOL S_use_gc_tc_mutex;
 EXTERN int S_collect_waiting_threads;
 EXTERN ptr S_collect_waiting_tcs[maximum_parallel_collect_threads];
+# ifdef IMPLICIT_ATOMIC_AS_EXPLICIT
+EXTERN s_thread_mutex_t S_implicit_mutex;
+# endif
 #endif
 
 /* segment.c */

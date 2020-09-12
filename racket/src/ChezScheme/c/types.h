@@ -409,11 +409,29 @@ typedef struct {
   } while (0);
 #define gc_tc_mutex_acquire() S_mutex_acquire(&S_gc_tc_mutex)
 #define gc_tc_mutex_release() S_mutex_release(&S_gc_tc_mutex)
+
+#ifdef IMPLICIT_ATOMIC_AS_EXPLICIT
+# define AS_IMPLICIT_ATOMIC(T, X) ({       \
+      T RESLT;                             \
+      s_thread_mutex_lock(&S_implicit_mutex);   \
+      RESLT = X;                           \
+      s_thread_mutex_unlock(&S_implicit_mutex); \
+      RESLT;                               \
+  })
+# define BEGIN_IMPLICIT_ATOMIC() s_thread_mutex_lock(&S_implicit_mutex)
+# define END_IMPLICIT_ATOMIC() s_thread_mutex_unlock(&S_implicit_mutex)
+#else
+# define AS_IMPLICIT_ATOMIC(T, X) X
+# define BEGIN_IMPLICIT_ATOMIC() do {  } while (0)
+# define END_IMPLICIT_ATOMIC() do {  } while (0)
+#endif
+
 #define S_cas_load_acquire_voidp(a, old, new) CAS_LOAD_ACQUIRE(a, old, new)
 #define S_cas_store_release_voidp(a, old, new) CAS_STORE_RELEASE(a, old, new)
 #define S_cas_load_acquire_ptr(a, old, new) CAS_LOAD_ACQUIRE(a, TO_VOIDP(old), TO_VOIDP(new))
 #define S_cas_store_release_ptr(a, old, new) CAS_STORE_RELEASE(a, TO_VOIDP(old), TO_VOIDP(new))
 #define S_store_release() RELEASE_FENCE()
+
 #else
 #define get_thread_context() TO_PTR(S_G.thread_context)
 #define deactivate_thread(tc) {}

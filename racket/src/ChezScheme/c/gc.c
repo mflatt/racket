@@ -332,11 +332,13 @@ static ptr sweep_from;
 # define SEGMENT_LOCK_ACQUIRE(si)                                      \
   ((si->lock == tc_in)                                                 \
    ? (old_lock_state = 0, 1)                                           \
-   : (old_lock_state = 1, S_cas_load_acquire_ptr(&si->lock, (ptr)0, tc_in)))
+   : (old_lock_state = 1, AS_IMPLICIT_ATOMIC(int, S_cas_load_acquire_ptr(&si->lock, (ptr)0, tc_in))))
 # define SEGMENT_LOCK_RELEASE(si) do { \
     if (old_lock_state) {                                       \
       S_store_release();                                        \
+      BEGIN_IMPLICIT_ATOMIC();                                  \
       si->lock = (ptr)0;                                        \
+      END_IMPLICIT_ATOMIC();                                    \
     }                                                           \
   } while (0)
 # define SEGMENT_LOCK_MUST_ACQUIRE(si) do { } while (!SEGMENT_LOCK_ACQUIRE(si))
@@ -1644,19 +1646,24 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
   }
 
 #define sweep_space(s, from_g, body) {                  \
+    BEGIN_IMPLICIT_ATOMIC();                            \
     while ((si = S_G.to_sweep[from_g][s]) != NULL) {    \
       if (LOCK_CAS_LOAD_ACQUIRE(&S_G.to_sweep[from_g][s], si, si->sweep_next)) {      \
+        END_IMPLICIT_ATOMIC();                                          \
         pp = TO_VOIDP(si->sweep_start);                                 \
         while ((p = *pp) != forward_marker)                             \
           body                                                          \
         if (CHECK_LOCK_FAILED(tc_in)) {                                 \
           SAVE_SWEEP_SEGMENT_FOR_LATER(tc_in, si);                      \
+          BEGIN_IMPLICIT_ATOMIC();                                      \
           break;                                                        \
         } else {                                                        \
           save_resweep(s, si);                                          \
         }                                                               \
+        BEGIN_IMPLICIT_ATOMIC();                                        \
       }                                                                 \
     }                                                                   \
+    END_IMPLICIT_ATOMIC();                                              \
     slp = &SWEEPLOC_AT(tc_in, s, from_g);                               \
     nlp = &NEXTLOC_AT(tc_in, s, from_g);                                \
     sweep_space_range(s, from_g, body)                                  \
@@ -1668,9 +1675,11 @@ static void save_sweep_segment_for_later(ptr tc_in, seginfo *si) {
   ISPC s = si->space; IGEN g = si->generation;
   CLEAR_LOCK_FAILED(tc_in);
   SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
+  BEGIN_IMPLICIT_ATOMIC();
   do {
     si->sweep_next = S_G.to_sweep[g][s];
   } while (!S_cas_store_release_ptr(&S_G.to_sweep[g][s], si->sweep_next, si));
+  END_IMPLICIT_ATOMIC();
 }
 
 static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl) {
@@ -1791,10 +1800,12 @@ static void transfer_sweep_next(ptr tc_in) {
 
       s = si->space;
       g = si->generation;
-  
+
+      BEGIN_IMPLICIT_ATOMIC();
       do {
         si->sweep_next = S_G.to_sweep[g][s];
       } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+      END_IMPLICIT_ATOMIC();
 
       si = next;
     }

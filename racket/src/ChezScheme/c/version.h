@@ -474,3 +474,6 @@ typedef char tputsputcchar;
 
 /* Use "/dev/urandom" everywhere except Windows */
 #define USE_DEV_URANDOM_UUID
+
+/* For debugging: */
+/* #define IMPLICIT_ATOMIC_AS_EXPLICIT */
