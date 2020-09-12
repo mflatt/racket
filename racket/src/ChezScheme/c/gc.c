@@ -704,7 +704,7 @@ FORCEINLINE void check_triggers(seginfo *si) {
 #ifndef ENABLE_OBJECT_COUNTS
 # include "gc-ocd.inc"
 #else
-<# include "gc-oce.inc"
+# include "gc-oce.inc"
 #endif
 
 /* sweep_in_old() is like sweep(), but the goal is to sweep the
