@@ -74,7 +74,7 @@ FORCEINLINE int CAS_STORE_RELEASE(volatile void *addr, void *old_val, void *new_
 #elif defined(__arm__)
 FORCEINLINE int S_cas_any_fence(volatile void *addr, void *old_val, void *new_val) {
   int ret;
-  __asm__ __volatile__ ("mcr p15, 0, %0, c7, c5, 4\n\t"
+  __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 5\n\t"
                         "mov %0, #0\n\t"       
                         "0:\n\t"
                         "ldrex r12, [%1, #0]\n\t"

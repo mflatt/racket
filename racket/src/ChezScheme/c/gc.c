@@ -2797,6 +2797,7 @@ static void parallel_sweep_generation(ptr tc) {
       while (sweepers[i].status != SWEEPER_READY) {
         s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
       }
+      S_flush_instruction_cache(sweepers[i].sweep_tc);
     }
     s_thread_mutex_unlock(&sweep_mutex);
 
