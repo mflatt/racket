@@ -535,11 +535,11 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 #else /* !NO_DIRTY_NEWSPACE_POINTERS */
 
 #ifdef ENABLE_PARALLEL
-/* In case we're retying and a pointer has already been forwarded: */
-# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp)      \
+/* In case we're retying and a pointer has already been forwarded [FIXME: needed?]: */
+# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp, from_g) \
   else if (SI->generation < from_g) S_record_new_dirty_card(tc_in, ppp, SI->generation);
 #else
-# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp) ELSE_MEASURE_NONOLDSPACE(pp)
+# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp, from_g) ELSE_MEASURE_NONOLDSPACE(pp)
 #endif
 
 #define relocate_impure(ppp, from_g) do {                       \
@@ -552,7 +552,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
     if (!IMMEDIATE(pp) && (SI = MaybeSegInfo(ptr_get_segment(pp))) != NULL) { \
       if (SI->old_space)                                                \
         relocate_impure_help_help(ppp, pp, from_g, SI);                 \
-      ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp)         \
+      ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp, from_g) \
     }                                                                   \
   } while (0)
 
@@ -592,9 +592,9 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       } else if (new_marked(_si, _pp)) {                                \
         _pg = TARGET_GENERATION(_si);                                   \
       } else if (CAN_MARK_AND(_si->use_marks)) {                        \
-        _pg = mark_object(tc_in, _pp, _si);                             \
+        _pg = mark_object_now(tc_in, _pp, _si);                         \
       } else {                                                          \
-        _pg = copy(tc_in, _pp, _si, _ppp);                              \
+        _pg = copy_now(tc_in, _pp, _si, _ppp);                          \
       }                                                                 \
       if (_pg < YOUNGEST) YOUNGEST = _pg;                               \
     }                                                                   \
@@ -609,6 +609,77 @@ static void do_relocate_indirect(ptr tc_in, ptr p) {
   relocate_pure(&p);
 }
 #define relocate_indirect(p) do_relocate_indirect(tc_in, p)
+
+#ifdef ENABLE_PARALLEL
+
+/* The `_now` variants of various functions/macros handle the possibly
+   of a lock failure by retrying immediately. A lock failure really
+   shouldn't happend where the `_now` forms are used, but because
+   locking may be implemented with a CAS that can fail spuriously on
+   processors like Arm, the lock can fail, anyway. */
+
+static IGEN mark_object_now(ptr tc_in, ptr pp, seginfo *si) {
+  IGEN g;
+  do {
+    CLEAR_LOCK_FAILED(tc_in);
+    g = mark_object(tc_in, pp, si);
+  } while (CHECK_LOCK_FAILED(tc_in));
+  return g;
+}
+
+static IGEN copy_now(ptr tc_in, ptr pp, seginfo *si, ptr *ppp) {
+  IGEN g;
+  do {
+    CLEAR_LOCK_FAILED(tc_in);
+    g = copy(tc_in, pp, si, ppp);
+  } while (CHECK_LOCK_FAILED(tc_in));
+  return g;
+}
+
+static void do_relocate_pure_now(ptr tc_in, ptr *pp) {
+  ENABLE_LOCK_ACQUIRE
+  relocate_pure(pp);
+  while (CHECK_LOCK_FAILED(tc_in)) {
+    CLEAR_LOCK_FAILED(tc_in);
+    relocate_pure(pp);
+  }
+}
+
+static void do_relocate_impure_now(ptr tc_in, ptr *pp, IGEN g) {
+  ENABLE_LOCK_ACQUIRE
+  relocate_impure(pp, g);
+  while (CHECK_LOCK_FAILED(tc_in)) {
+    CLEAR_LOCK_FAILED(tc_in);
+    relocate_impure(pp, g);
+  }
+}
+
+static void do_mark_or_copy_pure_now(ptr tc_in, ptr *dest, ptr pp, seginfo *si) {
+  do {
+    CLEAR_LOCK_FAILED(tc_in);
+    mark_or_copy_pure(dest, pp, si);
+  } while (CHECK_LOCK_FAILED(tc_in));
+}
+
+# define relocate_pure_now(pp)       do_relocate_pure_now(tc_in, pp)
+# define relocate_impure_now(pp, g)  do_relocate_impure_now(tc_in, pp, g)
+# define mark_or_copy_pure_now(dest, pp, si) do_mark_or_copy_pure_now(tc, dest, pp, si)
+
+static void sweep_thread_now(ptr tc_in, ptr p) {
+  do {
+    CLEAR_LOCK_FAILED(tc_in);
+    sweep_thread(tc_in, p);
+  } while (CHECK_LOCK_FAILED(tc_in));
+}
+
+#else
+# define mark_object_now(tc, pp, si) mark_object(tc, pp, si)
+# define copy_now(tc, pp, si, ppp)   copy(tc, pp, si, ppp)
+# define relocate_pure_now(pp)       relocate_pure(pp)
+# define relocate_impure_now(pp, g)  relocate_impure(pp, g)
+# define mark_or_copy_pure_now(tc, pp, si) mark_or_copy_pure(tc, pp, si)
+# define sweep_thread_now(tc, thread) sweep_thread(tc, thread)
+#endif
 
 FORCEINLINE void check_triggers(seginfo *si) {
   /* Registering ephemerons and guardians to recheck at the
@@ -633,7 +704,7 @@ FORCEINLINE void check_triggers(seginfo *si) {
 #ifndef ENABLE_OBJECT_COUNTS
 # include "gc-ocd.inc"
 #else
-# include "gc-oce.inc"
+<# include "gc-oce.inc"
 #endif
 
 /* sweep_in_old() is like sweep(), but the goal is to sweep the
@@ -645,11 +716,10 @@ FORCEINLINE void check_triggers(seginfo *si) {
    sweep_in_old() is allowed to copy the object, since the object
    is going to get copied anyway. */
 static void sweep_in_old(ptr tc_in, ptr p) {
-  ENABLE_LOCK_ACQUIRE
   /* Detect all the cases when we need to give up on in-place
      sweeping: */
   if (object_directly_refers_to_self(p)) {
-    relocate_pure(&p);
+    relocate_pure_now(&p);
     return;
   }
 
@@ -759,7 +829,6 @@ typedef struct count_root_t {
 } count_root_t;
 
 ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
-    ENABLE_LOCK_ACQUIRE
     ptr tc = tc_in;
     IGEN g; ISPC s;
     seginfo *oldspacesegments, *oldweakspacesegments, *si, *nextsi;
@@ -1006,7 +1075,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
            if (!si->old_space || FORWARDEDP(p, si) || marked(si, p)
                || !count_roots[i].weak) {
              /* reached or older; sweep transitively */
-             relocate_pure(&p);
+             relocate_pure_now(&p);
              sweep(tc, p, TARGET_GENERATION(si));
              ADD_BACKREFERENCE(p, si->generation);
              sweep_generation(tc);
@@ -1099,9 +1168,9 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       if (FWDMARKER(ls) == forward_marker) ls = FWDADDRESS(ls);
 
       thread = Scar(ls);
-      if (!OLDSPACE(thread)) sweep_thread(tc, thread);
+      if (!OLDSPACE(thread)) sweep_thread_now(tc, thread);
     }
-    relocate_pure(&S_threads);
+    relocate_pure_now(&S_threads);
 
   /* relocate nonempty oldspace symbols and set up list of buckets to rebuild later */
     buckets_to_rebuild = NULL;
@@ -1130,7 +1199,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
             (SYMVAL(sym) != sunbound || SYMPLIST(sym) != Snil || SYMSPLIST(sym) != Snil)) {
           seginfo *sym_si = SegInfo(ptr_get_segment(sym));
           if (!new_marked(sym_si, sym))
-            mark_or_copy_pure(&sym, sym, sym_si);
+            mark_or_copy_pure_now(&sym, sym, sym_si);
         }
       }
       S_G.buckets_of_generation[g] = NULL;
@@ -1139,7 +1208,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
   /* relocate the protected C pointers */
     {uptr i;
      for (i = 0; i < S_G.protect_next; i++)
-         relocate_pure(S_G.protected[i]);
+       relocate_pure_now(S_G.protected[i]);
     }
 
   /* sweep areas marked dirty by assignments into older generations */
@@ -1249,7 +1318,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
                 /* if tconc was old it's been forwarded */
                   tconc = GUARDIANTCONC(ls);
 
-                  WITH_TOP_BACKREFERENCE(tconc, relocate_pure(&rep));
+                  WITH_TOP_BACKREFERENCE(tconc, relocate_pure_now(&rep));
 
                   old_end = Scdr(tconc);
                   new_end = S_cons_in(tc, space_impure, 0, FIX(0), FIX(0));
@@ -1297,7 +1366,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
               }
               
               rep = GUARDIANREP(ls);
-              WITH_TOP_BACKREFERENCE(tconc, relocate_pure(&rep));
+              WITH_TOP_BACKREFERENCE(tconc, relocate_pure_now(&rep));
               relocate_rep = 1;
 
 #ifdef ENABLE_OBJECT_COUNTS
@@ -1707,33 +1776,34 @@ static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl) {
     
 static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
     IGEN from_g;
-    ptr *slp, *nlp; ptr *pp, p, *nl, *sl;
+    ptr *pp, p, *nl;
     seginfo *si;
   
     for (from_g = MIN_TG; from_g <= MAX_TG; from_g += 1) {
       /* By starting from `base_loc`, we may needlessly sweep pairs in `MAX_TG`
          that were allocated before the GC, but that's ok. */
-      SWEEPLOC_AT(tc_in, space_weakpair, from_g) = BASELOC_AT(tc_in, space_weakpair, from_g);
-      S_G.to_sweep[space_weakpair][from_g] = NULL; /* in case there was new allocation */
-      sweep_space(space_weakpair, from_g, {
-          forward_or_bwp(pp, p);
-          pp += 2;
-      })
+      pp = BASELOC_AT(tc_in, space_weakpair, from_g);
+      nl = NEXTLOC_AT(tc_in, space_weakpair, from_g);
+      while (pp != nl) {
+        p = *pp;
+        forward_or_bwp(pp, p);
+        pp += 2;
+      }
 
 #ifdef ENABLE_PARALLEL
-      /* For each sweeper thread, we need to similarly sweep from it's thread-local
-         regions that are not closed off. */
+      /* For each tc used by a sweeper thread, we need to similarly
+         sweep from thread-local regions that are not closed off. */
       { 
         int i;
         for (i = 0; i < num_sweepers; i++) {
           ptr tc = sweepers[i].sweep_tc;
-          SWEEPLOC_AT(tc, space_weakpair, from_g) = BASELOC_AT(tc, space_weakpair, from_g);
-          slp = &SWEEPLOC_AT(tc, space_weakpair, from_g);
-          nlp = &NEXTLOC_AT(tc, space_weakpair, from_g);
-          sweep_space_range(space_weakpair, from_g, {
+          pp = BASELOC_AT(tc, space_weakpair, from_g);
+          nl = NEXTLOC_AT(tc, space_weakpair, from_g);
+          while (pp != nl) {
+            p = *pp;
             forward_or_bwp(pp, p);
             pp += 2;
-          })          
+          }
         }
       }
 #endif
@@ -2460,7 +2530,6 @@ static void add_trigger_ephemerons_to_pending(ptr pe) {
 }
 
 static void check_ephemeron(ptr tc_in, ptr pe) {
-  ENABLE_LOCK_ACQUIRE
   ptr p;
   seginfo *si;
   IGEN from_g;
@@ -2478,21 +2547,21 @@ static void check_ephemeron(ptr tc_in, ptr pe) {
       IGEN tg = TARGET_GENERATION(si);
       if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
-      relocate_impure(&INITCDR(pe), from_g);
+      relocate_impure_now(&INITCDR(pe), from_g);
     } else if (FORWARDEDP(p, si)) {
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
       IGEN tg = TARGET_GENERATION(si);
       if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
       INITCAR(pe) = FWDADDRESS(p);
-      relocate_impure(&INITCDR(pe), from_g);
+      relocate_impure_now(&INITCDR(pe), from_g);
     } else {
       /* Not reached, so far; install as trigger */
       ephemeron_add(&si->trigger_ephemerons, pe);
       si->has_triggers = 1;
     }
   } else {
-    relocate_impure(&INITCDR(pe), from_g);
+    relocate_impure_now(&INITCDR(pe), from_g);
   }
   
   POP_BACKREFERENCE();
