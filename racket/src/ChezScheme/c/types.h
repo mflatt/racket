@@ -445,6 +445,9 @@ typedef struct {
 #define S_cas_load_acquire_ptr(a, old, new) (*(a) = new, 1)
 #define S_cas_store_release_ptr(a, old, new) (*(a) = new, 1)
 #define S_store_release() do { } while (0)
+#define BEGIN_IMPLICIT_ATOMIC() do {  } while (0)
+#define END_IMPLICIT_ATOMIC() do {  } while (0)
+#define AS_IMPLICIT_ATOMIC(T, X) X
 #endif
 
 #ifdef __MINGW32__
