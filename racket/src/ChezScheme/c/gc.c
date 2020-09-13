@@ -345,7 +345,7 @@ static ptr sweep_from;
 # define RECORD_LOCK_FAILED(tc, si) LOCKSTATUS(tc) = Sfalse
 # define CLEAR_LOCK_FAILED(tc) LOCKSTATUS(tc) = Strue
 # define CHECK_LOCK_FAILED(tc) (LOCKSTATUS(tc) == Sfalse)
-# define SAVE_SWEEP_RANGE_FOR_LATER(tc, slp, sl, nl) save_sweep_range_for_later(tc, slp, sl, nl)
+# define SAVE_SWEEP_RANGE_FOR_LATER(tc, s, g, slp, sl, nl) save_sweep_range_for_later(tc, s, g, slp, sl, nl)
 # define SAVE_SWEEP_SEGMENT_FOR_LATER(tc, si) save_sweep_segment_for_later(tc, si)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) S_cas_load_acquire_ptr(a, old, new)
 # define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire() 
@@ -353,7 +353,7 @@ static ptr sweep_from;
 
 static void gather_active_sweepers();
 static void parallel_sweep_generation(ptr tc);
-static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl);
+static void save_sweep_range_for_later(ptr tc_in, ISPC s, IGEN g, ptr *slp, ptr *sl, ptr *nl);
 static void save_sweep_segment_for_later(ptr tc_in, seginfo *si);
 static void gate_postponed(ptr tc);
 
@@ -379,7 +379,7 @@ static int num_sweepers;
 # define RECORD_LOCK_FAILED(tc, si) do { } while (0)
 # define CLEAR_LOCK_FAILED(tc) do { } while (0)
 # define CHECK_LOCK_FAILED(tc) 0
-# define SAVE_SWEEP_RANGE_FOR_LATER(tc, slp, sl, nl) do { } while (0)
+# define SAVE_SWEEP_RANGE_FOR_LATER(tc, s, g, slp, sl, nl) do { } while (0)
 # define SAVE_SWEEP_SEGMENT_FOR_LATER(tc, si) do { } while (0)
 # define LOCK_CAS_LOAD_ACQUIRE(a, old, new) (*(a) = new, 1)
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
@@ -1736,7 +1736,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
         body                                                      \
       }                                                           \
       if (CHECK_LOCK_FAILED(tc_in)) {                             \
-        SAVE_SWEEP_RANGE_FOR_LATER(tc_in, slp, sl, nl);           \
+        SAVE_SWEEP_RANGE_FOR_LATER(tc_in, s, from_g, slp, sl, nl);      \
         break;                                                    \
       }                                                           \
     }                                                             \
@@ -1766,7 +1766,7 @@ static void save_sweep_segment_for_later(ptr tc_in, seginfo *si) {
   END_IMPLICIT_ATOMIC();
 }
 
-static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl) {
+static void save_sweep_range_for_later(ptr tc_in, ISPC s, IGEN g, ptr *slp, ptr *sl, ptr *nl) {
   CLEAR_LOCK_FAILED(tc_in);
   SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
   /* check whether this segment is still the thread-local allocation segment: */
@@ -1774,8 +1774,12 @@ static void save_sweep_range_for_later(ptr tc_in, ptr *slp, ptr *sl, ptr *nl) {
     *slp = sl;
   } else {
     /* need to set the sweep pointer in the segment, which must be one
-       of the ones queued in the thread */
-    seginfo *si = SWEEPNEXT(tc_in);
+       of the ones queued to sweep */
+    seginfo *si;
+    if (S_use_gc_tc_mutex)
+      si = SWEEPNEXT(tc_in);
+    else
+      si = S_G.to_sweep[g][s];
     while (1) {
       if (si == NULL) S_error_abort("could not find segment for sweep range");
       if (TO_VOIDP(si->sweep_start) == nl) {
