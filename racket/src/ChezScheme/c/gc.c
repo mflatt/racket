@@ -1690,34 +1690,23 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       return Svoid;
 }
 
-#define save_resweep(s, si) do {                  \
-    if (s == space_weakpair) {                    \
-      GC_TC_MUTEX_ACQUIRE();                      \
-      si->sweep_next = resweep_weak_segments;     \
-      resweep_weak_segments = si;                 \
-      GC_TC_MUTEX_RELEASE();                      \
-    }                                             \
-  } while (0)
-
-#define sweep_space_range(s, from_g, body) {                      \
-    while ((sl = TO_VOIDP(*slp)) != (nl = TO_VOIDP(*nlp))) {      \
-      *slp = TO_PTR(nl);                                          \
-      pp = sl;                                                    \
-      while (pp != nl) {                                          \
-        p = *pp;                                                  \
-        body                                                      \
-      }                                                           \
-      if (CHECK_LOCK_FAILED(tc_in)) {                             \
-        SAVE_SWEEP_RANGE_FOR_LATER(tc_in, slp, sl, nl);           \
-        break;                                                    \
-      }                                                           \
-    }                                                             \
-  }
+/* The `SEGINFO_PLEASE_HOLD` to represent a dequeue from `to_sweep` in
+   progress. It doesn't work to try to CAS in `si->sweep_next`
+   directly to pop from `to_sweep`, because it's possible for
+   `si->sweep_next` to change between the time the CAS is requested
+   and the time is succeeds --- in the case where some other thread
+   pops first, then pushses it back with a different `sweep_next`
+   before the original attempting tread actually tries the CAS. In
+   other words, a segment needs to be claimed by a thread before the
+   segment's `sweep_next` field can be read. */
+#define SEGINFO_PLEASE_HOLD ((seginfo *)0x1)
 
 #define sweep_space(s, from_g, body) {                  \
     BEGIN_IMPLICIT_ATOMIC();                            \
     while ((si = S_G.to_sweep[from_g][s]) != NULL) {    \
-      if (LOCK_CAS_LOAD_ACQUIRE(&S_G.to_sweep[from_g][s], si, si->sweep_next)) {      \
+      if ((si != SEGINFO_PLEASE_HOLD)                                   \
+          && LOCK_CAS_LOAD_ACQUIRE(&S_G.to_sweep[from_g][s], si, SEGINFO_PLEASE_HOLD)) { \
+        S_G.to_sweep[from_g][s] = si->sweep_next;                       \
         END_IMPLICIT_ATOMIC();                                          \
         pp = TO_VOIDP(si->sweep_start);                                 \
         while ((p = *pp) != forward_marker)                             \
@@ -1738,6 +1727,31 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     sweep_space_range(s, from_g, body)                                  \
   }
 
+#define sweep_space_range(s, from_g, body) {                      \
+    while ((sl = TO_VOIDP(*slp)) != (nl = TO_VOIDP(*nlp))) {      \
+      *slp = TO_PTR(nl);                                          \
+      pp = sl;                                                    \
+      while (pp != nl) {                                          \
+        p = *pp;                                                  \
+        body                                                      \
+      }                                                           \
+      if (CHECK_LOCK_FAILED(tc_in)) {                             \
+        SAVE_SWEEP_RANGE_FOR_LATER(tc_in, slp, sl, nl);           \
+        break;                                                    \
+      }                                                           \
+    }                                                             \
+  }
+
+#define save_resweep(s, si) do {                  \
+    if (s == space_weakpair) {                    \
+      GC_TC_MUTEX_ACQUIRE();                      \
+      si->sweep_next = resweep_weak_segments;     \
+      resweep_weak_segments = si;                 \
+      GC_TC_MUTEX_RELEASE();                      \
+    }                                             \
+  } while (0)
+
+
 #ifdef ENABLE_PARALLEL
 
 static void save_sweep_segment_for_later(ptr tc_in, seginfo *si) {
@@ -1747,7 +1761,8 @@ static void save_sweep_segment_for_later(ptr tc_in, seginfo *si) {
   BEGIN_IMPLICIT_ATOMIC();
   do {
     si->sweep_next = S_G.to_sweep[g][s];
-  } while (!S_cas_store_release_ptr(&S_G.to_sweep[g][s], si->sweep_next, si));
+  } while ((si->sweep_next == SEGINFO_PLEASE_HOLD)
+           || !S_cas_store_release_ptr(&S_G.to_sweep[g][s], si->sweep_next, si));
   END_IMPLICIT_ATOMIC();
 }
 
@@ -1874,7 +1889,8 @@ static void transfer_sweep_next(ptr tc_in) {
       BEGIN_IMPLICIT_ATOMIC();
       do {
         si->sweep_next = S_G.to_sweep[g][s];
-      } while (!S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
+      } while ((si->sweep_next == SEGINFO_PLEASE_HOLD)
+               || !S_cas_store_release_voidp(&S_G.to_sweep[g][s], si->sweep_next, si));
       END_IMPLICIT_ATOMIC();
 
       si = next;
