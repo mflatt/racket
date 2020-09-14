@@ -355,7 +355,7 @@ static void gather_active_sweepers();
 static void parallel_sweep_generation(ptr tc);
 static void save_sweep_range_for_later(ptr tc_in, ISPC s, IGEN g, ptr *slp, ptr *sl, ptr *nl);
 static void save_sweep_segment_for_later(ptr tc_in, seginfo *si);
-static void gate_postponed(ptr tc);
+static int gate_postponed(ptr tc, int status);
 
 #define SWEEPER_NONE     0
 #define SWEEPER_READY    1
@@ -2801,6 +2801,7 @@ static void gather_active_sweepers() {
 static s_thread_rv_t start_sweeper(void *_data) {
   gc_thread_data *data = _data;
   ptr tc;
+  int status;
 
   s_thread_mutex_lock(&sweep_mutex);
   while (1) {
@@ -2813,9 +2814,10 @@ static s_thread_rv_t start_sweeper(void *_data) {
     tc = data->sweep_tc;
     s_thread_setspecific(S_tc_key, tc);
 
+    status = 0;
     do {
       sweep_generation_pass(tc);
-      gate_postponed(tc);
+      status = gate_postponed(tc, status);
     } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
 
     /* ensure terminators on any segment where sweeper may have allocated: */
@@ -2842,7 +2844,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
 }
 
 static void parallel_sweep_generation(ptr tc) {
-  int i;
+  int i, status;
 
   if (!sweep_mutex_initialized) {
     s_thread_mutex_init(&sweep_mutex);
@@ -2883,9 +2885,10 @@ static void parallel_sweep_generation(ptr tc) {
     s_thread_mutex_unlock(&sweep_mutex);
 
     /* sweep in the main thread */
+    status = 0;
     do {
       sweep_generation_pass(tc);
-      gate_postponed(tc);
+      status = gate_postponed(tc, status);
     } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
 
     /* wait for other sweepers */
@@ -2912,24 +2915,34 @@ static void parallel_sweep_generation(ptr tc) {
   S_use_gc_tc_mutex = 0;
 }
 
-static void gate_postponed(ptr tc) {
-  s_thread_mutex_lock(&sweep_mutex);
+#define WAIT_AFTER_POSTPONES 100
+
+static int gate_postponed(ptr tc, int status) {
   if (SWEEPCHANGE(tc) == SWEEP_CHANGE_POSTPONED) {
-    /* This thread wasn't able to make progress after a lock conflict.
-       Instead of spinning, which could create livelock, wait until
-       some thread makes progress. */
-    if (num_running_sweepers == 1)  {
-      /* All other threads postponed, so this one should be able to
-         make progress after all. */
-    } else {
-      --num_running_sweepers;
-      s_thread_cond_wait(&postpone_cond, &sweep_mutex);
-      num_running_sweepers++;
+    if (status < WAIT_AFTER_POSTPONES)
+      return status + 1;
+    else {
+      s_thread_mutex_lock(&sweep_mutex);
+      /* This thread wasn't able to make progress after a lock conflict.
+         Instead of spinning, which could create livelock, wait until
+         some thread makes progress. */
+      if (num_running_sweepers == 1)  {
+        /* All other threads postponed, so this one should be able to
+           make progress after all. */
+      } else {
+        --num_running_sweepers;
+        s_thread_cond_wait(&postpone_cond, &sweep_mutex);
+        num_running_sweepers++;
+      }
+      s_thread_mutex_unlock(&sweep_mutex);
     }
   } else {
+    s_thread_mutex_lock(&sweep_mutex);
     s_thread_cond_broadcast(&postpone_cond);
+    s_thread_mutex_unlock(&sweep_mutex);
   }
-  s_thread_mutex_unlock(&sweep_mutex);
+
+  return 0;
 }
 
 #endif
