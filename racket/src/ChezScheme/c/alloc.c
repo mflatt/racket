@@ -203,8 +203,8 @@ static void close_off_segment(ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC
     /* in case this is during a GC, add to sweep list */
     si = SegInfo(addr_get_segment(base_loc));
     si->sweep_start = sweep_loc;
-    si->sweep_next = SWEEPNEXT_AT(tc, s, g);
-    SWEEPNEXT_AT(tc, s, g) = si;
+    si->sweep_next = TO_VOIDP(SWEEPNEXT_AT(tc, s, g));
+    SWEEPNEXT_AT(tc, s, g) = TO_PTR(si);
   }
 }
 

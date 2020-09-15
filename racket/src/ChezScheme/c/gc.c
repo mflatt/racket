@@ -2138,8 +2138,10 @@ static void sweep_dirty(ptr tc) {
         {
           int i;
           for (i = 0; i < num_sweepers; i++)
-            if (sweepers[i].sweep_tc == dirty_si->creator_tc)
+            if (sweepers[i].sweep_tc == dirty_si->creator_tc) {
               tc_in = sweepers[i].sweep_tc;
+              break;
+            }
         }
 #endif
         
@@ -2149,9 +2151,11 @@ static void sweep_dirty(ptr tc) {
 
         /* The current allocation pointer may be relevant as the
            ending point. We assume that thread-local regions for all
-           other threads are terminated and won't get new allocations
-           while dirty sweeping runs. */
-        next_loc = NEXTLOC_AT(tc, s, from_g);
+           threads without a sweeper are terminated and won't get new
+           allocations while dirty sweeping runs, while all
+           allocations for a thread with a sweeper will be only using
+           that tc. */
+        next_loc = NEXTLOC_AT(tc_in, s, from_g);
         nl = TO_VOIDP(next_loc);
 
         if (s == space_weakpair) {
@@ -2220,7 +2224,7 @@ static void sweep_dirty(ptr tc) {
                     ptr p = TYPE(TO_PTR(pp), type_symbol);
 
                     if (!dirty_si->marked_mask || marked(dirty_si, p))
-                      youngest = sweep_dirty_symbol(tc, p, youngest);
+                      youngest = sweep_dirty_symbol(tc_in, p, youngest);
 
                     pp += size_symbol / sizeof(ptr);
                   }
@@ -2240,7 +2244,7 @@ static void sweep_dirty(ptr tc) {
                     ptr p = TYPE(TO_PTR(pp), type_typed_object);
 
                     if (!dirty_si->marked_mask || marked(dirty_si, p))
-                      youngest = sweep_dirty_port(tc, p, youngest);
+                      youngest = sweep_dirty_port(tc_in, p, youngest);
 
                     pp += size_port / sizeof(ptr);
                   }
@@ -2323,7 +2327,7 @@ static void sweep_dirty(ptr tc) {
                         /* skip unmarked words */
                         p = (ptr)((uptr)p + byte_alignment);
                       } else {
-                        youngest = sweep_dirty_record(tc, p, youngest);
+                        youngest = sweep_dirty_record(tc_in, p, youngest);
                         p = (ptr)((iptr)p +
                             size_record_inst(UNFIX(RECORDDESCSIZE(
                                   RECORDINSTTYPE(p)))));
@@ -2369,7 +2373,7 @@ static void sweep_dirty(ptr tc) {
                       /* quit on end of segment */
                     if (FWDMARKER(p) == forward_marker) break;
 
-                      youngest = sweep_dirty_record(tc, p, youngest);
+                      youngest = sweep_dirty_record(tc_in, p, youngest);
                       p = (ptr)((iptr)p +
                           size_record_inst(UNFIX(RECORDDESCSIZE(
                                 RECORDINSTTYPE(p)))));
@@ -2389,7 +2393,7 @@ static void sweep_dirty(ptr tc) {
                   while (pp < ppend && (dirty_si->marked_mask || (*pp != forward_marker))) {
                     ptr p = TYPE(TO_PTR(pp), type_pair);
                     if (!dirty_si->marked_mask || marked(dirty_si, p))
-                      youngest = check_dirty_ephemeron(tc, p, youngest);
+                      youngest = check_dirty_ephemeron(tc_in, p, youngest);
                     pp += size_ephemeron / sizeof(ptr);
                   }
                 } else {
@@ -2837,7 +2841,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     if (data->thread) {
       /* sweep tc in this sweeper, so that things it references are
          more likely handled in this sweeper: */
-      sweep_thread(tc, data->thread);
+      sweep_thread_now(tc, data->thread);
       data->thread = (ptr)0;
     }
 

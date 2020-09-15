@@ -1107,15 +1107,15 @@ ptr S_gc(ptr tc, IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
       || S_G.enable_object_counts || S_G.enable_object_backreferences
       || (count_roots != Sfalse)) {
     return S_gc_oce(tc, max_cg, min_tg, max_tg, count_roots);
+#if defined(PTHREADS)
+  } else if (S_collect_waiting_threads != 0) {
+    return S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
+#endif
   } else if (max_cg == 0 && min_tg == 1 && max_tg == 1
            && !S_G.must_mark_gen0 && S_G.locked_objects[0] == Snil
            && (S_G.min_mark_gen > 0)) {
     S_gc_011(tc);
     return Svoid;
-#if defined(PTHREADS)
-  } else if (S_collect_waiting_threads != 0) {
-    return S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
-#endif
   } else {
     return S_gc_ocd(tc, max_cg, min_tg, max_tg, Sfalse);
   }
