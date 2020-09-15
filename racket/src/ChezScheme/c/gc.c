@@ -1176,9 +1176,9 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       if (FWDMARKER(ls) == forward_marker) ls = FWDADDRESS(ls);
 
       thread = Scar(ls);
-      t_tc = (ptr)THREADTC(Scar(ls));
 
 #ifdef ENABLE_PARALLEL
+      t_tc = (ptr)THREADTC(Scar(ls));
       if (SWEEPER(t_tc) != -1) {
         if (!OLDSPACE(thread)) {
           /* sweep in sweeper thread: */
