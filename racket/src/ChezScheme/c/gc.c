@@ -1170,7 +1170,9 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
      stack */
     for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
       ptr thread;
+#ifdef ENABLE_PARALLEL
       ptr t_tc;
+#endif
 
     /* someone may have their paws on the list */
       if (FWDMARKER(ls) == forward_marker) ls = FWDADDRESS(ls);
