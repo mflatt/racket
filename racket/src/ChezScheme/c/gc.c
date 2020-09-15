@@ -527,14 +527,6 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 
 #else /* !NO_DIRTY_NEWSPACE_POINTERS */
 
-#ifdef ENABLE_PARALLEL
-/* In case we're retying and a pointer has already been forwarded [FIXME: needed?]: */
-# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp, from_g) \
-  else if (SI->generation < from_g) S_record_new_dirty_card(tc_in, ppp, SI->generation);
-#else
-# define ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp, from_g) ELSE_MEASURE_NONOLDSPACE(pp)
-#endif
-
 #define relocate_impure(ppp, from_g) do {                       \
     ptr* PPP = ppp; ptr PP = *PPP; IGEN FROM_G = from_g;        \
     relocate_impure_help(PPP, PP, FROM_G);                      \
@@ -545,7 +537,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
     if (!IMMEDIATE(pp) && (SI = MaybeSegInfo(ptr_get_segment(pp))) != NULL) { \
       if (SI->old_space)                                                \
         relocate_impure_help_help(ppp, pp, from_g, SI);                 \
-      ELSE_CHECK_GENERATION_OR_MEASURE_NONOLDSPACE(SI, pp, ppp, from_g) \
+      ELSE_MEASURE_NONOLDSPACE(pp)                                      \
     }                                                                   \
   } while (0)
 
