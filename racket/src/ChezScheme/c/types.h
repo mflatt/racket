@@ -82,6 +82,7 @@ typedef int IFASLCODE;      /* fasl type codes */
 #define NEXTLOC_AT(tc, s, g) NEXTLOC(tc, SG_AT_TO_INDEX(s, g))
 #define BYTESLEFT_AT(tc, s, g) BYTESLEFT(tc, SG_AT_TO_INDEX(s, g))
 #define SWEEPLOC_AT(tc, s, g) SWEEPLOC(tc, SG_AT_TO_INDEX(s, g))
+#define SWEEPNEXT_AT(tc, s, g) SWEEPNEXT(tc, SG_AT_TO_INDEX(s, g))
 
 /* inline allocation --- no mutex required */
 /* find room allocates n bytes in space s and generation g into
@@ -158,6 +159,7 @@ typedef struct _seginfo {
   uptr number;                              /* the segment number */
 #ifdef PTHREADS
   ptr lock;                                 /* for parallel GC */
+  ptr creator_tc;                           /* for parallelism heuristic; might not match an active thread */
 #endif
   struct _chunkinfo *chunk;                 /* the chunk this segment belongs to */
   struct _seginfo *next;                    /* pointer to the next seginfo (used in occupied_segments and unused_segs) */

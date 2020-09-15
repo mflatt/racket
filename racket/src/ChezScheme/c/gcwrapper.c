@@ -996,7 +996,6 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
    /* now transfer old_g info to new_g, and clear old_g info */
     S_G.bytes_of_generation[new_g] = S_G.bytes_of_generation[old_g]; S_G.bytes_of_generation[old_g] = 0;
     for (s = 0; s <= max_real_space; s += 1) {
-      S_G.to_sweep[new_g][s] = S_G.to_sweep[old_g][s]; S_G.to_sweep[old_g][s] = NULL;
       S_G.bytes_of_space[new_g][s] = S_G.bytes_of_space[old_g][s]; S_G.bytes_of_space[old_g][s] = 0;
       S_G.occupied_segments[new_g][s] = S_G.occupied_segments[old_g][s]; S_G.occupied_segments[old_g][s] = NULL;
       for (si = S_G.occupied_segments[new_g][s]; si != NULL; si = si->next) {
@@ -1010,6 +1009,7 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
           NEXTLOC_AT(t_tc, s, new_g) = NEXTLOC_AT(t_tc, s, old_g); NEXTLOC_AT(t_tc, s, old_g) = (ptr)0;
           BYTESLEFT_AT(t_tc, s, new_g) = BYTESLEFT_AT(t_tc, s, old_g); BYTESLEFT_AT(t_tc, s, old_g) = 0;
           SWEEPLOC_AT(t_tc, s, new_g) = SWEEPLOC_AT(t_tc, s, old_g); SWEEPLOC_AT(t_tc, s, old_g) = 0;
+          SWEEPNEXT_AT(t_tc, s, new_g) = SWEEPNEXT_AT(t_tc, s, old_g); SWEEPNEXT_AT(t_tc, s, old_g) = 0;
         }
       }
     }

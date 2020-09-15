@@ -187,7 +187,7 @@ static void maybe_fire_collector() {
 }
 
 /* suitable mutex (either tc_mutex or gc_tc_mutex) must be held */
-static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
+static void close_off_segment(ptr tc, ptr old, ptr base_loc, ptr sweep_loc, ISPC s, IGEN g)
 {
   if (base_loc) {
     seginfo *si;
@@ -200,22 +200,11 @@ static void close_off_segment(NO_THREADS_UNUSED ptr tc, ptr old, ptr base_loc, p
     /* lay down an end-of-segment marker */
     *(ptr*)TO_VOIDP(old) = forward_marker;
 
-    /* add to sweep list */
+    /* in case this is during a GC, add to sweep list */
     si = SegInfo(addr_get_segment(base_loc));
     si->sweep_start = sweep_loc;
-
-#ifdef PTHREADS
-    if (S_use_gc_tc_mutex) {
-      si->sweep_next = SWEEPNEXT(tc);
-      SWEEPNEXT(tc) = si;
-    } else {
-      si->sweep_next = S_G.to_sweep[g][s];
-      S_G.to_sweep[g][s] = si;
-    }
-#else
-    si->sweep_next = S_G.to_sweep[g][s];
-    S_G.to_sweep[g][s] = si;
-#endif
+    si->sweep_next = SWEEPNEXT_AT(tc, s, g);
+    SWEEPNEXT_AT(tc, s, g) = si;
   }
 }
 
@@ -233,7 +222,6 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
   tc_mutex_acquire();
 #endif
   
-  /* closing off segment effectively moves to global space: */
   close_off_segment(tc, old, BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
 
   S_pants_down += 1;
@@ -243,7 +231,7 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
  /* block requests to minimize fragmentation and improve cache locality */
   if (s == space_code && nsegs < 16) nsegs = 16;
 
-  seg = S_find_segments(s, g, nsegs);
+  seg = S_find_segments(tc, s, g, nsegs);
   new = build_ptr(seg, 0);
 
   new_bytes = nsegs * bytes_per_segment;
@@ -271,8 +259,7 @@ ptr S_find_more_thread_room(ptr tc, ISPC s, IGEN g, iptr n, ptr old) {
 
 /* tc_mutex must be held */
 void S_close_off_thread_local_segment(ptr tc, ISPC s, IGEN g) {
-  /* closing off segment effectively moves to global space: */
-  close_off_segment((ptr)0, NEXTLOC_AT(tc, s, g), BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
+  close_off_segment(tc, NEXTLOC_AT(tc, s, g), BASELOC_AT(tc, s, g), SWEEPLOC_AT(tc, s, g), s, g);
 
   BASELOC_AT(tc, s, g) = (ptr)0;
   BYTESLEFT_AT(tc, s, g) = 0;
@@ -295,14 +282,14 @@ void S_reset_allocation_pointer(tc) ptr tc; {
 
   S_pants_down += 1;
 
-  seg = S_find_segments(space_new, 0, 1);
+  seg = S_find_segments(tc, space_new, 0, 1);
 
   /* NB: if allocate_segments didn't already ensure we don't use the last segment
      of memory, we'd have to reject it here so cp2-alloc can avoid a carry check for
      small allocation requests, using something like this:
 
      if (seg == (((uptr)1 << (ptr_bits - segment_offset_bits)) - 1))
-       seg = S_find_segments(space_new, 0, 1);
+       seg = S_find_segments(tc, space_new, 0, 1);
   */
 
   S_G.bytes_of_space[0][space_new] += bytes_per_segment;

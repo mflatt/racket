@@ -1573,15 +1573,16 @@
    [ptr SRCBV]
    [double fpregs (constant asm-fpreg-max)]
    ;; thread-local allocation and parallel collection:
-   [xptr sweep-stack]
-   [xptr sweep-stack-start]
-   [xptr sweep-stack-limit]
    [xptr base-loc (constant num-thread-local-allocation-segments)]
    [xptr next-loc (constant num-thread-local-allocation-segments)]
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
+   [xptr sweep-next (constant num-thread-local-allocation-segments)]
+   [iptr sweeper]
+   [xptr sweep-stack]
+   [xptr sweep-stack-start]
+   [xptr sweep-stack-limit]
    [iptr sweep-change]
-   [xptr sweep-next]
    [xptr lock-status]))
 
 (define tc-field-list
