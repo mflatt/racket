@@ -13,6 +13,7 @@
 (disable-unbound-warning
  mkgc-ocd.inc
  mkgc-oce.inc
+ mkgc-par.inc
  mkvfasl.inc)
 
 ;; Currently supported traversal modes:
@@ -193,7 +194,10 @@
 
    [closure
     (define code : ptr (CLOSCODE _))
-    (trace-code-early code)
+    (trace-code-early code) ; not traced in parallel mode
+    ;; In parallel mode, don't use any fields of `code` until the
+    ;; second on after the type, because the type and first field may
+    ;; be overwritten with forwarding information
     (cond
       [(and-not-as-dirty
         (or-assume-continuation
@@ -248,11 +252,16 @@
           [_backreferences?_
            space-closure]
           [else
-           (cond
-             [(& (code-type code) (<< code-flag-mutable-closure code-flags-offset))
-              space-impure]
-             [else
-              space-pure])]))
+           (case-flag parallel?
+             [on
+              ;; use space-closure so code reference (not a regular ptr) is swept correctly
+              space-closure]
+             [off
+              (cond
+                [(& (code-type code) (<< code-flag-mutable-closure code-flags-offset))
+                 space-impure]
+                [else
+                 space-pure])])]))
        (vspace vspace_closure)
        (when-vfasl
         (when (& (code-type code) (<< code-flag-mutable-closure code-flags-offset))
@@ -463,37 +472,33 @@
       (count countof-box)]
 
      [ratnum
-      (space space-data)
+      (space (case-flag parallel?
+               [on space-pure]
+               [off space-data]))
       (vspace vspace_impure) ; would be better if we had pure, but these are rare
       (size size-ratnum)
       (copy-type ratnum-type)
-      (trace-now ratnum-numerator)
-      (trace-now ratnum-denominator)
-      (case-mode
-       [(copy) (when (CHECK_LOCK_FAILED _tc_)
-                 ;; create failed relocates so that the heap checker isn't unhappy
-                 (set! (ratnum-numerator _copy_) (cast ptr 0))
-                 (set! (ratnum-denominator _copy_) (cast ptr 0)))]
-       [(mark) (check-lock-failed)]
-       [else])
+      (trace-nonparallel-now ratnum-numerator)
+      (trace-nonparallel-now ratnum-denominator)
+      (case-flag parallel?
+        [on (pad (set! (ratnum-pad _copy_) 0))]
+        [off])
       (mark)
       (vfasl-pad-word)
       (count countof-ratnum)]
 
      [exactnum
-      (space space-data)
+      (space (case-flag parallel?
+               [on space-pure]
+               [off space-data]))
       (vspace vspace_impure) ; same rationale as ratnum
       (size size-exactnum)
       (copy-type exactnum-type)
-      (trace-now exactnum-real)
-      (trace-now exactnum-imag)
-      (case-mode
-       [(copy) (when (CHECK_LOCK_FAILED _tc_)
-                 ;; create failed relocates so that the heap checker isn't unhappy
-                 (set! (exactnum-real _copy_) (cast ptr 0))
-                 (set! (exactnum-imag _copy_) (cast ptr 0)))]
-       [(mark) (check-lock-failed)]
-       [else])
+      (trace-nonparallel-now exactnum-real)
+      (trace-nonparallel-now exactnum-imag)
+      (case-flag parallel?
+        [on (pad (set! (exactnum-pad _copy_) 0))]
+        [off])
       (mark)
       (vfasl-pad-word)
       (count countof-exactnum)]
@@ -613,6 +618,11 @@
    [else
     (trace-nonself field)]))
 
+(define-trace-macro (trace-nonparallel-now field)
+  (case-flag parallel?
+    [on (trace-pure field)]
+    [off (trace-now field)]))
+
 (define-trace-macro (try-double-pair do-car pair-car
                                      do-cdr pair-cdr
                                      count-pair)
@@ -680,7 +690,17 @@
      ;; Special relocation handling for code in a closure:
      (set! code (vfasl_relocate_code vfi code))]
     [else
-     (trace-early (just code))])))
+     ;; In parallel mode, the `code` pointer may or may not have been
+     ;; forwarded. In that case, we may misinterpret the forward mmarker
+     ;; as a code type with flags, but it's ok, because the flags will
+     ;; only be set for static-generation objects
+     (case-flag parallel?
+       [on (case-mode
+            [(sweep sweep-in-old)
+             (trace-pure (just code))
+             (check-lock-failed)]
+            [else])]
+       [off (trace-early (just code))])])))
 
 (define-trace-macro (copy-clos-code code)
   (case-mode
@@ -1417,14 +1437,11 @@
        (case (lookup 'mode config)
          [(copy)
           (code-block
-           "ENABLE_LOCK_ACQUIRE"
-           "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
            "check_triggers(tc_in, si);"
            (code-block
             "ptr new_p;"
             "IGEN tg = TARGET_GENERATION(si);"
             (body)
-            "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
             "SWEEPCHANGE(tc_in) = SWEEP_CHANGE_PROGRESS;"
             "FWDMARKER(p) = forward_marker;"
             "FWDADDRESS(p) = new_p;"
@@ -1434,8 +1451,6 @@
             "return tg;"))]
          [(mark)
           (code-block
-           "ENABLE_LOCK_ACQUIRE"
-           "if (CHECK_LOCK_FAILED(tc_in)) return 0xff;"
            "check_triggers(tc_in, si);"
            (ensure-segment-mark-mask "si" "" '())
            (body)
@@ -2534,25 +2549,29 @@
                                   (loop (cdr l))))]
          [else (cons (car l) (loop (cdr l)))]))))
 
-  (define (gen-gc ofn count? measure?)
+  (define (gen-gc ofn count? measure? parallel?)
     (guard
      (x [#t (raise x)])
      (parameterize ([current-output-port (open-output-file ofn 'replace)])
        (print-code (generate "copy"
                              `((mode copy)
                                (maybe-backreferences? ,count?)
-                               (counts? ,count?))))
+                               (counts? ,count?)
+                               (parallel? ,parallel?))))
        (print-code (generate "sweep"
                              `((mode sweep)
                                (maybe-backreferences? ,count?)
-                               (counts? ,count?))))
+                               (counts? ,count?)
+                               (parallel? ,parallel?))))
        (print-code (generate "sweep_object_in_old"
                              `((mode sweep-in-old)
-                               (maybe-backreferences? ,count?))))
+                               (maybe-backreferences? ,count?)
+                               (parallel? ,parallel?))))
        (print-code (generate "sweep_dirty_object"
                              `((mode sweep)
                                (maybe-backreferences? ,count?)
                                (counts? ,count?)
+                               (parallel? ,parallel?)
                                (as-dirty? #t))))
        (letrec ([sweep1
                  (case-lambda
@@ -2580,7 +2599,8 @@
                              `((mode size))))
        (print-code (generate "mark_object"
                              `((mode mark)
-                               (counts? ,count?))))
+                               (counts? ,count?)
+                               (parallel? ,parallel?))))
        (print-code (generate "object_directly_refers_to_self"
                              `((mode self-test))))
        (print-code (code "static void mark_typemod_data_object(ptr tc_in, ptr p, uptr p_sz, seginfo *si)"
@@ -2608,6 +2628,7 @@
   (let-values ([(op get) (open-bytevector-output-port (native-transcoder))])
     (mkequates.h op))
   
-  (set! mkgc-ocd.inc (lambda (ofn) (gen-gc ofn #f #f)))
-  (set! mkgc-oce.inc (lambda (ofn) (gen-gc ofn #t #t)))
+  (set! mkgc-ocd.inc (lambda (ofn) (gen-gc ofn #f #f #f)))
+  (set! mkgc-oce.inc (lambda (ofn) (gen-gc ofn #t #t #f)))
+  (set! mkgc-par.inc (lambda (ofn) (gen-gc ofn #f #f #t)))
   (set! mkvfasl.inc (lambda (ofn) (gen-vfasl ofn))))

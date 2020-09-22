@@ -29,9 +29,9 @@
    The copying, sweeping, and marking operations that depend on
    object's shape are mostly implemented in "mkgc.ss". That script
    generates "gc-ocd.inc" (for modes where object counting and
-   backpointers are disabled) and "gc-oce.inc". The rest of the
-   implementation here can still depend on representatoin details,
-   though, especially for pairs, weak pairs, and ephemerons.
+   backpointers are disabled), "gc-oce.inc", and "gc-par.inc". The
+   rest of the implementation here can still depend on representatoin
+   details, though, especially for pairs, weak pairs, and ephemerons.
 
    GC Copying versus Marking
    -------------------------
@@ -643,15 +643,7 @@ static void do_relocate_pure_now(ptr tc_in, ptr *pp) {
   }
 }
 
-static void do_mark_or_copy_pure_now(ptr tc_in, ptr *dest, ptr pp, seginfo *si) {
-  do {
-    CLEAR_LOCK_FAILED(tc_in);
-    mark_or_copy_pure(dest, pp, si);
-  } while (CHECK_LOCK_FAILED(tc_in));
-}
-
 # define relocate_pure_now(pp)       do_relocate_pure_now(tc_in, pp)
-# define mark_or_copy_pure_now(dest, pp, si) do_mark_or_copy_pure_now(tc, dest, pp, si)
 
 static void sweep_thread_now(ptr tc_in, ptr p) {
   do {
@@ -662,7 +654,6 @@ static void sweep_thread_now(ptr tc_in, ptr p) {
 
 #else
 # define relocate_pure_now(pp)       relocate_pure(pp)
-# define mark_or_copy_pure_now(tc, pp, si) mark_or_copy_pure(tc, pp, si)
 # define sweep_thread_now(tc, thread) sweep_thread(tc, thread)
 #endif
 
@@ -686,7 +677,9 @@ FORCEINLINE void check_triggers(ptr tc_in, seginfo *si) {
   }
 }
 
-#ifndef ENABLE_OBJECT_COUNTS
+#if defined(ENABLE_PARALLEL)
+# include "gc-par.inc"
+#elif !defined(ENABLE_OBJECT_COUNTS)
 # include "gc-ocd.inc"
 #else
 # include "gc-oce.inc"
@@ -1215,7 +1208,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
             (SYMVAL(sym) != sunbound || SYMPLIST(sym) != Snil || SYMSPLIST(sym) != Snil)) {
           seginfo *sym_si = SegInfo(ptr_get_segment(sym));
           if (!new_marked(sym_si, sym))
-            mark_or_copy_pure_now(&sym, sym, sym_si);
+            mark_or_copy_pure(&sym, sym, sym_si);
         }
       }
       S_G.buckets_of_generation[g] = NULL;

@@ -855,6 +855,8 @@
 ;; ---------------------------------------------------------------------
 ;; Bit and byte offsets for different types of objects:
 
+;; Flags that matter to the GC must apply only to static-generation
+;; objects, and they must not overlap with `forward-marker`
 (define-constant code-flag-system           #b0000001)
 (define-constant code-flag-continuation     #b0000010)
 (define-constant code-flag-template         #b0000100)
@@ -1389,7 +1391,8 @@
 (define-primitive-structure-disps ratnum type-typed-object
   ([iptr type]
    [ptr numerator]
-   [ptr denominator]))
+   [ptr denominator]
+   [iptr pad])) ; for alignment
 
 (define-primitive-structure-disps vector type-typed-object
   ([iptr type]
@@ -1433,7 +1436,8 @@
 (define-primitive-structure-disps exactnum type-typed-object
   ([iptr type]
    [ptr real]
-   [ptr imag]))
+   [ptr imag]
+   [iptr pad])) ; for alignment
 
 (define-primitive-structure-disps closure type-closure
   ([ptr code]
