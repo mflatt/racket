@@ -237,20 +237,33 @@ static void check_pending_measure_ephemerons(ptr tc_in);
 
 #ifdef ENABLE_TIMING
 #include <sys/time.h>
-/* gets milliseconds of real time (not CPU time) */
-static uptr get_time () {
+static uptr get_real_time () {
   struct timeval now;
   gettimeofday(&now, NULL);
   return ((uptr) now.tv_sec) * 1000 + ((uptr) now.tv_usec) / 1000;
 }
-# define GET_TIME(x) uptr x = get_time()
-# define ACCUM_TIME(a, y, x) uptr y = get_time() - x; a += y
+static uptr get_cpu_time () {
+  struct timespec now;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now);
+  return ((uptr) now.tv_sec) * 1000 + ((uptr) now.tv_nsec) / 1000000;
+}
+# define GET_REAL_TIME(x) uptr x = get_real_time()
+# define GET_CPU_TIME(x) uptr x = get_cpu_time()
+# define ACCUM_REAL_TIME(a, y, x) uptr y = get_real_time() - x; a += y
+# define ACCUM_CPU_TIME(a, y, x) uptr y = get_cpu_time() - x; a += y
 # define REPORT_TIME(e) e
 static uptr collect_accum, all_accum, par_accum;
+static int percentage(iptr n, iptr d) { return (n * 100) / d; }
+# define COUNT_SWEPT_BYTES(start, end) num_swept_bytes += ((uptr)TO_PTR(end) - (uptr)TO_PTR(start))
+# define ADJUST_COUNTER(e) e
 #else
-# define GET_TIME(x) do { } while (0)
-# define ACCUM_TIME(a, y, x) do { } while (0)
+# define GET_REAL_TIME(x) do { } while (0)
+# define GET_CPU_TIME(x) do { } while (0)
+# define ACCUM_REAL_TIME(a, y, x) do { } while (0)
+# define ACCUM_CPU_TIME(a, y, x) do { } while (0)
 # define REPORT_TIME(e) do { } while (0)
+# define COUNT_SWEPT_BYTES(start, end) do { } while (0)
+# define ADJUST_COUNTER(e) do { } while (0)
 #endif
 
 #if defined(MIN_TG) && defined(MAX_TG)
@@ -400,6 +413,10 @@ typedef struct {
   remote_range *ranges_to_send[maximum_parallel_collect_threads+1];
   /* modified with sweeper mutex held: */
   remote_range *ranges_received;
+#ifdef ENABLE_TIMING
+  int remote_ranges_sent, remote_ranges_received;
+  iptr remote_ranges_bytes_sent, remote_ranges_bytes_received;
+#endif
 } gc_thread_data;
 
 static gc_thread_data sweepers[maximum_parallel_collect_threads+1];
@@ -816,7 +833,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     count_root_t *count_roots;
 #endif
 
-    GET_TIME(astart);
+    GET_REAL_TIME(astart);
 
    /* flush instruction cache: effectively clear_code_mod but safer */
     for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
@@ -1186,7 +1203,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     }
     relocate_pure(&S_threads, NULL, 0);
 
-    GET_TIME(start);
+    GET_REAL_TIME(start);
 
   /* relocate nonempty oldspace symbols and set up list of buckets to rebuild later */
     buckets_to_rebuild = NULL;
@@ -1492,8 +1509,9 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
    /* still-pending ephemerons all go to bwp */
     finish_pending_ephemerons(tc, oldspacesegments);
 
-    ACCUM_TIME(collect_accum, step, start);
-    REPORT_TIME(fprintf(stderr, "%d col  +%ld ms  %ld ms\n", MAX_CG, step, collect_accum));
+    ACCUM_REAL_TIME(collect_accum, step, start);
+    REPORT_TIME(fprintf(stderr, "%d coll  +%ld ms  %ld ms  [real time]\n",
+                        MAX_CG, step, collect_accum));
 
    /* post-gc oblist handling.  rebuild old buckets in the target generation, pruning unforwarded symbols */
     { bucket_list *bl; bucket *b, *bnext; bucket_pointer_list *bpl; bucket **pb; ptr sym;
@@ -1712,8 +1730,8 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
     for (g = MIN_TG; g <= MAX_TG; g++)
       S_G.bitmask_overhead[g] += BITMASKOVERHEAD(tc_in, g);
 
-    ACCUM_TIME(all_accum, astep, astart);
-    REPORT_TIME(fprintf(stderr, "%d all  +%ld ms  %ld ms\n", MAX_CG, astep, all_accum));
+    ACCUM_REAL_TIME(all_accum, astep, astart);
+    REPORT_TIME(fprintf(stderr, "%d all   +%ld ms  %ld ms  [real time]\n", MAX_CG, astep, all_accum));
 
     if (count_roots_ls != Sfalse) {
 #ifdef ENABLE_OBJECT_COUNTS
@@ -1821,12 +1839,6 @@ static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
     }                                             \
   } while (0)
 
-#ifdef ENABLE_TIMING
-# define COUNT_SWEPT_BYTES(start, end) num_swept_bytes += ((uptr)TO_PTR(end) - (uptr)TO_PTR(start))
-#else
-# define COUNT_SWEPT_BYTES(start, end) do { } while (0)
-#endif
-    
 static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
     IGEN from_g;
     ptr *pp, p, *nl;
@@ -2087,6 +2099,7 @@ static iptr sweep_generation_pass(ptr tc_in) {
         S_error_abort("dirty range sweep: unexpected space");
       }
       FLUSH_REMOTE_RANGE(tc_in, s, from_g);
+      COUNT_SWEPT_BYTES(dirty_ranges->start, dirty_ranges->end);
       dirty_ranges = dirty_ranges->next;
     }
 
@@ -3008,7 +3021,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     while (data->status != SWEEPER_SWEEPING) {
       s_thread_cond_wait(&sweep_cond, &sweep_mutex);
     }
-    GET_TIME(start);
+    GET_CPU_TIME(start);
     /* REMOVEME printf("START %ld\n", SWEEPER(data->sweep_tc)); */
     (void)s_thread_mutex_unlock(&sweep_mutex);
 
@@ -3047,9 +3060,15 @@ static s_thread_rv_t start_sweeper(void *_data) {
     for (g = MIN_TG; g <= MAX_TG; g++)
       S_G.bitmask_overhead[g] += BITMASKOVERHEAD(tc, g);
     data->status = SWEEPER_READY;
+    ACCUM_CPU_TIME(sweep_accum, step, start);
+    REPORT_TIME(fprintf(stderr, "%d swpr  +%ld ms  %ld ms  %ld bytes  %d%%/%d sent %d%%/%d received  [%p]\n",
+                        MAX_CG, step, sweep_accum, num_swept_bytes,
+                        percentage(sweepers[SWEEPER(tc)].remote_ranges_bytes_sent, num_swept_bytes),
+                        sweepers[SWEEPER(tc)].remote_ranges_sent,
+                        percentage(sweepers[SWEEPER(tc)].remote_ranges_bytes_received, num_swept_bytes),
+                        sweepers[SWEEPER(tc)].remote_ranges_received,
+                        tc));
     SWEEPER(tc) = main_sweeper_index;
-    ACCUM_TIME(sweep_accum, step, start);
-    REPORT_TIME(fprintf(stderr, "%d swp  +%ld ms  %ld ms  %ld bytes  [%p]\n", MAX_CG, step, sweep_accum, num_swept_bytes, tc));
 
     s_thread_cond_signal(&data->done_cond);
   }
@@ -3088,16 +3107,24 @@ static void parallel_sweep_dirty_and_generation(ptr tc) {
   iptr num_swept_bytes;
 
   REPORT_TIME(fprintf(stderr, "------\n"));
-  GET_TIME(start);
+  GET_CPU_TIME(start);
 
   S_use_gc_tc_mutex = 1;
 
   /* start other sweepers */
   (void)s_thread_mutex_lock(&sweep_mutex);
   sweepers[main_sweeper_index].status = SWEEPER_SWEEPING;
+  ADJUST_COUNTER(sweepers[main_sweeper_index].remote_ranges_sent = 0);
+  ADJUST_COUNTER(sweepers[main_sweeper_index].remote_ranges_bytes_sent = 0);
+  ADJUST_COUNTER(sweepers[main_sweeper_index].remote_ranges_received = 0);
+  ADJUST_COUNTER(sweepers[main_sweeper_index].remote_ranges_bytes_received = 0);
   for (i = 0; i < num_sweepers; i++) {
     sweepers[i].status = SWEEPER_SWEEPING;
     SWEEPER(sweepers[i].sweep_tc) = i;
+    ADJUST_COUNTER(sweepers[i].remote_ranges_sent = 0);
+    ADJUST_COUNTER(sweepers[i].remote_ranges_bytes_sent = 0);
+    ADJUST_COUNTER(sweepers[i].remote_ranges_received = 0);
+    ADJUST_COUNTER(sweepers[i].remote_ranges_bytes_received = 0);
     num_running_sweepers++;
   }
   s_thread_cond_broadcast(&sweep_cond);
@@ -3121,8 +3148,15 @@ static void parallel_sweep_dirty_and_generation(ptr tc) {
   }
   (void)s_thread_mutex_unlock(&sweep_mutex);
 
-  ACCUM_TIME(par_accum, step, start);
-  REPORT_TIME(fprintf(stderr, "%d par  +%ld ms  %ld ms  %ld bytes  [%p]\n", MAX_CG, step, par_accum, num_swept_bytes, tc));
+  ACCUM_CPU_TIME(par_accum, step, start);
+  REPORT_TIME(fprintf(stderr, "%d main  +%ld ms  %ld ms  %ld bytes  %d%%/%d sent %d%%/%d received  [%p]\n",
+                      MAX_CG,
+                      step, par_accum, num_swept_bytes,
+                      percentage(sweepers[main_sweeper_index].remote_ranges_bytes_sent, num_swept_bytes),
+                      sweepers[main_sweeper_index].remote_ranges_sent,
+                      percentage(sweepers[main_sweeper_index].remote_ranges_bytes_received, num_swept_bytes),
+                      sweepers[main_sweeper_index].remote_ranges_received,
+                      tc));
 
   S_use_gc_tc_mutex = 0;
 }
@@ -3187,7 +3221,12 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
       SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
       r = sweepers[me].ranges_to_send[they];
       sweepers[me].ranges_to_send[they] = NULL;
-      for (next = r; next->next != NULL; next = next->next);
+      for (next = r; next->next != NULL; next = next->next) {
+        ADJUST_COUNTER(sweepers[me].remote_ranges_sent++);
+        ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_sent += ((uptr)next->end - (uptr)next->start));
+      }
+      ADJUST_COUNTER(sweepers[me].remote_ranges_sent++);
+      ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_sent += ((uptr)next->end - (uptr)next->start));
       next->next = sweepers[they].ranges_received;
       sweepers[they].ranges_received = r;
       if (sweepers[they].status == SWEEPER_WAITING_FOR_WORK) {
@@ -3216,6 +3255,8 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
         r->next = LOCALRANGES_AT(tc, r->s, r->g);
         LOCALRANGES_AT(tc, r->s, r->g) = r;
       }
+      ADJUST_COUNTER(sweepers[me].remote_ranges_received++);
+      ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_received += ((uptr)r->end - (uptr)r->start));
     }
   }
 

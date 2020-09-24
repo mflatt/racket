@@ -311,7 +311,6 @@ void S_record_new_dirty_card(ptr tc, ptr *ppp, IGEN to_g) {
   dirtycardinfo *ndc;
 
   gc_tc_mutex_acquire();
-  /* REMOVEME printf("dirty %p %d\n", ppp, to_g); */
   ndc = S_G.new_dirty_cards;
   if (ndc != NULL && ndc->card == card) {
     if (to_g < ndc->youngest) ndc->youngest = to_g;

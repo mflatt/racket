@@ -225,8 +225,11 @@
             (case-mode
              [(sweep)
               (define stk : ptr (continuation-stack _))
-              (define s_si : seginfo* (SegInfo (ptr_get_segment stk)))
-              (when (&& (!= stk (cast ptr 0)) (-> s_si old_space))
+              (define s_si : seginfo* NULL)
+              (when (&& (!= stk (cast ptr 0))
+                        (begin
+                          (set! s_si (SegInfo (ptr_get_segment stk)))
+                          (-> s_si old_space)))
                 (cond
                   [(! (SEGMENT_IS_LOCAL s_si stk))
                    ;; A stack segment has a single owner, so it's ok for us
@@ -2116,6 +2119,8 @@
                  (expression (car (apply-macro m (list a))) config protect? multiline?))]
            [else
             (protect (format "~a(~a)" op (expression a config #t)))])]
+        [`(begin ,a ,b)
+         (format "(~a, ~a)" (expression a config #t) (expression b config #t))]
         [`(,op ,a ,b)
          (cond
            [(memq op '(& && \|\| == != + - * < > <= >= << >> ->))
