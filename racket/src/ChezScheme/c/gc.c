@@ -2026,8 +2026,8 @@ static iptr sweep_generation_pass(ptr tc_in) {
       ISPC s = dirty_ranges->s;
       IGEN from_g = dirty_ranges->g;
 
-      pp = dirty_ranges->start;
-      nl = dirty_ranges->end;
+      pp = TO_VOIDP(dirty_ranges->start);
+      nl = TO_VOIDP(dirty_ranges->end);
 
       if ((s == space_impure)
           || (s == space_immobile_impure)
