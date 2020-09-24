@@ -1124,9 +1124,9 @@ ptr S_gc(ptr tc, IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
 #if defined(PTHREADS)
   } else if (S_collect_waiting_threads != 0) {
     ptr r;
-    S_checkheap++;
+    // REMOVEME S_checkheap++;
     r = S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
-    --S_checkheap;
+    //--S_checkheap;
     return r;
 #endif
   } else if (max_cg == 0 && min_tg == 1 && max_tg == 1

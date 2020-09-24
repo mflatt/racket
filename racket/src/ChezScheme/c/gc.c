@@ -362,7 +362,7 @@ typedef struct remote_range {
 # define RECORD_REMOTE_RANGE_TO(tc, start, size, sweeper) do { \
     ptr START = TO_PTR(UNTYPE_ANY(start));                     \
     ptr END = (ptr)((uptr)START + (size));                     \
-    printf("@%d: %p-%p\n", (int)sweeper, START, END);          \
+    /* REMOVEME printf("@%d: %p-%p\n", (int)sweeper, START, END); */    \
     if ((uptr)START < (uptr)REMOTERANGESTART(tc))              \
       REMOTERANGESTART(tc) = START;                            \
     if ((uptr)END > (uptr)REMOTERANGEEND(tc))                  \
@@ -623,15 +623,12 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
             _pg = TARGET_GENERATION(_si);                               \
           } else if (new_marked(_si, _pp)) {                            \
             _pg = TARGET_GENERATION(_si);                               \
-            printf("dirty marked %p\n", _ppp);                          \
           } else if (CAN_MARK_AND(_si->use_marks)) {                    \
             _pg = mark_object(tc_in, _pp, _si);                         \
-            printf("dirty did mark %p\n", _ppp);                        \
           } else {                                                      \
             _pg = copy(tc_in, _pp, _si, _ppp);                          \
           }                                                             \
         } else {                                                        \
-          printf("dirty remote %p\n", _ppp);                            \
           RECORD_REMOTE_RANGE(tc_in, start, size, _si);                 \
           _pg = 0xff;                                                   \
         }                                                               \
@@ -677,6 +674,7 @@ FORCEINLINE void check_triggers(ptr tc_in, seginfo *si) {
 }
 
 #if defined(ENABLE_PARALLEL)
+# define SIZE 0
 # include "gc-par.inc"
 #elif !defined(ENABLE_OBJECT_COUNTS)
 # include "gc-ocd.inc"
@@ -890,6 +888,9 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
         for (g = MIN_TG; g <= MAX_TG; g++)
           BITMASKOVERHEAD(t_tc, g) = 0;
         for (s = 0; s <= max_real_space; s++) {
+          /* need to save `NEXTLOC_AT` to ensure that dirty sweeping
+             doesn't overshoot into newly allocated objects */
+          ORIGNEXTLOC(t_tc, s) = NEXTLOC_AT(t_tc, s, MAX_TG);
           SWEEPLOC_AT(t_tc, s, MAX_TG) = NEXTLOC_AT(t_tc, s, MAX_TG);
           for (g = MIN_TG; g <= MAX_TG; g++)
             SWEEPNEXT_AT(t_tc, s, g) = (ptr)0;
@@ -1167,7 +1168,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       thread = Scar(ls);
 
 #ifdef ENABLE_PARALLEL
-      t_tc = (ptr)THREADTC(Scar(ls));
+      t_tc = (ptr)THREADTC(thread);
       if (WILL_BE_SWEEPER(t_tc) != main_sweeper_index) {
         if (!OLDSPACE(thread)) {
           /* sweep in sweeper thread: */
@@ -1741,7 +1742,7 @@ static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
   int me = SWEEPER(tc);
   int they = REMOTESWEEPER(tc);
 
-  printf("%d flush %p-%p [%d,%d] to %d\n", me, REMOTERANGESTART(tc), REMOTERANGEEND(tc), s, g, they);
+  /* REMOVEME printf("%d flush %p-%p [%d,%d] to %d\n", me, REMOTERANGESTART(tc), REMOTERANGEEND(tc), s, g, they); */
 
   find_room_voidp(tc, space_data, 0, ptr_align(sizeof(remote_range)), r);
   BITMASKOVERHEAD(tc, 0) += ptr_align(sizeof(remote_range));
@@ -1753,7 +1754,9 @@ static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
   sweepers[me].ranges_to_send[they] = r;
 
   REMOTERANGESTART(tc) = (ptr)(uptr)-1;
-  REMOTERANGEEND(tc) = (ptr)0;  
+  REMOTERANGEEND(tc) = (ptr)0;
+
+  SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
 }
 
 #endif
@@ -2026,13 +2029,12 @@ static iptr sweep_generation_pass(ptr tc_in) {
       pp = dirty_ranges->start;
       nl = dirty_ranges->end;
 
-      if ((s == space_impure) || (s == space_immobile_impure)
-          || (s == space_impure_typed_object) || (s == space_count_impure)
+      if ((s == space_impure)
+          || (s == space_immobile_impure)
+          || (s == space_count_impure)
           || (s == space_closure)
-          /* can happen in the special case of a thread object: */
-          || (s == space_pure_typed_object)) {
-        if (s == space_impure)
-          printf("sweep like dirty %p-%p [%d, %d]\n", pp, nl, s, from_g);
+          || (s == space_impure_typed_object)) {
+        /* REMOVEME if (s == space_impure) printf("sweep like dirty %p-%p [%d, %d]\n", pp, nl, s, from_g); */
         while (pp < nl) {
           p = *pp;
           relocate_impure_help(pp, p, from_g, pp, 2 * ptr_bytes);
@@ -2040,6 +2042,13 @@ static iptr sweep_generation_pass(ptr tc_in) {
           p = *ppn;
           relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);
           pp = ppn + 1;
+        }
+      } else if ((s == space_pure_typed_object)
+                 || (s == space_count_pure)) {
+        /* can happen in the special case of a thread object: */
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_typed_object);
+          pp = TO_VOIDP(((uptr)TO_PTR(pp) + sweep_typed_object(tc_in, p, from_g)));
         }
       } else if (s == space_symbol) {
         while (pp < nl) {
@@ -2074,7 +2083,7 @@ static iptr sweep_generation_pass(ptr tc_in) {
                         size_record_inst(UNFIX(RECORDDESCSIZE(RECORDINSTTYPE(p)))));
         }
       } else {
-        printf("failing on %p-%p [%d, %d]\n", pp, nl, s, from_g);
+        /* REMOVEME */ printf("failing on %p-%p [%d, %d]\n", pp, nl, s, from_g);
         S_error_abort("dirty range sweep: unexpected space");
       }
       FLUSH_REMOTE_RANGE(tc_in, s, from_g);
@@ -2228,7 +2237,7 @@ static void setup_sweep_dirty() {
 
 static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
   IGEN youngest, min_youngest;
-  ptr *pp, *ppn, *ppend, *nl, start, next_loc;
+  ptr *pp, *ppn, *ppend, *nl, start;
   uptr seg, d;
   ISPC s;
   IGEN from_g, to_g;
@@ -2272,14 +2281,16 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
         start = build_ptr(seg, 0);
         ppend = TO_VOIDP(start);
 
-        /* The current allocation pointer may be relevant as the
+        /* The original allocation pointer may be relevant as the
            ending point. We assume that thread-local regions for all
            threads without a sweeper are terminated and won't get new
            allocations while dirty sweeping runs, while all
            allocations for a thread with a sweeper will be only using
-           that tc. */
-        next_loc = NEXTLOC_AT(tc_in, s, from_g);
-        nl = TO_VOIDP(next_loc);
+           that tc, and no allocation happens for a non-target generation. */
+        if (from_g == MAX_TG)
+          nl = TO_VOIDP(ORIGNEXTLOC(tc_in, s));
+        else
+          nl = TO_VOIDP(NEXTLOC_AT(tc_in, s, from_g));
 
         d = 0;
         while (d < cards_per_segment) {
@@ -2320,7 +2331,7 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
                     }
                     FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                   } else {
-                    printf("dirty segment %p-%p (%d)\n", pp, ppend, youngest);
+                    // REMOVEME printf("dirty segment %p-%p (%d)\n", pp, ppend, youngest);
                     while (pp < ppend && *pp != forward_marker) {
                       /* handle two pointers at a time */
                       relocate_dirty(pp, youngest, pp, 2 * ptr_bytes);
@@ -2328,7 +2339,7 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
                       relocate_dirty(ppn, youngest, pp, 2 * ptr_bytes);
                       pp = ppn + 1;
                     }
-                    printf(" ended %p (%d)\n", pp, youngest);
+                    // REMOVEME printf(" ended %p (%d)\n", pp, youngest);
                     FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                   }
                 } else if (s == space_symbol) {
@@ -2353,6 +2364,11 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
 
                     pp += size_symbol / sizeof(ptr);
                   }
+                  /* REMOVEME 
+                  printf("symbol %d youngest %d at %p %ld{%ld} [<%p %p/%p !%p +>%d @%d]\n",
+                         s, youngest, dirty_si, d, dend, ppend,
+                         dirty_si->creator_tc, tc_in, nl, ((d < cards_per_segment) ? dirty_si->dirty_bytes[d+1] : -1), MAX_CG);
+                  */
                   
                   FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                 } else if (s == space_port) {
@@ -2377,7 +2393,7 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
 
                     pp += size_port / sizeof(ptr);
                   }
-
+                  
                   FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                 } else if (s == space_impure_record) { /* abandon hope all ye who enter here */
                   ptr p;
@@ -2744,7 +2760,6 @@ static void check_ephemeron(ptr tc_in, ptr pe) {
         INITCAR(pe) = FWDADDRESS(p);
         relocate_impure(&INITCDR(pe), from_g, pe, size_ephemeron);
       } else {
-        /* If we get here, then there's no lock failure: */
         /* Not reached, so far; install as trigger */
         ephemeron_add(&si->trigger_ephemerons, pe);
         si->has_triggers = 1;
@@ -2994,7 +3009,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
       s_thread_cond_wait(&sweep_cond, &sweep_mutex);
     }
     GET_TIME(start);
-    printf("START %ld\n", SWEEPER(data->sweep_tc));
+    /* REMOVEME printf("START %ld\n", SWEEPER(data->sweep_tc)); */
     (void)s_thread_mutex_unlock(&sweep_mutex);
 
     tc = data->sweep_tc;
@@ -3026,7 +3041,7 @@ static s_thread_rv_t start_sweeper(void *_data) {
     }
     
     (void)s_thread_mutex_lock(&sweep_mutex);
-    printf("FINISH %ld\n", SWEEPER(tc));
+    /* REMOVEME printf("FINISH %ld\n", SWEEPER(tc)); */
     S_G.bitmask_overhead[0] += BITMASKOVERHEAD(tc, 0);
     BITMASKOVERHEAD(tc, 0) = 0;
     for (g = MIN_TG; g <= MAX_TG; g++)
@@ -3087,7 +3102,7 @@ static void parallel_sweep_dirty_and_generation(ptr tc) {
   }
   s_thread_cond_broadcast(&sweep_cond);
   num_running_sweepers++;
-  printf("START %ld %d/%d/%d\n", SWEEPER(tc), MAX_CG, MIN_TG, MAX_TG);
+  /* REMOVEME printf("START %ld %d/%d/%d\n", SWEEPER(tc), MAX_CG, MIN_TG, MAX_TG); */
   (void)s_thread_mutex_unlock(&sweep_mutex);
   
   /* sweep in the main thread */
@@ -3097,7 +3112,7 @@ static void parallel_sweep_dirty_and_generation(ptr tc) {
   
   /* wait for other sweepers */
   (void)s_thread_mutex_lock(&sweep_mutex);
-  printf("FINISH %ld\n", SWEEPER(tc));
+  /* REMOVEME printf("FINISH %ld\n", SWEEPER(tc)); */
   for (i = 0; i < num_sweepers; i++) {
     while (sweepers[i].status != SWEEPER_READY) {
       s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
@@ -3125,7 +3140,7 @@ static iptr sweep_generation_trading_work(ptr tc) {
         && (sweepers[me].ranges_received == NULL)) {
       /* everyone is done */
       int i, they = main_sweeper_index;
-      printf("zero %ld\n", SWEEPER(tc));
+      /* REMOVEME printf("zero %ld\n", SWEEPER(tc)); */
       for (i = -1; i < num_sweepers; i++) {
         s_thread_cond_signal(&sweepers[they].work_cond);
         they = i + 1;
@@ -3139,9 +3154,9 @@ static iptr sweep_generation_trading_work(ptr tc) {
         num_running_sweepers++;
       } else {
         sweepers[me].status = SWEEPER_WAITING_FOR_WORK;
-        printf("sleep %d\n", me);
+        /* REMOVEME printf("sleep %d\n", me); */
         s_thread_cond_wait(&sweepers[me].work_cond, &sweep_mutex);
-        printf("wake %d\n", me);
+        /* REMOVEME printf("wake %d\n", me); */
       }
       if (sweepers[me].status != SWEEPER_WAITING_FOR_WORK) {
         /* got work; num_running_sweepers was incremented, too */
@@ -3192,7 +3207,7 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
   if (r != NULL) {
     SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
     for (; r != NULL; r = next) {
-      printf("%d receive %p-%p [%d, %d]\n", me, r->start, r->end, r->s, r->g);
+      /* REMOVEME printf("%d receive %p-%p [%d, %d]\n", me, r->start, r->end, r->s, r->g); */
       next = r->next;
       if (r->g > MAX_TG) {
         r->next = dirty_ranges;

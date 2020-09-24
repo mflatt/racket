@@ -260,15 +260,16 @@
           [_backreferences?_
            space-closure]
           [else
-           (case-flag parallel?
-             [on
-              ;; use space-closure so code reference (not a regular ptr) is swept correctly
-              space-closure]
-             [off
-              (cond
-                [(& (code-type code) (<< code-flag-mutable-closure code-flags-offset))
-                 space-impure]
-                [else
+           (cond
+             [(& (code-type code) (<< code-flag-mutable-closure code-flags-offset))
+              ;; in parallel mode, assume that code pointer is static and doesn't need to be swept
+              space-impure]
+             [else
+              (case-flag parallel?
+                [on
+                 ;; use space-closure so code reference (not a regular ptr) is swept correctly
+                 space-closure]
+                [off
                  space-pure])])]))
        (vspace vspace_closure)
        (when-vfasl
@@ -303,7 +304,7 @@
     (size size-symbol)
     (mark one-bit)
     (trace/define symbol-value val :vfasl-as (FIX (vfasl_symbol_to_index vfi _)))
-    (trace-symcode symbol-pvalue val)
+    (trace-local-symcode symbol-pvalue val)
     (trace-nonself/vfasl-as-nil symbol-plist)
     (trace-nonself symbol-name)
     (trace-nonself/vfasl-as-nil symbol-splist)
@@ -765,6 +766,27 @@
     (set! (symbol-pvalue _copy_) Snil)]
    [else
     (copy symbol-pvalue)]))
+
+(define-trace-macro (trace-local-symcode symbol-pvalue val)
+  (case-mode
+   [(sweep)
+    (case-flag parallel?
+      [on
+       (define v_si : seginfo* (cond
+                                 [(Sprocedurep val) (SegInfo (ptr_get_segment val))]
+                                 [else NULL]))
+       (cond
+         [(\|\|
+           (\|\|
+            (== v_si NULL)
+            (! (-> v_si old_space)))
+           (SEGMENT_IS_LOCAL v_si val))
+          (trace-symcode symbol-pvalue val)]
+         [else
+          (RECORD_REMOTE_RANGE _tc_ _ _size_ v_si)])]
+      [off (trace-symcode symbol-pvalue val)])]
+   [else
+    (trace-symcode symbol-pvalue val)]))
 
 (define-trace-macro (trace-tlc tlc-next tlc-keyval)
   (case-mode

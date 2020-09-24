@@ -1499,8 +1499,9 @@
 (define-constant virtual-register-count 16)
 (define-constant static-generation 7)
 (define-constant num-generations (fx+ (constant static-generation) 1))
-(define-constant num-thread-local-allocation-segments (fx* (fx+ 1 (constant static-generation))
-                                                           (fx+ 1 (constant max-real-space))))
+(define-constant num-spaces (fx+ (constant max-real-space) 1))
+(define-constant num-thread-local-allocation-segments (fx* (constant num-generations)
+                                                           (constant num-spaces)))
 (define-constant maximum-parallel-collect-threads 8)
 
 ;;; make sure gc sweeps all ptrs
@@ -1581,6 +1582,7 @@
    [xptr base-loc (constant num-thread-local-allocation-segments)]
    [xptr next-loc (constant num-thread-local-allocation-segments)]
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
+   [xptr orig-next-loc (constant num-spaces)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
    [xptr sweep-next (constant num-thread-local-allocation-segments)]
    [xptr local-ranges (constant num-thread-local-allocation-segments)]
