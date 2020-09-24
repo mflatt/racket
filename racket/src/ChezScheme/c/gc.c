@@ -1799,8 +1799,8 @@ static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
     if (local_ranges != NULL) {                                         \
       LOCALRANGES_AT(tc_in, s, from_g) = (ptr)0;                        \
       while (local_ranges) {                                            \
-        pp = local_ranges->start;                                       \
-        nl = local_ranges->end;                                         \
+        pp = TO_VOIDP(local_ranges->start);                             \
+        nl = TO_VOIDP(local_ranges->end);                               \
         while (pp != nl) {                                              \
           p = *pp;                                                      \
           body                                                          \
