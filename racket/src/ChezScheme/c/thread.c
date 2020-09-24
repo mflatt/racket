@@ -77,6 +77,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
       NEXTLOC(tc, i) = (ptr)0;
       BYTESLEFT(tc, i) = 0;
       SWEEPLOC(tc, i) = (ptr)0;
+      LOCALRANGES(tc, i) = (ptr)0;
     }
  
     v = S_vector_in(tc, space_new, 0, n);
@@ -142,7 +143,8 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   LZ4OUTBUFFER(tc) = 0;
 
   SWEEPER(tc) = -1;
-  LOCKSTATUS(tc) = Strue;
+  REMOTERANGESTART(tc) = (ptr)(uptr)-1;
+  REMOTERANGEEND(tc) = (ptr)0;
 
   tc_mutex_release();
 

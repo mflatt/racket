@@ -83,6 +83,7 @@ typedef int IFASLCODE;      /* fasl type codes */
 #define BYTESLEFT_AT(tc, s, g) BYTESLEFT(tc, SG_AT_TO_INDEX(s, g))
 #define SWEEPLOC_AT(tc, s, g) SWEEPLOC(tc, SG_AT_TO_INDEX(s, g))
 #define SWEEPNEXT_AT(tc, s, g) SWEEPNEXT(tc, SG_AT_TO_INDEX(s, g))
+#define LOCALRANGES_AT(tc, s, g) LOCALRANGES(tc, SG_AT_TO_INDEX(s, g))
 
 /* inline allocation --- no mutex required */
 /* find room allocates n bytes in space s and generation g into

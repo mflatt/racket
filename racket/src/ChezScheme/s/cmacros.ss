@@ -1583,13 +1583,16 @@
    [iptr bytes-left (constant num-thread-local-allocation-segments)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
    [xptr sweep-next (constant num-thread-local-allocation-segments)]
+   [xptr local-ranges (constant num-thread-local-allocation-segments)]
    [xptr pending-ephemerons]
    [iptr sweeper]
    [xptr sweep-stack]
    [xptr sweep-stack-start]
    [xptr sweep-stack-limit]
    [iptr sweep-change]
-   [xptr lock-status]
+   [iptr remote-sweeper]
+   [xptr remote-range-start]
+   [xptr remote-range-end]
    [iptr bitmask-overhead (constant num-generations)]))
 
 (define tc-field-list

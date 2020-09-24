@@ -564,6 +564,8 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
   uptr static_segments = 0;
   uptr nonstatic_segments = 0;
 
+  if (!aftergc) return; /* REMOVEME */
+
   check_dirty();
 
   {
@@ -576,6 +578,18 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
             S_checkheap_errors += 1;
             printf("!!! inconsistent thread NEXT %p and BASE %p\n",
                    TO_VOIDP(NEXTLOC_AT(t_tc, s, g)), TO_VOIDP(BASELOC_AT(t_tc, s, g)));
+          }
+          if (LOCALRANGES_AT(t_tc, s, g) != (ptr)0) {
+            S_checkheap_errors += 1;
+            printf("!!! leftover thread LOCALRANGES %p [%d, %d]\n",
+                   TO_VOIDP(LOCALRANGES_AT(t_tc, s, g)), s, g);
+          }
+          if ((REMOTERANGEEND(t_tc) != (ptr)0)
+              || (REMOTERANGESTART(t_tc) != (ptr)(uptr)-1)) {
+            S_checkheap_errors += 1;
+            printf("!!! nonempty thread REMOTERANGE %p-%p\n",
+                   TO_VOIDP(REMOTERANGESTART(t_tc)),
+                   TO_VOIDP(REMOTERANGEEND(t_tc)));
           }
         }
       }
@@ -1109,7 +1123,11 @@ ptr S_gc(ptr tc, IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
     return S_gc_oce(tc, max_cg, min_tg, max_tg, count_roots);
 #if defined(PTHREADS)
   } else if (S_collect_waiting_threads != 0) {
-    return S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
+    ptr r;
+    S_checkheap++;
+    r = S_gc_par(tc, max_cg, min_tg, max_tg, Sfalse);
+    --S_checkheap;
+    return r;
 #endif
   } else if (max_cg == 0 && min_tg == 1 && max_tg == 1
            && !S_G.must_mark_gen0 && S_G.locked_objects[0] == Snil

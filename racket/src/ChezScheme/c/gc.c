@@ -259,6 +259,12 @@ static uptr collect_accum, all_accum, par_accum;
 # endif
 #endif
 
+#define main_sweeper_index maximum_parallel_collect_threads
+
+/* Use the `REMOTESWEEPER` field to assign the sweeper before sweepers
+   actually start: */
+#define WILL_BE_SWEEPER(tc) REMOTESWEEPER(tc)
+
 /* #define DEBUG */
 
 /* initialized and used each gc cycle.  any others should be defined in globals.h */
@@ -335,78 +341,93 @@ static ptr sweep_from;
 # define ADD_BACKREFERENCE(p, from_g)
 #endif
 
+typedef struct remote_range {
+  ISPC s;
+  IGEN g;
+  ptr start, end;
+  struct remote_range *next;
+} remote_range;
+
 #if !defined(PTHREADS)
 # undef ENABLE_PARALLEL
 #endif
 
 #ifdef ENABLE_PARALLEL
 
-# define ENABLE_LOCK_ACQUIRE int old_lock_state;
-# define SEGMENT_LOCK_ACQUIRE(si)                                      \
-  ((si->lock == tc_in)                                                 \
-   ? (old_lock_state = 0, 1)                                           \
-   : (old_lock_state = 1, AS_IMPLICIT_ATOMIC(int, S_cas_load_acquire_ptr(&si->lock, (ptr)0, tc_in))))
-# define SEGMENT_LOCK_RELEASE(si) do { \
-    if (old_lock_state) {                                       \
-      S_store_release();                                        \
-      BEGIN_IMPLICIT_ATOMIC();                                  \
-      si->lock = (ptr)0;                                        \
-      END_IMPLICIT_ATOMIC();                                    \
-    }                                                           \
-  } while (0)
-# define SEGMENT_LOCK_MUST_ACQUIRE(si) do { } while (!SEGMENT_LOCK_ACQUIRE(si))
-# define RECORD_LOCK_FAILED(tc, si) LOCKSTATUS(tc) = Sfalse
-# define CLEAR_LOCK_FAILED(tc) LOCKSTATUS(tc) = Strue
-# define CHECK_LOCK_FAILED(tc) (LOCKSTATUS(tc) == Sfalse)
-# define SAVE_SWEEP_RANGE_FOR_LATER(tc, s, g, slp, sl, nl) save_sweep_range_for_later(tc, s, g, slp, sl, nl)
-# define SAVE_SWEEP_SEGMENT_FOR_LATER(tc, si) save_sweep_segment_for_later(tc, si)
-# define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire() 
+# define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire()
 # define GC_TC_MUTEX_RELEASE() gc_tc_mutex_release()
 
+# define GET_LOCALRANGES_AT(tc, s, g) LOCALRANGES_AT(tc, s, g) 
+# define SEGMENT_IS_LOCAL(si, p) ((SWEEPER(si->creator_tc) == SWEEPER(tc_in)) || marked(si, p))
+# define RECORD_REMOTE_RANGE_TO(tc, start, size, sweeper) do { \
+    ptr START = TO_PTR(UNTYPE_ANY(start));                     \
+    ptr END = (ptr)((uptr)START + (size));                     \
+    printf("@%d: %p-%p\n", (int)sweeper, START, END);          \
+    if ((uptr)START < (uptr)REMOTERANGESTART(tc))              \
+      REMOTERANGESTART(tc) = START;                            \
+    if ((uptr)END > (uptr)REMOTERANGEEND(tc))                  \
+      REMOTERANGEEND(tc) = END;                                \
+    REMOTESWEEPER(tc) = sweeper;                               \
+  } while (0)
+# define RECORD_REMOTE_RANGE(tc, start, size, si) RECORD_REMOTE_RANGE_TO(tc, start, size, SWEEPER(si->creator_tc))
+# define FLUSH_REMOTE_RANGE(tc, s, g) do {        \
+    if (REMOTERANGESTART(tc) != (ptr)(uptr)-1) {  \
+      flush_remote_range(tc, s, g);               \
+    }                                             \
+  } while (0)
+
 static void gather_active_sweepers();
+static void reassign_segment_creator(ptr tc, seginfo *si);
 static IBOOL sweeper_started(int i);
 static void parallel_sweep_dirty_and_generation(ptr tc);
-static void save_sweep_range_for_later(ptr tc_in, ISPC s, IGEN g, ptr *slp, ptr *sl, ptr *nl);
-static void save_sweep_segment_for_later(ptr tc_in, seginfo *si);
-static int gate_postponed(ptr tc, int status);
+static iptr sweep_generation_trading_work(ptr tc);
 
-#define SWEEPER_NONE     0
-#define SWEEPER_READY    1
-#define SWEEPER_SWEEPING 2
+static void flush_remote_range(ptr tc, ISPC s, IGEN g);
+static remote_range *send_and_receive_remote_ranges(ptr tc);
+
+#define SWEEPER_NONE             0
+#define SWEEPER_READY            1
+#define SWEEPER_SWEEPING         2
+#define SWEEPER_WAITING_FOR_WORK 3
 
 typedef struct {
   int status;
-  s_thread_cond_t done_cond;
+  s_thread_cond_t done_cond, work_cond;
   ptr sweep_tc;
   ptr thread; /* not 0 => thread to sweep on start */
   seginfo *dirty_segments[DIRTY_SEGMENT_LISTS];
+  /* modified only by owning sweeper: */
+  remote_range *ranges_to_send[maximum_parallel_collect_threads+1];
+  /* modified with sweeper mutex held: */
+  remote_range *ranges_received;
 } gc_thread_data;
 
-static gc_thread_data sweepers[maximum_parallel_collect_threads];
+static gc_thread_data sweepers[maximum_parallel_collect_threads+1];
 static int num_sweepers;
 
 static seginfo *main_dirty_segments[DIRTY_SEGMENT_LISTS];
 
 #else
-# define ENABLE_LOCK_ACQUIRE /* empty */
-# define SEGMENT_LOCK_ACQUIRE(si) 1
-# define SEGMENT_LOCK_MUST_ACQUIRE(si) do { } while (0)
-# define SEGMENT_LOCK_RELEASE(si) do { } while (0)
-# define RECORD_LOCK_FAILED(tc, si) do { } while (0)
-# define CLEAR_LOCK_FAILED(tc) do { } while (0)
-# define CHECK_LOCK_FAILED(tc) 0
-# define SAVE_SWEEP_RANGE_FOR_LATER(tc, s, g, slp, sl, nl) do { } while (0)
-# define SAVE_SWEEP_SEGMENT_FOR_LATER(tc, si) do { } while (0)
+
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
 # define GC_TC_MUTEX_RELEASE() do { } while (0)
+
+# define GET_LOCALRANGES_AT(tc, s, g) NULL
+# define SEGMENT_IS_LOCAL(si, p) 1
+# define RECORD_REMOTE_RANGE_TO(tc, start, size, sweeper) do { } while (0)
+# define RECORD_REMOTE_RANGE(tc, start, size, si) do { } while (0)
+# define FLUSH_REMOTE_RANGE(tc, s, g) do { } while (0)
+
 # define gather_active_sweepers() do { } while (0)
+# define reassign_segment_creator(tc, si) do { } while (0)
 # define parallel_sweep_dirty_and_generation(tc) do { sweep_dirty(tc); sweep_generation(tc); } while (0)
+# define send_and_receive_remote_ranges(tc) NULL
 static void sweep_dirty PROTO((ptr tc));
+
 #endif
 
 #define SWEEP_NO_CHANGE        0
 #define SWEEP_CHANGE_PROGRESS  1
-#define SWEEP_CHANGE_POSTPONED 2
 
 #if ptr_alignment == 2
 # define record_full_marked_mask 0x55
@@ -436,11 +457,14 @@ uptr list_length(ptr ls) {
 }
 #endif
 
-#define init_mask(tc, dest, tg, init) {                                  \
-    find_room_voidp(tc, space_data, tg, ptr_align(segment_bitmap_bytes), dest); \
-    memset(dest, init, segment_bitmap_bytes);                           \
+#define init_mask(tc, dest, tg, init) do {                                  \
+    octet *MASK;                                                        \
+    find_room_voidp(tc, space_data, tg, ptr_align(segment_bitmap_bytes), MASK); \
+    memset(MASK, init, segment_bitmap_bytes);                           \
+    STORE_FENCE();                                                      \
+    dest = MASK;                                                        \
     BITMASKOVERHEAD(tc, tg) += ptr_align(segment_bitmap_bytes);         \
-  }
+  } while (0)
 
 #define marked(si, p) (si->marked_mask && (si->marked_mask[segment_bitmap_byte(p)] & segment_bitmap_bit(p)))
 
@@ -495,41 +519,39 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 /* use relocate_pure for newspace fields that can't point to younger
    objects or where there's no need to track generations */
 
-#define relocate_pure(ppp) do {                 \
+#define relocate_pure(ppp, start, size) do {    \
     ptr* PPP = ppp; ptr PP = *PPP;              \
-    relocate_pure_help(PPP, PP);                \
+    relocate_pure_help(PPP, PP, start, size);   \
   } while (0)
 
-#define relocate_pure_help(ppp, pp) do {     \
+#define relocate_pure_help(ppp, pp, start, size) do {   \
     seginfo *SI;                             \
     if (!IMMEDIATE(pp) && (SI = MaybeSegInfo(ptr_get_segment(pp))) != NULL) {  \
       if (SI->old_space)                      \
-        relocate_pure_help_help(ppp, pp, SI); \
+        relocate_pure_help_help(ppp, pp, SI, start, size);   \
       ELSE_MEASURE_NONOLDSPACE(pp)            \
     }                                         \
   } while (0)
 
-#define relocate_pure_help_help(ppp, pp, si) do {    \
-    if (SEGMENT_LOCK_ACQUIRE(si)) {                  \
+#define relocate_pure_help_help(ppp, pp, si, start, size) do {       \
+    if (SEGMENT_IS_LOCAL(si, pp)) {                                  \
       if (FORWARDEDP(pp, si))                        \
         *ppp = GET_FWDADDRESS(pp);                   \
       else if (!new_marked(si, pp))                  \
         mark_or_copy_pure(ppp, pp, si);              \
-      SEGMENT_LOCK_RELEASE(si);                      \
     } else                                           \
-      RECORD_LOCK_FAILED(tc_in, si);                 \
+      RECORD_REMOTE_RANGE(tc_in, start, size, si);   \
   } while (0)
 
-#define relocate_code(pp, si) do {              \
+#define relocate_code(pp, si, start, size) do { \
     if (si->old_space) {                        \
-      if (SEGMENT_LOCK_ACQUIRE(si)) {           \
+      if (SEGMENT_IS_LOCAL(si, pp)) {           \
         if (FWDMARKER(pp) == forward_marker)    \
           pp = GET_FWDADDRESS(pp);              \
         else if (!new_marked(si, pp))           \
           mark_or_copy_pure(&pp, pp, si);       \
-        SEGMENT_LOCK_RELEASE(si);               \
       } else                                    \
-        RECORD_LOCK_FAILED(tc_in, si);          \
+        RECORD_REMOTE_RANGE(tc_in, start, size, si);    \
     } ELSE_MEASURE_NONOLDSPACE(pp)              \
   } while (0)
 
@@ -545,39 +567,39 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 
 #ifdef NO_DIRTY_NEWSPACE_POINTERS
 
-# define relocate_impure_help(PPP, PP, FROM_G) do {(void)FROM_G; relocate_pure_help(PPP, PP);} while (0)
-# define relocate_impure(PPP, FROM_G) do {(void)FROM_G; relocate_pure(PPP);} while (0)
+# define relocate_impure_help(PPP, PP, FROM_G, start, size) do {(void)FROM_G; relocate_pure_help(PPP, PP, start, size);} while (0)
+# define relocate_impure(PPP, FROM_G, start, size) do {(void)FROM_G; relocate_pure(PPP, start, size);} while (0)
 
 #else /* !NO_DIRTY_NEWSPACE_POINTERS */
 
-#define relocate_impure(ppp, from_g) do {                       \
+#define relocate_impure(ppp, from_g, start, size) do {          \
     ptr* PPP = ppp; ptr PP = *PPP; IGEN FROM_G = from_g;        \
-    relocate_impure_help(PPP, PP, FROM_G);                      \
+    relocate_impure_help(PPP, PP, FROM_G, start, size);         \
   } while (0)
 
-#define relocate_impure_help(ppp, pp, from_g) do {                      \
+#define relocate_impure_help(ppp, pp, from_g, start, size) do {         \
     seginfo *SI;                                                        \
     if (!IMMEDIATE(pp) && (SI = MaybeSegInfo(ptr_get_segment(pp))) != NULL) { \
       if (SI->old_space)                                                \
-        relocate_impure_help_help(ppp, pp, from_g, SI);                 \
+        relocate_impure_help_help(ppp, pp, from_g, SI, start, size);    \
       ELSE_MEASURE_NONOLDSPACE(pp)                                      \
     }                                                                   \
   } while (0)
 
-#define relocate_impure_help_help(ppp, pp, from_g, si) do {             \
+#define relocate_impure_help_help(ppp, pp, from_g, si, start, size) do { \
     IGEN __to_g;                                                        \
-    if (SEGMENT_LOCK_ACQUIRE(si)) {                                     \
+    if (SEGMENT_IS_LOCAL(si, pp)) {                                     \
       if (FORWARDEDP(pp, si)) {                                         \
         *ppp = GET_FWDADDRESS(pp);                                      \
         __to_g = TARGET_GENERATION(si);                                 \
-        if (__to_g < from_g) S_record_new_dirty_card(tc_in, ppp, __to_g); \
       } else if (!new_marked(si, pp)) {                                 \
         mark_or_copy_impure(__to_g, ppp, pp, from_g, si);               \
-        if (__to_g < from_g) S_record_new_dirty_card(tc_in, ppp, __to_g); \
+      } else {                                                          \
+        __to_g = TARGET_GENERATION(si);                                 \
       }                                                                 \
-      SEGMENT_LOCK_RELEASE(si);                                         \
+      if (__to_g < from_g) S_record_new_dirty_card(tc_in, ppp, __to_g); \
     } else                                                              \
-      RECORD_LOCK_FAILED(tc_in, si);                                    \
+      RECORD_REMOTE_RANGE(tc_in, start, size, si);                      \
   } while (0)
 
 #define mark_or_copy_impure(to_g, dest, p, from_g, si) do {      \
@@ -589,26 +611,28 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 
 #endif /* !NO_DIRTY_NEWSPACE_POINTERS */
 
-#define relocate_dirty(PPP, YOUNGEST) do {                              \
+#define relocate_dirty(PPP, YOUNGEST, start, size) do {                 \
     seginfo *_si; ptr *_ppp = PPP, _pp = *_ppp; IGEN _pg;               \
     if (!IMMEDIATE(_pp) && (_si = MaybeSegInfo(ptr_get_segment(_pp))) != NULL) { \
       if (!_si->old_space) {                                            \
         _pg = _si->generation;                                          \
       } else {                                                          \
-        if (SEGMENT_LOCK_ACQUIRE(_si)) {                                \
+        if (SEGMENT_IS_LOCAL(_si, _pp)) {                               \
           if (FORWARDEDP(_pp, _si)) {                                   \
             *_ppp = GET_FWDADDRESS(_pp);                                \
             _pg = TARGET_GENERATION(_si);                               \
           } else if (new_marked(_si, _pp)) {                            \
             _pg = TARGET_GENERATION(_si);                               \
+            printf("dirty marked %p\n", _ppp);                          \
           } else if (CAN_MARK_AND(_si->use_marks)) {                    \
             _pg = mark_object(tc_in, _pp, _si);                         \
+            printf("dirty did mark %p\n", _ppp);                        \
           } else {                                                      \
             _pg = copy(tc_in, _pp, _si, _ppp);                          \
           }                                                             \
-          SEGMENT_LOCK_RELEASE(_si);                                    \
         } else {                                                        \
-          RECORD_LOCK_FAILED(tc_in, _si);                               \
+          printf("dirty remote %p\n", _ppp);                            \
+          RECORD_REMOTE_RANGE(tc_in, start, size, _si);                 \
           _pg = 0xff;                                                   \
         }                                                               \
       }                                                                 \
@@ -620,41 +644,16 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 # define is_counting_root(si, p) (si->counting_mask && (si->counting_mask[segment_bitmap_byte(p)] & segment_bitmap_bit(p)))
 #endif
 
-static void do_relocate_indirect(ptr tc_in, ptr p) {
-  ENABLE_LOCK_ACQUIRE
-  relocate_pure(&p);
-}
-#define relocate_indirect(p) do_relocate_indirect(tc_in, p)
-
 #ifdef ENABLE_PARALLEL
-
-/* The `_now` variants of various functions/macros handle the possibly
-   of a lock failure by retrying immediately. A lock failure really
-   shouldn't happend where the `_now` forms are used, but because
-   locking may be implemented with a CAS that can fail spuriously on
-   processors like Arm, the lock can fail, anyway. */
-
-static void do_relocate_pure_now(ptr tc_in, ptr *pp) {
-  ENABLE_LOCK_ACQUIRE
-  relocate_pure(pp);
-  while (CHECK_LOCK_FAILED(tc_in)) {
-    CLEAR_LOCK_FAILED(tc_in);
-    relocate_pure(pp);
-  }
+static void do_relocate_indirect(ptr tc_in, ptr p, ptr* start, uptr len) {
+  relocate_pure(&p, start, len);
 }
-
-# define relocate_pure_now(pp)       do_relocate_pure_now(tc_in, pp)
-
-static void sweep_thread_now(ptr tc_in, ptr p) {
-  do {
-    CLEAR_LOCK_FAILED(tc_in);
-    sweep_thread(tc_in, p);
-  } while (CHECK_LOCK_FAILED(tc_in));
-}
-
+# define relocate_indirect(p, start, len) do_relocate_indirect(tc_in, p, start, len)
 #else
-# define relocate_pure_now(pp)       relocate_pure(pp)
-# define sweep_thread_now(tc, thread) sweep_thread(tc, thread)
+static void do_relocate_indirect(ptr tc_in, ptr p) {
+  relocate_pure(&p, NULL, 0);
+}
+# define relocate_indirect(p, start, len) do_relocate_indirect(tc_in, p)
 #endif
 
 FORCEINLINE void check_triggers(ptr tc_in, seginfo *si) {
@@ -697,7 +696,7 @@ static void sweep_in_old(ptr tc_in, ptr p) {
   /* Detect all the cases when we need to give up on in-place
      sweeping: */
   if (object_directly_refers_to_self(p)) {
-    relocate_pure_now(&p);
+    relocate_pure(&p, NULL, 0);
     return;
   }
 
@@ -834,7 +833,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
 #endif /* !NO_DIRTY_NEWSPACE_POINTERS */
     S_G.must_mark_gen0 = 0;
 
-    /* map `tc`s of rendezvous threads to sweeping threads */
+    /* map `tc`s of rendezvous threads to sweeping threads, setting WILL_BE_SWEEPER */
     gather_active_sweepers();
 
     for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
@@ -842,14 +841,20 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       S_scan_dirty(TO_VOIDP(EAP(t_tc)), TO_VOIDP(REAL_EAP(t_tc)));
       EAP(t_tc) = REAL_EAP(t_tc) = AP(t_tc) = (ptr)0;
 
+      /* Initially, map every context to the same sweeper, so
+         we can relocate some initial objects */
+      SWEEPER(t_tc) = main_sweeper_index;
+
+      /* If WILL_BE_SWEEPER() is not already set right, set it to
+         `main_sweeper_index`. */
 #ifdef ENABLE_PARALLEL
-      if (SWEEPER(t_tc) != -1) {
-        if ((SWEEPER(t_tc) >= num_sweepers)
-            || (sweepers[SWEEPER(t_tc)].sweep_tc != t_tc))
-          SWEEPER(t_tc) = -1;
+      if (WILL_BE_SWEEPER(t_tc) != main_sweeper_index) {
+        if ((WILL_BE_SWEEPER(t_tc) >= num_sweepers)
+            || (sweepers[WILL_BE_SWEEPER(t_tc)].sweep_tc != t_tc))
+          WILL_BE_SWEEPER(t_tc) = main_sweeper_index;
       }
 #else
-      SWEEPER(t_tc) = -1;
+      WILL_BE_SWEEPER(t_tc) = main_sweeper_index;
 #endif
 
       /* clear thread-local allocation: */
@@ -864,7 +869,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
         }
       }
 
-      if ((t_tc != tc) && (SWEEPER(t_tc) == -1)) {
+      if ((t_tc != tc) && (WILL_BE_SWEEPER(t_tc) == main_sweeper_index)) {
         /* close off any current allocation in MAX_TG, and ensure that
            end-of-segment markers are otherwise set (in case that's
            needed for dirty-byte sweeping) */
@@ -956,6 +961,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
           si->marked_mask = NULL; /* clear old mark bits, if any */
           si->marked_count = 0;
           si->min_dirty_byte = 0; /* prevent registering as dirty while GCing */
+          reassign_segment_creator(tc, si);
         }
         S_G.occupied_segments[g][s] = NULL;
 
@@ -1069,7 +1075,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
            if (!si->old_space || FORWARDEDP(p, si) || marked(si, p)
                || !count_roots[i].weak) {
              /* reached or older; sweep transitively */
-             relocate_pure_now(&p);
+             relocate_pure(&p, NULL, 0);
              sweep(tc, p, TARGET_GENERATION(si));
              ADD_BACKREFERENCE(p, si->generation);
              sweep_generation(tc);
@@ -1162,22 +1168,22 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
 
 #ifdef ENABLE_PARALLEL
       t_tc = (ptr)THREADTC(Scar(ls));
-      if (SWEEPER(t_tc) != -1) {
+      if (WILL_BE_SWEEPER(t_tc) != main_sweeper_index) {
         if (!OLDSPACE(thread)) {
           /* sweep in sweeper thread: */
-          sweepers[SWEEPER(t_tc)].thread = thread;
+          sweepers[WILL_BE_SWEEPER(t_tc)].thread = thread;
         } else {
           /* relocate now, so main sweeping will happen in
              sweeper thread */
           ptr tc_in = t_tc; /* shadows enclosing `tc_in` binding */
-          relocate_pure_now(&thread);
+          relocate_pure(&thread, NULL, 0);
         }
       } else
 #endif
         if (!OLDSPACE(thread))
-          sweep_thread_now(tc, thread);
+          sweep_thread(tc, thread);
     }
-    relocate_pure_now(&S_threads);
+    relocate_pure(&S_threads, NULL, 0);
 
     GET_TIME(start);
 
@@ -1217,25 +1223,8 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
   /* relocate the protected C pointers */
     {uptr i;
      for (i = 0; i < S_G.protect_next; i++)
-       relocate_pure_now(S_G.protected[i]);
+       relocate_pure(S_G.protected[i], NULL, 0);
     }
-
-#ifdef ENABLE_PARALLEL
-  /* make sure threads with sweepers have terminated older-generation
-     pages before sweeping dirty objects */
-    { int i;
-      for (i = 0; i < num_sweepers; i++) {
-        ptr t_tc = sweepers[i].sweep_tc;
-        for (s = 0; s <= max_real_space; s++) {
-          for (g = MAX_TG; g <= static_generation; g++) {
-            ptr old = NEXTLOC_AT(t_tc, s, g);
-            if (old != (ptr)0)
-              *(ptr*)TO_VOIDP(old) = forward_marker;
-          }
-        }        
-      }
-    }
-#endif
 
   /* sweep older locked and unlocked objects that are on `space_new` segments,
      because we can't find dirty writes there */
@@ -1352,7 +1341,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
                 /* if tconc was old it's been forwarded */
                   tconc = GUARDIANTCONC(ls);
 
-                  WITH_TOP_BACKREFERENCE(tconc, relocate_pure_now(&rep));
+                  WITH_TOP_BACKREFERENCE(tconc, relocate_pure(&rep, NULL, 0));
 
                   old_end = Scdr(tconc);
                   new_end = S_cons_in(tc, space_impure, 0, FIX(0), FIX(0));
@@ -1400,7 +1389,7 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
               }
               
               rep = GUARDIANREP(ls);
-              WITH_TOP_BACKREFERENCE(tconc, relocate_pure_now(&rep));
+              WITH_TOP_BACKREFERENCE(tconc, relocate_pure(&rep, NULL, 0));
               relocate_rep = 1;
 
 #ifdef ENABLE_OBJECT_COUNTS
@@ -1735,41 +1724,90 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
       return Svoid;
 }
 
-#define sweep_space(s, from_g, body) {                  \
+#ifdef ENABLE_PARALLEL
+
+static void reassign_segment_creator(ptr tc, seginfo *si) {
+  int i;
+
+  for (i = 0; i < num_sweepers; i++)
+    if (sweepers[i].sweep_tc == si->creator_tc)
+      return;
+
+  si->creator_tc = tc;
+}
+
+static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
+  remote_range *r;
+  int me = SWEEPER(tc);
+  int they = REMOTESWEEPER(tc);
+
+  printf("%d flush %p-%p [%d,%d] to %d\n", me, REMOTERANGESTART(tc), REMOTERANGEEND(tc), s, g, they);
+
+  find_room_voidp(tc, space_data, 0, ptr_align(sizeof(remote_range)), r);
+  BITMASKOVERHEAD(tc, 0) += ptr_align(sizeof(remote_range));
+  r->s = s;
+  r->g = g;
+  r->start = REMOTERANGESTART(tc);
+  r->end = REMOTERANGEEND(tc);
+  r->next = sweepers[me].ranges_to_send[they];
+  sweepers[me].ranges_to_send[they] = r;
+
+  REMOTERANGESTART(tc) = (ptr)(uptr)-1;
+  REMOTERANGEEND(tc) = (ptr)0;  
+}
+
+#endif
+
+#define sweep_space(s, from_g, body) do {                               \
+    sweep_space_segments(s, from_g, body);                              \
+    sweep_space_bump_range(s, from_g, body);                            \
+    sweep_space_local_ranges(s, from_g, body);                          \
+  } while (0)
+
+#define sweep_space_segments(s, from_g, body) do {                      \
     while ((si = (seginfo *)TO_VOIDP(SWEEPNEXT_AT(tc_in, s, from_g))) != NULL) { \
       SWEEPNEXT_AT(tc_in, s, from_g) = TO_PTR(si->sweep_next);          \
       pp = TO_VOIDP(si->sweep_start);                                   \
       while ((p = *pp) != forward_marker)                               \
         body                                                            \
-      if (CHECK_LOCK_FAILED(tc_in)) {                                   \
-        SAVE_SWEEP_SEGMENT_FOR_LATER(tc_in, si);                        \
-        break;                                                          \
-      } else {                                                          \
-        COUNT_SWEPT_BYTES(si->sweep_start, pp);                         \
-        save_resweep(s, si);                                            \
-      }                                                                 \
+      COUNT_SWEPT_BYTES(si->sweep_start, pp);                           \
+      FLUSH_REMOTE_RANGE(tc_in, s, from_g);                             \
+      save_resweep(s, si);                                              \
     }                                                                   \
+  } while (0)
+
+#define sweep_space_bump_range(s, from_g, body) do {                    \
     slp = &SWEEPLOC_AT(tc_in, s, from_g);                               \
     nlp = &NEXTLOC_AT(tc_in, s, from_g);                                \
-    sweep_space_range(s, from_g, body)                                  \
-  }
+    while ((sl = TO_VOIDP(*slp)) != (nl = TO_VOIDP(*nlp))) {            \
+      *slp = TO_PTR(nl);                                                \
+      pp = sl;                                                          \
+      while (pp != nl) {                                                \
+        p = *pp;                                                        \
+        body                                                            \
+      }                                                                 \
+      COUNT_SWEPT_BYTES(sl, nl);                                        \
+      FLUSH_REMOTE_RANGE(tc_in, s, from_g);                             \
+    }                                                                   \
+  } while (0)
 
-#define sweep_space_range(s, from_g, body) {                      \
-    while ((sl = TO_VOIDP(*slp)) != (nl = TO_VOIDP(*nlp))) {      \
-      *slp = TO_PTR(nl);                                          \
-      pp = sl;                                                    \
-      while (pp != nl) {                                          \
-        p = *pp;                                                  \
-        body                                                      \
-      }                                                           \
-      if (CHECK_LOCK_FAILED(tc_in)) {                             \
-        SAVE_SWEEP_RANGE_FOR_LATER(tc_in, s, from_g, slp, sl, nl);      \
-        break;                                                    \
-      } else {                                                    \
-        COUNT_SWEPT_BYTES(sl, nl);                                \
-      }                                                           \
-    }                                                             \
-  }
+#define sweep_space_local_ranges(s, from_g, body) do {                  \
+    local_ranges = TO_VOIDP(GET_LOCALRANGES_AT(tc_in, s, from_g));      \
+    if (local_ranges != NULL) {                                         \
+      LOCALRANGES_AT(tc_in, s, from_g) = (ptr)0;                        \
+      while (local_ranges) {                                            \
+        pp = local_ranges->start;                                       \
+        nl = local_ranges->end;                                         \
+        while (pp != nl) {                                              \
+          p = *pp;                                                      \
+          body                                                          \
+        }                                                               \
+        COUNT_SWEPT_BYTES(local_ranges->start, nl);                     \
+        FLUSH_REMOTE_RANGE(tc_in, s, from_g);                           \
+        local_ranges = local_ranges->next;                              \
+      }                                                                 \
+    }                                                                   \
+  } while (0)
 
 #define save_resweep(s, si) do {                  \
     if (s == space_weakpair) {                    \
@@ -1784,40 +1822,6 @@ ptr GCENTRY(ptr tc_in, ptr count_roots_ls) {
 # define COUNT_SWEPT_BYTES(start, end) num_swept_bytes += ((uptr)TO_PTR(end) - (uptr)TO_PTR(start))
 #else
 # define COUNT_SWEPT_BYTES(start, end) do { } while (0)
-#endif
-
-#ifdef ENABLE_PARALLEL
-
-static void save_sweep_segment_for_later(ptr tc_in, seginfo *si) {
-  ISPC s = si->space; IGEN g = si->generation;
-  CLEAR_LOCK_FAILED(tc_in);
-  SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
-  si->sweep_next = TO_VOIDP(SWEEPNEXT_AT(tc_in, s, g));
-  SWEEPNEXT_AT(tc_in, s, g) = TO_PTR(si);
-}
-
-static void save_sweep_range_for_later(ptr tc_in, ISPC s, IGEN g, ptr *slp, ptr *sl, ptr *nl) {
-  CLEAR_LOCK_FAILED(tc_in);
-  SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
-  /* check whether this segment is still the thread-local allocation segment: */
-  if (TO_VOIDP(*slp) == nl) {
-    *slp = sl;
-  } else {
-    /* need to set the sweep pointer in the segment, which must be one
-       of the ones queued to sweep */
-    seginfo *si;
-    si = SWEEPNEXT_AT(tc_in, s, g);
-    while (1) {
-      if (si == NULL) S_error_abort("could not find segment for sweep range");
-      if (TO_VOIDP(si->sweep_start) == nl) {
-        si->sweep_start = TO_PTR(sl);
-        return;
-      }
-      si = si->sweep_next;
-    }
-  }
-}
-
 #endif
     
 static void resweep_weak_pairs(ptr tc_in, seginfo *oldweakspacesegments) {
@@ -1903,10 +1907,10 @@ static void forward_or_bwp(pp, p) ptr *pp; ptr p; {
 }
 
 static iptr sweep_generation_pass(ptr tc_in) {
-  ENABLE_LOCK_ACQUIRE
-  ptr *slp, *nlp; ptr *pp, p, *nl, *sl; IGEN from_g;
+  ptr *slp, *nlp; ptr *pp, *ppn, p, *nl, *sl; IGEN from_g;
   seginfo *si;
   iptr num_swept_bytes = 0;
+  remote_range *local_ranges, *dirty_ranges;
 
   do {
     SWEEPCHANGE(tc_in) = SWEEP_NO_CHANGE;
@@ -1914,89 +1918,167 @@ static iptr sweep_generation_pass(ptr tc_in) {
     sweep_from_stack(tc_in);
 
     for (from_g = MIN_TG; from_g <= MAX_TG; from_g += 1) {
-    
-      sweep_space(space_impure, from_g, {
-        SET_BACKREFERENCE(TYPE(TO_PTR(pp), type_pair)); /* only pairs put here in backreference mode */
-        relocate_impure_help(pp, p, from_g);
-        p = *(pp += 1);
-        relocate_impure_help(pp, p, from_g);
-        pp += 1;
-      })
+
+# define SWEEP_TWO_WORDS_BODY {                                         \
+        /* only pairs in theses spaces in backreference mode */         \
+        SET_BACKREFERENCE(TYPE(TO_PTR(pp), type_pair));                 \
+        relocate_impure_help(pp, p, from_g, pp, 2 * ptr_bytes);         \
+        ppn = pp + 1;                                                   \
+        p = *ppn;                                                       \
+        relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);        \
+        pp = ppn + 1;                                                   \
+    }
+      
+      sweep_space(space_impure, from_g, SWEEP_TWO_WORDS_BODY);
       SET_BACKREFERENCE(Sfalse)
 
       sweep_space(space_symbol, from_g, {
         p = TYPE(TO_PTR(pp), type_symbol);
         sweep_symbol(tc_in, p, from_g);
         pp += size_symbol / sizeof(ptr);
-      })
+      });
 
       sweep_space(space_port, from_g, {
         p = TYPE(TO_PTR(pp), type_typed_object);
         sweep_port(tc_in, p, from_g);
         pp += size_port / sizeof(ptr);
-      })
+      });
 
       sweep_space(space_weakpair, from_g, {
         SET_BACKREFERENCE(TYPE(TO_PTR(pp), type_pair))
-        p = *(pp += 1);
-        relocate_impure_help(pp, p, from_g);
-        pp += 1;
-      })
+        ppn = pp + 1;
+        p = *ppn;
+        relocate_impure_help(ppn, p, from_g, pp, size_pair);
+        pp = ppn + 1;
+      });
       SET_BACKREFERENCE(Sfalse)
 
       sweep_space(space_ephemeron, from_g, {
         p = TYPE(TO_PTR(pp), type_pair);
         add_ephemeron_to_pending(tc_in, p);
         pp += size_ephemeron / sizeof(ptr);
-      })
+      });
       
       sweep_space(space_pure, from_g, {
         SET_BACKREFERENCE(TYPE(TO_PTR(pp), type_pair)) /* only pairs put here in backreference mode */
-        relocate_impure_help(pp, p, from_g);
-        p = *(pp += 1);
-        relocate_impure_help(pp, p, from_g);
-        pp += 1;
-      })
+        relocate_impure_help(pp, p, from_g, pp, 2 * ptr_bytes);
+        ppn = pp + 1;
+        p = *ppn;
+        relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);
+        pp = ppn + 1;
+      });
       SET_BACKREFERENCE(Sfalse)
 
       sweep_space(space_continuation, from_g, {
         p = TYPE(TO_PTR(pp), type_closure);
         sweep_continuation(tc_in, p, from_g);
         pp += size_continuation / sizeof(ptr);
-      })
+      });
 
       sweep_space(space_pure_typed_object, from_g, {
         p = TYPE(TO_PTR(pp), type_typed_object);
         pp = TO_VOIDP(((uptr)TO_PTR(pp) + sweep_typed_object(tc_in, p, from_g)));
-      })
+      });
 
       sweep_space(space_code, from_g, {
         p = TYPE(TO_PTR(pp), type_typed_object);
         sweep_code_object(tc_in, p, from_g);
         pp += size_code(CODELEN(p)) / sizeof(ptr);
-      })
+      });
 
       sweep_space(space_impure_record, from_g, {
         p = TYPE(TO_PTR(pp), type_typed_object);
         sweep_record(tc_in, p, from_g);
         pp = TO_VOIDP((iptr)TO_PTR(pp) +
                size_record_inst(UNFIX(RECORDDESCSIZE(RECORDINSTTYPE(p)))));
-      })
+      });
 
-    /* space used only as needed for backreferences: */
+      /* space used only as needed for backreferences: */
       sweep_space(space_impure_typed_object, from_g, {
         p = TYPE(TO_PTR(pp), type_typed_object);
         pp = TO_VOIDP((uptr)TO_PTR(pp) + sweep_typed_object(tc_in, p, from_g));
-      })
+      });
 
-    /* space used only as needed for backreferences: */
+      /* space used only as needed for backreferences: */
       sweep_space(space_closure, from_g, {
         p = TYPE(TO_PTR(pp), type_closure);
         sweep(tc_in, p, from_g);
         pp = TO_VOIDP((uptr)TO_PTR(pp) + size_object(p));
-      })
+      });
 
-    /* don't sweep from space_count_pure or space_count_impure */
+      /* spaces used only for ranges that were remote to another sweeper: */
+      sweep_space_local_ranges(space_immobile_impure, from_g, SWEEP_TWO_WORDS_BODY);
+      sweep_space_local_ranges(space_count_pure, from_g, SWEEP_TWO_WORDS_BODY);
+      sweep_space_local_ranges(space_count_impure, from_g, SWEEP_TWO_WORDS_BODY);
+    }
+
+    dirty_ranges = send_and_receive_remote_ranges(tc_in);
+
+    /* The ranges in `dirty_ranges` are old-generation objects from
+       other parallel sweepers, which means they correspond to dirty
+       sweeps in the originating sweeper. We handle them here like
+       regular sweeping using `relocate_impure`, which will register a
+       dirty-card update as needed. */
+    while (dirty_ranges != NULL) {
+      ISPC s = dirty_ranges->s;
+      IGEN from_g = dirty_ranges->g;
+
+      pp = dirty_ranges->start;
+      nl = dirty_ranges->end;
+
+      if ((s == space_impure) || (s == space_immobile_impure)
+          || (s == space_impure_typed_object) || (s == space_count_impure)
+          || (s == space_closure)
+          /* can happen in the special case of a thread object: */
+          || (s == space_pure_typed_object)) {
+        if (s == space_impure)
+          printf("sweep like dirty %p-%p [%d, %d]\n", pp, nl, s, from_g);
+        while (pp < nl) {
+          p = *pp;
+          relocate_impure_help(pp, p, from_g, pp, 2 * ptr_bytes);
+          ppn = pp + 1;
+          p = *ppn;
+          relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);
+          pp = ppn + 1;
+        }
+      } else if (s == space_symbol) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_symbol);
+          sweep_symbol(tc_in, p, from_g);
+          pp += size_symbol / sizeof(ptr);
+        }
+      } else if (s == space_port) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_typed_object);
+          sweep_port(tc_in, p, from_g);
+          pp += size_port / sizeof(ptr);
+        }
+      } else if (s == space_weakpair) {
+        while (pp < nl) {
+          ppn = pp + 1;
+          p = *ppn;
+          relocate_impure_help(ppn, p, from_g, pp, size_pair);
+          pp = ppn + 1;
+        }
+      } else if (s == space_ephemeron) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_pair);
+          add_ephemeron_to_pending(tc_in, p);
+          pp += size_ephemeron / sizeof(ptr);
+        }
+      } else if (s == space_impure_record) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_typed_object);
+          sweep_record(tc_in, p, from_g);
+          pp = TO_VOIDP((iptr)TO_PTR(pp) +
+                        size_record_inst(UNFIX(RECORDDESCSIZE(RECORDINSTTYPE(p)))));
+        }
+      } else {
+        printf("failing on %p-%p [%d, %d]\n", pp, nl, s, from_g);
+        S_error_abort("dirty range sweep: unexpected space");
+      }
+      FLUSH_REMOTE_RANGE(tc_in, s, from_g);
+      dirty_ranges = dirty_ranges->next;
     }
 
     /* Waiting until sweeping doesn't trigger a change reduces the
@@ -2005,15 +2087,14 @@ static iptr sweep_generation_pass(ptr tc_in) {
        it doesn't change the worst-case complexity. */
     if (SWEEPCHANGE(tc_in) == SWEEP_NO_CHANGE)
       check_pending_ephemerons(tc_in);
+
   } while (SWEEPCHANGE(tc_in) == SWEEP_CHANGE_PROGRESS);
 
   return num_swept_bytes;
 }
 
 static void sweep_generation(ptr tc_in) {
-  do {
-    sweep_generation_pass(tc_in);
-  } while (SWEEPCHANGE(tc_in) != SWEEP_NO_CHANGE);
+  sweep_generation_pass(tc_in);
 }
 
 void enlarge_sweep_stack(ptr tc_in) {
@@ -2036,17 +2117,12 @@ void sweep_from_stack(ptr tc_in) {
       seginfo *si;
       SWEEPSTACK(tc_in) = (ptr)((uptr)SWEEPSTACK(tc_in) - ptr_bytes);
       p = *(ptr *)TO_VOIDP(SWEEPSTACK(tc_in));
-      /* Room for improvement: `si->generation` is needed only 
-         for objects that have impure fields */
+      /* Room for improvement: `si->generation` is needed only for
+         objects that have impure fields, or in paralle mode for
+         remote ranges. */
       si = SegInfo(ptr_get_segment(p));
       sweep(tc_in, p, si->generation);
-      if (CHECK_LOCK_FAILED(tc_in)) {
-        /* try doing something else for now and sweep `p` later */
-        CLEAR_LOCK_FAILED(tc_in);
-        SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
-        push_sweep(p)
-        break;
-      }
+      FLUSH_REMOTE_RANGE(tc_in, si->space, si->generation);
     }
   }
 }
@@ -2151,9 +2227,8 @@ static void setup_sweep_dirty() {
 }
 
 static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
-  ENABLE_LOCK_ACQUIRE
   IGEN youngest, min_youngest;
-  ptr *pp, *ppend, *nl, start, next_loc;
+  ptr *pp, *ppn, *ppend, *nl, start, next_loc;
   uptr seg, d;
   ISPC s;
   IGEN from_g, to_g;
@@ -2234,21 +2309,27 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
                     while (pp < ppend) {
                       /* handle two pointers at a time */
                       if (marked(dirty_si, TO_PTR(pp))) {
-                        relocate_dirty(pp,youngest);
-                        pp += 1;
-                        relocate_dirty(pp,youngest);
-                        pp += 1;
-                      } else
+                        relocate_dirty(pp, youngest, pp, 2 * ptr_bytes);
+                        ppn = pp + 1;
+                        relocate_dirty(ppn, youngest, pp, 2 * ptr_bytes);
+                        pp = ppn + 1;
+                      } else {
+                        FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                         pp += 2;
+                      }
                     }
+                    FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                   } else {
+                    printf("dirty segment %p-%p (%d)\n", pp, ppend, youngest);
                     while (pp < ppend && *pp != forward_marker) {
                       /* handle two pointers at a time */
-                      relocate_dirty(pp,youngest);
-                      pp += 1;
-                      relocate_dirty(pp,youngest);
-                      pp += 1;
+                      relocate_dirty(pp, youngest, pp, 2 * ptr_bytes);
+                      ppn = pp + 1;
+                      relocate_dirty(ppn, youngest, pp, 2 * ptr_bytes);
+                      pp = ppn + 1;
                     }
+                    printf(" ended %p (%d)\n", pp, youngest);
+                    FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                   }
                 } else if (s == space_symbol) {
                   /* old symbols cannot overlap segment boundaries
@@ -2267,9 +2348,13 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
 
                     if (!dirty_si->marked_mask || marked(dirty_si, p))
                       youngest = sweep_dirty_symbol(tc_in, p, youngest);
+                    else
+                      FLUSH_REMOTE_RANGE(tc_in, s, from_g);
 
                     pp += size_symbol / sizeof(ptr);
                   }
+                  
+                  FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                 } else if (s == space_port) {
                   /* old ports cannot overlap segment boundaries
                      since any object that spans multiple
@@ -2287,9 +2372,13 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
 
                     if (!dirty_si->marked_mask || marked(dirty_si, p))
                       youngest = sweep_dirty_port(tc_in, p, youngest);
+                    else
+                      FLUSH_REMOTE_RANGE(tc_in, s, from_g);
 
                     pp += size_port / sizeof(ptr);
                   }
+
+                  FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                 } else if (s == space_impure_record) { /* abandon hope all ye who enter here */
                   ptr p;
                   if (dirty_si->marked_mask) {
@@ -2367,6 +2456,7 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
                       seginfo *si = SegInfo(ptr_get_segment(p));
                       if (!marked(si, p)) {
                         /* skip unmarked words */
+                        FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                         p = (ptr)((uptr)p + byte_alignment);
                       } else {
                         youngest = sweep_dirty_record(tc_in, p, youngest);
@@ -2375,6 +2465,8 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
                                   RECORDINSTTYPE(p)))));
                       }
                     }
+
+                    FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                   } else {
                     uptr j; ptr pnext; seginfo *si;
 
@@ -2413,44 +2505,43 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
                     /* now sweep */
                     while ((ptr *)TO_VOIDP(UNTYPE(p, type_typed_object)) < ppend) {
                       /* quit on end of segment */
-                    if (FWDMARKER(p) == forward_marker) break;
+                      if (FWDMARKER(p) == forward_marker) break;
 
                       youngest = sweep_dirty_record(tc_in, p, youngest);
                       p = (ptr)((iptr)p +
                           size_record_inst(UNFIX(RECORDDESCSIZE(
                                 RECORDINSTTYPE(p)))));
                     }
+
+                    FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                   }
                 } else if (s == space_weakpair) {
                   while (pp < ppend && (dirty_si->marked_mask || (*pp != forward_marker))) {
                     /* skip car field and handle cdr field */
                     if (!dirty_si->marked_mask || marked(dirty_si, TO_PTR(pp))) {
-                      pp += 1;
-                      relocate_dirty(pp, youngest);
-                      pp += 1;
-                    } else
+                      ptr *ppn = pp + 1;
+                      relocate_dirty(ppn, youngest, pp, size_pair);
+                      pp = ppn + 1;
+                    } else {
+                      FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                       pp += 2;
+                    }
                   }
+
+                  FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                 } else if (s == space_ephemeron) {
                   while (pp < ppend && (dirty_si->marked_mask || (*pp != forward_marker))) {
                     ptr p = TYPE(TO_PTR(pp), type_pair);
                     if (!dirty_si->marked_mask || marked(dirty_si, p))
                       youngest = check_dirty_ephemeron(tc_in, p, youngest);
+                    else
+                      FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                     pp += size_ephemeron / sizeof(ptr);
                   }
+
+                  FLUSH_REMOTE_RANGE(tc_in, s, from_g);
                 } else {
                   S_error_abort("sweep_dirty(gc): unexpected space");
-                }
-
-                if (CHECK_LOCK_FAILED(tc_in)) {
-                  /* give up for now, and remember to restart at this segment */
-                  DirtySegmentsAt(dirty_segments, from_g, to_g) = dirty_si;
-                  if (s == space_weakpair)
-                    local_weaksegments_to_resweep = local_weaksegments_to_resweep->next;
-                  add_weaksegments_to_resweep(local_weaksegments_to_resweep, last_local_weaksegments_to_resweep);
-                  CLEAR_LOCK_FAILED(tc_in);
-                  SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
-                  return num_swept_bytes;
                 }
 
                 if (s == space_weakpair) {
@@ -2474,8 +2565,6 @@ static uptr sweep_dirty_segments(ptr tc_in, seginfo **dirty_segments) {
   }
 
   add_weaksegments_to_resweep(local_weaksegments_to_resweep, last_local_weaksegments_to_resweep);
-
-  SWEEPCHANGE(tc_in) = SWEEP_NO_CHANGE;
 
   POP_BACKREFERENCE()
 
@@ -2628,7 +2717,6 @@ static void add_trigger_ephemerons_to_pending(ptr tc_in, ptr pe) {
 }
 
 static void check_ephemeron(ptr tc_in, ptr pe) {
-  ENABLE_LOCK_ACQUIRE
   ptr p;
   seginfo *si;
   IGEN from_g;
@@ -2641,36 +2729,35 @@ static void check_ephemeron(ptr tc_in, ptr pe) {
   
   p = Scar(pe);
   if (!IMMEDIATE(p) && (si = MaybeSegInfo(ptr_get_segment(p))) != NULL && si->old_space) {
-    if (SEGMENT_LOCK_ACQUIRE(si)) {
+    if (SEGMENT_IS_LOCAL(si, p)) {
       if (new_marked(si, p)) {
-        ENABLE_LOCK_ACQUIRE /* for nested relocate */
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
         IGEN tg = TARGET_GENERATION(si);
         if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
-        relocate_impure(&INITCDR(pe), from_g);
+        relocate_impure(&INITCDR(pe), from_g, pe, size_ephemeron);
       } else if (FORWARDEDP(p, si)) {
-        ENABLE_LOCK_ACQUIRE /* for nested relocate */
 #ifndef NO_DIRTY_NEWSPACE_POINTERS
         IGEN tg = TARGET_GENERATION(si);
         if (tg < from_g) S_record_new_dirty_card(tc_in, &INITCAR(pe), tg);
 #endif
         INITCAR(pe) = FWDADDRESS(p);
-        relocate_impure(&INITCDR(pe), from_g);
+        relocate_impure(&INITCDR(pe), from_g, pe, size_ephemeron);
       } else {
         /* If we get here, then there's no lock failure: */
         /* Not reached, so far; install as trigger */
         ephemeron_add(&si->trigger_ephemerons, pe);
         si->has_triggers = 1;
       }
-      SEGMENT_LOCK_RELEASE(si);
     } else {
-      RECORD_LOCK_FAILED(tc_in, si);
+      RECORD_REMOTE_RANGE_TO(tc_in, pe, size_ephemeron, SWEEPER(si->creator_tc));
     }
   } else {
-    relocate_impure(&INITCDR(pe), from_g);
+    relocate_impure(&INITCDR(pe), from_g, pe, size_ephemeron);
   }
-  
+
+  FLUSH_REMOTE_RANGE(tc_in, space_ephemeron, from_g);
+
   POP_BACKREFERENCE();
 }
 
@@ -2683,13 +2770,6 @@ static void check_pending_ephemerons(ptr tc_in) {
   while (pe != 0) {
     next_pe = EPHEMERONNEXT(pe);
     check_ephemeron(tc_in, pe);
-    if (CHECK_LOCK_FAILED(tc_in)) {
-      CLEAR_LOCK_FAILED(tc_in);
-      SWEEPCHANGE(tc_in) = SWEEP_CHANGE_POSTPONED;
-      EPHEMERONNEXT(pe) = next_pe;
-      ephemeron_add(&PENDINGEPHEMERONS(tc_in), pe);
-      break;
-    }
     pe = next_pe;
   }
 }
@@ -2699,7 +2779,6 @@ static void check_pending_ephemerons(ptr tc_in) {
    be less pessimistic than setting `youngest` to the target
    generation: */
 static IGEN check_dirty_ephemeron(ptr tc_in, ptr pe, IGEN youngest) {
-  ENABLE_LOCK_ACQUIRE
   ptr p;
   seginfo *si;
   IGEN pg;
@@ -2708,12 +2787,12 @@ static IGEN check_dirty_ephemeron(ptr tc_in, ptr pe, IGEN youngest) {
   p = Scar(pe);
   if (!IMMEDIATE(p) && (si = MaybeSegInfo(ptr_get_segment(p))) != NULL) {
     if (si->old_space) {
-      if (SEGMENT_LOCK_ACQUIRE(si)) {
+      if (SEGMENT_IS_LOCAL(si, p)) {
         if (new_marked(si, p)) {
-          relocate_dirty(&INITCDR(pe), youngest);
+          relocate_dirty(&INITCDR(pe), youngest, pe, size_ephemeron);
         } else if (FORWARDEDP(p, si)) {
           INITCAR(pe) = GET_FWDADDRESS(p);
-          relocate_dirty(&INITCDR(pe), youngest);
+          relocate_dirty(&INITCDR(pe), youngest, pe, size_ephemeron);
         } else {
           /* Not reached, so far; add to pending list */
           add_ephemeron_to_pending(tc_in, pe);
@@ -2726,20 +2805,19 @@ static IGEN check_dirty_ephemeron(ptr tc_in, ptr pe, IGEN youngest) {
           if (youngest != MIN_TG && (pg = TARGET_GENERATION(si)) < youngest)
             youngest = pg;
         }
-        SEGMENT_LOCK_RELEASE(si);
       } else {
-        RECORD_LOCK_FAILED(tc_in, si);
+        RECORD_REMOTE_RANGE_TO(tc_in, pe, size_ephemeron, SWEEPER(si->creator_tc));
         return youngest;
       }
     } else {
       if (youngest != MIN_TG && (pg = si->generation) < youngest)
         youngest = pg;
-      relocate_dirty(&INITCDR(pe), youngest);
+      relocate_dirty(&INITCDR(pe), youngest, pe, size_ephemeron);
     }
   } else {
     /* Non-collectable key means that the value determines
        `youngest`: */
-    relocate_dirty(&INITCDR(pe), youngest);
+    relocate_dirty(&INITCDR(pe), youngest, pe, size_ephemeron);
   }
 
   POP_BACKREFERENCE()
@@ -2881,7 +2959,6 @@ static s_thread_mutex_t sweep_mutex;
 static s_thread_cond_t sweep_cond;
 
 static int num_running_sweepers;
-static s_thread_cond_t postpone_cond;
 
 static void gather_active_sweepers() {
   int i, n;
@@ -2892,7 +2969,7 @@ static void gather_active_sweepers() {
       ptr tc = S_collect_waiting_tcs[i];
       if (sweeper_started(n)) {
         sweepers[n].sweep_tc = tc;
-        SWEEPER(tc) = n;
+        WILL_BE_SWEEPER(tc) = n;
         n++;
       } else
         break;
@@ -2905,7 +2982,6 @@ static void gather_active_sweepers() {
 static s_thread_rv_t start_sweeper(void *_data) {
   gc_thread_data *data = _data;
   ptr tc;
-  int status;
   iptr num_swept_bytes;
   IGEN g;
 #ifdef ENABLE_TIMING
@@ -2917,8 +2993,8 @@ static s_thread_rv_t start_sweeper(void *_data) {
     while (data->status != SWEEPER_SWEEPING) {
       s_thread_cond_wait(&sweep_cond, &sweep_mutex);
     }
-    num_running_sweepers++;
     GET_TIME(start);
+    printf("START %ld\n", SWEEPER(data->sweep_tc));
     (void)s_thread_mutex_unlock(&sweep_mutex);
 
     tc = data->sweep_tc;
@@ -2927,20 +3003,15 @@ static s_thread_rv_t start_sweeper(void *_data) {
     if (data->thread) {
       /* sweep tc in this sweeper, so that things it references are
          more likely handled in this sweeper: */
-      sweep_thread_now(tc, data->thread);
+      seginfo *t_si = SegInfo(ptr_get_segment(data->thread));
+      sweep_thread(tc, data->thread);
+      FLUSH_REMOTE_RANGE(tc, t_si->space, t_si->generation);
       data->thread = (ptr)0;
     }
 
-    status = 0;
     num_swept_bytes = 0;
-    do {
-      num_swept_bytes += sweep_dirty_segments(tc, data->dirty_segments);
-      status = gate_postponed(tc, status);
-    } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
-    do {
-      num_swept_bytes += sweep_generation_pass(tc);
-      status = gate_postponed(tc, status);
-    } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
+    num_swept_bytes += sweep_dirty_segments(tc, data->dirty_segments);
+    num_swept_bytes += sweep_generation_trading_work(tc);
 
     /* ensure terminators on any segment where sweeper may have allocated: */
     {
@@ -2953,16 +3024,15 @@ static s_thread_rv_t start_sweeper(void *_data) {
         }
       }
     }
-
+    
     (void)s_thread_mutex_lock(&sweep_mutex);
-    --num_running_sweepers;
-    if (!num_running_sweepers)
-      s_thread_cond_broadcast(&postpone_cond);
+    printf("FINISH %ld\n", SWEEPER(tc));
     S_G.bitmask_overhead[0] += BITMASKOVERHEAD(tc, 0);
     BITMASKOVERHEAD(tc, 0) = 0;
     for (g = MIN_TG; g <= MAX_TG; g++)
       S_G.bitmask_overhead[g] += BITMASKOVERHEAD(tc, g);
     data->status = SWEEPER_READY;
+    SWEEPER(tc) = main_sweeper_index;
     ACCUM_TIME(sweep_accum, step, start);
     REPORT_TIME(fprintf(stderr, "%d swp  +%ld ms  %ld ms  %ld bytes  [%p]\n", MAX_CG, step, sweep_accum, num_swept_bytes, tc));
 
@@ -2976,7 +3046,7 @@ static IBOOL sweeper_started(int i) {
   if (!sweep_mutex_initialized) {
     s_thread_mutex_init(&sweep_mutex);
     s_thread_cond_init(&sweep_cond);
-    s_thread_cond_init(&postpone_cond);
+    s_thread_cond_init(&sweepers[main_sweeper_index].work_cond);
     sweep_mutex_initialized = 1;
   }
 
@@ -2985,6 +3055,7 @@ static IBOOL sweeper_started(int i) {
     
     sweepers[i].status = SWEEPER_READY;
     s_thread_cond_init(&sweepers[i].done_cond);
+    s_thread_cond_init(&sweepers[i].work_cond);
     
     if ((status = s_thread_create(start_sweeper, &sweepers[i])) != 0) {
       /* eror creating a thread; just go with as many as we have */
@@ -2998,7 +3069,7 @@ static IBOOL sweeper_started(int i) {
 }
 
 static void parallel_sweep_dirty_and_generation(ptr tc) {
-  int i, status;
+  int i;
   iptr num_swept_bytes;
 
   REPORT_TIME(fprintf(stderr, "------\n"));
@@ -3008,29 +3079,25 @@ static void parallel_sweep_dirty_and_generation(ptr tc) {
 
   /* start other sweepers */
   (void)s_thread_mutex_lock(&sweep_mutex);
-  for (i = 0; i < num_sweepers; i++)
+  sweepers[main_sweeper_index].status = SWEEPER_SWEEPING;
+  for (i = 0; i < num_sweepers; i++) {
     sweepers[i].status = SWEEPER_SWEEPING;
+    SWEEPER(sweepers[i].sweep_tc) = i;
+    num_running_sweepers++;
+  }
   s_thread_cond_broadcast(&sweep_cond);
   num_running_sweepers++;
+  printf("START %ld %d/%d/%d\n", SWEEPER(tc), MAX_CG, MIN_TG, MAX_TG);
   (void)s_thread_mutex_unlock(&sweep_mutex);
   
   /* sweep in the main thread */
-  status = 0;
   num_swept_bytes = 0;
-  do {
-    num_swept_bytes += sweep_dirty_segments(tc, main_dirty_segments);
-    status = gate_postponed(tc, status);
-  } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
-  do {
-    num_swept_bytes += sweep_generation_pass(tc);
-    status = gate_postponed(tc, status);
-  } while (SWEEPCHANGE(tc) != SWEEP_NO_CHANGE);
+  num_swept_bytes += sweep_dirty_segments(tc, main_dirty_segments);
+  num_swept_bytes += sweep_generation_trading_work(tc);
   
   /* wait for other sweepers */
   (void)s_thread_mutex_lock(&sweep_mutex);
-  --num_running_sweepers;
-  if (!num_running_sweepers)
-    s_thread_cond_broadcast(&postpone_cond);
+  printf("FINISH %ld\n", SWEEPER(tc));
   for (i = 0; i < num_sweepers; i++) {
     while (sweepers[i].status != SWEEPER_READY) {
       s_thread_cond_wait(&sweepers[i].done_cond, &sweep_mutex);
@@ -3045,34 +3112,99 @@ static void parallel_sweep_dirty_and_generation(ptr tc) {
   S_use_gc_tc_mutex = 0;
 }
 
-#define WAIT_AFTER_POSTPONES 10
+static iptr sweep_generation_trading_work(ptr tc) {
+  iptr num_swept_bytes = 0;
 
-static int gate_postponed(ptr tc, int status) {
-  if (SWEEPCHANGE(tc) == SWEEP_CHANGE_POSTPONED) {
-    if (status < WAIT_AFTER_POSTPONES)
-      return status + 1;
-    else {
-      (void)s_thread_mutex_lock(&sweep_mutex);
-      /* This thread wasn't able to make progress after a lock conflict.
-         Instead of spinning, which could create livelock, wait until
-         some thread makes progress. */
-      if (num_running_sweepers == 1)  {
-        /* All other threads postponed, so this one should be able to
-           make progress after all. */
-      } else {
-        --num_running_sweepers;
-        s_thread_cond_wait(&postpone_cond, &sweep_mutex);
-        num_running_sweepers++;
+  num_swept_bytes += sweep_generation_pass(tc);
+  
+  s_thread_mutex_lock(&sweep_mutex);
+  --num_running_sweepers;
+  while (1) {
+    int me = SWEEPER(tc);
+    if ((num_running_sweepers == 0)
+        && (sweepers[me].ranges_received == NULL)) {
+      /* everyone is done */
+      int i, they = main_sweeper_index;
+      printf("zero %ld\n", SWEEPER(tc));
+      for (i = -1; i < num_sweepers; i++) {
+        s_thread_cond_signal(&sweepers[they].work_cond);
+        they = i + 1;
       }
-      (void)s_thread_mutex_unlock(&sweep_mutex);
+      s_thread_mutex_unlock(&sweep_mutex);
+      return num_swept_bytes;
+    } else {
+      /* wait for work */
+      if (sweepers[me].ranges_received != NULL) {
+        /* some work appeared since we last checked */
+        num_running_sweepers++;
+      } else {
+        sweepers[me].status = SWEEPER_WAITING_FOR_WORK;
+        printf("sleep %d\n", me);
+        s_thread_cond_wait(&sweepers[me].work_cond, &sweep_mutex);
+        printf("wake %d\n", me);
+      }
+      if (sweepers[me].status != SWEEPER_WAITING_FOR_WORK) {
+        /* got work; num_running_sweepers was incremented, too */
+        s_thread_mutex_unlock(&sweep_mutex);
+        num_swept_bytes += sweep_generation_pass(tc);
+        s_thread_mutex_lock(&sweep_mutex);
+        --num_running_sweepers;
+      } else if (num_running_sweepers == 0) {
+        /* other sweeper noticed that everyone is done */
+        s_thread_mutex_unlock(&sweep_mutex);
+        return num_swept_bytes;
+      } else {
+        /* not clear why we were woken, so just go around again */
+      }
     }
-  } else {
-    (void)s_thread_mutex_lock(&sweep_mutex);
-    s_thread_cond_broadcast(&postpone_cond);
-    (void)s_thread_mutex_unlock(&sweep_mutex);
+  }
+}
+
+static remote_range *send_and_receive_remote_ranges(ptr tc) {
+  int i, me = SWEEPER(tc), they;
+  remote_range *r, *next, *dirty_ranges = NULL;
+
+  s_thread_mutex_lock(&sweep_mutex);
+
+  they = main_sweeper_index;
+  for (i = -1; i < num_sweepers; i++) {
+    if (sweepers[me].ranges_to_send[they] != NULL) {
+      SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
+      r = sweepers[me].ranges_to_send[they];
+      sweepers[me].ranges_to_send[they] = NULL;
+      for (next = r; next->next != NULL; next = next->next);
+      next->next = sweepers[they].ranges_received;
+      sweepers[they].ranges_received = r;
+      if (sweepers[they].status == SWEEPER_WAITING_FOR_WORK) {
+        num_running_sweepers++;
+        sweepers[they].status = SWEEPER_SWEEPING;
+        s_thread_cond_signal(&sweepers[they].work_cond);
+      }
+    }
+    they = i + 1;
   }
 
-  return 0;
+  r = sweepers[me].ranges_received;
+  sweepers[me].ranges_received = NULL;
+
+  s_thread_mutex_unlock(&sweep_mutex);
+
+  if (r != NULL) {
+    SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
+    for (; r != NULL; r = next) {
+      printf("%d receive %p-%p [%d, %d]\n", me, r->start, r->end, r->s, r->g);
+      next = r->next;
+      if (r->g > MAX_TG) {
+        r->next = dirty_ranges;
+        dirty_ranges = r;
+      } else {
+        r->next = LOCALRANGES_AT(tc, r->s, r->g);
+        LOCALRANGES_AT(tc, r->s, r->g) = r;
+      }
+    }
+  }
+
+  return dirty_ranges;
 }
 
 #endif
@@ -3142,7 +3274,7 @@ static void push_measure(ptr tc_in, ptr p)
 
   if (si->old_space) {
     /* We must be in a GC--measure fusion, so switch back to GC */
-    relocate_pure_help_help(&p, p, si);
+    relocate_pure_help_help(&p, p, si, NULL, 0);
     return;
   }
 
