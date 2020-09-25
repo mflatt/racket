@@ -691,7 +691,6 @@ FORCEINLINE void check_triggers(ptr tc_in, seginfo *si) {
 }
 
 #if defined(ENABLE_PARALLEL)
-# define SIZE 0
 # include "gc-par.inc"
 #elif !defined(ENABLE_OBJECT_COUNTS)
 # include "gc-ocd.inc"

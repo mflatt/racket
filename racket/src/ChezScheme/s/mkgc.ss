@@ -14,7 +14,8 @@
  mkgc-ocd.inc
  mkgc-oce.inc
  mkgc-par.inc
- mkvfasl.inc)
+ mkvfasl.inc
+ mkheapcheck.inc)
 
 ;; Currently supported traversal modes:
 ;;   - copy
@@ -26,6 +27,7 @@
 ;;   - measure     : recurs for reachable size
 ;;   - vfasl-copy
 ;;   - vfasl-sweep
+;;   - check
 
 ;; For the specification, there are a few declaration forms described
 ;; below, such as `trace` to declare a pointer-valued field within an
@@ -174,6 +176,9 @@
        [(copy)
         (set! (ephemeron-prev-ref _copy_) 0)
         (set! (ephemeron-next _copy_) 0)]
+       [(check)
+        (trace pair-car)
+        (trace pair-cdr)]
        [else])
       (add-ephemeron-to-pending)
       (mark one-bit no-sweep)
@@ -182,6 +187,9 @@
      [space-weakpair
       (space space-weakpair)
       (vfasl-fail "weakpair")
+      (case-mode
+       [(check) (trace pair-car)]
+       [else])
       (try-double-pair copy pair-car
                        trace pair-cdr
                        countof-weakpair)]
@@ -865,8 +873,9 @@
                    (set! num S_G.zero_length_bignum)])]
                [off
                 (trace-record-type-pm num rtd)])]
-               [(sweep-in-old self-test)
-                (trace-record-type-pm num rtd)]
+            [(sweep-in-old self-test)
+             (trace-record-type-pm num rtd)]
+            [(check) (check-bignum num)]
             [else])])
          (let* ([index : iptr (- (BIGLEN num) 1)]
                 ;; Ignore bit for already forwarded rtd
@@ -984,7 +993,7 @@
                           (cast iptr (port-buffer _))))
       (trace port-buffer)
       (set! (port-last _) (cast ptr (+ (cast iptr (port-buffer _)) n))))]
-   [sweep-in-old
+   [(sweep-in-old check)
     (when (& (cast uptr _tf_) flag)
       (trace port-buffer))]
    [else
@@ -1091,15 +1100,18 @@
                (trace-pure (* pp)))
              (set! mask >>= 1)))]
          [else
-          (define n_si : seginfo* (SegInfo (ptr_get_segment num)))
-          (cond
-            [(! (-> n_si old_space))]
-            [(SEGMENT_IS_LOCAL n_si num)
-             (trace-pure (* (ENTRYNONCOMPACTLIVEMASKADDR oldret)))
-             (set! num  (ENTRYLIVEMASK oldret))]
-            [else
-             (RECORD_REMOTE_RANGE _tc_ _ _size_ n_si)
-             (set! num S_G.zero_length_bignum)])
+          (case-mode
+           [(check) (check-bignum num)]
+           [else
+            (define n_si : seginfo* (SegInfo (ptr_get_segment num)))
+            (cond
+              [(! (-> n_si old_space))]
+              [(SEGMENT_IS_LOCAL n_si num)
+               (trace-pure (* (ENTRYNONCOMPACTLIVEMASKADDR oldret)))
+               (set! num  (ENTRYLIVEMASK oldret))]
+              [else
+               (RECORD_REMOTE_RANGE _tc_ _ _size_ n_si)
+               (set! num S_G.zero_length_bignum)])])
           (let* ([index : iptr (BIGLEN num)])
             (while
              :? (!= index 0)
@@ -1219,6 +1231,10 @@
       (set! (reloc-table-code t) (cast ptr (ptr_diff _ (-> vfi base_addr))))
       (set! (code-reloc _) (cast ptr (ptr_diff t (-> vfi base_addr))))]
      [else])]))
+
+(define-trace-macro (check-bignum var)
+  (trace (just var))
+  (check_bignum var))
 
 (define-trace-macro (unless-code-relocated stmt)
   (case-flag code-relocated?
@@ -1459,6 +1475,7 @@
                   [(lookup 'as-dirty? config #f) ", IGEN youngest"]
                   [(lookup 'no-from-g? config #f) ""]
                   [else ", IGEN from_g"])]
+               [(check) ", uptr seg, ISPC s_in, IBOOL aftergc"]
                [else ""]))
      (let ([body
             (lambda ()
@@ -1641,7 +1658,7 @@
                         (code
                          "/* Do not inspect the type or first field of the rtd, because"
                          "   it may have been overwritten for forwarding. */")])]
-                    [(measure sweep sweep-in-old)
+                    [(measure sweep sweep-in-old check)
                      (statements `((trace-early ,field)) (cons `(early-rtd? #t) config))]
                     [else #f])
                   (statements (cdr l) (cons `(copy-extra-rtd ,field) config)))]
@@ -1745,7 +1762,7 @@
                (statements (cons `(copy-bytes ,offset (* ptr_bytes ,len))
                                  (cdr l))
                            config)]
-              [(sweep measure sweep-in-old vfasl-sweep)
+              [(sweep measure sweep-in-old vfasl-sweep check)
                (code
                 (loop-over-pointers
                  (field-expression offset config "p" #t)
@@ -2187,6 +2204,13 @@
        (measure-statement (field-expression field config "p" #f))]
       [(eq? mode 'self-test)
        (format "if (p == ~a) return 1;" (field-expression field config "p" #f))]
+      [(eq? mode 'check)
+       (format "check_pointer(&(~a), ~a, ~a, seg, s_in, aftergc);"
+               (field-expression field config "p" #f)
+               (match field
+                 [`(just ,_) "0"]
+                 [else "1"])
+               (expression '_ config))]
       [else #f]))
 
   (define (relocate-statement purity e config)
@@ -2663,6 +2687,15 @@
                              `((mode vfasl-sweep)
                                (return-size? #t)))))))
 
+  (define (gen-heapcheck ofn)
+    (guard
+     (x [#t (raise x)])
+     (parameterize ([current-output-port (open-output-file ofn 'replace)])
+       (print-code (generate "check_object"
+                             `((mode check))))
+       (print-code (generate "size_object"
+                             `((mode size)))))))
+
   ;; Render via mkequates to record a mapping from selectors to C
   ;; macros:
   (let-values ([(op get) (open-bytevector-output-port (native-transcoder))])
@@ -2671,4 +2704,5 @@
   (set! mkgc-ocd.inc (lambda (ofn) (gen-gc ofn #f #f #f)))
   (set! mkgc-oce.inc (lambda (ofn) (gen-gc ofn #t #t #f)))
   (set! mkgc-par.inc (lambda (ofn) (gen-gc ofn #f #f #t)))
-  (set! mkvfasl.inc (lambda (ofn) (gen-vfasl ofn))))
+  (set! mkvfasl.inc (lambda (ofn) (gen-vfasl ofn)))
+  (set! mkheapcheck.inc (lambda (ofn) (gen-heapcheck ofn))))
