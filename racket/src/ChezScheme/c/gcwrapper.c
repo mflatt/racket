@@ -842,7 +842,7 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
                       pp1 = pp2; /* break out of outer loop */
                       break;
                     } else if (!IMMEDIATE(p)) {
-                      check_pointer(pp1, 1, NULL, seg, s, aftergc);
+                      check_pointer(pp1, 1, (ptr)0, seg, s, aftergc);
                     }
                   }
                   pp1 += 1;
