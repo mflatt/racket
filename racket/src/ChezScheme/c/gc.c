@@ -124,45 +124,58 @@
    -------------------
 
    Parallel mode runs `sweep_generation` concurrently in multiple
-   threads. It relies on a number of invariants:
+   sweeper threads. It relies on a number of invariants:
 
     * There are no attempts to take tc_mutex suring sweeping. To the
       degree that locking is needed (e.g., to allocate new segments),
       `S_use_gc_tc_mutex` redirects to gc_tc_mutex. No other locks
       can be taken while that one is held.
 
-    * To copy from or mark on a segment, a segment-specific lock must
-      be taken.
+    * To copy from or mark on a segment, a sweeper must own the
+      segment. A sweeper during sweeping may encounter a "remote"
+      reference to a segment that it doesn't own; in that case, it
+      registers the object containing the remote reference to be
+      re-swept by the sweeeer that owns the target of the referenced.
 
-      The lock must be taken before checking anything about objects on
-      the page, including whether the object starts with a forwarding
-      pointer. If a lock acquisition fails, everything must be
-      retryable as the level of the object or segment sweep. For a
-      segment sweep, objects may end up being swept multiple times.
+      A segment is owned by the thread that originally allocated it.
+      When a GC starts, for old-space segments that are owned by
+      threads that do no have a corresponding sweeper, the segment is
+      moved to the main collecting thread's ownership.
 
-      The lock is re-entrant, but re-locking information is held
-      outside the locak in a local variable, instead of being part of
-      the lock state. (That's why an ENABLE_LOCK_ACQUIRE declaration
-      is required in functions that take locks.)
+      Note that copying and marking are constrained so that they don't
+      have to recursively copy or mark. In some cases, this property
+      is achieved by not caring whether a reference goes to an old
+      copy or unmarked object; for example, a record type's size field
+      will be the same in both places, so either copy can be used to
+      determine a record size of copying. A record type's parent field
+      would not be available, however, since it can get overwritten
+      with forwarding information.
 
-    * Lock acquisition must be failable everywhere, with one
-      exception: when an object spans multiple segments, then `mark`
-      may need to set mark bits on multiple segments. In that case, it
-      can wait on locks for the extra pages, because there's an order
-      for the lock-taking: the first segment's lock followed by each
-      later segment.
+    * An object that is marked does not count as "remote".
 
-    * A segment in the target generation is exposed to the pool of
-      collecting threads only after a copy to the target segment is
-      complete. That's a consequence of keeping segments to sweep in a
-      thread-specific list.
+      Sweepers might attempt to access marked-object information at
+      the same time that it is being updated by the owning sweeper.
+      It's ok if the non-owning sweepers get stale information;
+      they'll just send the referencing object to the owning thread
+      for re-sweeping. A write fence ensures that non-owning sweepers
+      do not inspect mark-bitmap bits that have not been initialized.
 
-    * The segment-table lock is required only for writing. When a
-      thread allocates a new segment, that segment becomes relevant
-      only to other threads at the point where an object in the new
-      segment is exposed to the other threads. So, for example, the
-      fence associated with taking a segment lock doubles to ensure
-      that a write has exposed the object.
+    * Normally, a sweeper that encounters a remote reference can
+      continue sweeping and eventually register the remote re-sweep.
+      An object is swept by only one sweeper at a time; if mmultiple
+      remote references to different sweepers are discovered in an
+      object, it is sent to nly one of the remote sweepers, and that
+      sweeper will eventually send on the object to the other sweeper.
+      At worst, each object is swept N times for N sweepers.
+
+      In rare cases, a sweeper cannot fully process an object, because
+      doing so would require inspecting a remote object. For example,
+      a record type's pointer mask or a stack frame's live-pointer
+      mask can be a bignum, and the bignum might be remote. In those
+      cases, the object might have to be sent back to the original
+      sweeper, and so on. In the owrst case, the object can be swept
+      more tha N times ---- but, again, this case rarely happens at
+      all, and sweeping more than N times is very unlikely.
 
    Currently, counting and backreference modes do not support
    parallelism.
@@ -370,7 +383,6 @@ typedef struct remote_range {
 # define GC_TC_MUTEX_ACQUIRE() gc_tc_mutex_acquire()
 # define GC_TC_MUTEX_RELEASE() gc_tc_mutex_release()
 
-# define GET_LOCALRANGES_AT(tc, s, g) LOCALRANGES_AT(tc, s, g) 
 # define SEGMENT_IS_LOCAL(si, p) ((SWEEPER(si->creator_tc) == SWEEPER(tc_in)) || marked(si, p))
 # define RECORD_REMOTE_RANGE_TO(tc, start, size, sweeper) do { \
     ptr START = TO_PTR(UNTYPE_ANY(start));                     \
@@ -429,7 +441,6 @@ static seginfo *main_dirty_segments[DIRTY_SEGMENT_LISTS];
 # define GC_TC_MUTEX_ACQUIRE() do { } while (0)
 # define GC_TC_MUTEX_RELEASE() do { } while (0)
 
-# define GET_LOCALRANGES_AT(tc, s, g) NULL
 # define SEGMENT_IS_LOCAL(si, p) 1
 # define RECORD_REMOTE_RANGE_TO(tc, start, size, sweeper) do { } while (0)
 # define RECORD_REMOTE_RANGE(tc, start, size, si) do { } while (0)
@@ -1781,7 +1792,6 @@ static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
 #define sweep_space(s, from_g, body) do {                               \
     sweep_space_segments(s, from_g, body);                              \
     sweep_space_bump_range(s, from_g, body);                            \
-    sweep_space_local_ranges(s, from_g, body);                          \
   } while (0)
 
 #define sweep_space_segments(s, from_g, body) do {                      \
@@ -1808,24 +1818,6 @@ static void flush_remote_range(ptr tc, ISPC s, IGEN g) {
       }                                                                 \
       COUNT_SWEPT_BYTES(sl, nl);                                        \
       FLUSH_REMOTE_RANGE(tc_in, s, from_g);                             \
-    }                                                                   \
-  } while (0)
-
-#define sweep_space_local_ranges(s, from_g, body) do {                  \
-    local_ranges = TO_VOIDP(GET_LOCALRANGES_AT(tc_in, s, from_g));      \
-    if (local_ranges != NULL) {                                         \
-      LOCALRANGES_AT(tc_in, s, from_g) = (ptr)0;                        \
-      while (local_ranges) {                                            \
-        pp = TO_VOIDP(local_ranges->start);                             \
-        nl = TO_VOIDP(local_ranges->end);                               \
-        while (pp != nl) {                                              \
-          p = *pp;                                                      \
-          body                                                          \
-        }                                                               \
-        COUNT_SWEPT_BYTES(local_ranges->start, nl);                     \
-        FLUSH_REMOTE_RANGE(tc_in, s, from_g);                           \
-        local_ranges = local_ranges->next;                              \
-      }                                                                 \
     }                                                                   \
   } while (0)
 
@@ -1924,7 +1916,7 @@ static iptr sweep_generation_pass(ptr tc_in) {
   ptr *slp, *nlp; ptr *pp, *ppn, p, *nl, *sl; IGEN from_g;
   seginfo *si;
   iptr num_swept_bytes = 0;
-  remote_range *local_ranges, *dirty_ranges;
+  remote_range *received_ranges;
 
   do {
     SWEEPCHANGE(tc_in) = SWEEP_NO_CHANGE;
@@ -1933,17 +1925,15 @@ static iptr sweep_generation_pass(ptr tc_in) {
 
     for (from_g = MIN_TG; from_g <= MAX_TG; from_g += 1) {
 
-# define SWEEP_TWO_WORDS_BODY {                                         \
-        /* only pairs in theses spaces in backreference mode */         \
-        SET_BACKREFERENCE(TYPE(TO_PTR(pp), type_pair));                 \
-        relocate_impure_help(pp, p, from_g, pp, 2 * ptr_bytes);         \
-        ppn = pp + 1;                                                   \
-        p = *ppn;                                                       \
-        relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);        \
-        pp = ppn + 1;                                                   \
-    }
-      
-      sweep_space(space_impure, from_g, SWEEP_TWO_WORDS_BODY);
+      sweep_space(space_impure, from_g, {
+        /* only pairs in theses spaces in backreference mode */
+        SET_BACKREFERENCE(TYPE(TO_PTR(pp), type_pair));
+        relocate_impure_help(pp, p, from_g, pp, 2 * ptr_bytes);
+        ppn = pp + 1;
+        p = *ppn;
+        relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);
+        pp = ppn + 1;
+      });
       SET_BACKREFERENCE(Sfalse)
 
       sweep_space(space_symbol, from_g, {
@@ -2019,31 +2009,26 @@ static iptr sweep_generation_pass(ptr tc_in) {
         sweep(tc_in, p, from_g);
         pp = TO_VOIDP((uptr)TO_PTR(pp) + size_object(p));
       });
-
-      /* spaces used only for ranges that were remote to another sweeper: */
-      sweep_space_local_ranges(space_immobile_impure, from_g, SWEEP_TWO_WORDS_BODY);
-      sweep_space_local_ranges(space_count_pure, from_g, SWEEP_TWO_WORDS_BODY);
-      sweep_space_local_ranges(space_count_impure, from_g, SWEEP_TWO_WORDS_BODY);
     }
 
-    dirty_ranges = send_and_receive_remote_ranges(tc_in);
+    received_ranges = send_and_receive_remote_ranges(tc_in);
 
-    /* The ranges in `dirty_ranges` are old-generation objects from
+    /* The ranges in `received_ranges` include old-generation objects from
        other parallel sweepers, which means they correspond to dirty
        sweeps in the originating sweeper. We handle them here like
        regular sweeping using `relocate_impure`, which will register a
        dirty-card update as needed. */
-    while (dirty_ranges != NULL) {
-      ISPC s = dirty_ranges->s;
-      IGEN from_g = dirty_ranges->g;
+    while (received_ranges != NULL) {
+      ISPC s = received_ranges->s;
+      IGEN from_g = received_ranges->g;
 
-      pp = TO_VOIDP(dirty_ranges->start);
-      nl = TO_VOIDP(dirty_ranges->end);
+      pp = TO_VOIDP(received_ranges->start);
+      nl = TO_VOIDP(received_ranges->end);
 
       if ((s == space_impure)
           || (s == space_immobile_impure)
           || (s == space_count_impure)
-          || (s == space_closure)
+          || (s == space_pure)
           || (s == space_impure_typed_object)) {
         /* REMOVEME if (s == space_impure) printf("sweep like dirty %p-%p [%d, %d]\n", pp, nl, s, from_g); */
         while (pp < nl) {
@@ -2054,9 +2039,27 @@ static iptr sweep_generation_pass(ptr tc_in) {
           relocate_impure_help(ppn, p, from_g, pp, 2 * ptr_bytes);
           pp = ppn + 1;
         }
+      } else if (s == space_closure) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_closure);
+          sweep(tc_in, p, from_g);
+          pp = TO_VOIDP((uptr)TO_PTR(pp) + size_object(p));
+        }
+      } else if (s == space_continuation) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_closure);
+          sweep_continuation(tc_in, p, from_g);
+          pp += size_continuation / sizeof(ptr);
+        }
+      } else if (s == space_code) {
+        while (pp < nl) {
+          p = TYPE(TO_PTR(pp), type_typed_object);
+          sweep_code_object(tc_in, p, from_g);
+          pp += size_code(CODELEN(p)) / sizeof(ptr);
+        }
       } else if ((s == space_pure_typed_object)
                  || (s == space_count_pure)) {
-        /* can happen in the special case of a thread object: */
+        /* old generation can happen in the special case of a thread object: */
         while (pp < nl) {
           p = TYPE(TO_PTR(pp), type_typed_object);
           pp = TO_VOIDP(((uptr)TO_PTR(pp) + sweep_typed_object(tc_in, p, from_g)));
@@ -2098,8 +2101,8 @@ static iptr sweep_generation_pass(ptr tc_in) {
         S_error_abort("dirty range sweep: unexpected space");
       }
       FLUSH_REMOTE_RANGE(tc_in, s, from_g);
-      COUNT_SWEPT_BYTES(dirty_ranges->start, dirty_ranges->end);
-      dirty_ranges = dirty_ranges->next;
+      COUNT_SWEPT_BYTES(received_ranges->start, received_ranges->end);
+      received_ranges = received_ranges->next;
     }
 
     /* Waiting until sweeping doesn't trigger a change reduces the
@@ -3210,7 +3213,7 @@ static iptr sweep_generation_trading_work(ptr tc) {
 
 static remote_range *send_and_receive_remote_ranges(ptr tc) {
   int i, me = SWEEPER(tc), they;
-  remote_range *r, *next, *dirty_ranges = NULL;
+  remote_range *r, *next, *last;
 
   s_thread_mutex_lock(&sweep_mutex);
 
@@ -3220,13 +3223,12 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
       SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
       r = sweepers[me].ranges_to_send[they];
       sweepers[me].ranges_to_send[they] = NULL;
-      for (next = r; next->next != NULL; next = next->next) {
+      for (next = r, last = r; next != NULL; next = next->next) {
         ADJUST_COUNTER(sweepers[me].remote_ranges_sent++);
         ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_sent += ((uptr)next->end - (uptr)next->start));
+        last = next;
       }
-      ADJUST_COUNTER(sweepers[me].remote_ranges_sent++);
-      ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_sent += ((uptr)next->end - (uptr)next->start));
-      next->next = sweepers[they].ranges_received;
+      last->next = sweepers[they].ranges_received;
       sweepers[they].ranges_received = r;
       if (sweepers[they].status == SWEEPER_WAITING_FOR_WORK) {
         num_running_sweepers++;
@@ -3244,22 +3246,16 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
 
   if (r != NULL) {
     SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
-    for (; r != NULL; r = next) {
+#ifdef ENABLE_TIMING
+    for (next = r; next != NULL; next = next->next) {
       /* REMOVEME printf("%d receive %p-%p [%d, %d]\n", me, r->start, r->end, r->s, r->g); */
-      next = r->next;
-      if (r->g > MAX_TG) {
-        r->next = dirty_ranges;
-        dirty_ranges = r;
-      } else {
-        r->next = LOCALRANGES_AT(tc, r->s, r->g);
-        LOCALRANGES_AT(tc, r->s, r->g) = r;
-      }
       ADJUST_COUNTER(sweepers[me].remote_ranges_received++);
-      ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_received += ((uptr)r->end - (uptr)r->start));
+      ADJUST_COUNTER(sweepers[me].remote_ranges_bytes_received += ((uptr)next->end - (uptr)next->start));
     }
+#endif
   }
 
-  return dirty_ranges;
+  return r;
 }
 
 #endif

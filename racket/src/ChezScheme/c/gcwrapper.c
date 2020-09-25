@@ -629,11 +629,6 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
             printf("!!! inconsistent thread NEXT %p and BASE %p\n",
                    TO_VOIDP(NEXTLOC_AT(t_tc, s, g)), TO_VOIDP(BASELOC_AT(t_tc, s, g)));
           }
-          if (LOCALRANGES_AT(t_tc, s, g) != (ptr)0) {
-            S_checkheap_errors += 1;
-            printf("!!! leftover thread LOCALRANGES %p [%d, %d]\n",
-                   TO_VOIDP(LOCALRANGES_AT(t_tc, s, g)), s, g);
-          }
           if ((REMOTERANGEEND(t_tc) != (ptr)0)
               || (REMOTERANGESTART(t_tc) != (ptr)(uptr)-1)) {
             S_checkheap_errors += 1;

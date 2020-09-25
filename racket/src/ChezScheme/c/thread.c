@@ -77,7 +77,6 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
       NEXTLOC(tc, i) = (ptr)0;
       BYTESLEFT(tc, i) = 0;
       SWEEPLOC(tc, i) = (ptr)0;
-      LOCALRANGES(tc, i) = (ptr)0;
     }
  
     v = S_vector_in(tc, space_new, 0, n);

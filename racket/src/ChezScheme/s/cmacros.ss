@@ -1585,7 +1585,6 @@
    [xptr orig-next-loc (constant num-spaces)]
    [xptr sweep-loc (constant num-thread-local-allocation-segments)]
    [xptr sweep-next (constant num-thread-local-allocation-segments)]
-   [xptr local-ranges (constant num-thread-local-allocation-segments)]
    [xptr pending-ephemerons]
    [iptr sweeper]
    [xptr sweep-stack]
