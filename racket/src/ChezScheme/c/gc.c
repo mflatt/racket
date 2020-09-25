@@ -3168,7 +3168,7 @@ static iptr sweep_generation_trading_work(ptr tc) {
 
   num_swept_bytes += sweep_generation_pass(tc);
   
-  s_thread_mutex_lock(&sweep_mutex);
+  (void)s_thread_mutex_lock(&sweep_mutex);
   --num_running_sweepers;
   while (1) {
     int me = SWEEPER(tc);
@@ -3181,7 +3181,7 @@ static iptr sweep_generation_trading_work(ptr tc) {
         s_thread_cond_signal(&sweepers[they].work_cond);
         they = i + 1;
       }
-      s_thread_mutex_unlock(&sweep_mutex);
+      (void)s_thread_mutex_unlock(&sweep_mutex);
       return num_swept_bytes;
     } else {
       /* wait for work */
@@ -3196,13 +3196,13 @@ static iptr sweep_generation_trading_work(ptr tc) {
       }
       if (sweepers[me].status != SWEEPER_WAITING_FOR_WORK) {
         /* got work; num_running_sweepers was incremented, too */
-        s_thread_mutex_unlock(&sweep_mutex);
+        (void)s_thread_mutex_unlock(&sweep_mutex);
         num_swept_bytes += sweep_generation_pass(tc);
-        s_thread_mutex_lock(&sweep_mutex);
+        (void)s_thread_mutex_lock(&sweep_mutex);
         --num_running_sweepers;
       } else if (num_running_sweepers == 0) {
         /* other sweeper noticed that everyone is done */
-        s_thread_mutex_unlock(&sweep_mutex);
+        (void)s_thread_mutex_unlock(&sweep_mutex);
         return num_swept_bytes;
       } else {
         /* not clear why we were woken, so just go around again */
@@ -3215,7 +3215,7 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
   int i, me = SWEEPER(tc), they;
   remote_range *r, *next, *last;
 
-  s_thread_mutex_lock(&sweep_mutex);
+  (void)s_thread_mutex_lock(&sweep_mutex);
 
   they = main_sweeper_index;
   for (i = -1; i < num_sweepers; i++) {
@@ -3242,7 +3242,7 @@ static remote_range *send_and_receive_remote_ranges(ptr tc) {
   r = sweepers[me].ranges_received;
   sweepers[me].ranges_received = NULL;
 
-  s_thread_mutex_unlock(&sweep_mutex);
+  (void)s_thread_mutex_unlock(&sweep_mutex);
 
   if (r != NULL) {
     SWEEPCHANGE(tc) = SWEEP_CHANGE_PROGRESS;
