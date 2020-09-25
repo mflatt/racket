@@ -579,7 +579,7 @@ static void check_pointer(ptr *pp, IBOOL address_is_meaningful, ptr base, uptr s
 
 static void check_bignum(ptr p) {
   if (!Sbignump(p))
-    printf("!!! not a bignum %p\n", p);
+    printf("!!! not a bignum %p\n", TO_VOIDP(p));
 }
 
 #include "heapcheck.inc"
