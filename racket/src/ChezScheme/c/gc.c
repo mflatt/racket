@@ -2134,6 +2134,31 @@ void enlarge_sweep_stack(ptr tc_in) {
   SWEEPSTACK(tc_in) = (ptr)((uptr)new_sweep_stack + sz);
 }
 
+#ifdef ENABLE_PARALLEL
+static ISPC infer_space(ptr p, seginfo *si) {
+  /* Certain kinds of values get allocated to more specific spaces by
+     parallel mode than non-parallel mode. Marking objects from a
+     previous collection can mean sweeping from the less-specific
+     space, however. We can synthesize an appropropriate space here,
+     since it will only be used only by the handling of received
+     ranges. */
+
+  if (si->marked_mask) {
+    ITYPE t = TYPEBITS(p);
+    if (t == type_typed_object) {
+      ptr tf = TYPEFIELD(p);
+      if ((iptr)tf == type_ratnum)
+        return space_pure;
+      else if ((iptr)tf == type_exactnum)
+        return space_pure;
+    } else if (t == type_closure)
+      return space_closure;
+  }
+
+  return si->space;
+}
+#endif
+
 void sweep_from_stack(ptr tc_in) {
   if (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
     while (SWEEPSTACK(tc_in) > SWEEPSTACKSTART(tc_in)) {
@@ -2142,11 +2167,11 @@ void sweep_from_stack(ptr tc_in) {
       SWEEPSTACK(tc_in) = (ptr)((uptr)SWEEPSTACK(tc_in) - ptr_bytes);
       p = *(ptr *)TO_VOIDP(SWEEPSTACK(tc_in));
       /* Room for improvement: `si->generation` is needed only for
-         objects that have impure fields, or in paralle mode for
+         objects that have impure fields, or in parallel mode for
          remote ranges. */
       si = SegInfo(ptr_get_segment(p));
       sweep(tc_in, p, si->generation);
-      FLUSH_REMOTE_RANGE(tc_in, si->space, si->generation);
+      FLUSH_REMOTE_RANGE(tc_in, infer_space(p, si), si->generation);
     }
   }
 }
