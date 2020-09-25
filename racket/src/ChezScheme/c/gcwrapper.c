@@ -548,31 +548,33 @@ void S_addr_tell(ptr p) {
 
 static void check_pointer(ptr *pp, IBOOL address_is_meaningful, ptr base, uptr seg, ISPC s, IBOOL aftergc) {
   ptr p = *pp;
-  seginfo *psi = MaybeSegInfo(ptr_get_segment(p));
-  if (psi != NULL) {
-    if ((psi->space == space_empty)
-        || psi->old_space
-        || (psi->marked_mask && !(psi->marked_mask[segment_bitmap_byte(p)] & segment_bitmap_bit(p))
-            /* corner case: a continuation in space_count_pure can refer to code via CLOSENTRY
-               where the entry point doesn't have a mark bit: */
-            && !((s == space_count_pure) && (psi->space == space_code)))) {
-      S_checkheap_errors += 1;
-      printf("!!! dangling reference at %s"PHtx" to "PHtx"%s\n",
-             (address_is_meaningful ? "" : "insideof "),
-             (ptrdiff_t)(address_is_meaningful ? pp : TO_VOIDP(base)),
-             (ptrdiff_t)p, (aftergc ? " after gc" : ""));
-      printf("from: "); segment_tell(seg);
-      printf("to:   "); segment_tell(ptr_get_segment(p));
-      {
-        ptr l;
-        for (l = S_G.locked_objects[psi->generation]; l != Snil; l = Scdr(l))
-          if (Scar(l) == p)
-            printf(" in locked\n");
-        for (l = S_G.unlocked_objects[psi->generation]; l != Snil; l = Scdr(l))
-          if (Scar(l) == p)
-            printf(" in unlocked\n");
+  if (!IMMEDIATE(p)) {
+    seginfo *psi = MaybeSegInfo(ptr_get_segment(p));
+    if (psi != NULL) {
+      if ((psi->space == space_empty)
+          || psi->old_space
+          || (psi->marked_mask && !(psi->marked_mask[segment_bitmap_byte(p)] & segment_bitmap_bit(p))
+              /* corner case: a continuation in space_count_pure can refer to code via CLOSENTRY
+                 where the entry point doesn't have a mark bit: */
+              && !((s == space_count_pure) && (psi->space == space_code)))) {
+        S_checkheap_errors += 1;
+        printf("!!! dangling reference at %s"PHtx" to "PHtx"%s\n",
+               (address_is_meaningful ? "" : "insideof "),
+               (ptrdiff_t)(address_is_meaningful ? pp : TO_VOIDP(base)),
+               (ptrdiff_t)p, (aftergc ? " after gc" : ""));
+        printf("from: "); segment_tell(seg);
+        printf("to:   "); segment_tell(ptr_get_segment(p));
+        {
+          ptr l;
+          for (l = S_G.locked_objects[psi->generation]; l != Snil; l = Scdr(l))
+            if (Scar(l) == p)
+              printf(" in locked\n");
+          for (l = S_G.unlocked_objects[psi->generation]; l != Snil; l = Scdr(l))
+            if (Scar(l) == p)
+              printf(" in unlocked\n");
+        }
+        abort(); // REMOVEME
       }
-      abort();
     }
   }
 }
@@ -836,7 +838,7 @@ void S_check_heap(aftergc, mcg) IBOOL aftergc; IGEN mcg; {
                     if (!si->marked_mask && (p == forward_marker)) {
                       pp1 = pp2; /* break out of outer loop */
                       break;
-                    } else if (!IMMEDIATE(p)) {
+                    } else {
                       check_pointer(pp1, 1, (ptr)0, seg, s, aftergc);
                     }
                   }
