@@ -1160,6 +1160,9 @@ static void relink_code(ptr co, ptr sym_base, ptr *vspaces, uptr *vspace_offsets
         ptr new_t;
         find_room(tc, space_data, static_generation, typemod, ptr_align(sz), new_t);
         memcpy(TO_VOIDP(new_t), TO_VOIDP(t), sz);
+        t = new_t;
+        CODERELOC(co) = t;
+        RELOCCODE(t) = co;
       }
     } else {
       CODERELOC(co) = t;
