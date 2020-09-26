@@ -159,12 +159,15 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   LZ4OUTBUFFER(tc) = 0;
 
   tgc->sweeper = main_sweeper_index;
-  tgc->will_be_sweeper = main_sweeper_index;
-  tgc->will_be_sweeper = main_sweeper_index;
   tgc->remote_range_start = (ptr)(uptr)-1;
   tgc->remote_range_end = (ptr)0;
   tgc->pending_ephemerons = (ptr)0;
-
+  tgc->ranges_to_send = NULL;
+  tgc->ranges_received = NULL;
+  for (i = 0; i < (int)DIRTY_SEGMENT_LISTS; i++)
+    tgc->dirty_segments[i] = NULL;
+  tgc->thread = (ptr)0;
+  
   tc_mutex_release();
 
   return thread;
