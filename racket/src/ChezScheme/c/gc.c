@@ -266,7 +266,7 @@ static uptr get_cpu_time () {
 # define ACCUM_CPU_TIME(a, y, x) uptr y = get_cpu_time() - x; a += y
 # define REPORT_TIME(e) e
 static uptr collect_accum, all_accum, par_accum;
-static int percentage(iptr n, iptr d) { return (n * 100) / d; }
+static int percentage(iptr n, iptr d) { if (d == 0) return 0; else return (n * 100) / d; }
 # define COUNT_SWEPT_BYTES(start, end) num_swept_bytes += ((uptr)TO_PTR(end) - (uptr)TO_PTR(start))
 # define ADJUST_COUNTER(e) e
 #else
@@ -410,6 +410,7 @@ typedef struct {
 #ifdef ENABLE_TIMING
   int remote_ranges_sent, remote_ranges_received;
   iptr remote_ranges_bytes_sent, remote_ranges_bytes_received;
+  uptr step, sweep_accum;
 #endif
 } gc_sweeper;
 
@@ -3111,7 +3112,7 @@ static void parallel_sweep_dirty_and_generation(thread_gc *tgc) {
     }
     
     REPORT_TIME(fprintf(stderr, "%d swpr  +%ld ms  %ld ms  %ld bytes  %d%%/%d sent %d%%/%d received\n",
-                        MAX_CG, sweeper[idx].step, sweeper[idx].sweep_accum, sweepers[idx].num_swept_bytes,
+                        MAX_CG, sweepers[idx].step, sweepers[idx].sweep_accum, sweepers[idx].num_swept_bytes,
                         percentage(sweepers[idx].remote_ranges_bytes_sent, sweepers[idx].num_swept_bytes),
                         sweepers[idx].remote_ranges_sent,
                         percentage(sweepers[idx].remote_ranges_bytes_received, sweepers[idx].num_swept_bytes),
@@ -3196,7 +3197,8 @@ static void run_sweeper(gc_sweeper *sweeper) {
     }
   }
 
-  ACCUM_CPU_TIME(par_accum, step, start);
+  ACCUM_CPU_TIME(sweeper->sweep_accum, step, start);
+  ADJUST_COUNTER(sweeper->step = step);
 
   sweeper->num_swept_bytes = num_swept_bytes;
 }
