@@ -968,7 +968,7 @@ extern void Sretain_static_relocation(void) {
 #endif
 
 static void default_abnormal_exit(void) {
-  exit(1);
+  abort();
 }
 
 extern void Sscheme_init(abnormal_exit) void (*abnormal_exit) PROTO((void)); {
