@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x09050328)
+(define-constant scheme-version #x09050329)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -2939,6 +2939,7 @@
      handle-nonprocedure-symbol
      thread-list
      split-and-resize
+     raw-terminated-cond
      raw-collect-cond
      raw-collect-thread0-cond
      raw-tc-mutex

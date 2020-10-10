@@ -127,3 +127,45 @@
                 (equal? "hello" (symbol->string (car r)))))))
 
      )
+
+(mat intern-tale
+  (begin
+    (define symbol-who-must-not-be-named 'symbol-who-must-not-be-named)
+    (define mystery-name (format "symbol-who-must-not-be-named-for-even-longer~a" (random 1000)))
+    (define g1 (gensym "gen"))
+    #t)
+  (let ([results #f]
+        [unique1 (gensym->unique-string g1)])
+    (let ([t (fork-thread
+              (lambda ()
+                (push-intern-table!)
+                (set! results
+                      (let ([s (string->symbol mystery-name)]
+                            [g2 (gensym "gen")])
+                        (list
+                         (eq? symbol-who-must-not-be-named
+                              (string->symbol "symbol-who-must-not-be-named"))
+                         s
+                         (oblist)
+                         (gensym "gen" unique1)
+                         g2
+                         (gensym->unique-string g2))))))])
+      (thread-join t)
+      (equal? (list #t
+                    #f
+                    (list mystery-name)
+                    symbol-who-must-not-be-named
+                    g1
+                    #f)
+              (list (car results)
+                    (eq? (cadr results)
+                         (string->symbol mystery-name))
+                    (filter (lambda (s) (equal? s mystery-name))
+                            (map symbol->string (caddr results)))
+                    (and (memq symbol-who-must-not-be-named (caddr results))
+                         symbol-who-must-not-be-named)
+                    (and (eq? g1 (list-ref results 3))
+                         g1)
+                    (eq? (list-ref results 4)
+                         (gensym "gen" (list-ref results 5)))))))
+  )

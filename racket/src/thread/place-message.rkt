@@ -2,7 +2,8 @@
 (require '#%flfxnum
          (only-in '#%foreign cpointer? ptr-add)
          (only-in '#%place place-shared?)
-         racket/prefab)
+         racket/prefab
+         racket/symbol)
 
 (provide place-message-allowed?
          place-message-allowed-direct?
@@ -195,6 +196,10 @@
        (vector->immutable-vector
         (for/vector #:length (vector-length v) ([e (in-vector v)])
           (loop e)))]
+      [(symbol? v)
+       ;; Symbols can be different in different places,
+       ;; so potentially re-intern in receiver:
+       (string->symbol (symbol->immutable-string v))]
       [(immutable-prefab-struct-key v)
        => (lambda (k)
             (apply make-prefab-struct

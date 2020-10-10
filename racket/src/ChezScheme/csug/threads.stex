@@ -89,14 +89,20 @@ synchronized across processors.
 \scheme{fork-thread} invokes \var{thunk} in a new thread and returns
 a thread object.
 
-Nothing can be done with the thread object returned by
-\scheme{fork-thread}, other than to print it or use it with inspection
-functions such as \scheme{compute-size}.
-
 Threads created by foreign code using some means other than
 \scheme{fork-thread} must call \scheme{Sactivate_thread}
 (Section~\ref{SECTFOREIGNCLIB}) before touching any Scheme data
 or calling any Scheme procedures.
+
+%----------------------------------------------------------------------------
+\noskipentryheader
+\formdef{thread-join}{\categoryprocedure}{(thread-join \var{thread})}
+\returns unspecified
+\listlibraries
+\endnoskipentryheader
+
+\noindent
+Waits until \var{thread} has commpleted.
 
 %----------------------------------------------------------------------------
 \entryheader

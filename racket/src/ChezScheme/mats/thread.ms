@@ -1620,11 +1620,11 @@
     ;; To avoid breaking later tests that use `(collect)`,
     ;; wait for any threads created here to exit
     (let ()
-      (define $threads (foreign-procedure "(cs)threads" () scheme-object))
-      (let loop ()
-        (unless (= 1 (length ($threads)))
-          (sleep (make-time 'time-duration 10000 0))
-          (loop))))
+      (define init-thread (get-initial-thread))
+      (for-each (lambda (t)
+                  (unless (eq? t init-thread)
+                    (thread-join t)))
+                ((foreign-procedure "(cs)threads" () scheme-object))))
     #t)
 )
 

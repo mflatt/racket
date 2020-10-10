@@ -871,6 +871,7 @@
 
    (when version?
      (display (banner)))
+   (push-intern-table! 0)
    (call/cc ; Chez Scheme's `call/cc`, used here to escape from the Racket-thread engine loop
     (lambda (entry-point-k)
       (call-in-main-thread

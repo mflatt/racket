@@ -44,6 +44,8 @@
   (when (eq? initial-place current-place)
     ;; needed by custodian GC callback for memory limits:
     (atomically (ensure-wakeup-handle!)))
+  (define path-m (message-ize path void))
+  (define sym-m (message-ize sym void))
   (define orig-cust (create-custodian #f))
   (define lock (host:make-mutex))
   (define started (host:make-condition))
@@ -103,7 +105,7 @@
           (current-pseudo-random-generator (make-pseudo-random-generator))
           (current-evt-pseudo-random-generator (make-pseudo-random-generator))
           (define finish
-            (host:start-place child-pch path sym
+            (host:start-place child-pch (un-message-ize path-m) (un-message-ize sym-m)
                               child-in-fd child-out-fd child-err-fd
                               orig-cust orig-plumber))
           (call-with-continuation-prompt

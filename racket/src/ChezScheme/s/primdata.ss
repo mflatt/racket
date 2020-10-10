@@ -1585,6 +1585,7 @@
   (profile-load-data [sig [(pathname ...) -> (void)]] [flags true])
   (profile-release-counters [sig [() -> (void)]] [flags true])
   (property-list [sig [(symbol) -> (list)]] [flags discard true safeongoodargs])
+  (push-intern-table! [sig [(sub-index) -> (void)]] [flags true])
   (put-bytevector-some [sig [(binary-output-port bytevector) (binary-output-port bytevector length) (binary-output-port bytevector length length) -> (uint)]] [flags true])
   (put-hash-table! [sig [(old-hash-table ptr ptr) -> (void)]] [flags true])
   (put-source-table [sig [(textual-output-port source-table) -> (void)]] [flags true])
@@ -1765,6 +1766,7 @@
   (textual-port-output-size [sig [(textual-output-port) -> (length)]] [flags discard])
   (thread? [sig [(ptr) -> (boolean)]] [flags pure unrestricted mifoldable discard])
   (thread-condition? [feature pthreads] [sig [(ptr) -> (boolean)]] [flags pure unrestricted mifoldable discard])
+  (thread-join [feature pthreads] [sig [(ptr) -> (void)]] [flags true])
   (top-level-bound? [sig [(symbol) (symbol environment) -> (boolean)]] [flags discard])
   (top-level-mutable? [sig [(symbol) (symbol environment) -> (boolean)]] [flags discard])
   (top-level-syntax [sig [(symbol) (symbol environment) -> (ptr)]] [flags discard])
@@ -2275,6 +2277,7 @@
   ($raw-collect-cond [feature pthreads] [flags single-valued])
   ($raw-collect-thread0-cond [feature pthreads] [flags single-valued])
   ($raw-tc-mutex [feature pthreads] [flags single-valued])
+  ($raw-terminated-cond [feature pthreads] [flags single-valued])
   ($read-performance-monitoring-counter [flags single-valued])
   ($read-time-stamp-counter [flags single-valued])
   ($real->flonum [flags single-valued arith-op mifoldable discard])
@@ -2450,6 +2453,7 @@
   ($session-key [flags])
   ($symbol-ht-rtd [flags])
   ($tc-mutex [feature pthreads] [flags])
+  ($terminated-cond [feature pthreads] [flags])
 )
 
 (define-symbol-flags* ([libraries] [flags system-keyword]) ; condition types

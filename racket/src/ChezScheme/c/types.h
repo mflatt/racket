@@ -269,7 +269,7 @@ typedef struct _bucket_pointer_list {
   struct _bucket_pointer_list *cdr;
 } bucket_pointer_list;
 
-typedef struct symbol_oblist {
+typedef struct intern_oblist {
   iptr length;
   iptr count;
   bucket **oblist;
@@ -277,7 +277,14 @@ typedef struct symbol_oblist {
 #ifdef PTHREADS
   scheme_mutex_t mutex; /* ordered after S_tc_mutex, before S_alloc_mutex */
 #endif
-} symbol_oblist;
+
+  struct intern_oblist *next; /* search after this one */
+
+  uptr refcount;
+  struct intern_oblist *all_next, *all_prev;
+
+  bucket_pointer_list *buckets_to_rebuild; /* used during GC */
+} intern_oblist;
 
 /* size macros for variable-sized objects */
 
@@ -511,7 +518,7 @@ typedef struct remote_range {
 typedef struct thread_gc {
   ptr tc;
   ptr thread; /* set only when collecting */
-  symbol_oblist *oblist;
+  intern_oblist *oblist;
 
   int during_alloc;
   IBOOL queued_fire;

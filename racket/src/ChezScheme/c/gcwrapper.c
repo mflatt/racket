@@ -1156,6 +1156,7 @@ void S_fixup_counts(ptr counts) {
 ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
   ptr tc = get_thread_context();
   ptr code, result;
+  intern_oblist *obl;
 
   code = CP(tc);
   if (Sprocedurep(code)) code = CLOSCODE(code);
@@ -1200,7 +1201,9 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
     S_G.guardians[new_g] = S_G.guardians[old_g]; S_G.guardians[old_g] = Snil;
     S_G.locked_objects[new_g] = S_G.locked_objects[old_g]; S_G.locked_objects[old_g] = Snil;
     S_G.unlocked_objects[new_g] = S_G.unlocked_objects[old_g]; S_G.unlocked_objects[old_g] = Snil;
-    S_G.main_oblist.buckets_of_generation[new_g] = S_G.main_oblist.buckets_of_generation[old_g]; S_G.main_oblist.buckets_of_generation[old_g] = NULL;
+    for (obl = &S_G.main_oblist; obl != NULL; obl = obl->all_next) {
+      obl->buckets_of_generation[new_g] = obl->buckets_of_generation[old_g]; obl->buckets_of_generation[old_g] = NULL;
+    }
     if (S_G.enable_object_counts) {
       INT i; ptr ls;
       for (i = 0; i < countof_types; i += 1) {

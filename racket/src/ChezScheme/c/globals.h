@@ -37,6 +37,7 @@ EXTERN char *Sdefaultheapdirs;
 #ifdef PTHREADS
 EXTERN s_thread_key_t S_tc_key;
 EXTERN scheme_mutex_t S_tc_mutex;
+EXTERN s_thread_cond_t S_terminated_cond;
 EXTERN s_thread_cond_t S_collect_cond;
 EXTERN s_thread_cond_t S_collect_thread0_cond;
 EXTERN scheme_mutex_t S_alloc_mutex; /* ordered after S_tc_mutex and any oblist */
@@ -150,7 +151,7 @@ EXTERN struct S_G_struct {
     IBOOL must_mark_gen0;
 
   /* intern.c */
-    symbol_oblist main_oblist;
+    intern_oblist main_oblist;
 
   /* prim.c */
     ptr library_entry_vector;

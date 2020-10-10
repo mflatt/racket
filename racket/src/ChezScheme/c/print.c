@@ -175,9 +175,11 @@ static void psym(x) ptr x; {
   } else if (Spairp(name)) {
     if (Scar(name) != Sfalse) {
       printf("#{");
-      display_string(Scdr(name));
+      if (Sstringp(Scdr(name)))
+        display_string(Scdr(name));
       printf(" ");
-      display_string(Scar(name));
+      if (Sstringp(Scar(name)))
+        display_string(Scar(name));
       printf("}");
     } else {
       printf("#<gensym ");

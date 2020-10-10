@@ -192,7 +192,10 @@ extern ptr S_count_size_increments PROTO((ptr ls, IGEN generation));
 
 /* intern.c */
 extern void S_intern_init PROTO((void));
-extern void S_resize_oblist PROTO((symbol_oblist *oblist));
+extern void S_push_intern_table PROTO((int pop));
+extern void S_resize_oblist PROTO((intern_oblist *oblist));
+extern void S_oblist_retain PROTO((intern_oblist *oblist));
+extern void S_oblist_release PROTO((intern_oblist *oblist));
 extern ptr S_intern PROTO((const unsigned char *s));
 extern ptr S_intern_sc PROTO((ptr tc, const string_char *s, iptr n, ptr name_str));
 extern ptr S_intern3 PROTO((ptr tc, const string_char *pname, iptr plen, const string_char *uname, iptr ulen, ptr pname_str, ptr uame_str));

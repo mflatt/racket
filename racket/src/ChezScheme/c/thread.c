@@ -39,6 +39,7 @@ void S_thread_init() {
     s_thread_mutex_init(&S_alloc_mutex.pmutex);
     S_alloc_mutex.owner = 0;
     S_alloc_mutex.count = 0;
+    s_thread_cond_init(&S_terminated_cond);
 
 # ifdef IMPLICIT_ATOMIC_AS_EXPLICIT
     s_thread_mutex_init(&S_implicit_mutex);
@@ -104,6 +105,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   GCDATA(tc) = TO_PTR(tgc);
   tgc->tc = tc;
   tgc->oblist = THREAD_GC(p_tc)->oblist;
+  S_oblist_retain(tgc->oblist);
 
  /* override nonclonable tc fields */
   THREADNO(tc) = S_G.threadno;
@@ -299,12 +301,15 @@ static IBOOL destroy_thread(tc) ptr tc; {
       THREAD_GC(tc)->sweeper = main_sweeper_index;
       THREAD_GC(tc)->tc = (ptr)0;
       THREAD_GC(tc)->next = free_thread_gcs;
+      S_oblist_release(THREAD_GC(tc)->oblist);
       free_thread_gcs = THREAD_GC(tc);
 
       free((void *)tc);
       
       THREADTC(thread) = 0; /* mark it dead */
       status = 1;
+
+      s_thread_cond_broadcast(&S_terminated_cond);
       break;
     }
     ls = &Scdr(*ls);
@@ -348,7 +353,6 @@ static s_thread_rv_t start_thread(p) void *p; {
 
   s_thread_return;
 }
-
 
 scheme_mutex_t *S_make_mutex() {
   scheme_mutex_t *m;

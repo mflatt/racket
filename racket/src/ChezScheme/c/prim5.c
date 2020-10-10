@@ -235,15 +235,18 @@ static ptr s_make_immobile_vector(uptr len, ptr fill) {
 
 static ptr s_oblist() {
   ptr tc = get_thread_context();
-  symbol_oblist *oblist = THREAD_GC(tc)->oblist;
+  intern_oblist *oblist = THREAD_GC(tc)->oblist;
   ptr ls = Snil;
-  iptr idx = oblist->length;
   bucket *b;
 
-  while (idx-- != 0) {
-    for (b = oblist->oblist[idx]; b != NULL; b = b->next) {
-      ls = Scons(b->sym, ls);
+  while (oblist != NULL) {
+    iptr idx = oblist->length;
+    while (idx-- != 0) {
+      for (b = oblist->oblist[idx]; b != NULL; b = b->next) {
+        ls = Scons(b->sym, ls);
+      }
     }
+    oblist = oblist->next;
   }
 
   return ls;
@@ -990,7 +993,7 @@ static void s_set_random_seed(x) U32 x; {
 
 static ptr s_intern(x) ptr x; {
   require(Sstringp(x),"string->symbol","~s is not a string",x);
-
+  
   return S_intern_sc(get_thread_context(), &STRIT(x, 0), Sstring_length(x), x);
 }
 
@@ -1640,6 +1643,7 @@ void S_prim5_init() {
     Sforeign_symbol("(cs)s_strings_to_gensym", (void *)s_strings_to_gensym);
     Sforeign_symbol("(cs)s_intern_gensym", (void *)S_intern_gensym);
     Sforeign_symbol("(cs)s_uninterned", (void *)S_uninterned);
+    Sforeign_symbol("(cs)s_push_intern_table", (void *)S_push_intern_table);
     Sforeign_symbol("(cs)cputime", (void *)S_cputime);
     Sforeign_symbol("(cs)realtime", (void *)S_realtime);
     Sforeign_symbol("(cs)clock_gettime", (void *)S_clock_gettime);

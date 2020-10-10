@@ -88,6 +88,7 @@
                    (init-place-locals!)
                    (register-as-place-main!)
                    (async-callback-place-init!)
+                   (push-intern-table! 1) ; fresh symbol table in each place
                    (let ([result (call/cc
                                   (lambda (esc)
                                     (set-box! place-esc-box esc)

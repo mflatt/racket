@@ -558,7 +558,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       else if (!new_marked(si, pp))                  \
         mark_or_copy_pure(ppp, pp, si);              \
     } else                                           \
-      RECORD_REMOTE_RANGE(tgc, start, size, si);   \
+      RECORD_REMOTE_RANGE(tgc, start, size, si);     \
   } while (0)
 
 #define relocate_code(pp, si, start, size) do { \
@@ -569,7 +569,7 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
         else if (!new_marked(si, pp))           \
           mark_or_copy_pure(&pp, pp, si);       \
       } else                                    \
-        RECORD_REMOTE_RANGE(tgc, start, size, si);    \
+        RECORD_REMOTE_RANGE(tgc, start, size, si);   \
     } ELSE_MEASURE_NONOLDSPACE(pp)              \
   } while (0)
 
@@ -615,9 +615,9 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
       } else {                                                          \
         __to_g = TARGET_GENERATION(si);                                 \
       }                                                                 \
-      if (__to_g < from_g) S_record_new_dirty_card(tgc, ppp, __to_g); \
+      if (__to_g < from_g) S_record_new_dirty_card(tgc, ppp, __to_g);   \
     } else                                                              \
-      RECORD_REMOTE_RANGE(tgc, start, size, si);                      \
+      RECORD_REMOTE_RANGE(tgc, start, size, si);                        \
   } while (0)
 
 #define mark_or_copy_impure(to_g, dest, p, from_g, si) do {      \
@@ -642,12 +642,12 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
           } else if (new_marked(_si, _pp)) {                            \
             _pg = TARGET_GENERATION(_si);                               \
           } else if (CAN_MARK_AND(_si->use_marks)) {                    \
-            _pg = mark_object(tgc, _pp, _si);                         \
+            _pg = mark_object(tgc, _pp, _si);                           \
           } else {                                                      \
-            _pg = copy(tgc, _pp, _si, _ppp);                          \
+            _pg = copy(tgc, _pp, _si, _ppp);                            \
           }                                                             \
         } else {                                                        \
-          RECORD_REMOTE_RANGE(tgc, start, size, _si);                 \
+          RECORD_REMOTE_RANGE(tgc, start, size, _si);                   \
           _pg = 0xff;                                                   \
         }                                                               \
       }                                                                 \
@@ -824,8 +824,8 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
     thread_gc *tgc = THREAD_GC(tc);
     IGEN g; ISPC s;
     seginfo *oldspacesegments, *oldweakspacesegments, *si, *nextsi;
+    intern_oblist *oblist;
     ptr ls;
-    bucket_pointer_list *buckets_to_rebuild;
     uptr pre_finalization_size, pre_phantom_bytes;
 #ifdef ENABLE_OBJECT_COUNTS
     ptr count_roots_counts = Snil;
@@ -1191,39 +1191,41 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
     GET_REAL_TIME(start);
 
   /* relocate nonempty oldspace symbols and set up list of buckets to rebuild later */
-    buckets_to_rebuild = NULL;
-    for (g = 0; g <= MAX_CG; g += 1) {
-      bucket_list *bl, *blnext; bucket *b; bucket_pointer_list *bpl; bucket **oblist_cell; ptr sym; iptr idx;
-      for (bl = S_G.main_oblist.buckets_of_generation[g]; bl != NULL; bl = blnext) {
-        blnext = bl->cdr;
-        b = bl->car;
-        /* mark this bucket old for the rebuilding loop */
-        b->next = TO_VOIDP((uptr)TO_PTR(b->next) | 1);
-        sym = b->sym;
-        idx = UNFIX(SYMHASH(sym)) % S_G.main_oblist.length;
-        oblist_cell = &S_G.main_oblist.oblist[idx];
-        if (!((uptr)TO_PTR(*oblist_cell) & 1)) {
-          /* mark this bucket in the set */
-          *oblist_cell = TO_VOIDP((uptr)TO_PTR(*oblist_cell) | 1);
-          /* repurpose the bucket list element for the list of buckets to rebuild later */
-          /* idiot_checks verifies these have the same size */
-          bpl = (bucket_pointer_list *)bl;
-          bpl->car = oblist_cell;
-          bpl->cdr = buckets_to_rebuild;
-          buckets_to_rebuild = bpl;
-        }
-        if (FWDMARKER(sym) != forward_marker &&
-            /* coordinate with alloc.c */
-            (SYMVAL(sym) != sunbound || SYMPLIST(sym) != Snil || SYMSPLIST(sym) != Snil)) {
-          seginfo *sym_si = SegInfo(ptr_get_segment(sym));
+    for (oblist = &S_G.main_oblist; oblist != NULL; oblist = oblist->all_next) {
+      oblist->buckets_to_rebuild = NULL;
+      for (g = 0; g <= MAX_CG; g += 1) {
+        bucket_list *bl, *blnext; bucket *b; bucket_pointer_list *bpl; bucket **oblist_cell; ptr sym; iptr idx;
+        for (bl = oblist->buckets_of_generation[g]; bl != NULL; bl = blnext) {
+          blnext = bl->cdr;
+          b = bl->car;
+          /* mark this bucket old for the rebuilding loop */
+          b->next = TO_VOIDP((uptr)TO_PTR(b->next) | 1);
+          sym = b->sym;
+          idx = UNFIX(SYMHASH(sym)) % oblist->length;
+          oblist_cell = &oblist->oblist[idx];
+          if (!((uptr)TO_PTR(*oblist_cell) & 1)) {
+            /* mark this bucket in the set */
+            *oblist_cell = TO_VOIDP((uptr)TO_PTR(*oblist_cell) | 1);
+            /* repurpose the bucket list element for the list of buckets to rebuild later */
+            /* idiot_checks verifies these have the same size */
+            bpl = (bucket_pointer_list *)bl;
+            bpl->car = oblist_cell;
+            bpl->cdr = oblist->buckets_to_rebuild;
+            oblist->buckets_to_rebuild = bpl;
+          }
+          if (FWDMARKER(sym) != forward_marker &&
+              /* coordinate with alloc.c */
+              (SYMVAL(sym) != sunbound || SYMPLIST(sym) != Snil || SYMSPLIST(sym) != Snil)) {
+            seginfo *sym_si = SegInfo(ptr_get_segment(sym));
 #ifdef ENABLE_PARALLEL
-          thread_gc *tgc = sym_si->creator; /* shadows enclosing `tgc` binding */
+            thread_gc *tgc = sym_si->creator; /* shadows enclosing `tgc` binding */
 #endif
-          if (!new_marked(sym_si, sym))
-            mark_or_copy_pure(&sym, sym, sym_si);
+            if (!new_marked(sym_si, sym))
+              mark_or_copy_pure(&sym, sym, sym_si);
+          }
         }
+        oblist->buckets_of_generation[g] = NULL;
       }
-      S_G.main_oblist.buckets_of_generation[g] = NULL;
     }
 
   /* relocate the protected C pointers */
@@ -1499,8 +1501,9 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
                         MAX_CG, step, collect_accum));
 
    /* post-gc oblist handling.  rebuild old buckets in the target generation, pruning unforwarded symbols */
-    { bucket_list *bl; bucket *b, *bnext; bucket_pointer_list *bpl; bucket **pb; ptr sym;
-      for (bpl = buckets_to_rebuild; bpl != NULL; bpl = bpl->cdr) {
+    for (oblist = &S_G.main_oblist; oblist != NULL; oblist = oblist->all_next) {
+      bucket_list *bl; bucket *b, *bnext; bucket_pointer_list *bpl; bucket **pb; ptr sym;
+      for (bpl = oblist->buckets_to_rebuild; bpl != NULL; bpl = bpl->cdr) {
         pb = bpl->car;
         for (b = TO_VOIDP((uptr)TO_PTR(*pb) - 1); b != NULL && ((uptr)TO_PTR(b->next) & 1); b = bnext) {
           bnext = TO_VOIDP((uptr)TO_PTR(b->next) - 1);
@@ -1523,11 +1526,11 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
               S_G.bytesof[g][countof_oblist] += sizeof(bucket_list);
 #endif /* ENABLE_OBJECT_COUNTS */
               bl->car = b;
-              bl->cdr = S_G.main_oblist.buckets_of_generation[g];
-              S_G.main_oblist.buckets_of_generation[g] = bl;
+              bl->cdr = oblist->buckets_of_generation[g];
+              oblist->buckets_of_generation[g] = bl;
             }
           } else {
-            S_G.main_oblist.count -= 1;
+            oblist->count -= 1;
           }
         }
         *pb = b;
