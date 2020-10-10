@@ -390,7 +390,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
     ptr end_syms = TYPE(VSPACE_END(vspace_symbol), type_symbol);
 
     if (sym != end_syms) {
-      tc_mutex_acquire();
+      oblist_mutex_acquire(THREAD_GC(tc)->oblist);
 
       while (sym < end_syms) {
         ptr isym;
@@ -411,7 +411,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
         INITSYMVAL(sym) = sunbound;
         INITSYMCODE(sym,S_G.nonprocedure_code);
 
-        isym = S_intern4(sym);
+        isym = S_intern4(tc, sym);
         if (isym != sym) {
           /* The symbol was already interned, so point to the existing one */
           INITSYMVAL(sym) = isym;
@@ -432,7 +432,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
         in_seg_off += size_symbol;
       }
 
-      tc_mutex_release();
+      oblist_mutex_release(THREAD_GC(tc)->oblist);
     }
   }
 

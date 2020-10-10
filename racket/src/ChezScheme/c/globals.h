@@ -39,7 +39,7 @@ EXTERN s_thread_key_t S_tc_key;
 EXTERN scheme_mutex_t S_tc_mutex;
 EXTERN s_thread_cond_t S_collect_cond;
 EXTERN s_thread_cond_t S_collect_thread0_cond;
-EXTERN scheme_mutex_t S_alloc_mutex; /* ordered after S_tc_mutex */
+EXTERN scheme_mutex_t S_alloc_mutex; /* ordered after S_tc_mutex and any oblist */
 EXTERN int S_collect_waiting_threads;
 EXTERN ptr S_collect_waiting_tcs[maximum_parallel_collect_threads];
 # ifdef IMPLICIT_ATOMIC_AS_EXPLICIT
@@ -137,7 +137,7 @@ EXTERN struct S_G_struct {
     IGEN new_max_nonstatic_generation;
     IGEN min_mark_gen;
     uptr countof[static_generation+1][countof_types];
-    uptr bytesof[static_generation+1][countof_types];
+  uptr bytesof[static_generation+1][countof_types]; /* protected by alloc mutex */
     uptr gctimestamp[static_generation+1];
     ptr rtds_with_counts[static_generation+1];
     uptr countof_size[countof_types];
@@ -150,10 +150,7 @@ EXTERN struct S_G_struct {
     IBOOL must_mark_gen0;
 
   /* intern.c */
-    iptr oblist_length;
-    iptr oblist_count;
-    bucket **oblist;
-    bucket_list *buckets_of_generation[static_generation];
+    symbol_oblist main_oblist;
 
   /* prim.c */
     ptr library_entry_vector;

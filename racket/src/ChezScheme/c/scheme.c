@@ -1066,7 +1066,7 @@ extern void Sregister_heap_file(UNUSED const char *path) {
 }
 
 extern void Sbuild_heap(kernel, custom_init) const char *kernel; void (*custom_init) PROTO((void)); {
-  ptr tc = Svoid; /* initialize to make gcc happy */
+  ptr tc = TO_PTR(S_G.thread_context);
   ptr p;
 
   switch (current_state) {
@@ -1131,12 +1131,12 @@ extern void Sbuild_heap(kernel, custom_init) const char *kernel; void (*custom_i
     S_threads = Snil;
     S_nthreads = 0;
     S_set_symbol_value(S_G.active_threads_id, FIX(0));
-    /* pass a parent tc of Svoid, since this call establishes the initial
-     * thread context and hence there is no parent thread context.  */
     tc = (ptr)THREADTC(S_create_thread_object("startup", tc));
 #ifdef PTHREADS
     s_thread_setspecific(S_tc_key, TO_VOIDP(tc));
 #endif
+    
+    TARGETMACHINE(tc) = S_intern((const unsigned char *)MACHINE_TYPE);
 
     /* #scheme-init enables interrupts */
     TRAP(tc) = (ptr)most_positive_fixnum;

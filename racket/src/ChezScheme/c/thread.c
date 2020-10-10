@@ -58,7 +58,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   thread_gc *tgc;
   INT i;
 
-  tc_mutex_acquire();
+  tc_mutex_acquire_no_check();
 
   if (S_threads == Snil) {
     tc = TO_PTR(S_G.thread_context);
@@ -103,6 +103,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
 
   GCDATA(tc) = TO_PTR(tgc);
   tgc->tc = tc;
+  tgc->oblist = THREAD_GC(p_tc)->oblist;
 
  /* override nonclonable tc fields */
   THREADNO(tc) = S_G.threadno;
@@ -135,7 +136,7 @@ ptr S_create_thread_object(who, p_tc) const char *who; ptr p_tc; {
   SIGNALINTERRUPTQUEUE(tc) = S_allocate_scheme_signal_queue();
   KEYBOARDINTERRUPTPENDING(tc) = Sfalse;
 
-  TARGETMACHINE(tc) = S_intern((const unsigned char *)MACHINE_TYPE);
+  TARGETMACHINE(tc) = TARGETMACHINE(p_tc);
 
  /* choosing not to clone virtual registers */
   for (i = 0 ; i < virtual_register_count ; i += 1) {

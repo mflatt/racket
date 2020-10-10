@@ -710,14 +710,14 @@ static void faslin(ptr tc, ptr *x, ptr t, ptr *pstrbuf, faslFile f) {
         case fasl_type_symbol: {
             iptr n;
             n = stringin(pstrbuf, 0, f);
-            *x = S_intern_sc(&STRIT(*pstrbuf, 0), n, Sfalse);
+            *x = S_intern_sc(tc, &STRIT(*pstrbuf, 0), n, Sfalse);
             return;
         }
         case fasl_type_gensym: {
             iptr pn, un;
             pn = stringin(pstrbuf, 0, f);
             un = stringin(pstrbuf, pn, f);
-            *x = S_intern3(&STRIT(*pstrbuf, 0), pn, &STRIT(*pstrbuf, pn), un, Sfalse, Sfalse);
+            *x = S_intern3(tc, &STRIT(*pstrbuf, 0), pn, &STRIT(*pstrbuf, pn), un, Sfalse, Sfalse);
             return;
         }
         case fasl_type_uninterned_symbol: {
@@ -1019,7 +1019,7 @@ static void faslin(ptr tc, ptr *x, ptr t, ptr *pstrbuf, faslFile f) {
             *x = co = S_code(tc, type_code | (flags << code_flags_offset), n);
             CODEFREE(co) = free;
             faslin(tc, &name, t, pstrbuf, f);
-            if (Sstringp(name)) name = SYMNAME(S_intern_sc(&STRIT(name, 0), Sstring_length(name), name));
+            if (Sstringp(name)) name = SYMNAME(S_intern_sc(tc, &STRIT(name, 0), Sstring_length(name), name));
             CODENAME(co) = name;
             faslin(tc, &CODEARITYMASK(co), t, pstrbuf, f);
             faslin(tc, &CODEINFO(co), t, pstrbuf, f);

@@ -234,12 +234,14 @@ static ptr s_make_immobile_vector(uptr len, ptr fill) {
 }
 
 static ptr s_oblist() {
+  ptr tc = get_thread_context();
+  symbol_oblist *oblist = THREAD_GC(tc)->oblist;
   ptr ls = Snil;
-  iptr idx = S_G.oblist_length;
+  iptr idx = oblist->length;
   bucket *b;
 
   while (idx-- != 0) {
-    for (b = S_G.oblist[idx]; b != NULL; b = b->next) {
+    for (b = oblist->oblist[idx]; b != NULL; b = b->next) {
       ls = Scons(b->sym, ls);
     }
   }
@@ -989,21 +991,25 @@ static void s_set_random_seed(x) U32 x; {
 static ptr s_intern(x) ptr x; {
   require(Sstringp(x),"string->symbol","~s is not a string",x);
 
-  return S_intern_sc(&STRIT(x, 0), Sstring_length(x), x);
+  return S_intern_sc(get_thread_context(), &STRIT(x, 0), Sstring_length(x), x);
 }
 
 static ptr s_intern2(ptr x, ptr n) {
-  return S_intern_sc(&STRIT(x, 0), UNFIX(n), Sfalse);
+  return S_intern_sc(get_thread_context(), &STRIT(x, 0), UNFIX(n), Sfalse);
 }
 
 /* first n chars str are pretty name; remaining m-n are unique name */
 static ptr s_intern3(ptr x, ptr n, ptr m) {
   iptr plen = UNFIX(n);
-  return S_intern3(&STRIT(x, 0), plen, &STRIT(x, plen), UNFIX(m) - plen, Sfalse, Sfalse);
+  return S_intern3(get_thread_context(),
+                   &STRIT(x, 0), plen,
+                   &STRIT(x, plen), UNFIX(m) - plen,
+                   Sfalse, Sfalse);
 }
 
 static ptr s_strings_to_gensym(ptr pname_str, ptr uname_str) {
-  return S_intern3(&STRIT(pname_str, 0), Sstring_length(pname_str),
+  return S_intern3(get_thread_context(),
+                   &STRIT(pname_str, 0), Sstring_length(pname_str),
                    &STRIT(uname_str, 0), Sstring_length(uname_str),
                    pname_str, uname_str);
 }

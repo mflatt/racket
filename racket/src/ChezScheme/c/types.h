@@ -244,6 +244,14 @@ typedef struct _t2table {
 #define DirtySegmentsAt(dirty_segments, from_g, to_g) dirty_segments[DIRTY_SEGMENT_INDEX(from_g, to_g)]
 #define DirtySegments(from_g, to_g) DirtySegmentsAt(S_G.dirty_segments, from_g, to_g) 
 
+#ifdef PTHREADS
+typedef struct {
+  volatile s_thread_t owner;
+  volatile uptr count;
+  s_thread_mutex_t pmutex;
+} scheme_mutex_t;
+#endif
+
 /* oblist */
 
 typedef struct _bucket {
@@ -260,6 +268,16 @@ typedef struct _bucket_pointer_list {
   struct _bucket **car;
   struct _bucket_pointer_list *cdr;
 } bucket_pointer_list;
+
+typedef struct symbol_oblist {
+  iptr length;
+  iptr count;
+  bucket **oblist;
+  bucket_list *buckets_of_generation[static_generation];
+#ifdef PTHREADS
+  scheme_mutex_t mutex; /* ordered after S_tc_mutex, before S_alloc_mutex */
+#endif
+} symbol_oblist;
 
 /* size macros for variable-sized objects */
 
@@ -347,11 +365,6 @@ typedef struct _dirtycardinfo {
 #define FRAME(tc,i) (((ptr *)TO_VOIDP(SFP(tc)))[i])
 
 #ifdef PTHREADS
-typedef struct {
-  volatile s_thread_t owner;
-  volatile uptr count;
-  s_thread_mutex_t pmutex;
-} scheme_mutex_t;
 
 #define get_thread_context() (ptr)s_thread_getspecific(S_tc_key)
 /* deactivate thread prepares the thread for a possible collection.
@@ -393,11 +406,24 @@ typedef struct {
 }
 
 #define tc_mutex_acquire() do {                 \
+    assert_no_oblist_mutex();                   \
     assert_no_alloc_mutex();                    \
+    S_mutex_acquire(&S_tc_mutex);               \
+  } while (0);
+#define tc_mutex_acquire_no_check() do {        \
     S_mutex_acquire(&S_tc_mutex);               \
   } while (0);
 #define tc_mutex_release() do {                 \
     S_mutex_release(&S_tc_mutex);               \
+  } while (0);
+
+/* Objlist mutex is ordered after tc mutex */
+#define oblist_mutex_acquire(oblist) do {       \
+    assert_no_alloc_mutex();                    \
+    S_mutex_acquire(&(oblist)->mutex);          \
+  } while (0);
+#define oblist_mutex_release(oblist) do {       \
+    S_mutex_release(&(oblist)->mutex);          \
   } while (0);
 
 /* Allocation mutex is ordered after tc mutex */
@@ -410,15 +436,21 @@ typedef struct {
 
 /* To enable checking lock order: */
 #if 0
+# define assert_no_oblist_mutex() do {                                  \
+    if (S_mutex_is_owner(&THREAD_GC(get_thread_context())->oblist->mutex)) \
+      S_error_abort("cannot take tc mutex after oblist mutex");         \
+  } while (0)
 # define assert_no_alloc_mutex() do {                                   \
     if (S_mutex_is_owner(&S_alloc_mutex))                               \
-      S_error_abort("cannot take tc mutex after allocation mutex");     \
+      S_error_abort("cannot take tc or oblist mutex after allocation mutex"); \
   } while (0)
 #else
+# define assert_no_oblist_mutex() do { } while (0)
 # define assert_no_alloc_mutex() do { } while (0)
 #endif
 
 #define IS_TC_MUTEX_OWNER() S_mutex_is_owner(&S_tc_mutex)
+#define IS_OBLIST_MUTEX_OWNER(oblist) S_mutex_is_owner(&(oblist)->mutex)
 #define IS_ALLOC_MUTEX_OWNER() S_mutex_is_owner(&S_alloc_mutex)
 
 /* Enable in "version.h": */
@@ -449,10 +481,14 @@ typedef struct {
 #define deactivate_thread(tc) {}
 #define reactivate_thread(tc) {}
 #define tc_mutex_acquire() do {} while (0)
+#define tc_mutex_acquire_no_check() do {} while (0)
 #define tc_mutex_release() do {} while (0)
+#define oblist_mutex_acquire(oblist) do {} while (0)
+#define oblist_mutex_release(oblist) do {} while (0)
 #define alloc_mutex_acquire() do {} while (0)
 #define alloc_mutex_release() do {} while (0)
 #define IS_TC_MUTEX_OWNER() 1
+#define IS_OBLIST_MUTEX_OWNER(oblist) 1
 #define IS_ALLOC_MUTEX_OWNER() 1
 #define S_cas_load_acquire_voidp(a, old, new) (*(a) = new, 1)
 #define S_cas_store_release_voidp(a, old, new) (*(a) = new, 1)
@@ -475,6 +511,7 @@ typedef struct remote_range {
 typedef struct thread_gc {
   ptr tc;
   ptr thread; /* set only when collecting */
+  symbol_oblist *oblist;
 
   int during_alloc;
   IBOOL queued_fire;

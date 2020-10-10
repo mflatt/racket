@@ -69,7 +69,7 @@ void S_gc_init() {
   }
 
   S_G.countof[static_generation][countof_oblist] += 1;
-  S_G.bytesof[static_generation][countof_oblist] += S_G.oblist_length * sizeof(bucket *);
+  S_G.bytesof[static_generation][countof_oblist] += S_G.main_oblist.length * sizeof(bucket *);
 
   S_protect(&S_G.static_id);
   S_G.static_id = S_intern((const unsigned char *)"static");
@@ -1200,7 +1200,7 @@ ptr S_do_gc(IGEN max_cg, IGEN min_tg, IGEN max_tg, ptr count_roots) {
     S_G.guardians[new_g] = S_G.guardians[old_g]; S_G.guardians[old_g] = Snil;
     S_G.locked_objects[new_g] = S_G.locked_objects[old_g]; S_G.locked_objects[old_g] = Snil;
     S_G.unlocked_objects[new_g] = S_G.unlocked_objects[old_g]; S_G.unlocked_objects[old_g] = Snil;
-    S_G.buckets_of_generation[new_g] = S_G.buckets_of_generation[old_g]; S_G.buckets_of_generation[old_g] = NULL;
+    S_G.main_oblist.buckets_of_generation[new_g] = S_G.main_oblist.buckets_of_generation[old_g]; S_G.main_oblist.buckets_of_generation[old_g] = NULL;
     if (S_G.enable_object_counts) {
       INT i; ptr ls;
       for (i = 0; i < countof_types; i += 1) {

@@ -28,6 +28,7 @@ void S_alloc_init() {
 
       GCDATA(tc) = TO_PTR(&S_G.main_thread_gc);
       S_G.main_thread_gc.tc = tc;
+      S_G.main_thread_gc.oblist = &S_G.main_oblist;
 
       /* reset the allocation tables */
         for (g = 0; g <= static_generation; g++) {
@@ -199,7 +200,7 @@ static void maybe_queue_fire_collector(thread_gc *tgc) {
 }
 
 void S_maybe_fire_collector(thread_gc *tgc) {
-  if ((tgc->during_alloc == 0) && (!IS_ALLOC_MUTEX_OWNER() || IS_TC_MUTEX_OWNER())) {
+  if ((tgc->during_alloc == 0) && ((!IS_ALLOC_MUTEX_OWNER() && !IS_OBLIST_MUTEX_OWNER(tgc->oblist)) || IS_TC_MUTEX_OWNER())) {
     if (tgc->queued_fire) {
       tgc->queued_fire = 0;
       S_fire_collector();
@@ -1076,7 +1077,7 @@ void S_phantom_bytevector_adjust(ph, new_sz) ptr ph; uptr new_sz; {
   seginfo *si;
   IGEN g;
 
-  tc_mutex_acquire();
+  alloc_mutex_acquire();
 
   si = SegInfo(ptr_get_segment(ph));
   g = si->generation;
@@ -1085,5 +1086,5 @@ void S_phantom_bytevector_adjust(ph, new_sz) ptr ph; uptr new_sz; {
   S_adjustmembytes(new_sz - old_sz);
   PHANTOMLEN(ph) = new_sz;
 
-  tc_mutex_release();
+  alloc_mutex_release();
 }

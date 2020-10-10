@@ -1194,14 +1194,14 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
     buckets_to_rebuild = NULL;
     for (g = 0; g <= MAX_CG; g += 1) {
       bucket_list *bl, *blnext; bucket *b; bucket_pointer_list *bpl; bucket **oblist_cell; ptr sym; iptr idx;
-      for (bl = S_G.buckets_of_generation[g]; bl != NULL; bl = blnext) {
+      for (bl = S_G.main_oblist.buckets_of_generation[g]; bl != NULL; bl = blnext) {
         blnext = bl->cdr;
         b = bl->car;
         /* mark this bucket old for the rebuilding loop */
         b->next = TO_VOIDP((uptr)TO_PTR(b->next) | 1);
         sym = b->sym;
-        idx = UNFIX(SYMHASH(sym)) % S_G.oblist_length;
-        oblist_cell = &S_G.oblist[idx];
+        idx = UNFIX(SYMHASH(sym)) % S_G.main_oblist.length;
+        oblist_cell = &S_G.main_oblist.oblist[idx];
         if (!((uptr)TO_PTR(*oblist_cell) & 1)) {
           /* mark this bucket in the set */
           *oblist_cell = TO_VOIDP((uptr)TO_PTR(*oblist_cell) | 1);
@@ -1223,7 +1223,7 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
             mark_or_copy_pure(&sym, sym, sym_si);
         }
       }
-      S_G.buckets_of_generation[g] = NULL;
+      S_G.main_oblist.buckets_of_generation[g] = NULL;
     }
 
   /* relocate the protected C pointers */
@@ -1523,11 +1523,11 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
               S_G.bytesof[g][countof_oblist] += sizeof(bucket_list);
 #endif /* ENABLE_OBJECT_COUNTS */
               bl->car = b;
-              bl->cdr = S_G.buckets_of_generation[g];
-              S_G.buckets_of_generation[g] = bl;
+              bl->cdr = S_G.main_oblist.buckets_of_generation[g];
+              S_G.main_oblist.buckets_of_generation[g] = bl;
             }
           } else {
-            S_G.oblist_count -= 1;
+            S_G.main_oblist.count -= 1;
           }
         }
         *pb = b;
@@ -1702,7 +1702,7 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
       conts_to_promote = Scdr(conts_to_promote);
     }
 
-    S_resize_oblist();
+    S_resize_oblist(&S_G.main_oblist);
 
     /* tell profile_release_counters to look for bwp'd counters at least through max_tg */
     if (S_G.prcgeneration < MAX_TG) S_G.prcgeneration = MAX_TG;
