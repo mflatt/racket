@@ -181,7 +181,9 @@ void S_oblist_release(intern_oblist *oblist) {
       S_G.bytesof[static_generation][countof_oblist] -= oblist->length * sizeof(bucket *);
       alloc_mutex_release();
 
+#ifdef PTHREADS
       s_thread_mutex_destroy(&oblist->mutex.pmutex);
+#endif
 
       free(oblist);
 
