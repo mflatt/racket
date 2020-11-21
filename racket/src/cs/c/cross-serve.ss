@@ -32,7 +32,7 @@
         (unless (eof-object? cmd)
           (get-u8 in) ; newline
           (let-values ([(o get) (open-bytevector-output-port)])
-            (let ([sfd-paths
+            (let ([literals
                    (case (integer->char cmd)
                      [(#\c #\u)
                       (call-with-fasled
@@ -54,11 +54,11 @@
               (let ([result (get)])
                 (put-num out (bytevector-length result))
                 (put-bytevector out result)
-                (let ([len (vector-length sfd-paths)])
+                (let ([len (vector-length literals)])
                   (put-num out len)
                   (let loop ([i 0])
                     (unless (fx= i len)
-                      (put-num out (vector-ref sfd-paths i))
+                      (put-num out (vector-ref literals i))
                       (loop (fx+ i 1)))))
                 (flush-output-port out)))
             (loop)))))))
@@ -76,30 +76,30 @@
 
 ;; ----------------------------------------
 
-(define-record-type path-placeholder
+(define-record-type literal-placeholder
   (fields pos))
 
 (define (call-with-fasled in proc)
   (let* ([fasled-bv (get-bytevector-n in (get-num in))]
-         [num-sfd-paths (get-num in)]
-         [sfd-paths (list->vector
-                      (let loop ([i 0])
-                        (if (fx= i num-sfd-paths)
-                            '()
-                            (cons (make-path-placeholder i)
-                                  (loop (fx+ i 1))))))]
+         [num-literals (get-num in)]
+         [literals (list->vector
+                    (let loop ([i 0])
+                      (if (fx= i num-literals)
+                          '()
+                          (cons (make-literal-placeholder i)
+                                (loop (fx+ i 1))))))]
          [used-placeholders '()]
          ;; v is the Chez Scheme value communicated from the client,
-         ;; but with each path replace by a `path-placeholder`:
+         ;; but with each literal replace by a `literal-placeholder`:
          [v (fasl-read (open-bytevector-input-port fasled-bv)
                        'load
-                       sfd-paths)])
+                       literals)])
       (proc v
             (lambda (a)
-              (and (path-placeholder? a)
+              (and (literal-placeholder? a)
                    (begin
                      (set! used-placeholders (cons a used-placeholders))
                      #t))))
-      ;; Return indices of paths used in new fasled output, in the
+      ;; Return indices of literals used in new fasled output, in the
       ;; order that they're used
-      (list->vector (map path-placeholder-pos used-placeholders))))
+      (list->vector (map literal-placeholder-pos used-placeholders))))
