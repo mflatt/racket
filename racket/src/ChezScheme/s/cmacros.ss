@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x09050333)
+(define-constant scheme-version #x09050334)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -2152,7 +2152,7 @@
      ;; a copy of this conversion for rehashing in "segment.h".
      (let* ([x x-expr]
             [x1 (constant-case ptr-bits
-                  [(64) (fxxor x (fxand (fxsrl x 32) #xFFFFFFFF))]
+                  [(64) (fxxor x (fxand (fxsra x 32) #xFFFFFFFF))]
                   [else x])]
             [x2 (fxxor x1 (fxand (fxsrl x1 16) #xFFFF))]
             [x3 (fxxor x2 (fxand (fxsrl x2 8) #xFF))])

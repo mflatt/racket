@@ -1,4 +1,4 @@
-(define-thread-local datums (make-weak-hash))
+(define-thread-local datums (make-weak-hashtable equal-hash-code equal?))
 
 (define intern-regexp? #f)
 (define (set-intern-regexp?! p) (set! intern-regexp? p))
@@ -12,11 +12,17 @@
         (bytes? v)
         (intern-regexp? v))
     (with-interrupts-disabled*
-     (or (weak-hash-ref-key datums v #f)
-         (let ([v (cond
-                   [(string? v) (string->immutable-string v)]
-                   [(bytes? v) (bytes->immutable-bytes v)]
-                   [else v])])
-           (hash-set! datums v #t)
-           v)))]
+     ;; getting hash code with interrupts disabled means that `v`
+     ;; cannot be mutated meanwhile:
+     (let* ([c (hashtable-cell datums v #f)]
+            [v0 (car c)])
+       (if (eq? v0 v)
+           (let ([v (cond
+                      [(string? v) (string->immutable-string v)]
+                      [(bytes? v) (bytes->immutable-bytes v)]
+                      [else v])])
+             (unless (eq? v v0)
+               (set-car! c v))
+             v)
+           v0)))]
    [else v]))
