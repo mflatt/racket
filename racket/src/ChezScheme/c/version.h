@@ -92,6 +92,7 @@
 # if (machine_type == machine_type_tppc32osx)
 #  define PTHREADS
 # endif
+# define FLUSHCACHE
 #endif
 
 #if (machine_type == machine_type_pb)
