@@ -221,7 +221,7 @@
       (error? (load-shared-object 3))
     )
    ]
-  [(i3osx ti3osx a6osx ta6osx)
+  [(i3osx ti3osx a6osx ta6osx ppc32osx tppc32osx)
    (mat load-shared-object
       (file-exists? "foreign1.so")
       (begin (load-shared-object "./foreign1.so") #t)

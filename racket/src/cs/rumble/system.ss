@@ -19,7 +19,7 @@
 
 (define os-symbol
   (case (machine-type)
-    [(a6osx ta6osx i3osx ti3osx arm64osx tarm64osx)
+    [(a6osx ta6osx i3osx ti3osx arm64osx tarm64osx ppc32osx tppc32osx)
      (if unix-style-macos? 'unix 'macosx)]
     [(a6nt ta6nt i3nt ti3nt) 'windows]
     [else 'unix]))

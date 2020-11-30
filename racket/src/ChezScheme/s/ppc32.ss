@@ -75,13 +75,14 @@
     [       %r19                                  #t 19 uptr]
     [       %r25                                  #t 25 uptr]
     [       %r30                                  #t 30 uptr]
-    [%fpreg1               #f  0 fp]
-    [%fpreg2               #f  9 fp]
+    [%fpreg1               #t  14 fp]
+    [%fpreg2               #t  15 fp]
   )
   (machine-dependent
     [%sp       %Csp        #t  1 uptr]
     [%Ctoc                 #f  2 uptr] ;; operating system reserved
     [%Csda                 #f 13 uptr] ;; might point to small data area, if used
+    [%fpreg0   %fptmp1     #f  0 fp]
     [%Cfparg1  %Cfpretval  #f  1 fp]
     [%Cfparg2              #f  2 fp]
     [%Cfparg3              #f  3 fp]
@@ -90,12 +91,12 @@
     [%Cfparg6              #f  6 fp]
     [%Cfparg7              #f  7 fp]
     [%Cfparg8              #f  8 fp]
-    [%flreg3 %fptmp1       #f 10 fp]
-    [%flreg4               #f 11 fp]
-    [%flreg5               #f 12 fp]
-    [%flreg6               #f 13 fp]
-    [%flreg7               #t 14 fp]
-    [%flreg8               #t 15 fp]
+    [%Cfparg9              #f  9 fp]
+    [%Cfparg10             #f 10 fp]
+    [%Cfparg11             #f 11 fp]
+    [%Cfparg12             #f 12 fp]
+    [%Cfparg13             #f 13 fp]
+    ;; 14 and 15 is are fpreg1 and fpreg2
     [%flreg9               #t 16 fp]
     [%flreg10              #t 17 fp]
     [%flreg11              #t 18 fp]
@@ -2122,7 +2123,13 @@
   (module (asm-foreign-call asm-foreign-callable)
     (define align (lambda (b x) (let ([k (- b 1)]) (fxlogand (fx+ x k) (fxlognot k)))))
     (define gp-parameter-regs (lambda () (list %Carg1 %Carg2 %Carg3 %Carg4 %Carg5 %Carg6 %Carg7 %Carg8)))
-    (define fp-parameter-regs (lambda () (list %Cfparg1 %Cfparg2 %Cfparg3 %Cfparg4 %Cfparg5 %Cfparg6 %Cfparg7 %Cfparg8)))
+    (define fp-parameter-regs (lambda ()
+                                (constant-case machine-type-name
+                                  [(ppc32osx tppc32osx)
+                                   (list %Cfparg1 %Cfparg2 %Cfparg3 %Cfparg4 %Cfparg5 %Cfparg6 %Cfparg7 %Cfparg8
+                                         %Cfparg9 %Cfparg10 %Cfparg11 %Cfparg12 %Cfparg13)]
+                                  [else
+                                   (list %Cfparg1 %Cfparg2 %Cfparg3 %Cfparg4 %Cfparg5 %Cfparg6 %Cfparg7 %Cfparg8)])))
     (define fp-result-regs (lambda () (list %Cfpretval)))
     (define (indirect-result-that-fits-in-registers? result-type)
       (nanopass-case (Ltype Type) result-type
@@ -2132,6 +2139,44 @@
       (nanopass-case (Ltype Type) result-type
         [(fp-ftd& ,ftd) ($ftd-compound? ftd)]
 	[else #f]))
+    
+    (constant-case machine-type-name
+       [(ppc32osx tppc32osx)
+        (define stack-arguments-starting-offset
+          ;; linkage area plus parameter area reserved for registers:
+          (+ 24 32))
+        (define skip-for-fp
+          (lambda (int* count)
+            (if (or (fx= count 0) (null? int*))
+                int*
+                (skip-for-fp (cdr int*) (fx- count 1)))))
+        (define skip-for-fp+ (lambda (iint count) (fx+ iint count)))
+        (define skip-stack-for-fp
+          (lambda (isp int* count)
+            (cond
+             [(fx= count 0) isp]
+             [(pair? int*) (skip-stack-for-fp isp (cdr int*) (fx- count 1))]
+             [else (skip-stack-for-fp (fx+ isp 4) '() (fx- count 1))])))
+        (define skip-stack-for-fp+
+          (lambda (isp iint count)
+            (cond
+             [(fx= count 0) isp]
+             [(< iint (length (gp-parameter-regs)))
+              (skip-stack-for-fp+ isp (fx+ iint 1) (fx- count 1))]
+             [else (skip-stack-for-fp+ (fx+ isp 4) iint (fx- count 1))])))
+        (define double-stack-align (lambda (isp) isp))
+        (define double-reg-align (lambda (int*) int*))
+        (define double-reg-count-align (lambda (iint) iint))
+        ]
+       [else
+        (define stack-arguments-starting-offset 8)
+        (define skip-for-fp (lambda (int* count) int*))
+        (define skip-for-fp+ (lambda (iint count) iint))
+        (define skip-stack-for-fp (lambda (isp int* count) isp))
+        (define double-stack-align (lambda (isp) (align 8 isp)))
+        (define double-reg-align (lambda (int*) (if (even? (length int*)) int* (cdr int*))))
+        (define double-reg-count-align (lambda (iint) (align 2 iint)))
+        ])
 
     (module (push-registers pop-registers)
       ;; stack offset must be 8-byte aligned if fp-reg-count is non-zero
@@ -2248,6 +2293,12 @@
               (%seq
                 (set! ,loreg ,lo)
                 (set! ,hireg ,hi)))))
+        (define load-int64-reg+stack
+          (lambda (hi offset)
+            (lambda (lorhs hirhs) ; requires two rhss
+              (%seq
+                (set! ,hi ,hirhs)
+                (set! ,(%mref ,%sp ,offset) ,lorhs)))))
         (define load-indirect-int-reg
           (lambda (ireg size category)
             (lambda (rhs) ; requires var
@@ -2269,8 +2320,9 @@
 		(set! ,loreg ,(%mref ,x 4))))))
         (define do-args
           (lambda (types)
-            ;; NB: start stack pointer at 8 to put arguments above the linkage area
-            (let loop ([types types] [locs '()] [live* '()] [int* (gp-parameter-regs)] [flt* (fp-parameter-regs)] [isp 8]
+            ;; NB: start stack pointer at `stack-arguments-starting-offset` to put arguments above the linkage area
+            (let loop ([types types] [locs '()] [live* '()] [int* (gp-parameter-regs)] [flt* (fp-parameter-regs)]
+                       [isp stack-arguments-starting-offset]
 		       ;; needed when adjusting active:
 		       [fp-live-count 0]
 		       ;; configured for `ftd-fp&` unpacking of floats:
@@ -2292,14 +2344,14 @@
                                  (cons* (car int*) (cadr int*) live*) (cddr int*) flt* isp fp-live-count
 				 #f)))
                          (if (null? flt*)
-                             (let ([isp (align 8 isp)])
+                             (let ([isp (double-stack-align isp)])
                                (loop (cdr types)
                                  (cons (load-double-stack isp fp-disp) locs)
                                  live* int* '() (fx+ isp 8) fp-live-count
 				 #f))
                              (loop (cdr types)
                                (cons (load-double-reg (car flt*) fp-disp) locs)
-                               live* int* (cdr flt*) isp (fx+ fp-live-count 1)
+                               live* (skip-for-fp int* 2) (cdr flt*) (skip-stack-for-fp isp int* 2) (fx+ fp-live-count 1)
 			       #f)))]
                     [(fp-single-float)
                      (if (constant software-floating-point)
@@ -2322,7 +2374,7 @@
 				 #f))
                              (loop (cdr types)
                                (cons (load-single-reg (car flt*) fp-disp) locs)
-                               live* int* (cdr flt*) isp (fx+ fp-live-count 1)
+                               live* (skip-for-fp int* 1) (cdr flt*) (skip-stack-for-fp isp int* 1) (fx+ fp-live-count 1)
 			       #f)))]
                     [(fp-ftd& ,ftd)
                      (cond
@@ -2346,9 +2398,10 @@
 				   0))]
 			  [(and (memq category '(integer unsigned))
 				(fx= 8 ($ftd-size ftd)))
-			   (let ([int* (if (even? (length int*)) int* (cdr int*))])
-			     (if (null? int*)
-                               (let ([isp (align 8 isp)])
+			   (let ([int* (double-reg-align int*)])
+			     (if (or (null? int*)
+                                     (null? (cdr int*)))
+                               (let ([isp (double-stack-align isp)])
                                  (loop (cdr types)
                                    (cons (load-indirect-int64-stack isp) locs)
                                    live* '() flt* (fx+ isp 8) fp-live-count
@@ -2372,17 +2425,24 @@
                            [(fp-integer ,bits) (fx= bits 64)]
                            [(fp-unsigned ,bits) (fx= bits 64)]
                            [else #f])
-                         (let ([int* (if (even? (length int*)) int* (cdr int*))])
-                           (if (null? int*)
-                               (let ([isp (align 8 isp)])
-                                 (loop (cdr types)
-                                   (cons (load-int64-stack isp) locs)
-                                   live* '() flt* (fx+ isp 8) fp-live-count
-				   #f))
+                         (let ([int* (double-reg-align int*)])
+                           (cond
+                            [(null? int*)
+                             (let ([isp (double-stack-align isp)])
                                (loop (cdr types)
-                                 (cons (load-int64-reg (cadr int*) (car int*)) locs)
-                                 (cons* (car int*) (cadr int*) live*) (cddr int*) flt* isp fp-live-count
-				 #f)))
+                                     (cons (load-int64-stack isp) locs)
+                                     live* '() flt* (fx+ isp 8) fp-live-count
+                                     #f))]
+                            [(null? (cdr int*))
+                             (loop (cdr types)
+                                   (cons (load-int64-reg+stack (car int*) isp) locs)
+                                   (cons (car int*) live*) (cdr int*) flt* (fx+ isp 4) fp-live-count
+                                   #f)]
+                            [else
+                             (loop (cdr types)
+                                   (cons (load-int64-reg (cadr int*) (car int*)) locs)
+                                   (cons* (car int*) (cadr int*) live*) (cddr int*) flt* isp fp-live-count
+                                   #f)]))
                          (if (null? int*)
                              (loop (cdr types)
                                (cons (load-int-stack isp) locs)
@@ -2700,6 +2760,12 @@
                 (%seq
                   (set! ,lolvalue ,(%mref ,%sp ,(fx+ offset 4)))
                   (set! ,hilvalue ,(%mref ,%sp ,offset))))))
+        (define load-split-int64-stack
+          (lambda (hioffset looffset)
+            (lambda (lolvalue hilvalue)
+              (%seq
+               (set! ,lolvalue ,(%mref ,%sp ,looffset))
+               (set! ,hilvalue ,(%mref ,%sp ,hioffset))))))
           (define load-stack-address
             (lambda (offset)
               (lambda (lvalue)
@@ -2761,17 +2827,19 @@
                     (cond
                       [(and (not (constant software-floating-point))
                             (nanopass-case (Ltype Type) (car types)
-                              [(fp-double-float) #t]
-                              [(fp-single-float) #t]
+                              [(fp-double-float) 2]
+                              [(fp-single-float) 1]
                               [else #f]))
-                       (if (fx< iflt fp-reg-count)
-                           (loop (cdr types)
-                             (cons (load-double-stack float-reg-offset) locs)
-                             iint (fx+ iflt 1) int-reg-offset (fx+ float-reg-offset 8) stack-arg-offset)
-                           (let ([stack-arg-offset (align 8 stack-arg-offset)])
-                             (loop (cdr types)
-                               (cons (load-double-stack stack-arg-offset) locs)
-                               iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8))))]
+                       => (lambda (width)
+                            (if (fx< iflt fp-reg-count)
+                                (loop (cdr types)
+                                  (cons (load-double-stack float-reg-offset) locs)
+                                  (skip-for-fp+ iint width) (fx+ iflt 1) int-reg-offset (fx+ float-reg-offset 8)
+                                  (skip-stack-for-fp+ stack-arg-offset iint width))
+                                (let ([stack-arg-offset (double-stack-align stack-arg-offset)])
+                                  (loop (cdr types)
+                                    (cons (load-double-stack stack-arg-offset) locs)
+                                    iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8)))))]
                       [(and (constant software-floating-point)
                             (nanopass-case (Ltype Type) (car types)
                               [(fp-double-float) #t]
@@ -2820,16 +2888,23 @@
 			   [else
 			    (case ($ftd-size ftd)
 			      [(8)
-			       (let ([iint (align 2 iint)])
-				 (if (fx< iint gp-reg-count)
-				     (let ([int-reg-offset (align 8 int-reg-offset)])
-				       (loop (cdr types)
-					 (cons (load-stack-address int-reg-offset) locs)
-					 (fx+ iint 2) iflt (fx+ int-reg-offset 8) float-reg-offset stack-arg-offset))
-				     (let ([stack-arg-offset (align 8 stack-arg-offset)])
-				       (loop (cdr types)
-					 (cons (load-stack-address stack-arg-offset) locs)
-					 iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8)))))]
+			       (let ([iint (double-reg-count-align iint)])
+				 (cond
+                                  [(fx< (fx+ iint 1) gp-reg-count)
+                                   (let ([int-reg-offset (double-stack-align int-reg-offset)])
+                                     (loop (cdr types)
+                                           (cons (load-stack-address int-reg-offset) locs)
+                                           (fx+ iint 2) iflt (fx+ int-reg-offset 8) float-reg-offset stack-arg-offset))]
+                                  #;
+                                  [(fx< iint gp-reg-count)
+                                   (loop (cdr types)
+                                         (cons (load-split-stack-address int-reg-offset stack-arg-offset) locs)
+                                         (fx+ iint 1) iflt (fx+ int-reg-offset 4) float-reg-offset (fx+ stack-arg-offset 4))]
+                                  [else
+                                   (let ([stack-arg-offset (double-stack-align stack-arg-offset)])
+                                     (loop (cdr types)
+                                           (cons (load-stack-address stack-arg-offset) locs)
+                                           iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8)))]))]
 			      [else
 			       (let ([byte-offset (- 4 ($ftd-size ftd))])
 				 (if (fx< iint gp-reg-count)
@@ -2843,16 +2918,22 @@
                          [(fp-integer ,bits) (fx= bits 64)]
                          [(fp-unsigned ,bits) (fx= bits 64)]
                          [else #f])
-                       (let ([iint (align 2 iint)])
-                         (if (fx< iint gp-reg-count)
-                             (let ([int-reg-offset (align 8 int-reg-offset)])
-                               (loop (cdr types)
-                                 (cons (load-int64-stack int-reg-offset) locs)
-                                 (fx+ iint 2) iflt (fx+ int-reg-offset 8) float-reg-offset stack-arg-offset))
-                             (let ([stack-arg-offset (align 8 stack-arg-offset)])
-                               (loop (cdr types)
-                                 (cons (load-int64-stack stack-arg-offset) locs)
-                                 iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8)))))]
+                       (let ([iint (double-reg-count-align iint)])
+                         (cond
+                          [(fx< (fx+ iint 1) gp-reg-count)
+                           (let ([int-reg-offset (double-stack-align int-reg-offset)])
+                             (loop (cdr types)
+                                   (cons (load-int64-stack int-reg-offset) locs)
+                                   (fx+ iint 2) iflt (fx+ int-reg-offset 8) float-reg-offset stack-arg-offset))]
+                          [(fx< iint gp-reg-count)
+                           (loop (cdr types)
+                                 (cons (load-split-int64-stack int-reg-offset stack-arg-offset) locs)
+                                 (fx+ iint 1) iflt (fx+ int-reg-offset 4) float-reg-offset (fx+ stack-arg-offset 4))]
+                          [else
+                           (let ([stack-arg-offset (double-stack-align stack-arg-offset)])
+                             (loop (cdr types)
+                                   (cons (load-int64-stack stack-arg-offset) locs)
+                                   iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8)))]))]
                       [else
                        (if (fx< iint gp-reg-count)
                            (loop (cdr types)
@@ -2891,6 +2972,16 @@
                         (if (null? regs)
                             inline
                             (%seq ,inline ,(f regs (fx+ offset 4))))))))))
+          (define restore-fp-regs
+            (lambda (regs offset)
+              (if (null? regs)
+                  `(nop)
+                  (let f ([regs regs] [offset offset])
+                    (let ([inline `(set! ,(car regs) ,(%mref ,%Csp ,%zero ,offset fp))])
+                      (let ([regs (cdr regs)])
+                        (if (null? regs)
+                            inline
+                            (%seq ,inline ,(f regs (fx+ offset 8))))))))))
           (define do-result
             (lambda (result-type return-space-offset int-reg-offset)
               (nanopass-case (Ltype Type) result-type
@@ -2967,24 +3058,27 @@
 			     (push-registers result-regs result-num-fp-regs (fp-result-regs) stash-offset
 					     e))))
           (lambda (info)
-            (define callee-save-regs (list %r14 %r15 %r16 %r17 %r18 %r19 %r20 %r21 %r22 %r23 %r24 %r25 %r26 %r27 %r28 %r29 %r30 %r31))
+            (define callee-save-regs (list %r16 %r17 %r18 %r19 %r20 %r21 %r22 %r23 %r24 %r25 %r26 %r27 %r28 %r29 %r30 %r31))
+            (define callee-save-fp-regs (list %fpreg1 %fpreg2))
             (define isaved (length callee-save-regs))
+            (define fpsaved (length callee-save-fp-regs))
             (let ([arg-type* (info-foreign-arg-type* info)]
 		  [result-type (info-foreign-result-type info)]
                   [gp-reg-count (length (gp-parameter-regs))]
                   [fp-reg-count (length (fp-parameter-regs))])
               (let-values ([(iint iflt) (count-reg-args arg-type* gp-reg-count fp-reg-count (indirect-result-that-fits-in-registers? result-type))])
-                (let* ([int-reg-offset 8]       ; initial offset for calling conventions
+                (let* ([int-reg-offset stack-arguments-starting-offset]
                        [float-reg-offset (align 8 (fx+ (fx* gp-reg-count 4) int-reg-offset))]
                        [callee-save-offset (if (constant software-floating-point)
                                                float-reg-offset
                                                (fx+ (fx* fp-reg-count 8) float-reg-offset))]
+                       [callee-save-fp-offset (fx+ (fx* isaved 4) callee-save-offset)]
 		       [synthesize-first-argument? (indirect-result-that-fits-in-registers? result-type)]
 		       [adjust-active? (if-feature pthreads (memq 'adjust-active (info-foreign-conv* info)) #f)]
-                       [unactivate-mode-offset (fx+ (fx* isaved 4) callee-save-offset)]
+                       [unactivate-mode-offset (fx+ (fx* fpsaved 8) callee-save-fp-offset)]
                        [return-space-offset (align 8 (fx+ unactivate-mode-offset (if adjust-active? 4 0)))]
                        [stack-size (align 16 (fx+ return-space-offset (if synthesize-first-argument? 8 0)))]
-                       [stack-arg-offset (fx+ stack-size 8)])
+                       [stack-arg-offset (fx+ stack-size stack-arguments-starting-offset)])
 		  (let-values ([(get-result result-regs result-num-fp-regs) (do-result result-type return-space-offset int-reg-offset)])
 		    (values
 		     (lambda ()
@@ -2993,9 +3087,8 @@
 			 ,(%inline store-with-update ,%Csp ,%Csp (immediate ,(fx- stack-size)))
 			 ,(save-regs (list-head (gp-parameter-regs) iint) int-reg-offset)
 			 ,(save-fp-regs (list-head (fp-parameter-regs) iflt) float-reg-offset)
-			 ; not bothering with callee-save floating point regs right now
-                         ; not bothering with cr, because we don't update nonvolatile fields
 			 ,(save-regs callee-save-regs callee-save-offset)
+			 ,(save-fp-regs callee-save-fp-regs callee-save-fp-offset)
 			 ,(if-feature pthreads
 			    ((lambda (e)
                                (if adjust-active?
@@ -3026,6 +3119,7 @@
                            (inline ,null-info ,%restore-lr (immediate ,(fx+ stack-size 4)))
                            ; restore the callee save registers
                            ,(restore-regs callee-save-regs callee-save-offset)
+                           ,(restore-fp-regs callee-save-fp-regs callee-save-fp-offset)
                            ; deallocate space for pad & arg reg values
                            (set! ,%Csp ,(%inline + ,%Csp (immediate ,stack-size)))
                            ; done

@@ -56,10 +56,24 @@ EXPORT double mipsfltest2(int x1,double x2,double x3) {
 }
 
 EXPORT double ppcfltest(int x1,double x2,int x3,double x4,int x5,double x6,int x7,double x8,double x9,double x10,double x11,double x12,double x13,double x14,double x15,double x16,double x17,double x18,double x19) {
+  //printf("%d %f %d %f %d %f %d %f\n", x1, x2, x3, x4, x5, x6, x7, x8);
+  //printf("%f %f %f %f %f %f %f %f %f %f %f\n", x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19);
     return x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19;
 }
 
+EXPORT double longlongtest0(long long a) {
+  return (double)a;
+}
+
+EXPORT double longlongtest(int x, long long a) {
+  return (double)a+x;
+}
+
 EXPORT double ppcfltest2(int x1, double x2, int x3, double x4, int x5, long long x5_5, double x6, int x7, double x8, long long x8_5, int x8_75, double x9, double x10, double x11, double x12, double x13, float x14, double x15, int x15_5, double x16, int x16_5, long long x17, double x18, int x18_5, double x19) {
+  printf("%d %f %d %f %d %lld %f %d %f %lld %d\n", x1, x2, x3, x4, x5, x5_5, x6, x7, x8, x8_5, x8_75);
+  printf("%f %f %f %f %f %f %f %d %f %d\n", x9, x10, x11, x12, x13, x14, x15, x15_5, x16, x16_5);
+  printf("%f %f %d %f\n", x17, x18, x18_5, x19);
+
     return x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19 + x5_5 + x8_5 + x8_75 + x15_5 + x16_5 + x18_5;
 }
 
