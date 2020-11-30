@@ -2391,8 +2391,8 @@
                               [(null? (cdr int*))
                                (loop (cdr types)
                                      (cons (if indirect?
-                                               (load-indirect-int64-reg+stack (car int*) isp)
-                                               (load-int64-reg+stack (car int*) isp))
+                                               (load-indirect-int64-reg+stack (car int*) (fx+ isp 4))
+                                               (load-int64-reg+stack (car int*) (fx+ isp 4)))
                                            locs)
                                      (cons (car int*) live*) (cdr int*) flt* (fx+ isp 8) fp-live-count
                                      #f)]
@@ -2899,32 +2899,6 @@
                 (%seq
                  (set! ,(%mref ,%sp ,stack-offset) ,(%mref ,%sp ,hi-offset))
                  (set! ,lvalue ,(%inline + ,%sp (immediate ,stack-offset)))))))
-          (define count-reg-args
-            (lambda (types gp-reg-count fp-reg-count synthesize-first-argument?)
-              (let f ([types types] [iint (if synthesize-first-argument? -1 0)] [iflt 0])
-                (if (null? types)
-                    (values iint iflt)
-                    (cond
-                      [(and (not (constant software-floating-point))
-                            (nanopass-case (Ltype Type) (car types)
-                              [(fp-double-float) #t]
-                              [(fp-single-float) #t]
-			      [(fp-ftd& ,ftd) (eq? 'float ($ftd-atomic-category ftd))]
-                              [else #f]))
-                       (f (cdr types) iint (if (fx< iflt fp-reg-count) (fx+ iflt 1) iflt))]
-                      [(or (nanopass-case (Ltype Type) (car types)
-                             [(fp-integer ,bits) (fx= bits 64)]
-                             [(fp-unsigned ,bits) (fx= bits 64)]
-			     [(fp-ftd& ,ftd) (and (not ($ftd-compound? ftd))
-						  (fx= 8 ($ftd-size ftd)))]
-                             [else #f])
-                           (and (constant software-floating-point)
-                                (nanopass-case (Ltype Type) (car types)
-                                  [(fp-double-float) #t]
-                                  [else #f])))
-                       (let ([iint (align 2 iint)])
-                         (f (cdr types) (if (fx< iint gp-reg-count) (fx+ iint 2) iint) iflt))]
-                      [else (f (cdr types) (if (fx< iint gp-reg-count) (fx+ iint 1) iint) iflt)])))))
           (constant-case machine-type-name
             [(ppc32osx tppc32osx)
              (define register+stack-arguments-starting-offset
@@ -2962,16 +2936,18 @@
                             [(fp-single-float) 1]
                             [else #f])
                           => (lambda (width)
-                               (cond
-                                 [(fx< iflt fp-reg-count)
-                                  (loop (cdr types)
-                                        (cons (load-double-stack float-reg-offset) locs)
-                                        (fx+ iint width) (fx+ iflt 1) (fx+ int-reg-offset (fx* 4 width)) (fx+ float-reg-offset 8)
-                                        (fx+ stack-arg-offset (fx* 4 width)))]
-                                 [else
-                                  (loop (cdr types)
-                                        (cons (load-double-stack stack-arg-offset) locs)
-                                        iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 8))]))]
+                               (let ([size (fx* width 4)])
+                                 (cond
+                                  [(fx< iflt fp-reg-count)
+                                   (loop (cdr types)
+                                         (cons (load-double-stack float-reg-offset) locs)
+                                         (fx+ iint width) (fx+ iflt 1) (fx+ int-reg-offset size) (fx+ float-reg-offset size)
+                                         (fx+ stack-arg-offset size))]
+                                  [else
+                                   (loop (cdr types)
+                                         (cons (load-double-stack stack-arg-offset) locs)
+                                         iint iflt int-reg-offset float-reg-offset
+                                         (fx+ stack-arg-offset size))])))]
                          [(nanopass-case (Ltype Type) (car types)
                             [(fp-ftd& ,ftd) ftd]
                             [else #f])
@@ -3029,7 +3005,44 @@
                                     (fx+ iint 1) iflt (fx+ int-reg-offset 4) float-reg-offset (fx+ stack-arg-offset 4))
                               (loop (cdr types)
                                     (cons (load-int-stack (car types) stack-arg-offset) locs)
-                                    iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 4)))])))))]
+                                    iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 4)))])))))
+             (define count-reg-args
+               (lambda (types gp-reg-count fp-reg-count synthesize-first-argument?)
+                 (let f ([types types] [iint (if synthesize-first-argument? -1 0)] [iflt 0])
+                   (if (null? types)
+                       (values iint iflt)
+                       (nanopass-case (Ltype Type) (car types)
+                         [(fp-double-float)
+                          (f (cdr types)
+                             (fxmin gp-reg-count (fx+ iint 2))
+                             (fxmin fp-reg-count (fx+ iflt 1)))]
+                         [(fp-single-float)
+                          (f (cdr types)
+                             (fxmin gp-reg-count (fx+ iint 1))
+                             (fxmin fp-reg-count (fx+ iflt 1)))]
+                         [(fp-ftd& ,ftd)
+                          (let ([words (fxsra (align 4 ($ftd-size ftd)) 2)])
+                            (cond
+                             [(eq? ($ftd-atomic-category ftd) 'float)
+                              (f (cdr types)
+                                 (fxmin gp-reg-count (fx+ iint words))
+                                 (fxmin fp-reg-count (fx+ iflt 1)))]
+                             [else
+                              (f (cdr types)
+                                 (fxmax gp-reg-count (fx+ iint words))
+                                 iflt)]))]
+                         [(fp-integer ,bits)
+                          (f (cdr types)
+                             (fxmin gp-reg-count (fx+ iint (fxsra (align 8 bits) 3)))
+                             iflt)]
+                         [(fp-unsigned ,bits)
+                          (f (cdr types)
+                             (fxmin gp-reg-count (fx+ iint (fxsra (align 8 bits) 3)))
+                             iflt)]
+                         [else
+                          (f (cdr types)
+                             (fxmin gp-reg-count (fx+ iint 1))
+                             iflt)])))))]
             [else
              ;; Linux variant of `do-stack`
              ;; -----------------------------
@@ -3155,7 +3168,33 @@
                                     (fx+ iint 1) iflt (fx+ int-reg-offset 4) float-reg-offset stack-arg-offset)
                               (loop (cdr types)
                                     (cons (load-int-stack (car types) stack-arg-offset) locs)
-                                    iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 4)))])))))])
+                                    iint iflt int-reg-offset float-reg-offset (fx+ stack-arg-offset 4)))])))))
+             (define count-reg-args
+               (lambda (types gp-reg-count fp-reg-count synthesize-first-argument?)
+                 (let f ([types types] [iint (if synthesize-first-argument? -1 0)] [iflt 0])
+                   (if (null? types)
+                       (values iint iflt)
+                       (cond
+                        [(and (not (constant software-floating-point))
+                              (nanopass-case (Ltype Type) (car types)
+                                [(fp-double-float) #t]
+                                [(fp-single-float) #t]
+                                [(fp-ftd& ,ftd) (eq? 'float ($ftd-atomic-category ftd))]
+                                [else #f]))
+                         (f (cdr types) iint (if (fx< iflt fp-reg-count) (fx+ iflt 1) iflt))]
+                        [(or (nanopass-case (Ltype Type) (car types)
+                               [(fp-integer ,bits) (fx= bits 64)]
+                               [(fp-unsigned ,bits) (fx= bits 64)]
+                               [(fp-ftd& ,ftd) (and (not ($ftd-compound? ftd))
+                                                    (fx= 8 ($ftd-size ftd)))]
+                               [else #f])
+                             (and (constant software-floating-point)
+                                  (nanopass-case (Ltype Type) (car types)
+                                    [(fp-double-float) #t]
+                                    [else #f])))
+                         (let ([iint (align 2 iint)])
+                           (f (cdr types) (if (fx< iint gp-reg-count) (fx+ iint 2) iint) iflt))]
+                        [else (f (cdr types) (if (fx< iint gp-reg-count) (fx+ iint 1) iint) iflt)])))))])
           (define save-regs
             (lambda (regs offset)
               (if (null? regs)
