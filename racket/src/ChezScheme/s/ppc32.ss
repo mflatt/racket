@@ -2135,10 +2135,17 @@
       (nanopass-case (Ltype Type) result-type
         [(fp-ftd& ,ftd) (not ($ftd-compound? ftd))]
 	[else #f]))
-    (define (indirect-result-to-pointer? result-type)
-      (nanopass-case (Ltype Type) result-type
-        [(fp-ftd& ,ftd) ($ftd-compound? ftd)]
-	[else #f]))
+    (define (indirect-result-to-pointer result-type arg-type*)
+      (constant-case machine-type-name
+        [(ppc32osx tppc32osx)
+         (nanopass-case (Ltype Type) result-type
+           [(fp-ftd& ,ftd) (if ($ftd-compound? ftd)
+                               (cons (with-output-language (Ltype Type)
+                                       `(fp-integer 32))
+                                     (cdr arg-type*))
+                               arg-type*)]
+           [else arg-type*])]
+        [else arg-type*]))
 
     (module (push-registers pop-registers)
       ;; stack offset must be 8-byte aligned if fp-reg-count is non-zero
@@ -2610,7 +2617,7 @@
 		 [result-type (info-foreign-result-type info)]
 		 [fill-result-here? (indirect-result-that-fits-in-registers? result-type)]
 		 [adjust-active? (if-feature pthreads (memq 'adjust-active (info-foreign-conv* info)) #f)])
-            (with-values (do-args (if fill-result-here? (cdr arg-type*) arg-type*))
+            (with-values (do-args (if fill-result-here? (cdr arg-type*) (indirect-result-to-pointer result-type arg-type*)))
               (lambda (orig-frame-size locs live* fp-live-count)
                 ;; NB: add 4 to frame size for CR save word
                 (let* ([fill-stash-offset orig-frame-size]
@@ -2976,6 +2983,16 @@
                                         (cons (load-address float-reg-offset) locs)
                                         (fx+ iint (fxsrl size 2)) (fx+ iflt 1) (fx+ int-reg-offset size) (fx+ float-reg-offset 8)
                                         (fx+ stack-arg-offset size)))]
+                               [(< ($ftd-size ftd) 4)
+                                ;; byte or word; need to load address into middle
+                                (loop (cdr types)
+                                      (cons (load-stack-address (fx+ (fx- 4 ($ftd-size ftd))
+                                                                     (if (< iint gp-reg-count)
+                                                                         int-reg-offset
+                                                                         stack-arg-offset)))
+                                            locs)
+                                      (fx+ iint 1) iflt (fx+ int-reg-offset 4) float-reg-offset
+                                      (fx+ stack-arg-offset 4))]
                                [else
                                 ;; in registers until they run out; copy the registers
                                 ;; to the reserved space just before arguments that
@@ -3344,7 +3361,7 @@
                   [gp-reg-count (length (gp-parameter-regs))]
                   [fp-reg-count (length (fp-parameter-regs))])
               (let-values ([(iint iflt) (count-reg-args arg-type* gp-reg-count fp-reg-count (indirect-result-that-fits-in-registers? result-type))])
-                (let* ([int-reg-offset stack-arguments-starting-offset] ; leave space for next calle, such as get-tc
+                (let* ([int-reg-offset stack-arguments-starting-offset] ; leave space for next callee, such as get-tc
                        [float-reg-offset (align 8 (fx+ (fx* gp-reg-count 4) int-reg-offset))]
                        [callee-save-offset (if (constant software-floating-point)
                                                float-reg-offset
@@ -3380,7 +3397,8 @@
                             `(set! ,%tc (literal ,(make-info-literal #f 'entry (lookup-c-entry thread-context) 0))))))
 		     ; list of procedures that marshal arguments from their C stack locations
                      ; to the Scheme argument locations
-                     (do-stack arg-type* gp-reg-count fp-reg-count int-reg-offset float-reg-offset stack-arg-offset
+                     (do-stack (indirect-result-to-pointer result-type arg-type*)
+                               gp-reg-count fp-reg-count int-reg-offset float-reg-offset stack-arg-offset
 			       synthesize-first-argument? return-space-offset)
 		     get-result
 		     (lambda ()
