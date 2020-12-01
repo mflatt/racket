@@ -2262,9 +2262,9 @@
                 (set! ,hi ,hirhs)
                 (set! ,(%mref ,%sp ,offset) ,lorhs)))))
         (define load-indirect-int-reg
-          (lambda (ireg size category)
+          (lambda (ireg size category offset)
             (lambda (rhs) ; requires var
-              (load/store-integer 'load ireg size category rhs 0))))
+              (load/store-integer 'load ireg size category rhs offset))))
         (define load/store-integer
           (lambda (mode reg size category rhs offset)
             (let ([int-type (case category
@@ -2294,14 +2294,14 @@
         (define load-indirect-stack
           (lambda (offset size)
             (lambda (rhs) ; requires var
-              (let ([tmp %Carg8])
+              (let ([tmp %r16])
                 (let loop ([delta 0] [size size])
                   (if (fx<= size 0)
                       `(nop)
                       (%seq
-                       ,(load/store-integer 'load tmp (fxmin size 4) 'unsigned %sp (fx+ offset delta))
-                       ,(load/store-integer 'store tmp (fxmin size 4) 'unsigned rhs delta)
-                       ,(loop (fx+ delta 4) (fx- size size)))))))))
+                       ,(load/store-integer 'load tmp (fxmin size 4) 'unsigned rhs delta)
+                       ,(load/store-integer 'store tmp (fxmin size 4) 'unsigned %sp (fx+ offset delta))
+                       ,(loop (fx+ delta 4) (fx- size 4)))))))))
         (constant-case machine-type-name
           [(ppc32osx tppc32osx)
            ;; Mac OS X variant of `do-args`
@@ -2354,21 +2354,23 @@
                             ;; for simplicity, just put the whole argument (not just
                             ;; the part after registers) on the stack, too
                             (let c-loop ([size ($ftd-size ftd)]
+                                         [offset 0]
                                          [int* int*]
                                          [live* live*]
                                          [loc (load-indirect-stack isp ($ftd-size ftd))])
                               (cond
-                               [(or (fx= 0 size) (null? int*))
+                               [(or (fx<= size 0) (null? int*))
                                 (loop (cdr types)
                                       (cons loc locs)
                                       live* int* flt* (fx+ isp (align 4 ($ftd-size ftd))) fp-live-count
                                       #f)]
                                [else
-                                (let ([reg-loc (load-indirect-int-reg (car int*) (fxmin size 4) 'integer)])
-                                  (c-loop (fxmax (fx- size 4) 0)
+                                (let ([reg-loc (load-indirect-int-reg (car int*) (fxmin size 4) 'integer offset)])
+                                  (c-loop (fx- size 4)
+                                          (fx+ offset 4)
                                           (cdr int*)
                                           (cons (car int*) live*)
-                                          (lambda (lhs) (%seq ,(reg-loc lhs) ,(loc lhs)))))]))]
+                                          (lambda (rhs) (%seq ,(reg-loc rhs) ,(loc rhs)))))]))]
                            [else
                             ;; single element, so treat as non-compound, including
                             ;; using floating-point registers, piggy-backing on unboxed handler
@@ -2433,7 +2435,7 @@
                                         #f)
                                   (loop (cdr types)
                                         (cons (if indirect?
-                                                  (load-indirect-int-reg (car int*) size category)
+                                                  (load-indirect-int-reg (car int*) size category 0)
                                                   (load-int-reg (car int*)))
                                               locs)
                                         (cons (car int*) live*) (cdr int*) flt* (fx+ isp 4) fp-live-count
@@ -2539,7 +2541,7 @@
                                           live* '() flt* (fx+ isp 4) fp-live-count
                                           #f)
                                     (loop (cdr types)
-                                          (cons (load-indirect-int-reg (car int*) ($ftd-size ftd) category) locs)
+                                          (cons (load-indirect-int-reg (car int*) ($ftd-size ftd) category 0) locs)
                                           (cons (car int*) live*) (cdr int*) flt* isp fp-live-count
                                           #f))]))])]
                        [else
@@ -2988,7 +2990,7 @@
                                                     (fx>= iint gp-reg-count))
                                                 (load-stack-address stack-arg-offset)]
                                                [else
-                                                (let ([loc (c-loop (fx- size 4) (fx+ iint 1))]
+                                                (let ([loc (c-loop (fx- size 4) (fx+ iint 1) (fx+ offset 4))]
                                                       [tmp %Carg8])
                                                   (lambda (lvalue)
                                                     (%seq
