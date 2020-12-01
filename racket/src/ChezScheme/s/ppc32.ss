@@ -3029,7 +3029,7 @@
                                  (fxmin fp-reg-count (fx+ iflt 1)))]
                              [else
                               (f (cdr types)
-                                 (fxmax gp-reg-count (fx+ iint words))
+                                 (fxmin gp-reg-count (fx+ iint words))
                                  iflt)]))]
                          [(fp-integer ,bits)
                           (f (cdr types)
@@ -3376,5 +3376,6 @@
                            ; deallocate space for pad & arg reg values
                            (set! ,%Csp ,(%inline + ,%Csp (immediate ,stack-size)))
                            ; done
-                           (asm-c-return ,null-info ,callee-save-regs ... ,result-regs ...)))))))))))))))
+                           (asm-c-return ,null-info ,callee-save-regs ... ,callee-save-fp-regs ... 
+                                         ,result-regs ... ,(list-head (fp-result-regs) result-num-fp-regs) ...)))))))))))))))
 )
