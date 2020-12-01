@@ -2346,33 +2346,47 @@
                                   live* (maybe-cdr int*) (cdr flt*) (fx+ isp 4) (fx+ fp-live-count 1)
                                   #f))]
                        [(fp-ftd& ,ftd)
-                        (cond
-                          [($ftd-compound? ftd)
-                           (let* ([words (fxsrl (align 4 ($ftd-size ftd)) 2)]
-                                  [int* (let loop ([int* int*] [words words])
-                                          (if (or (fx= 0 words) (null? int*))
-                                              int*
-                                              (loop (cdr int*) (fx- words 1))))])
-                             (loop (cdr types)
-                                   (cons (load-indirect-stack isp ($ftd-size ftd)) locs)
-                                   live* int* flt* (fx+ isp (fx* words 4)) fp-live-count
-                                   #f))]
-                          [else
-                           ;; extract content and pass that content, piggy-backing on unboxed handler
-                           (let* ([category ($ftd-atomic-category ftd)]
-                                  [unpacked-type (with-output-language (Ltype Type)
-                                                   (cond
+                        (let ([members ($ftd->members ftd)])
+                          (cond
+                           [(not (and (pair? members)
+                                      (null? (cdr members))))
+                            ;; compound: use integer registers until we run out; 
+                            ;; for simplicity, just put the whole argument (not just
+                            ;; the part after registers) on the stack, too
+                            (let c-loop ([size ($ftd-size ftd)]
+                                         [int* int*]
+                                         [live* live*]
+                                         [loc (load-indirect-stack isp ($ftd-size ftd))])
+                              (cond
+                               [(or (fx= 0 size) (null? int*))
+                                (loop (cdr types)
+                                      (cons loc locs)
+                                      live* int* flt* (fx+ isp (align 4 ($ftd-size ftd))) fp-live-count
+                                      #f)]
+                               [else
+                                (let ([reg-loc (load-indirect-int-reg (car int*) (fxmin size 4) 'integer)])
+                                  (c-loop (fxmax (fx- size 4) 0)
+                                          (cdr int*)
+                                          (cons (car int*) live*)
+                                          (lambda (lhs) (%seq ,(reg-loc lhs) ,(loc lhs)))))]))]
+                           [else
+                            ;; single element, so treat as non-compound, including
+                            ;; using floating-point registers, piggy-backing on unboxed handler
+                            (let* ([category (caar members)]
+                                   [size (cadar members)]
+                                   [unpacked-type (with-output-language (Ltype Type)
+                                                    (cond
                                                      [(eq? category 'float)
-                                                      (case ($ftd-size ftd)
+                                                      (case size
                                                         [(4) `(fp-single-float)]
                                                         [else `(fp-double-float)])]
                                                      [(eq? category 'integer)
-                                                      `(fp-integer ,(fx* 8 ($ftd-size ftd)))]
+                                                      `(fp-integer ,(fx* 8 size))]
                                                      [else
-                                                      `(fp-unsigned ,(fx* 8 ($ftd-size ftd)))]))])
-                             (loop (cons unpacked-type (cdr types)) locs live* int* flt* isp fp-live-count
-                                   ;; indirect?
-                                   #t))])]
+                                                      `(fp-unsigned ,(fx* 8 size))]))])
+                              (loop (cons unpacked-type (cdr types)) locs live* int* flt* isp fp-live-count
+                                    ;; indirect?
+                                    #t))]))]
                        [else
                         (if (nanopass-case (Ltype Type) (car types)
                               [(fp-integer ,bits) (fx= bits 64)]
@@ -2891,14 +2905,6 @@
 		 (set! ,%fptmp1 ,(%mref ,%sp ,%zero ,offset fp))
                  ,(%inline store-double->single ,(%mref ,%sp ,%zero ,offset fp) ,%fptmp1)
 		 (set! ,lvalue ,(%inline + ,%sp (immediate ,offset)))))))
-          (define load-split-stack-address
-            (lambda (hi-offset stack-offset)
-              ;; assume that we can use the stack space before `lo-offset`
-              ;; to copy the value currently at `hi-offset`
-              (lambda (lvalue)
-                (%seq
-                 (set! ,(%mref ,%sp ,stack-offset) ,(%mref ,%sp ,hi-offset))
-                 (set! ,lvalue ,(%inline + ,%sp (immediate ,stack-offset)))))))
           (constant-case machine-type-name
             [(ppc32osx tppc32osx)
              (define register+stack-arguments-starting-offset
@@ -2953,33 +2959,46 @@
                             [else #f])
                           =>
                           (lambda (ftd)
-                            (cond
-                              [(or ($ftd-compound? ftd)
-                                   (case ($ftd-atomic-category ftd)
-                                     [(float) (fx>= iflt fp-reg-count)]
-                                     [else (fx>= iint gp-reg-count)]))
-                               (let* ([words (fxsrl (align 4 ($ftd-size ftd)) 2)])
-                                 (loop (cdr types)
-                                       (cons (load-stack-address stack-arg-offset) locs)
-                                       (fx+ iint words) iflt (fx+ int-reg-offset (fx* 4 words)) float-reg-offset (fx+ stack-arg-offset (fx* 4 words))))]
-                              [(eq? ($ftd-atomic-category ftd) 'float)
-                               (let ([load-address (case ($ftd-size ftd)
-                                                     [(4) load-stack-address/convert-float]
-                                                     [else load-stack-address])]
-                                     [size ($ftd-size ftd)])
-                                 (if (fx< iflt fp-reg-count)
-                                     (loop (cdr types)
-                                           (cons (load-address float-reg-offset) locs)
-                                           (fx+ iint (fxsrl size 2)) (fx+ iflt 1) (fx+ int-reg-offset size) (fx+ float-reg-offset 8) (fx+ stack-arg-offset size))))]
-                              [else
-                               (let ([size ($ftd-size ftd)])
-                                 (loop (cdr types)
-                                       (cons (if (and (fx= size 8)
-                                                      (fx= (fx+ iint 1) gp-reg-count))
-                                                 (load-split-stack-address int-reg-offset stack-arg-offset)
-                                                 (load-stack-address int-reg-offset))
-                                             locs)
-                                       (fx+ iint (fxsrl size 2)) iflt (fx+ int-reg-offset size) float-reg-offset (fx+ stack-arg-offset size)))]))]
+                            (let ([members ($ftd->members ftd)])
+                              (cond
+                               [(and (pair? members)
+                                     (null? (cdr members))
+                                     (eq? 'float (caar members))
+                                     (fx< iflt fp-reg-count))
+                                ;; single member as float => in register
+                                (let ([load-address (case ($ftd-size ftd)
+                                                      [(4) load-stack-address/convert-float]
+                                                      [else load-stack-address])]
+                                      [size ($ftd-size ftd)])
+                                  (loop (cdr types)
+                                        (cons (load-address float-reg-offset) locs)
+                                        (fx+ iint (fxsrl size 2)) (fx+ iflt 1) (fx+ int-reg-offset size) (fx+ float-reg-offset 8)
+                                        (fx+ stack-arg-offset size)))]
+                               [else
+                                ;; in registers until they run out; copy the registers
+                                ;; to the reserved space just before arguments that
+                                ;; are only on the stack, and then we have a contiguous
+                                ;; object on the stack
+                                (let* ([words (fxsrl (align 4 ($ftd-size ftd)) 2)]
+                                       [loc (let c-loop ([size ($ftd-size ftd)]
+                                                         [iint iint]
+                                                         [offset 0])
+                                              (cond
+                                               [(or (fx<= size 0)
+                                                    (fx>= iint gp-reg-count))
+                                                (load-stack-address stack-arg-offset)]
+                                               [else
+                                                (let ([loc (c-loop (fx- size 4) (fx+ iint 1))]
+                                                      [tmp %Carg8])
+                                                  (lambda (lvalue)
+                                                    (%seq
+                                                     (set! ,tmp ,(%mref ,%sp ,(fx+ int-reg-offset offset)))
+                                                     (set! ,(%mref ,%sp ,(fx+ stack-arg-offset offset)) ,tmp)
+                                                     ,(loc lvalue))))]))])
+                                  (loop (cdr types)
+                                        (cons loc locs)
+                                        (fx+ iint words) iflt (fx+ int-reg-offset (fx* 4 words)) float-reg-offset
+                                        (fx+ stack-arg-offset (fx* 4 words))))])))]
                          [(nanopass-case (Ltype Type) (car types)
                             [(fp-integer ,bits) (fx= bits 64)]
                             [(fp-unsigned ,bits) (fx= bits 64)]
@@ -3021,9 +3040,12 @@
                              (fxmin gp-reg-count (fx+ iint 1))
                              (fxmin fp-reg-count (fx+ iflt 1)))]
                          [(fp-ftd& ,ftd)
-                          (let ([words (fxsra (align 4 ($ftd-size ftd)) 2)])
+                          (let ([words (fxsra (align 4 ($ftd-size ftd)) 2)]
+                                [members ($ftd->members ftd)])
                             (cond
-                             [(eq? ($ftd-atomic-category ftd) 'float)
+                             [(and (pair? members)
+                                   (null? (cdr members))
+                                   (eq? 'float (caar members)))
                               (f (cdr types)
                                  (fxmin gp-reg-count (fx+ iint words))
                                  (fxmin fp-reg-count (fx+ iflt 1)))]
