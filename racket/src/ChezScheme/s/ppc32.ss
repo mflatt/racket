@@ -2274,18 +2274,36 @@
               (load/store-integer 'load ireg size category rhs offset))))
         (define load/store-integer
           (lambda (mode reg size category rhs offset)
-            (let ([int-type (case category
-                              [(unsigned) (case size
-                                            [(1) 'unsigned-8]
-                                            [(2) 'unsigned-16]
-                                            [else 'unsigned-32])]
-                              [else (case size
-                                      [(1) 'integer-8]
-                                      [(2) 'integer-16]
-                                      [else 'integer-32])])])
-              (if (eq? mode 'load)
-                  `(set! ,reg (inline ,(make-info-load int-type #f) ,%load ,rhs ,%zero (immediate ,offset)))
-                  `(inline ,(make-info-load int-type #f) ,%store ,rhs ,%zero (immediate ,offset) ,reg)))))
+            (cond
+             [(fx= size 3)
+              (let ([hi-int-type (if (eq? category 'unsigned) 'unsigned-16 'integer-16)])
+                (case mode
+                  [(load)
+                   (let ([tmp %r18])
+                     (%seq
+                      (set! ,reg (inline ,(make-info-load hi-int-type #f) ,%load ,rhs ,%zero (immediate ,offset)))
+                      (set! ,tmp (inline ,(make-info-load 'unsigned-8 #f) ,%load ,rhs ,%zero (immediate ,(fx+ 2 offset))))
+                      (set! ,reg ,(%inline sll ,reg (immediate 8)))
+                      (set! ,reg ,(%inline logor ,reg ,tmp))))]
+                  [else
+                   ;; assumes that we can mangle `reg`
+                   (%seq
+                    (inline ,(make-info-load 'unsigned-8 #f) ,%store ,rhs ,%zero (immediate ,(fx+ 2 offset)) ,reg)
+                    (set! ,reg ,(%inline sra ,reg (immediate 8)))
+                    (inline ,(make-info-load hi-int-type #f) ,%store ,rhs ,%zero (immediate ,offset) ,reg))]))]
+             [else
+              (let ([int-type (case category
+                                [(unsigned) (case size
+                                              [(1) 'unsigned-8]
+                                              [(2) 'unsigned-16]
+                                              [else 'unsigned-32])]
+                                [else (case size
+                                        [(1) 'integer-8]
+                                        [(2) 'integer-16]
+                                        [else 'integer-32])])])
+                (if (eq? mode 'load)
+                    `(set! ,reg (inline ,(make-info-load int-type #f) ,%load ,rhs ,%zero (immediate ,offset)))
+                    `(inline ,(make-info-load int-type #f) ,%store ,rhs ,%zero (immediate ,offset) ,reg)))])))
         (define load-indirect-int64-reg
           (lambda (loreg hireg)
             (lambda (x) ; requires var
@@ -2355,11 +2373,15 @@
                        [(fp-ftd& ,ftd)
                         (let ([members ($ftd->members ftd)])
                           (cond
-                           [(not (and (pair? members)
-                                      (null? (cdr members))))
+                           [(or (not (and (pair? members)
+                                          (null? (cdr members))))
+                                ;; floating-point in a union is passed in integer registers:
+                                (and ($ftd-union? ftd)
+                                     (eq? 'float (caar members))))
                             ;; compound: use integer registers until we run out; 
                             ;; for simplicity, just put the whole argument (not just
-                            ;; the part after registers) on the stack, too
+                            ;; the part after registers) on the stack, too, which
+                            ;; handles things like sizes not divisible by 4 or unions
                             (let c-loop ([size ($ftd-size ftd)]
                                          [offset 0]
                                          [int* int*]
@@ -2938,7 +2960,8 @@
                             [iflt 0]
                             [int-reg-offset int-reg-offset]
                             [float-reg-offset float-reg-offset]
-                            [stack-arg-offset (fx- stack-arg-offset register+stack-arguments-starting-offset)])
+                            [stack-arg-offset (fx- stack-arg-offset (fx- stack-arguments-starting-offset
+                                                                         register+stack-arguments-starting-offset))])
                    (if (null? types)
                        (let ([locs (reverse locs)])
                          (if synthesize-first-argument?
@@ -2970,7 +2993,8 @@
                           (lambda (ftd)
                             (let ([members ($ftd->members ftd)])
                               (cond
-                               [(and (pair? members)
+                               [(and (not ($ftd-union? ftd))
+                                     (pair? members)
                                      (null? (cdr members))
                                      (eq? 'float (caar members))
                                      (fx< iflt fp-reg-count))
@@ -2983,7 +3007,7 @@
                                         (cons (load-address float-reg-offset) locs)
                                         (fx+ iint (fxsrl size 2)) (fx+ iflt 1) (fx+ int-reg-offset size) (fx+ float-reg-offset 8)
                                         (fx+ stack-arg-offset size)))]
-                               [(< ($ftd-size ftd) 4)
+                               [(memv ($ftd-size ftd) '(1 2))
                                 ;; byte or word; need to load address into middle
                                 (loop (cdr types)
                                       (cons (load-stack-address (fx+ (fx- 4 ($ftd-size ftd))
@@ -2997,23 +3021,28 @@
                                 ;; in registers until they run out; copy the registers
                                 ;; to the reserved space just before arguments that
                                 ;; are only on the stack, and then we have a contiguous
-                                ;; object on the stack
-                                (let* ([words (fxsrl (align 4 ($ftd-size ftd)) 2)]
-                                       [loc (let c-loop ([size ($ftd-size ftd)]
-                                                         [iint iint]
-                                                         [offset 0])
-                                              (cond
-                                               [(or (fx<= size 0)
-                                                    (fx>= iint gp-reg-count))
-                                                (load-stack-address stack-arg-offset)]
-                                               [else
-                                                (let ([loc (c-loop (fx- size 4) (fx+ iint 1) (fx+ offset 4))]
-                                                      [tmp %Carg8])
-                                                  (lambda (lvalue)
-                                                    (%seq
-                                                     (set! ,tmp ,(%mref ,%sp ,(fx+ int-reg-offset offset)))
-                                                     (set! ,(%mref ,%sp ,(fx+ stack-arg-offset offset)) ,tmp)
-                                                     ,(loc lvalue))))]))])
+                                ;; object on the stack; except that sizes not a multiple
+                                ;; of 4 are always on the stack and no copying is needed
+                                (let* ([size ($ftd-size ftd)]
+                                       [words (fxsrl (align 4 size) 2)]
+                                       [loc
+                                        (cond
+                                         [(not (fx= size (fx* words 4)))
+                                          (load-stack-address stack-arg-offset)]
+                                         [else
+                                          (let c-loop ([size size] [iint iint] [offset 0])
+                                            (cond
+                                             [(or (fx<= size 0)
+                                                  (fx>= iint gp-reg-count))
+                                              (load-stack-address stack-arg-offset)]
+                                             [else
+                                              (let ([loc (c-loop (fx- size 4) (fx+ iint 1) (fx+ offset 4))]
+                                                    [tmp %Carg8])
+                                                (lambda (lvalue)
+                                                  (%seq
+                                                   (set! ,tmp ,(%mref ,%sp ,(fx+ int-reg-offset offset)))
+                                                   (set! ,(%mref ,%sp ,(fx+ stack-arg-offset offset)) ,tmp)
+                                                   ,(loc lvalue))))]))])])
                                   (loop (cdr types)
                                         (cons loc locs)
                                         (fx+ iint words) iflt (fx+ int-reg-offset (fx* 4 words)) float-reg-offset
@@ -3062,7 +3091,8 @@
                           (let ([words (fxsra (align 4 ($ftd-size ftd)) 2)]
                                 [members ($ftd->members ftd)])
                             (cond
-                             [(and (pair? members)
+                             [(and (not ($ftd-union? ftd))
+                                   (pair? members)
                                    (null? (cdr members))
                                    (eq? 'float (caar members)))
                               (f (cdr types)

@@ -1028,7 +1028,7 @@ ftype operators:
                            [(ftd-struct? ftd)
                             (loop (caddr (car (ftd-struct-field* ftd))))]
                            [(ftd-union? ftd)
-                            (apply max (map (lambda (f) (loop (caddr f))) (ftd-union-field* ftd)))]
+                            (apply max (map (lambda (f) (loop (cdr f))) (ftd-union-field* ftd)))]
                            [(ftd-array? ftd)
                             (loop (ftd-array-ftd ftd))]
                            [else (ftd-size ftd)]))])
@@ -1046,6 +1046,9 @@ ftype operators:
       (or (ftd-struct? x)
           (ftd-union? x)
           (ftd-array? x))))
+  (set! $ftd-union?
+    (lambda (x)
+      (ftd-union? x)))
   (set! $ftd-unsigned?
     (lambda (x)
       (and (ftd-base? x)
