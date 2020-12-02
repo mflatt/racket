@@ -2354,6 +2354,10 @@
           [(ppc32osx tppc32osx)
            ;; Mac OS X variant of `do-args`
            ;; -----------------------------
+           ;; On varargs: the PPC ABI says that unknown arguments should be in both FP
+           ;; and int registers, but in practice it seems to mean int arguments; the
+           ;; ABI actually talks about "known" and "unknown", so only "..." arguments
+           ;; are in int registers, but we just assume that all but the first is "...".
            (define register+stack-arguments-starting-offset
              ;; after linkage area:
              24)
@@ -2382,7 +2386,9 @@
                                 (cons (load-double-stack isp (and indirect? 0)) locs)
                                 live* int* '() (fx+ isp 8) fp-live-count
                                 #f)]
-                         [(not varargs?)
+                         [(or (not varargs?)
+                              ;; hack: varargs requires at least one argument
+                              (fx= isp register+stack-arguments-starting-offset))
                           ;; in FP register
                           (loop (cdr types)
                                 (cons (load-double-reg (car flt*) (and indirect? 0)) locs)
@@ -3002,11 +3008,8 @@
                ;; we push all of the int reg args with one push instruction and all of the
                ;; float reg args with another (v)push instruction. It's possible for an argument
                ;; to be split across a register and the stack --- but in that case, there's
-               ;; room just before on the stack to copy in the register.
-               ;; On varargs: the PPC ABI says that unknown arguments should be in both FP
-               ;; and int registers, but in practice it seems to mean int arguments; the
-               ;; ABI actually talks about "known" and "unknown", so only "..." arguments
-               ;; are in int registers, but we just assume that all but the first is "...".
+               ;; room just before on the stack to copy in the register. See foreign-call
+               ;; for information on varrags.
                (lambda (types gp-reg-count fp-reg-count init-int-reg-offset float-reg-offset stack-arg-offset
                               synthesize-first-argument? varargs? return-space-offset)
                  (let loop ([types (if synthesize-first-argument? (cdr types) types)]
