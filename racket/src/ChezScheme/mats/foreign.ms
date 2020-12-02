@@ -2735,7 +2735,7 @@
          '(load-shared-object "libc.so.7")]
         [(i3nt ti3nt a6nt ta6nt)
          '(load-shared-object "msvcrt.dll")]
-        [(i3osx ti3osx a6osx ta6osx)
+        [(i3osx ti3osx a6osx ta6osx ppc32osx tppc32osx)
          '(load-shared-object "libc.dylib")]
         [else (error 'load-libc "unrecognized machine type ~s" (machine-type))]))
     #t)

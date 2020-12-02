@@ -2327,6 +2327,29 @@
                        ,(load/store-integer 'load tmp (fxmin size 4) 'unsigned rhs delta)
                        ,(load/store-integer 'store tmp (fxmin size 4) 'unsigned %sp (fx+ offset delta))
                        ,(loop (fx+ delta 4) (fx- size 4)))))))))
+        (define load-double-int-regs
+          (lambda (hireg loreg isp indirect?)
+            (if indirect?
+                (lambda (x) ; requires var
+                  (%seq
+                   (set! ,loreg ,(%mref ,x ,4))
+                   (set! ,hireg ,(%mref ,x ,0))))
+                (lambda (x) ; unboxed
+                  (%seq
+                   (set! ,(%mref ,%sp ,%zero ,isp fp) ,x)
+                   (set! ,loreg ,(%mref ,%sp ,(fx+ isp 4)))
+                   (set! ,hireg ,(%mref ,%sp ,isp)))))))
+        (define load-double-int-reg+stack
+          (lambda (hireg isp indirect?)
+            (if indirect?
+                (lambda (x) ; requires var
+                  (%seq
+                   (set! ,(%mref ,%sp ,(fx+ isp 4)) ,(%mref ,x 4))
+                   (set! ,hireg ,(%mref ,x 0))))
+                (lambda (x) ; unboxed
+                  (%seq
+                   (set! ,(%mref ,%sp ,%zero ,isp fp) ,x)
+                   (set! ,hireg ,(%mref ,%sp ,isp)))))))
         (constant-case machine-type-name
           [(ppc32osx tppc32osx)
            ;; Mac OS X variant of `do-args`
@@ -2339,7 +2362,7 @@
              (+ register+stack-arguments-starting-offset 32))
            (define (maybe-cdr p) (if (pair? p) (cdr p) p))
            (define do-args
-             (lambda (types)
+             (lambda (types varargs?)
                ;; NB: start stack pointer at `stack-arguments-starting-offset` to put arguments above the linkage area
                (let loop ([types types] [locs '()] [live* '()] [int* (gp-parameter-regs)] [flt* (fp-parameter-regs)]
                           [isp register+stack-arguments-starting-offset]
@@ -2351,25 +2374,45 @@
                      (values (fxmax isp stack-arguments-starting-offset) locs live* fp-live-count)
                      (nanopass-case (Ltype Type) (car types)
                        [(fp-double-float)
-                        (if (null? flt*)
-                            (loop (cdr types)
-                                  (cons (load-double-stack isp (and indirect? 0)) locs)
-                                  live* int* '() (fx+ isp 8) fp-live-count
-                                  #f)
-                            (loop (cdr types)
-                                  (cons (load-double-reg (car flt*) (and indirect? 0)) locs)
-                                  live* (maybe-cdr (maybe-cdr int*)) (cdr flt*) (fx+ isp 8) (fx+ fp-live-count 1)
-                                  #f))]
+                        (cond
+                         [(or (null? flt*)
+                              (and varargs? (null? int*)))
+                          ;; on stack
+                          (loop (cdr types)
+                                (cons (load-double-stack isp (and indirect? 0)) locs)
+                                live* int* '() (fx+ isp 8) fp-live-count
+                                #f)]
+                         [(not varargs?)
+                          ;; in FP register
+                          (loop (cdr types)
+                                (cons (load-double-reg (car flt*) (and indirect? 0)) locs)
+                                live* (maybe-cdr (maybe-cdr int*)) (cdr flt*) (fx+ isp 8) (fx+ fp-live-count 1)
+                                #f)]
+                         [else ; => varargs
+                          ;; in integer register... maybe only halfway
+                          (if (null? (cdr int*))
+                              (loop (cdr types)
+                                    (cons (load-double-int-reg+stack (car int*) isp indirect?) locs)
+                                    (cons (car int*) live*) '() flt* (fx+ isp 8) fp-live-count
+                                    #f)
+                              (loop (cdr types)
+                                    (cons (load-double-int-regs (car int*) (cadr int*) isp indirect?) locs)
+                                    (cons* (car int*) (cadr int*) live*) (cdr (cdr int*)) flt* (fx+ isp 8) fp-live-count
+                                    #f))])]
                        [(fp-single-float)
-                        (if (null? flt*)
-                            (loop (cdr types)
-                                  (cons (load-single-stack isp (and indirect? 0)) locs)
-                                  live* int* '() (fx+ isp 4) fp-live-count
-                                  #f)
-                            (loop (cdr types)
-                                  (cons (load-single-reg (car flt*) (and indirect? 0)) locs)
-                                  live* (maybe-cdr int*) (cdr flt*) (fx+ isp 4) (fx+ fp-live-count 1)
-                                  #f))]
+                        (cond
+                         [(null? flt*)
+                          ;; on stack
+                          (loop (cdr types)
+                                (cons (load-single-stack isp (and indirect? 0)) locs)
+                                live* int* '() (fx+ isp 4) fp-live-count
+                                #f)]
+                         [(not varargs?)
+                          ;; in FP register
+                          (loop (cdr types)
+                                (cons (load-single-reg (car flt*) (and indirect? 0)) locs)
+                                live* (maybe-cdr int*) (cdr flt*) (fx+ isp 4) (fx+ fp-live-count 1)
+                                #f)])]
                        [(fp-ftd& ,ftd)
                         (let ([members ($ftd->members ftd)])
                           (cond
@@ -2474,7 +2517,7 @@
            ;; --------------------------
            (define stack-arguments-starting-offset 8)
            (define do-args
-             (lambda (types)
+             (lambda (types varargs?)
                ;; NB: start stack pointer at `stack-arguments-starting-offset` to put arguments above the linkage area
                (let loop ([types types] [locs '()] [live* '()] [int* (gp-parameter-regs)] [flt* (fp-parameter-regs)] [isp stack-arguments-starting-offset]
                           ;; needed when adjusting active:
@@ -2635,11 +2678,13 @@
 	     ,(save-and-restore result-live* result-fp-live-count (fp-result-regs) `(set! ,%Cretval ,(%inline activate-thread))))))
         (lambda (info)
           (safe-assert (reg-callee-save? %tc)) ; no need to save-restore
-          (let* ([arg-type* (info-foreign-arg-type* info)]
+          (let* ([varargs? (memq 'varargs (info-foreign-conv* info))]
+                 [arg-type* (info-foreign-arg-type* info)]
 		 [result-type (info-foreign-result-type info)]
 		 [fill-result-here? (indirect-result-that-fits-in-registers? result-type)]
 		 [adjust-active? (if-feature pthreads (memq 'adjust-active (info-foreign-conv* info)) #f)])
-            (with-values (do-args (if fill-result-here? (cdr arg-type*) (indirect-result-to-pointer result-type arg-type*)))
+            (with-values (do-args (if fill-result-here? (cdr arg-type*) (indirect-result-to-pointer result-type arg-type*))
+                                  varargs?)
               (lambda (orig-frame-size locs live* fp-live-count)
                 ;; NB: add 4 to frame size for CR save word
                 (let* ([fill-stash-offset orig-frame-size]
@@ -2922,7 +2967,13 @@
               (lambda (lolvalue hilvalue)
                 (%seq
                  (set! ,lolvalue ,(%mref ,%sp ,looffset))
-               (set! ,hilvalue ,(%mref ,%sp ,hioffset))))))
+                 (set! ,hilvalue ,(%mref ,%sp ,hioffset))))))
+          (define load-split-double-stack
+            (lambda (hioffset looffset)
+              (lambda (x) ; requires var
+                (%seq
+                 (set! ,(%mref ,x ,(constant flonum-data-disp)) ,(%mref ,%sp ,hioffset))
+                 (set! ,(%mref ,x ,(fx+ (constant flonum-data-disp) 4)) ,(%mref ,%sp ,looffset))))))
           (define load-stack-address
             (lambda (offset)
               (lambda (lvalue)
@@ -2947,18 +2998,22 @@
              ;; Mac OS X variant of `do-stack`
              ;; -----------------------------
              (define do-stack
-               ;; all of the args are on the stack at this point, though not contiguous since
+               ;; All of the args are on the stack at this point, though not contiguous since
                ;; we push all of the int reg args with one push instruction and all of the
-               ;; float reg args with another (v)push instruction; it's possible for an argument
+               ;; float reg args with another (v)push instruction. It's possible for an argument
                ;; to be split across a register and the stack --- but in that case, there's
-               ;; room just before on the stack to copy in the register
-               (lambda (types gp-reg-count fp-reg-count int-reg-offset float-reg-offset stack-arg-offset
-                              synthesize-first-argument? return-space-offset)
+               ;; room just before on the stack to copy in the register.
+               ;; On varargs: the PPC ABI says that unknown arguments should be in both FP
+               ;; and int registers, but in practice it seems to mean int arguments; the
+               ;; ABI actually talks about "known" and "unknown", so only "..." arguments
+               ;; are in int registers, but we just assume that all but the first is "...".
+               (lambda (types gp-reg-count fp-reg-count init-int-reg-offset float-reg-offset stack-arg-offset
+                              synthesize-first-argument? varargs? return-space-offset)
                  (let loop ([types (if synthesize-first-argument? (cdr types) types)]
                             [locs '()]
                             [iint 0]
                             [iflt 0]
-                            [int-reg-offset int-reg-offset]
+                            [int-reg-offset init-int-reg-offset]
                             [float-reg-offset float-reg-offset]
                             [stack-arg-offset (fx- stack-arg-offset (fx- stack-arguments-starting-offset
                                                                          register+stack-arguments-starting-offset))])
@@ -2976,15 +3031,30 @@
                           => (lambda (width)
                                (let ([size (fx* width 4)])
                                  (cond
-                                  [(fx< iflt fp-reg-count)
+                                  [(and (fx< iflt fp-reg-count)
+                                        (or (not varargs?)
+                                            ;; hack: varargs function requires at least one argument
+                                            (fx= int-reg-offset init-int-reg-offset)))
+                                   ;; in FP register
                                    (loop (cdr types)
                                          (cons (load-double-stack float-reg-offset) locs)
                                          (fx+ iint width) (fx+ iflt 1) (fx+ int-reg-offset size) (fx+ float-reg-offset size)
                                          (fx+ stack-arg-offset size))]
-                                  [else
+                                  [(or (not varargs?)
+                                       (fx>= iint gp-reg-count))
+                                   ;; on stack
                                    (loop (cdr types)
                                          (cons (load-double-stack stack-arg-offset) locs)
                                          iint iflt int-reg-offset float-reg-offset
+                                         (fx+ stack-arg-offset size))]
+                                  [else ;; => varargs
+                                   ;; in integer register --- but maybe halfway on stack
+                                   (loop (cdr types)
+                                         (cons (if (fx< (fx+ iint 1) gp-reg-count)
+                                                   (load-double-stack int-reg-offset)
+                                                   (load-split-double-stack int-reg-offset (fx+ stack-arg-offset 4)))
+                                               locs)
+                                         (fx+ iint width) iflt (fx+ int-reg-offset size) float-reg-offset
                                          (fx+ stack-arg-offset size))])))]
                          [(nanopass-case (Ltype Type) (car types)
                             [(fp-ftd& ,ftd) ftd]
@@ -3123,7 +3193,7 @@
                ;; we push all of the int reg args with one push instruction and all of the
                ;; float reg args with another (v)push instruction
                (lambda (types gp-reg-count fp-reg-count int-reg-offset float-reg-offset stack-arg-offset
-                              synthesize-first-argument? return-space-offset)
+                              synthesize-first-argument? varargs? return-space-offset)
                  (let loop ([types (if synthesize-first-argument? (cdr types) types)]
                             [locs '()]
                             [iint 0]
@@ -3399,6 +3469,7 @@
                        [callee-save-fp-offset (fx+ (fx* isaved 4) callee-save-offset)]
 		       [synthesize-first-argument? (indirect-result-that-fits-in-registers? result-type)]
 		       [adjust-active? (if-feature pthreads (memq 'adjust-active (info-foreign-conv* info)) #f)]
+                       [varargs? (memq 'varargs (info-foreign-conv* info))]
                        [unactivate-mode-offset (fx+ (fx* fpsaved 8) callee-save-fp-offset)]
                        [return-space-offset (align 8 (fx+ unactivate-mode-offset (if adjust-active? 4 0)))]
                        [stack-size (align 16 (fx+ return-space-offset (if synthesize-first-argument? 8 0)))]
@@ -3429,7 +3500,7 @@
                      ; to the Scheme argument locations
                      (do-stack (indirect-result-to-pointer result-type arg-type*)
                                gp-reg-count fp-reg-count int-reg-offset float-reg-offset stack-arg-offset
-			       synthesize-first-argument? return-space-offset)
+			       synthesize-first-argument? varargs? return-space-offset)
 		     get-result
 		     (lambda ()
 		       (in-context Tail

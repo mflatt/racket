@@ -478,7 +478,7 @@ ftype operators:
                         (make-ftd-array ftd
                           (and defid (symbol->string (syntax->datum defid)))
                           stype
-                          (* n (ftd-size ftd))
+                          (* n ($ftd-size ftd)) ; use `$ftd-size` for PPC Mac OS
                           (ftd-alignment ftd)
                           n ftd)))]
                    [(bits-kwd (field-name signedness bits) ...)
