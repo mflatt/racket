@@ -662,8 +662,7 @@
            '(lambda (w z) #t))
 (test-comp '(lambda (w z) (pair? (list w z w)))
            '(lambda (w z) #t))
-(test-comp #:except 'chez-scheme ;; optimizer doesn't know that `random` produces a single value
-           '(lambda (w z) (pair? (list w (random) w)))
+(test-comp '(lambda (w z) (pair? (list w (random) w)))
            '(lambda (w z) (random) #t))
 (test-comp #:except 'chez-scheme ;; optimizer doesn't know that `random` produces a single value
            '(lambda (w z) (pair? (list (read) (random) w)))
