@@ -1,11 +1,13 @@
 #lang racket/base
-(require "match.rkt"
+(require racket/fixnum
+         "match.rkt"
          "wrap.rkt"
          "known.rkt"
          "import.rkt"
          "mutated-state.rkt")
 
-(provide ensure-single-valued)
+(provide ensure-single-valued
+         single-valued-lambda?)
 
 (define (ensure-single-valued v knowns prim-knowns imports mutated)
   (match v
@@ -19,7 +21,64 @@
              (simple-mutated-state? (hash-ref mutated u #f))
              (let ([k (or (hash-ref prim-knowns u #f)
                           (hash-ref-either knowns imports u))])
-               (known-procedure/pure? k)))
+               (or (known-procedure/pure? k)
+                   (known-procedure/single-valued? k))))
         v]
        [else `($value ,v)])]
     [`,_ v]))
+
+;; ----------------------------------------
+
+(define (single-valued-lambda? lam knowns prim-knowns imports mutated)
+  (match lam
+    [`(lambda ,_ . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated 10)]
+    [`(case-lambda [,_ . ,bodys] ...)
+     (for/and ([body (in-list bodys)])
+       (single-valued-body? body knowns prim-knowns imports mutated 10))]
+    [`,_ #f]))
+
+(define (single-valued-body? body knowns prim-knowns imports mutated fuel)
+  (let loop ([body body] [fuel fuel])
+    (cond
+      [(fx= fuel 0) #f]
+      [(null? (cdr body))
+       (single-valued? (car body) knowns prim-knowns imports mutated fuel)]
+      [else
+       (loop (cdr body) (fx- fuel 1))])))
+
+(define (single-valued? e knowns prim-knowns imports mutated fuel)
+  (match e
+    [`(lambda . ,_) #t]
+    [`(case-lambda . ,_) #t]
+    [`(quote . ,_) #t]
+    [`(#%variable-reference . ,_) #t]
+    [`(let-values ,_ . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(let ,_ . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(letrec ,_ . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(letrec* ,_ . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(begin . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(begin-unsafe . ,body)
+     (single-valued-body? body knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(begin0 ,e . ,_)
+     (single-valued? e knowns prim-knowns imports mutated (fx- fuel 1))]
+    [`(set! ,_ ,e) #t]
+    [`(if ,_ ,thn ,els)
+     (and (single-valued? thn knowns prim-knowns imports mutated (fxrshift fuel 1))
+          (single-valued? els knowns prim-knowns imports mutated (fxrshift fuel 1)))]
+    [`(#%app/value . ,_) #t]
+    [`(#%app/no-return . ,_) #t]
+    [`(,proc . ,args)
+     (let ([proc (unwrap proc)])
+       (and (symbol? proc)
+            (let ([v (or (hash-ref-either knowns imports proc)
+                         (hash-ref prim-knowns proc #f))])
+              (or (known-procedure/single-valued? v)
+                  (known-procedure/pure? v)))
+            (simple-mutated-state? (hash-ref mutated proc #f))))]
+    [`,_ #t]))
