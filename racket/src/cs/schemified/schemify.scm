@@ -12629,7 +12629,7 @@
                     v_0
                     (list '$value v_0))))
               v_0)))))))
-(define INITIAL-SINGLE-VALUE-FUEL 32)
+(define INITIAL-SINGLE-VALUE-FUEL 16)
 (define single-valued-lambda?
   (lambda (lam_0 knowns_0 prim-knowns_0 imports_0 mutated_0)
     (let ((hd_0
@@ -12648,7 +12648,7 @@
            prim-knowns_0
            imports_0
            mutated_0
-           32))
+           16))
         (if (if (eq? 'case-lambda hd_0)
               (let ((a_0 (cdr (unwrap lam_0))))
                 (if (wrap-list? a_0)
@@ -12743,7 +12743,7 @@
                                            prim-knowns_0
                                            imports_0
                                            mutated_0
-                                           32)))
+                                           16)))
                                      (values result_1))))
                               (if (if (not
                                        (let ((x_0 (list body_0)))

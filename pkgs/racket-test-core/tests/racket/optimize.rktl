@@ -10,6 +10,8 @@
          racket/unsafe/ops
          compiler/zo-parse
          compiler/zo-marshal
+         compiler/private/deserialize
+         compiler/compilation-path
          ffi/unsafe/vm
          racket/match
          (prefix-in k: '#%kernel))
@@ -66,7 +68,43 @@
                    (eq? 'linklet (car s-exp)))
         (error 'compile/optimize "compiled content does not have expected shape: ~s"
                s-exp))
-      (define s (expand/optimize-linklet s-exp))
+
+      ;; Support cross-module inling, at least through one layer of `require`
+      (define-values (mpi-vector requires provides phase-to-link-modules)
+        (deserialize-requires-and-provides bundle))
+      (define link-modules (hash-ref phase-to-link-modules 0 '()))
+      (define keys (for/list ([r (in-list link-modules)])
+                     (gensym)))
+      (define mod-uses (for/hasheq ([key (in-list keys)]
+                                    [mod-use (in-list link-modules)])
+                         (values key mod-use)))
+      (define (get-module-info key)
+        (define mu (hash-ref mod-uses key #f))
+        (cond
+          [mu
+           (define mp (module-path-index-resolve (module-use-module mu) #f))
+           (define path (resolved-module-path-name mp))
+           (cond
+             [(path? path)
+              (define zo-path (get-compilation-bytecode-file path))
+              (define lnkl (call-with-input-file* zo-path zo-parse))
+              (define bundle (if (linkl-directory? lnkl)
+                                 (hash-ref (linkl-directory-table lnkl) '() #f)
+                                 lnkl))
+              (define code (hash-ref (linkl-bundle-table bundle) (module-use-phase mu) #f))
+              (values code #f)]
+             [else
+              (values #f #f)])]
+          [else (values #f #f)]))
+
+      (define s (if (null? link-modules)
+                    (expand/optimize-linklet s-exp)
+                    (expand/optimize-linklet s-exp
+                                             #f
+                                             (list->vector (append '(#f #f #f) keys))
+                                             get-module-info
+                                             '())))
+      
       ;; normalize bindings and gensyms
       (define (new formals env)
         (cond
@@ -188,8 +226,7 @@
            '(lambda () (begin0 (cons 1 2) (read)))
            #f)
 
-(test-comp #:except 'chez-scheme
-           '(lambda () (random))
+(test-comp '(lambda () (random))
            '(lambda () (begin0 (random) #f)))
 (test-comp '(lambda (f) (f))
            '(lambda (f) (begin0 (f) #f))
@@ -333,11 +370,9 @@
                     #f)
          (test-comp '(lambda (x) #t)
                     `(lambda (x) (,e? x x)))
-         (test-comp #:except 'chez-scheme
-                    '(lambda (x) #t)
+         (test-comp '(lambda (x) #t)
                     `(lambda (x) (,e? car car)))
-         (test-comp #:except 'chez-scheme
-                    '(lambda (x) (list map #t))
+         (test-comp '(lambda (x) (list map #t))
                     `(lambda (x) (list map (,e? map map))))
          (test-comp '(module ? racket/base
                        (define x (if (zero? (random 2)) '() '(1)))
@@ -1099,7 +1134,8 @@
 (test-comp '(lambda (w z) (box? (list (cons (random w) z))))
            '(lambda (w z) (random w) #f))
 
-(test-comp '(lambda () (begin0 (random 1) (random 2)))
+(test-comp #:except 'chez-scheme
+           '(lambda () (begin0 (random 1) (random 2)))
            '(lambda () (car (cons (random 1) (random 2)))))
 (test-comp '(lambda () (begin (random 1) (random 2)))
            '(lambda () (cdr (cons (random 1) (random 2)))))

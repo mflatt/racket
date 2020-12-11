@@ -29,7 +29,11 @@
 
 ;; ----------------------------------------
 
-(define INITIAL-SINGLE-VALUE-FUEL 32)
+;; Make some effort to detect single-valued functions. Knowing
+;; single-valuedness is only worth a little beyond primitives, so we
+;; don't try very hard.
+
+(define INITIAL-SINGLE-VALUE-FUEL 16)
 
 (define (single-valued-lambda? lam knowns prim-knowns imports mutated)
   (match lam

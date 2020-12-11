@@ -494,15 +494,17 @@
      [(c name import-keys) (compile-linklet c name import-keys #f '(serializable))]
      [(c name import-keys get-import) (compile-linklet c name import-keys get-import '(serializable))]
      [(c name import-keys get-import options)
-      (define check-result (check-compile-args 'compile-linklet import-keys get-import options))
-      (do-compile-linklet c name import-keys get-import options #f)]))
+      (do-compile-linklet 'compile-linklet c name import-keys get-import options #f)]))
 
   (define expand/optimize-linklet ; for testing
     (case-lambda
-     [(c) (do-compile-linklet c #f #f #f '() #t)]))
+     [(c) (do-compile-linklet 'expand/optimize-linklet c #f #f #f '() #t)]
+     [(c name import-keys get-import options)
+      (do-compile-linklet 'expand/optimize-linklet c name import-keys get-import options #t)]))
 
   (define do-compile-linklet
-    (lambda (c name import-keys get-import options just-expand?)
+    (lambda (who c name import-keys get-import options just-expand?)
+      (define check-result (check-compile-args who import-keys get-import options))
       (define serializable? (#%memq 'serializable options))
       (define use-prompt? (#%memq 'use-prompt options))
       (define unsafe? (and (#%memq 'unsafe options) #t))

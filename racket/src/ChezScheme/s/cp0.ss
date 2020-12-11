@@ -2274,6 +2274,12 @@
                                    [(ref ,maybe-src ,x) (eq? x x0)]
                                    [else #f])))
                           arg*))]
+                  [,pr0
+                   (andmap (lambda (arg)
+                             (and (nanopass-case (Lsrc Expr) (result-exp (value-visit-operand! arg))
+                                    [,pr (eq? pr pr0)]
+                                    [else #f])))
+                           arg*)]
                   [else #f]))
             (begin
               (residualize-seq '() (cons arg arg*) ctxt)
