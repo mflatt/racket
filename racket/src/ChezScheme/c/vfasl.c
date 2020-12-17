@@ -81,7 +81,6 @@ static uptr symbol_pos_to_offset(uptr sym_pos) {
   return (segs * bytes_per_segment) + (syms * size_symbol);
 }
 
-static IFASLCODE abs_reloc_variant(IFASLCODE type);
 static void relink_code(ptr co, ptr sym_base, ptr *vspaces, uptr *vspace_offsets, IBOOL to_static);
 static ptr find_pointer_from_offset(uptr p_off, ptr *vspaces, uptr *vspace_offsets);
 
@@ -487,10 +486,6 @@ ptr S_vfasl_to(ptr bv)
 #define VFASL_RELOC_TAG(p) (UNFIX(p) & ((1 << vfasl_reloc_tag_bits) - 1))
 #define VFASL_RELOC_POS(p) (UNFIX(p) >> vfasl_reloc_tag_bits)
 
-static IFASLCODE abs_reloc_variant(IFASLCODE type) {
-  return S_abs_reloc_variant(type);
-}
-
 static void relink_code(ptr co, ptr sym_base, ptr *vspaces, uptr *vspace_offsets, IBOOL to_static) {
     ptr t; iptr a, m, n;
 
@@ -530,7 +525,9 @@ static void relink_code(ptr co, ptr sym_base, ptr *vspaces, uptr *vspace_offsets
             code_off = RELOC_CODE_OFFSET(entry);
         }
         a += code_off;
-        obj = S_get_code_obj(abs_reloc_variant(RELOC_TYPE(entry)), co, a, item_off);
+
+        /* offset is stored in place of constant-loading code: */
+        memcpy(&obj, TO_VOIDP((ptr)((uptr)co + a)), sizeof(ptr));
 
         if (IMMEDIATE(obj)) {
           if (Sfixnump(obj)) {

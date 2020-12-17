@@ -118,7 +118,6 @@ extern ptr S_bv_fasl_read PROTO((ptr bv, int ty, uptr offset, uptr len, ptr path
 extern ptr S_boot_read PROTO((INT fd, const char *path));
 extern char *S_format_scheme_version PROTO((uptr n));
 extern char *S_lookup_machine_type PROTO((uptr n));
-extern IFASLCODE S_abs_reloc_variant PROTO((IFASLCODE type));
 extern void S_set_code_obj PROTO((char *who, IFASLCODE typ, ptr p, iptr n,
              ptr x, iptr o));
 extern ptr S_get_code_obj PROTO((IFASLCODE typ, ptr p, iptr n, iptr o));

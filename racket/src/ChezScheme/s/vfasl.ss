@@ -511,9 +511,6 @@
 
 (define rtd-flds (csv7:record-field-accessor #!base-rtd 'flds))
 
-(define vfasl-link-update!
-  (foreign-procedure "(cs)vfasl_link_update" (ptr uptr int uptr iptr) void))
-
 (define (fix v)
   (bitwise-arithmetic-shift-left v (constant fixnum-offset)))
 (define (fixed? v)
@@ -1069,8 +1066,10 @@
                                                  (not (fixed? elem-addr)))
                                        ($oops 'vfasl "unexpected fixnum in relocation ~s" elem-addr))
                                      elem-addr])))])
-             (let-values ([(bv offset) (vptr->bytevector+offset code-p vfi)])
-               (vfasl-link-update! bv (fx+ a offset) type new-elem item-offset))
+             ;; overwrites constant-loading instructions in the code, so the
+             ;; linking protocol needs to be able to deal with that, possibly using
+             ;; later instructions to infer the right repair:
+             (set-uptr! code-p a new-elem vfi)
              (loop n a (fx+ i 1)))]
           [else ($oops 'vfasl "expected a relocation")])))
     new-p))

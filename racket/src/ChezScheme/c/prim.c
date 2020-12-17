@@ -23,7 +23,6 @@ static void create_library_entry_vector PROTO((void));
 static void create_c_entry_vector PROTO((void));
 static void s_instantiate_code_object PROTO((void));
 static void s_link_code_object PROTO((ptr co, ptr objs));
-static void s_vfasl_link_update PROTO((ptr bv, uptr offset, int orig_type, uptr val, iptr item_offset));
 static IBOOL s_check_heap_enabledp PROTO((void));
 static void s_enable_check_heap PROTO((IBOOL b));
 static uptr s_check_heap_errors PROTO((void));
@@ -194,7 +193,6 @@ void S_prim_init() {
     Sforeign_symbol("(cs)count_size_increments", (void *)S_count_size_increments);
     Sforeign_symbol("(cs)lookup_library_entry", (void *)S_lookup_library_entry);
     Sforeign_symbol("(cs)link_code_object", (void *)s_link_code_object);
-    Sforeign_symbol("(cs)vfasl_link_update", (void *)s_vfasl_link_update);
     Sforeign_symbol("(cs)lookup_c_entry", (void *)S_lookup_c_entry);
     Sforeign_symbol("(cs)lock_object", (void *)Slock_object);
     Sforeign_symbol("(cs)unlock_object", (void *)Sunlock_object);
@@ -310,11 +308,6 @@ static void s_link_code_object(co, objs) ptr co, objs; {
         objs = Scdr(objs);
     }
     S_thread_end_code_write();
-}
-
-static void s_vfasl_link_update(ptr bv, uptr offset, int orig_type, uptr val, iptr item_offset) {
-  IFASLCODE type = S_abs_reloc_variant(orig_type);
-  S_set_code_obj("vfasl", type, TO_PTR(&BVIT(bv, 0)), offset, (ptr)val, item_offset);
 }
 
 static INT s_check_heap_enabledp(void) {

@@ -1329,16 +1329,6 @@ static IBOOL equalp(x, y) ptr x, y; {
 }
 
 static IBOOL rtd_equiv(x, y) ptr x, y; {
-
-  if (!(((RECORDINSTTYPE(x) == RECORDINSTTYPE(y))) &&
-        RECORDDESCPARENT(x) == RECORDDESCPARENT(y))) {
-    printf("uh oh... %p %p [base %p]\n", RECORDDESCPARENT(x), RECORDDESCPARENT(y), S_G.base_rtd);
-    S_prin1(RECORDDESCNAME(x)); printf("\n");
-    S_prin1(RECORDDESCUID(x)); printf("\n");
-    S_prin1(RECORDDESCNAME(y)); printf("\n");
-    S_prin1(RECORDDESCUID(y)); printf("\n");
-  }
-
   return ((RECORDINSTTYPE(x) == RECORDINSTTYPE(y))
           /* recognize `base-rtd` shape: */
           || ((RECORDINSTTYPE(x) == x)
@@ -1378,29 +1368,6 @@ INT pax_encode21(INT n)
   return (((x0_4<<2 | x5_6)<<2 | x7_8)<<11 | x9_19)<<1 | x20;
 }
 #endif /* HPUX */
-
-/* Picks a relocation variant that fits into the actual relocation's
-   shape, but holds an absolue value */
-IFASLCODE S_abs_reloc_variant(IFASLCODE type) {
-  if (type == reloc_abs)
-    return reloc_abs;
-#if defined(I386) || defined(X86_64)
-  return reloc_abs;
-#elif defined(ARMV6)
-  return reloc_arm32_abs;
-#elif defined(AARCH64)
-  return reloc_arm64_abs;
-#elif defined(PPC32)
-  if (type == reloc_ppc32_abs)
-    return reloc_ppc32_abs;
-  else
-    return reloc_abs;
-#elif defined(PORTABLE_BYTECODE)
-  return reloc_pb_abs;
-#else
-  >> need to fill in for this platform <<
-#endif
-}
 
 /* used here, in S_gc(), and in compile.ss */
 void S_set_code_obj(who, typ, p, n, x, o) char *who; IFASLCODE typ; iptr n, o; ptr p, x; {
@@ -1578,19 +1545,27 @@ ptr S_get_code_obj(typ, p, n, o) IFASLCODE typ; iptr n, o; ptr p; {
     return (ptr)(item - o);
 }
 
-
 #ifdef PORTABLE_BYTECODE
 
 /* Address pieces in a movz,movk,movk,movk sequence are upper 16 bits */
 #define ADDRESS_BITS_SHIFT 16
-#define ADDRESS_BITS_MASK  ((U32)0xffff0000)
+#define ADDRESS_BITS_MASK  ((U32)0xFFFF0000)
+#define DEST_REG_MASK      0xF00
 
 static void pb_set_abs(void *address, uptr item) {
-  ((U32 *)address)[0] = ((((U32 *)address)[0] & ~ADDRESS_BITS_MASK) | ((item & 0xFFFF) << ADDRESS_BITS_SHIFT));
-  ((U32 *)address)[1] = ((((U32 *)address)[1] & ~ADDRESS_BITS_MASK) | (((item >> 16) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  /* First word can have an arbitrary value due to vfasl offset
+     storage, so get the target register from the end: */
 #if ptr_bytes == 8  
-  ((U32 *)address)[2] = ((((U32 *)address)[2] & ~ADDRESS_BITS_MASK) | (((item >> 32) & 0xFFFF) << ADDRESS_BITS_SHIFT));
-  ((U32 *)address)[3] = ((((U32 *)address)[3] & ~ADDRESS_BITS_MASK) | (((item >> 48) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  int dest_reg = ((U32 *)address)[3] & DEST_REG_MASK;
+#else
+  int dest_reg = ((U32 *)address)[1] & DEST_REG_MASK;
+#endif
+
+  ((U32 *)address)[0] = (pb_mov16_pb_zero_bits_pb_shift0 | dest_reg | ((item & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  ((U32 *)address)[1] = (pb_mov16_pb_keep_bits_pb_shift1 | dest_reg | (((item >> 16) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+#if ptr_bytes == 8  
+  ((U32 *)address)[2] = (pb_mov16_pb_keep_bits_pb_shift2 | dest_reg | (((item >> 32) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  ((U32 *)address)[3] = (pb_mov16_pb_keep_bits_pb_shift3 | dest_reg | (((item >> 48) & 0xFFFF) << ADDRESS_BITS_SHIFT));
 #endif
 }
 
@@ -1604,17 +1579,17 @@ static uptr pb_get_abs(void *address) {
           );
 }
 
-#endif /* AARCH64 */
+#endif /* PORTABLE_BYTECODE */
 
 #ifdef ARMV6
 static void arm32_set_abs(void *address, uptr item) {
   /* code generator produces ldrlit destreg, 0; brai 0; long 0 */
-  /* we change long 0 => long item */
-  *((U32 *)address + 2) = item;
+  /* given address is at long 0, which we change to `item` */
+  *((U32 *)address) = item;
 }
 
 static uptr arm32_get_abs(void *address) {
-  return *((U32 *)address + 2);
+  return *((U32 *)address);
 }
 
 #define MAKE_B(n) (0xEA000000 | (n))
@@ -1667,11 +1642,24 @@ static uptr arm32_get_jump(void *address) {
 #define ADDRESS_BITS_SHIFT 5
 #define ADDRESS_BITS_MASK  ((U32)0x1fffe0)
 
+/* Dest register in either movz or movk: */
+#define DEST_REG_MASK 0x1F
+
+#define MOVZ_OPCODE    0xD2800000
+#define MOVK_OPCODE    0xF2800000
+#define SHIFT16_OPCODE 0x00200000
+#define SHIFT32_OPCODE 0x00400000
+#define SHIFT48_OPCODE 0x00600000
+
 static void arm64_set_abs(void *address, uptr item) {
-  ((U32 *)address)[0] = ((((U32 *)address)[0] & ~ADDRESS_BITS_MASK) | ((item & 0xFFFF) << ADDRESS_BITS_SHIFT));
-  ((U32 *)address)[1] = ((((U32 *)address)[1] & ~ADDRESS_BITS_MASK) | (((item >> 16) & 0xFFFF) << ADDRESS_BITS_SHIFT));
-  ((U32 *)address)[2] = ((((U32 *)address)[2] & ~ADDRESS_BITS_MASK) | (((item >> 32) & 0xFFFF) << ADDRESS_BITS_SHIFT));
-  ((U32 *)address)[3] = ((((U32 *)address)[3] & ~ADDRESS_BITS_MASK) | (((item >> 48) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  /* First word can have an arbitrary value due to vfasl offset
+     storage, so get the target register from the end: */
+  int dest_reg = ((U32 *)address)[3] & DEST_REG_MASK;
+  
+  ((U32 *)address)[0] = (MOVZ_OPCODE | dest_reg | ((item & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  ((U32 *)address)[1] = (MOVK_OPCODE | SHIFT16_OPCODE | dest_reg | (((item >> 16) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  ((U32 *)address)[2] = (MOVK_OPCODE | SHIFT32_OPCODE | dest_reg | (((item >> 32) & 0xFFFF) << ADDRESS_BITS_SHIFT));
+  ((U32 *)address)[3] = (MOVK_OPCODE | SHIFT48_OPCODE | dest_reg | (((item >> 48) & 0xFFFF) << ADDRESS_BITS_SHIFT));
 }
 
 static uptr arm64_get_abs(void *address) {
@@ -1688,21 +1676,26 @@ static uptr arm64_get_abs(void *address) {
 #define UPDATE_ADDIS(item, instr) (((instr) & ~0xFFFF) | (((item) >> 16) & 0xFFFF))
 #define UPDATE_ADDI(item, instr)  (((instr) & ~0xFFFF) | ((item) & 0xFFFF))
 
-#define MAKE_B(disp, callp) ((18 << 26) | (((disp) & 0xFFFFFF) << 2) | (callp))
-#define MAKE_ADDIS(item)    ((15 << 26) | (((item) >> 16) & 0xFFFF))
-#define MAKE_ORI(item)      ((24 << 26) | ((item) & 0xFFFF))
-#define MAKE_NOP            ((24 << 26))
-#define MAKE_MTCTR          ((31 << 26) | (9 << 16) | (467 << 1))
-#define MAKE_BCTR(callp)    ((19 << 26) | (20 << 21) | (528 << 1) | (callp))
+#define MAKE_B(disp, callp)   ((18 << 26) | (((disp) & 0xFFFFFF) << 2) | (callp))
+#define MAKE_ADDIS(reg, item) ((15 << 26) | (((item) >> 16) & 0xFFFF))
+#define MAKE_ADDI(reg, item)  ((14 << 26) | ((item) & 0xFFFF))
+#define MAKE_ORI(item)        ((24 << 26) | ((item) & 0xFFFF))
+#define MAKE_NOP              ((24 << 26))
+#define MAKE_MTCTR            ((31 << 26) | (9 << 16) | (467 << 1))
+#define MAKE_BCTR(callp)      ((19 << 26) | (20 << 21) | (528 << 1) | (callp))
+
+#define DEST_REG_MASK         (0xF << 21)
 
 static void ppc32_set_abs(void *address, uptr item) {
   /* code generator produces addis destreg, %r0, 0 (hi) ; addi destreg, destreg, 0 (lo) */
   /* we change 0 (hi) => upper 16 bits of address */
   /* we change 0 (lo) => lower 16 bits of address */
   /* low part is signed: if negative, increment high part */
+  /* but the first word may have been overritten for vfasl */
+  int dest_reg = (*((U32 *)address + 1)) & DEST_REG_MASK;
   item = item + (item << 1 & 0x10000);
-  *((U32 *)address + 0) = UPDATE_ADDIS(item, *((U32 *)address + 0));
-  *((U32 *)address + 1) = UPDATE_ADDI(item, *((U32 *)address + 1));
+  *((U32 *)address + 0) = dest_reg | MAKE_ADDIS(item);
+  *((U32 *)address + 1) = dest_reg | dest_reg >> 5 | MAKE_ADDI(item);
 }
 
 static uptr ppc32_get_abs(void *address) {
