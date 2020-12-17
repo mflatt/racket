@@ -1829,7 +1829,10 @@
     ; create boot loader (invoke) for entry into Scheme from C
     (lambda (out machine . bootfiles)
       (do-make-boot-header who out machine bootfiles)))
-  
+
+  (set! $emit-boot-header emit-boot-header)
+
+  #;
   (set-who! vfasl-convert-file
     (let ([->vfasl (foreign-procedure "(cs)to_vfasl" (scheme-object) scheme-object)]
           [vfasl-can-combine? (foreign-procedure "(cs)vfasl_can_combinep" (scheme-object) boolean)])

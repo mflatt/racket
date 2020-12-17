@@ -113,11 +113,12 @@ extern void S_phantom_bytevector_adjust PROTO((ptr ph, uptr new_sz));
 
 /* fasl.c */
 extern void S_fasl_init PROTO((void));
-ptr S_fasl_read PROTO((INT fd, IFASLCODE situation, ptr path, ptr externals));
-ptr S_bv_fasl_read PROTO((ptr bv, int ty, uptr offset, uptr len, ptr path, ptr externals));
-ptr S_boot_read PROTO((INT fd, const char *path));
-char *S_format_scheme_version PROTO((uptr n));
-char *S_lookup_machine_type PROTO((uptr n));
+extern ptr S_fasl_read PROTO((INT fd, IFASLCODE situation, ptr path, ptr externals));
+extern ptr S_bv_fasl_read PROTO((ptr bv, int ty, uptr offset, uptr len, ptr path, ptr externals));
+extern ptr S_boot_read PROTO((INT fd, const char *path));
+extern char *S_format_scheme_version PROTO((uptr n));
+extern char *S_lookup_machine_type PROTO((uptr n));
+extern IFASLCODE S_abs_reloc_variant PROTO((IFASLCODE type));
 extern void S_set_code_obj PROTO((char *who, IFASLCODE typ, ptr p, iptr n,
              ptr x, iptr o));
 extern ptr S_get_code_obj PROTO((IFASLCODE typ, ptr p, iptr n, iptr o));

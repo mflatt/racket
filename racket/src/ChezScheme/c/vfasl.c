@@ -55,25 +55,7 @@ e   \_  [bitmap of pointers to relocate]
 
 typedef uptr vfoff;
 
-/* Similar to allocation spaces, but not all allocation spaces are
-   represented, and these spaces are more fine-grained in some
-   cases: */
-enum {
-  vspace_symbol,
-  vspace_rtd,
-  vspace_closure,
-  vspace_impure,
-  vspace_pure_typed,
-  vspace_impure_record,
-  /* rest rest are at then end to make the pointer bitmap
-     end with zeros (that can be dropped): */
-  vspace_code,
-  vspace_data,
-  vspace_reloc, /* can be dropped after direct to static generation */
-  vspaces_count
-};
-
-/* Needs to match order above, maps vfasl spaces to allocation
+/* Needs to match vspace enum order, maps vfasl spaces to allocation
    spaces: */
 static ISPC vspace_spaces[] = {
   space_symbol,
@@ -86,20 +68,6 @@ static ISPC vspace_spaces[] = {
   space_data,
   space_data /* reloc --- but not really, since relocs are never in static */
 };
-
-typedef struct vfasl_header {
-  vfoff data_size;
-  vfoff table_size;
-
-  vfoff result_offset;
-
-  /* first starting offset is 0, so skip it in this array: */
-  vfoff vspace_rel_offsets[vspaces_count-1];
-
-  vfoff symref_count;
-  vfoff rtdref_count;
-  vfoff singletonref_count;
-} vfasl_header;
 
 /************************************************************/
 /* Encode-time data structures                              */
@@ -148,9 +116,6 @@ typedef struct vfasl_info {
 #define ptr_add(p, n) ((ptr)((uptr)(p) + (n)))
 #define ptr_subtract(p, n) ((ptr)((uptr)(p) - (n)))
 #define ptr_diff(p, q) ((uptr)(p) - (uptr)(q))
-
-#define byte_bits      8
-#define log2_byte_bits 3
 
 #define segment_align(size) (((size)+bytes_per_segment-1) & ~(bytes_per_segment-1))
 
@@ -212,7 +177,8 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
 # define VSPACE_LENGTH(s) (vspace_offsets[(s)+1] - vspace_offsets[(s)])
 # define VSPACE_END(s) ptr_add(vspaces[(s)], VSPACE_LENGTH(s))
   ptr tc = get_thread_context();
-  vfasl_header header;
+  octet header_space[size_vfasl_header];
+  ptr header = TO_PTR(header_space);
   ptr table;
   vfoff *symrefs, *rtdrefs, *singletonrefs;
   octet *bm, *bm_end;
@@ -226,23 +192,23 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
     S_error("fasl-read", "input length mismatch");
 
   if (bv)
-    memcpy(&header, &BVIT(bv, offset), sizeof(vfasl_header));
+    memcpy(&header_space, &BVIT(bv, offset), size_vfasl_header);
   else {
-    if (S_fasl_stream_read(stream, (octet*)&header, sizeof(header)) < 0)
+    if (S_fasl_stream_read(stream, header_space, size_vfasl_header) < 0)
       S_error("fasl-read", "input truncated");
   }
 
-  used_len += header.data_size + header.table_size;
+  used_len += VFASLHEADER_DATA_SIZE(header) + VFASLHEADER_TABLE_SIZE(header);
   if (used_len > input_len)
     S_error("fasl-read", "input length mismatch");
 
   vspace_offsets[0] = 0;
   for (s = 1; s < vspaces_count; s++) {
-    vspace_offsets[s] = header.vspace_rel_offsets[s-1];
+    vspace_offsets[s] = VFASLHEADER_VSPACE_REL_OFFSETS(header, s-1);
   }
-  vspace_offsets[vspaces_count] = header.data_size;
+  vspace_offsets[vspaces_count] = VFASLHEADER_DATA_SIZE(header);
 
-  bv_addr = (bv ? &BVIT(bv, sizeof(vfasl_header) + offset) : NULL);
+  bv_addr = (bv ? &BVIT(bv, size_vfasl_header + offset) : NULL);
 
   to_static = (S_vfasl_boot_mode > 0);
   
@@ -285,18 +251,18 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
   if (bv)
     table = TO_PTR(bv_addr);
   else {
-    newspace_find_room(tc, typemod, ptr_align(header.table_size), table);
-    if (S_fasl_stream_read(stream, TO_VOIDP(table), header.table_size) < 0)
+    newspace_find_room(tc, typemod, ptr_align(VFASLHEADER_TABLE_SIZE(header)), table);
+    if (S_fasl_stream_read(stream, TO_VOIDP(table), VFASLHEADER_TABLE_SIZE(header)) < 0)
       S_error("fasl-read", "input truncated");
   }
 
   symrefs = TO_VOIDP(table);
-  rtdrefs = TO_VOIDP(ptr_add(TO_PTR(symrefs), header.symref_count * sizeof(vfoff)));
-  singletonrefs = TO_VOIDP(ptr_add(TO_PTR(rtdrefs), header.rtdref_count * sizeof(vfoff)));
-  bm = TO_VOIDP(ptr_add(TO_PTR(singletonrefs), header.singletonref_count * sizeof(vfoff)));
-  bm_end = TO_VOIDP(ptr_add(TO_PTR(table), header.table_size));
+  rtdrefs = TO_VOIDP(ptr_add(TO_PTR(symrefs), VFASLHEADER_SYMREF_COUNT(header) * sizeof(vfoff)));
+  singletonrefs = TO_VOIDP(ptr_add(TO_PTR(rtdrefs), VFASLHEADER_RTDREF_COUNT(header) * sizeof(vfoff)));
+  bm = TO_VOIDP(ptr_add(TO_PTR(singletonrefs), VFASLHEADER_SINGLETONREF_COUNT(header) * sizeof(vfoff)));
+  bm_end = TO_VOIDP(ptr_add(TO_PTR(table), VFASLHEADER_TABLE_SIZE(header)));
 
-#if 0
+#if 1
   printf("\n"
          "hdr  %ld\n"
          "syms %ld\n"
@@ -307,7 +273,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
          "data %ld\n"
          "othr %ld\n"
          "tabl %ld  symref %ld  rtdref %ld  sglref %ld\n",
-         sizeof(vfasl_header),
+         (uptr)size_vfasl_header,
          VSPACE_LENGTH(vspace_symbol),
          VSPACE_LENGTH(vspace_rtd),
          VSPACE_LENGTH(vspace_closure),
@@ -317,12 +283,23 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
          (VSPACE_LENGTH(vspace_impure)
           + VSPACE_LENGTH(vspace_pure_typed)
           + VSPACE_LENGTH(vspace_impure_record)),
-         header.table_size,
-         header.symref_count * sizeof(vfoff),
-         header.rtdref_count * sizeof(vfoff),
-         header.singletonref_count * sizeof(vfoff));
+         VFASLHEADER_TABLE_SIZE(header),
+         VFASLHEADER_SYMREF_COUNT(header) * sizeof(vfoff),
+         VFASLHEADER_RTDREF_COUNT(header) * sizeof(vfoff),
+         VFASLHEADER_SINGLETONREF_COUNT(header) * sizeof(vfoff));
 #endif
 
+  if (VSPACE_LENGTH(vspace_rtd) > 0) {
+    ptr rtd = TYPE(vspaces[vspace_rtd], type_typed_object);
+    ptr rtd_end = TYPE(VSPACE_END(vspace_rtd), type_typed_object);
+
+    while (1) {
+      rtd = ptr_add(rtd, size_record_type);
+      if (rtd == rtd_end)
+        break;
+    }
+  }
+    
   /* We have to convert an offset relative to the start of data in the
      vfasl format to an offset relative to an individual space, at
      least for target generations other than 0. Rely on the fact that
@@ -379,7 +356,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
   {
     SPACE_OFFSET_DECLS;
     vfoff i;
-    for (i = 0; i < header.singletonref_count; i++) {
+    for (i = 0; i < VFASLHEADER_SINGLETONREF_COUNT(header); i++) {
       uptr r_off;
       ptr *ref;
       r_off = singletonrefs[i];
@@ -429,9 +406,6 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
               printf("\n");
             }
           }
-        } else {
-          if (INITSYMPLIST(sym) != Snil) printf("oops\n");
-          if (INITSYMSPLIST(sym) != Snil) printf("oops\n");
         }
 
         sym = ptr_add(sym, size_symbol);
@@ -447,7 +421,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
     SPACE_OFFSET_DECLS;
     ptr syms = vspaces[vspace_symbol];
     vfoff i;
-    for (i = 0; i < header.symref_count; i++) {
+    for (i = 0; i < VFASLHEADER_SYMREF_COUNT(header); i++) {
       uptr p2_off, sym_pos;
       ptr *p2, sym, val;
       p2_off = symrefs[i];
@@ -510,7 +484,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
   {
     SPACE_OFFSET_DECLS;
     vfoff i;
-    for (i = 0; i < header.rtdref_count; i++) {
+    for (i = 0; i < VFASLHEADER_RTDREF_COUNT(header); i++) {
       uptr r_off;
       ptr *ref, rtd, uid;
       r_off = rtdrefs[i];
@@ -563,7 +537,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
   {
     ptr v;
     ITYPE t;
-    v = find_pointer_from_offset(header.result_offset, vspaces, vspace_offsets);
+    v = find_pointer_from_offset(VFASLHEADER_RESULT_OFFSET(header), vspaces, vspace_offsets);
     if (((t = TYPEBITS(v)) == type_typed_object)
         && TYPEP(TYPEFIELD(v), mask_box, type_box))
       v = Sunbox(v);
@@ -615,7 +589,8 @@ static void vfasl_init(vfasl_info *vfi) {
 ptr S_to_vfasl(ptr v)
 {
   vfasl_info *vfi;
-  vfasl_header header;
+  octet header_space[size_vfasl_header];
+  ptr header = TO_PTR(header_space);
   ITYPE t;
   int s;
   uptr size, data_size, bitmap_size;
@@ -646,25 +621,25 @@ ptr S_to_vfasl(ptr v)
 
   /* Setup for second pass: allocate to contiguous bytes */
 
-  size = sizeof(vfasl_header);
+  size = size_vfasl_header;
 
   data_size = vfi->spaces[0].total_bytes;
   for (s = 1; s < vspaces_count; s++) {
-    header.vspace_rel_offsets[s-1] = data_size;
+    VFASLHEADER_VSPACE_REL_OFFSETS(header, s-1) = data_size;
     data_size += vfi->spaces[s].total_bytes;
   }
-  header.data_size = data_size;
+  VFASLHEADER_DATA_SIZE(header) = data_size;
   size += data_size;
 
   size += vfi->symref_count * sizeof(vfoff);
   size += vfi->rtdref_count * sizeof(vfoff);
   size += vfi->singletonref_count * sizeof(vfoff);
 
-  header.symref_count = vfi->symref_count;
-  header.rtdref_count = vfi->rtdref_count;
-  header.singletonref_count = vfi->singletonref_count;
+  VFASLHEADER_SYMREF_COUNT(header) = vfi->symref_count;
+  VFASLHEADER_RTDREF_COUNT(header) = vfi->rtdref_count;
+  VFASLHEADER_SINGLETONREF_COUNT(header) = vfi->singletonref_count;
 
-  header.table_size = size - data_size - sizeof(header); /* doesn't yet include the bitmap */
+  VFASLHEADER_TABLE_SIZE(header) = size - data_size - size_vfasl_header; /* doesn't yet include the bitmap */
 
   bitmap_size = (data_size + (byte_bits-1)) >> log2_byte_bits;
 
@@ -676,7 +651,7 @@ ptr S_to_vfasl(ptr v)
   p = TO_PTR(&BVIT(bv, 0));
 
   /* Skip header for now */  
-  p = ptr_add(p, sizeof(vfasl_header));
+  p = ptr_add(p, size_vfasl_header);
 
   vfi->base_addr = p;
 
@@ -720,7 +695,7 @@ ptr S_to_vfasl(ptr v)
 
   v = vfasl_copy_all(vfi, v);
 
-  header.result_offset = ptr_diff(v, vfi->base_addr);
+  VFASLHEADER_RESULT_OFFSET(header) = ptr_diff(v, vfi->base_addr);
 
   /* Make all pointers relative to the start of the data area */
   {
@@ -749,16 +724,16 @@ ptr S_to_vfasl(ptr v)
     }
 
     /* We can ignore trailing zeros */
-    header.table_size += (bitmap_size - zeros);
+    VFASLHEADER_TABLE_SIZE(header) += (bitmap_size - zeros);
   }
 
   /* Truncate bytevector to match end of bitmaps */
   {
-    uptr sz = sizeof(vfasl_header) + header.data_size + header.table_size;
+    uptr sz = size_vfasl_header + VFASLHEADER_DATA_SIZE(header) + VFASLHEADER_TABLE_SIZE(header);
     BYTEVECTOR_TYPE(bv) = (sz << bytevector_length_offset) | type_bytevector;
   }
 
-  memcpy(&BVIT(bv, 0), &header, sizeof(vfasl_header));
+  memcpy(&BVIT(bv, 0), &header_space, size_vfasl_header);
 
   sort_offsets(vfi->symrefs, vfi->symref_count);
   sort_offsets(vfi->rtdrefs, vfi->rtdref_count);
@@ -1077,45 +1052,17 @@ static int is_rtd(ptr tf, vfasl_info *vfi)
 /*************************************************************/
 /* Code and relocation handling for save and load            */
 
-#define VFASL_RELOC_TAG_BITS         3
+#define VFASL_RELOC_C_ENTRY(p) (((uptr)(p) << vfasl_reloc_tag_bits) | vfasl_reloc_c_entry_tag)
+#define VFASL_RELOC_LIBRARY_ENTRY(p) (((uptr)(p) << vfasl_reloc_tag_bits) | vfasl_reloc_library_entry_tag)
+#define VFASL_RELOC_LIBRARY_ENTRY_CODE(p) (((uptr)(p) << vfasl_reloc_tag_bits) | vfasl_reloc_library_entry_code_tag)
+#define VFASL_RELOC_SYMBOL(p) (((uptr)(p) << vfasl_reloc_tag_bits) | vfasl_reloc_symbol_tag)
+#define VFASL_RELOC_SINGLETON(p) (((uptr)(p) << vfasl_reloc_tag_bits) | vfasl_reloc_singleton_tag)
 
-#define VFASL_RELOC_C_ENTRY_TAG            1
-#define VFASL_RELOC_LIBRARY_ENTRY_TAG      2
-#define VFASL_RELOC_LIBRARY_ENTRY_CODE_TAG 3
-#define VFASL_RELOC_SYMBOL_TAG             4
-#define VFASL_RELOC_SINGLETON_TAG          5
-/* FXIME: rtds? */
+#define VFASL_RELOC_TAG(p) (UNFIX(p) & ((1 << vfasl_reloc_tag_bits) - 1))
+#define VFASL_RELOC_POS(p) (UNFIX(p) >> vfasl_reloc_tag_bits)
 
-#define VFASL_RELOC_C_ENTRY(p) (((uptr)(p) << VFASL_RELOC_TAG_BITS) | VFASL_RELOC_C_ENTRY_TAG)
-#define VFASL_RELOC_LIBRARY_ENTRY(p) (((uptr)(p) << VFASL_RELOC_TAG_BITS) | VFASL_RELOC_LIBRARY_ENTRY_TAG)
-#define VFASL_RELOC_LIBRARY_ENTRY_CODE(p) (((uptr)(p) << VFASL_RELOC_TAG_BITS) | VFASL_RELOC_LIBRARY_ENTRY_CODE_TAG)
-#define VFASL_RELOC_SYMBOL(p) (((uptr)(p) << VFASL_RELOC_TAG_BITS) | VFASL_RELOC_SYMBOL_TAG)
-#define VFASL_RELOC_SINGLETON(p) (((uptr)(p) << VFASL_RELOC_TAG_BITS) | VFASL_RELOC_SINGLETON_TAG)
-
-#define VFASL_RELOC_TAG(p) (UNFIX(p) & ((1 << VFASL_RELOC_TAG_BITS) - 1))
-#define VFASL_RELOC_POS(p) (UNFIX(p) >> VFASL_RELOC_TAG_BITS)
-
-/* Picks a relocation variant that fits into the actual relocation's
-   shape, but holds an absolue value */
 static IFASLCODE abs_reloc_variant(IFASLCODE type) {
-  if (type == reloc_abs)
-    return reloc_abs;
-#if defined(I386) || defined(X86_64)
-  return reloc_abs;
-#elif defined(ARMV6)
-  return reloc_arm32_abs;
-#elif defined(AARCH64)
-  return reloc_arm64_abs;
-#elif defined(PPC32)
-  if (type == reloc_ppc32_abs)
-    return reloc_ppc32_abs;
-  else
-    return reloc_abs;
-#elif defined(PORTABLE_BYTECODE)
-  return reloc_pb_abs;
-#else
-  >> need to fill in for this platform <<
-#endif
+  return S_abs_reloc_variant(type);
 }
 
 static ptr vfasl_encode_relocation(vfasl_info *vfi, ptr obj) {
@@ -1196,16 +1143,16 @@ static void relink_code(ptr co, ptr sym_base, ptr *vspaces, uptr *vspace_offsets
           if (Sfixnump(obj)) {
             int tag = VFASL_RELOC_TAG(obj);
             iptr pos = VFASL_RELOC_POS(obj);
-            if (tag == VFASL_RELOC_SINGLETON_TAG)
+            if (tag == vfasl_reloc_singleton_tag)
               obj = lookup_singleton(pos);
-            else if (tag == VFASL_RELOC_C_ENTRY_TAG)
+            else if (tag == vfasl_reloc_c_entry_tag)
               obj = S_lookup_c_entry(pos);
-            else if ((tag == VFASL_RELOC_LIBRARY_ENTRY_TAG)
-                     || (tag == VFASL_RELOC_LIBRARY_ENTRY_CODE_TAG)) {
+            else if ((tag == vfasl_reloc_library_entry_tag)
+                     || (tag == vfasl_reloc_library_entry_code_tag)) {
               obj = S_lookup_library_entry(pos, 1);
-              if (tag == VFASL_RELOC_LIBRARY_ENTRY_CODE_TAG)
+              if (tag == vfasl_reloc_library_entry_code_tag)
                 obj = CLOSCODE(obj);
-            } else if (tag == VFASL_RELOC_SYMBOL_TAG) {
+            } else if (tag == vfasl_reloc_symbol_tag) {
               ptr val;
               obj = TYPE(ptr_add(sym_base, symbol_pos_to_offset(pos)), type_symbol);
               if ((val = SYMVAL(obj)) != sunbound)
@@ -1333,7 +1280,9 @@ static ptr *singleton_refs[] = { &S_G.null_string,
                                  &S_G.eqp,
                                  &S_G.eqvp,
                                  &S_G.equalp,
-                                 &S_G.symboleqp };
+                                 &S_G.symboleqp,
+                                 &S_G.symbol_symbol,
+                                 &S_G.symbol_ht_rtd };
 
 static int detect_singleton(ptr p) {
   unsigned i;
@@ -1345,7 +1294,13 @@ static int detect_singleton(ptr p) {
 }
 
 static ptr lookup_singleton(iptr which) {
-  return *(singleton_refs[which-1]);
+  ptr v;
+  v = *(singleton_refs[which-1]);
+
+  if (v == Sfalse)
+    S_error_abort("vfasl: singleton not ready");
+
+  return v;
 }  
   
 /*************************************************************/

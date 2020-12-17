@@ -296,6 +296,8 @@ void S_fasl_init() {
         S_G.equalp = Sfalse;
         S_protect(&S_G.symboleqp);
         S_G.symboleqp = Sfalse;
+        S_protect(&S_G.symbol_ht_rtd);
+        S_G.symbol_ht_rtd = Sfalse;
     }
 
     MAKE_NAN(s_nan)
@@ -1368,6 +1370,29 @@ INT pax_encode21(INT n)
   return (((x0_4<<2 | x5_6)<<2 | x7_8)<<11 | x9_19)<<1 | x20;
 }
 #endif /* HPUX */
+
+/* Picks a relocation variant that fits into the actual relocation's
+   shape, but holds an absolue value */
+IFASLCODE S_abs_reloc_variant(IFASLCODE type) {
+  if (type == reloc_abs)
+    return reloc_abs;
+#if defined(I386) || defined(X86_64)
+  return reloc_abs;
+#elif defined(ARMV6)
+  return reloc_arm32_abs;
+#elif defined(AARCH64)
+  return reloc_arm64_abs;
+#elif defined(PPC32)
+  if (type == reloc_ppc32_abs)
+    return reloc_ppc32_abs;
+  else
+    return reloc_abs;
+#elif defined(PORTABLE_BYTECODE)
+  return reloc_pb_abs;
+#else
+  >> need to fill in for this platform <<
+#endif
+}
 
 /* used here, in S_gc(), and in compile.ss */
 void S_set_code_obj(who, typ, p, n, x, o) char *who; IFASLCODE typ; iptr n, o; ptr p, x; {
