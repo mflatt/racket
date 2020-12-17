@@ -473,25 +473,28 @@
            (header-k (lambda (p) (emit-header p version machine dependencies)))]
           [entry (situation fasl)
            (entry-k situation fasl)]
-          [else (sorry! "unrecognized top-level fasl-record-type ~s" x)])))
+          [else
+           (sorry! "unrecognized top-level fasl-record-type ~s" x)])))
+
+    (define (write-one-entry p situation fasl)
+      (let ([t (make-table)])
+        (build! fasl t)
+        (let-values ([(bv* size)
+                      (let-values ([(p extractor) ($open-bytevector-list-output-port)])
+                        (let ([n (table-count t)])
+                          (unless (fx= n 0)
+                            (put-u8 p (constant fasl-type-graph))
+                            (put-uptr p n)))
+                        (write-fasl p t fasl)
+                        (extractor))])
+          ($write-fasl-bytevectors p bv* size situation (constant fasl-type-fasl)))))
 
     (define write-entry
       (lambda (p x)
         (handle-entry
          x
          (lambda (write-k) (write-k p))
-         (lambda (situation fasl)
-           (let ([t (make-table)])
-             (build! fasl t)
-             (let-values ([(bv* size)
-                           (let-values ([(p extractor) ($open-bytevector-list-output-port)])
-                             (let ([n (table-count t)])
-                               (unless (fx= n 0)
-                                 (put-u8 p (constant fasl-type-graph))
-                                 (put-uptr p n)))
-                             (write-fasl p t fasl)
-                             (extractor))])
-               ($write-fasl-bytevectors p bv* size situation (constant fasl-type-fasl))))))))
+         (lambda (situation fasl) (write-one-entry p situation fasl)))))
 
     (define write-graph
       (lambda (p t x th)
@@ -924,7 +927,8 @@
                                        (lambda (x situation)
                                          (let ([bv ($fasl-to-vfasl x)])
                                            ($write-fasl-bytevectors op (list bv) (bytevector-length bv)
-                                                                    situation
+                                                                    ;; see "promoting" below:
+                                                                    (constant fasl-type-visit-revisit)
                                                                     (constant fasl-type-vfasl))))]
                                       [write-out-accum (lambda (accum situation)
                                                          (unless (null? accum)
@@ -952,6 +956,9 @@
                                                   situation
                                                   (cdr entry*))]
                                            [(or (not ($fasl-can-combine? x))
+                                                ;; improve sharing by promiting everyting to visit-revisit,
+                                                ;; instead of comparing situations
+                                                #;
                                                 (and accum-situation
                                                      (not (eqv? accum-situation situation))))
                                             (write-out-accum accum accum-situation)

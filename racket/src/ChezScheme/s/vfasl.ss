@@ -60,6 +60,10 @@
           (mutable graph)
           (mutable base-rtd)   ; write base-rtd only once
 
+          (mutable symbols)    ; intern symbols (because multiple fasl blocks may be combined)
+          (mutable rtds)       ; intern rtds (same reason)
+          (mutable strings)    ; intern certain strings (for code names)
+
           (mutable installs-library-entry?)) ; to determine whether vfasls can be combined
   (nongenerative))
 
@@ -88,6 +92,9 @@
 
                    (make-eq-hashtable)
                    #f
+                   (make-eq-hashtable)
+                   (make-eq-hashtable)
+                   (make-hashtable string-hash string=?)
 
                    #f)) ; installs-library-entry?
 
@@ -295,7 +302,7 @@
 ;; Allocate into the given vspace in a vfasl image. The result
 ;; is just the `v` part of a vptr (because it's easier to do arithmetic
 ;; with that to initialize the item).
-(define (find-room vfi vspc n type)
+(define (find-room who vfi vspc n type)
   (let ([n (c-alloc-align n)]
         [vc (vector-ref (vfasl-info-spaces vfi) vspc)])
     (constant-case* vspc
@@ -448,6 +455,7 @@
                                       vfasl-info-rtdrefs))
                          (let ([bm (vfasl-info-ptr-bitmap vfi)])
                            (when bm
+                             (safe-assert (fxzero? (fxand rel-v (fx- (constant ptr-bytes) 1))))
                              (let* ([w-rel-b (fxsra rel-v (constant log2-ptr-bytes))]
                                     [i (fx+ bm (fxsra w-rel-b (constant log2-byte-bits)))]
                                     [bit (fxsll 1 (fxand w-rel-b (fx- (constant byte-bits) 1)))]
@@ -515,7 +523,7 @@
           set-elem!
           vec-ref)
        #'(let* ([len (vec-length vec)]
-                [new-p (find-room vfi
+                [new-p (find-room 'vec-type-disp vfi
                                   (constant vspace)
                                   (fx+ (constant header-size-vec) (fx* len (constant elem-bytes)))
                                   (constant type-typed-object))])
@@ -548,23 +556,29 @@
                            (let ([i (fx* i (constant bigit-bits))])
                              (bitwise-bit-field n i (fx+ i (constant bigit-bits))))))))))
   (define (symbol-copy v name sym)
-    (let ([new-p (find-room vfi
-                            (constant vspace-symbol)
-                            (constant size-symbol)
-                            (constant type-symbol))])
-      (graph! v new-p)
-      (set-uptr! new-p (constant symbol-value-disp)
-                 ;; use value slot to store symbol index
-                 (fix (symbol-vptr->index new-p vfi))
-                 vfi)
-      (set-uptr! new-p (constant symbol-pvalue-disp) (constant snil) vfi)
-      (set-uptr! new-p (constant symbol-plist-disp) (constant snil) vfi)
-      (set-ptr! new-p (constant symbol-name-disp) name vfi)
-      (set-uptr! new-p (constant symbol-splist-disp) (constant snil) vfi)
-      (set-iptr! new-p (constant symbol-hash-disp) (fix (symbol-hash sym)) vfi)
-      new-p))
+    (let ([v2 (eq-hashtable-ref (vfasl-info-symbols vfi) sym v)])
+      (cond
+        [(not (eq? v v2))
+         (copy v2 vfi)]
+        [else
+         (eq-hashtable-set! (vfasl-info-symbols vfi) sym v)
+         (let ([new-p (find-room 'symbol vfi
+                                 (constant vspace-symbol)
+                                 (constant size-symbol)
+                                 (constant type-symbol))])
+           (graph! v new-p)
+           (set-uptr! new-p (constant symbol-value-disp)
+                      ;; use value slot to store symbol index
+                      (fix (symbol-vptr->index new-p vfi))
+                      vfi)
+           (set-uptr! new-p (constant symbol-pvalue-disp) (constant snil) vfi)
+           (set-uptr! new-p (constant symbol-plist-disp) (constant snil) vfi)
+           (set-ptr! new-p (constant symbol-name-disp) name vfi)
+           (set-uptr! new-p (constant symbol-splist-disp) (constant snil) vfi)
+           (set-iptr! new-p (constant symbol-hash-disp) (fix (symbol-hash sym)) vfi)
+           new-p)])))
   (define (pair-copy a d)
-    (let* ([new-p (find-room vfi
+    (let* ([new-p (find-room 'pair vfi
                              (constant vspace-impure)
                              (constant size-pair)
                              (constant type-pair))])
@@ -572,10 +586,15 @@
       (set-ptr! new-p (constant pair-cdr-disp) d vfi)
       new-p))
   (define (string-copy name)
-    (copy (fasl-string (constant fasl-type-immutable-string) name) vfi))
+    ;; interns `name` so that symbols and code share
+    (let ([s (or (hashtable-ref (vfasl-info-strings vfi) name #f)
+                 (let ([s (fasl-string (constant fasl-type-immutable-string) name)])
+                   (hashtable-set! (vfasl-info-strings vfi) name s)
+                   s))])
+      (copy s vfi)))
   (define (base-rtd-copy v)
     (let ([new-p (or (vfasl-info-base-rtd vfi)
-                     (find-room vfi
+                     (find-room 'base-rtd vfi
                                 (constant vspace-rtd)
                                 (constant size-record-type)
                                 (constant type-typed-object)))])
@@ -587,6 +606,15 @@
     (let ([bv (make-bytevector 8)])
       (bytevector-u64-native-set! bv 0 (bitwise-ior low (bitwise-arithmetic-shift high 32)))
       (bytevector-ieee-double-native-ref bv 0)))
+  (define (build-symbol v)
+    (or (fasl-case* v
+          [(string ty string)
+           (if (eq? ty (constant fasl-type-symbol))
+               (string->symbol string)
+               #f)]
+          [(gensym pname uname) (gensym pname uname)]
+          [else #f])
+        (error 'vfasl "expected a symbol: ~s" v)))
   (fasl-case* v
     [(atom ty uptr)
      (constant-case* ty
@@ -598,7 +626,7 @@
     [(large-integer sign vuptr)
      (exact-integer-copy v (build-exact-integer sign vuptr))]
     [(flonum high low)
-     (let ([new-p (find-room vfi
+     (let ([new-p (find-room 'flonum vfi
                              (constant vspace-data)
                              (constant size-flonum)
                              (constant type-flonum))])
@@ -613,7 +641,7 @@
          [else
           ;; can't just use `pair-copy` for initial pair, because we need
           ;; to set up the graph:
-          (let ([new-p (find-room vfi
+          (let ([new-p (find-room 'pair vfi
                                   (constant vspace-impure)
                                   (constant size-pair)
                                   (constant type-pair))])
@@ -631,7 +659,7 @@
      (constant-case* ty
        [(fasl-type-base-rtd) (base-rtd-copy v)]
        [(fasl-type-box fasl-type-immutable-box)
-        (let ([new-p (find-room vfi
+        (let ([new-p (find-room 'box vfi
                                 (constant vspace-impure)
                                 (constant size-box)
                                 (constant type-typed-object))])
@@ -644,7 +672,7 @@
           (set-ptr! new-p (constant box-ref-disp) (copy (vector-ref vec 0) vfi) vfi)
           new-p)]
        [(fasl-type-ratnum)
-        (let ([new-p (find-room vfi
+        (let ([new-p (find-room 'ratnum vfi
                                 (constant vspace-impure)
                                 (constant size-ratnum)
                                 (constant type-typed-object))])
@@ -654,7 +682,7 @@
           (set-ptr! new-p (constant ratnum-denominator-disp) (copy (vector-ref vec 1) vfi) vfi)
           new-p)]
        [(fasl-type-exactnum)
-        (let ([new-p (find-room vfi
+        (let ([new-p (find-room 'exactnum vfi
                                 (constant vspace-impure)
                                 (constant size-exactnum)
                                 (constant type-typed-object))])
@@ -664,7 +692,7 @@
           (set-ptr! new-p (constant exactnum-real-disp) (copy (vector-ref vec 1) vfi) vfi)
           new-p)]
        [(fasl-type-inexactnum)
-        (let ([new-p (find-room vfi
+        (let ([new-p (find-room 'inexactnum vfi
                                 (constant vspace-data)
                                 (constant size-inexactnum)
                                 (constant type-typed-object))])
@@ -688,25 +716,26 @@
                      (string-copy string)
                      (string->symbol string))]
        [else
-        (cond
-          [(fx= 0 (string-length string))
-           (make-vsingleton (if (eqv? ty (constant fasl-type-immutable-string))
-                                (constant singleton-null-immutable-string)
-                                (constant singleton-null-string)))]
-          [else
-           (vector-copy v string
-                        string-length
-                        vspace-data
-                        header-size-string string-data-disp
-                        string-char-bytes
-                        (bitwise-ior (bitwise-arithmetic-shift-left (string-length string) (constant string-length-offset))
-                                     (if (eqv? ty (constant fasl-type-immutable-string))
-                                         (constant string-immutable-flag)
-                                         0)
-                                     (constant type-string))
-                        string-type-disp
-                        set-char!
-                        string-ref)])])]
+        (let ([immutable? (eqv? ty (constant fasl-type-immutable-string))])
+          (cond
+            [(fx= 0 (string-length string))
+             (make-vsingleton (if immutable?
+                                  (constant singleton-null-immutable-string)
+                                  (constant singleton-null-string)))]
+            [else
+             (vector-copy v string
+                          string-length
+                          vspace-data
+                          header-size-string string-data-disp
+                          string-char-bytes
+                          (bitwise-ior (bitwise-arithmetic-shift-left (string-length string) (constant string-length-offset))
+                                       (if immutable?
+                                           (constant string-immutable-flag)
+                                           0)
+                                       (constant type-string))
+                          string-type-disp
+                          set-char!
+                          string-ref)]))])]
     [(gensym pname uname)
      (symbol-copy v (pair-copy (string-copy uname) (string-copy pname)) (gensym pname uname))]
     [(vector ty vec)
@@ -799,9 +828,16 @@
      (cond
        [(refers-back-to-self? v rtd)
         (base-rtd-copy v)]
+       [(and maybe-uid
+             (let ([v2 (eq-hashtable-ref (vfasl-info-rtds vfi) (build-symbol maybe-uid) v)])
+               (and (not (eq? v2 v))
+                    v2)))
+        => (lambda (v2)
+             (copy v2 vfi))]
        [else
         (let ([rtd-p (copy rtd vfi)])
           (when maybe-uid
+            (eq-hashtable-set! (vfasl-info-rtds vfi) (build-symbol maybe-uid) v)
             ;; make sure parent type is earlier
             (for-each (lambda (fld)
                         (field-case (car fld*)
@@ -816,7 +852,7 @@
                           (constant vspace-pure-typed)]
                          [else
                           (constant vspace-impure-record)])]
-                 [new-p (find-room vfi vspc size (constant type-typed-object))])
+                 [new-p (find-room 'record vfi vspc size (constant type-typed-object))])
             (graph! v new-p)
             (set-ptr! new-p (constant record-type-disp) rtd-p vfi)
             (let loop ([addr (constant record-data-disp)]
@@ -845,13 +881,16 @@
             new-p))])]
     [(closure offset c)
      (let* ([c-v (copy c vfi)]
-            [new-p (find-room vfi (constant vspace-closure) (constant header-size-closure) (constant type-closure))])
+            [new-p (find-room 'closure vfi
+                              (constant vspace-closure)
+                              (constant header-size-closure)
+                              (constant type-closure))])
        (graph! v new-p)
        (set-ptr!/no-record new-p (constant closure-code-disp) (vptr+ c-v offset) vfi)
        new-p)]
     [(code flags free name arity-mask info pinfo* bytes m vreloc)
      (let* ([len (bytevector-length bytes)]
-            [new-p (find-room vfi
+            [new-p (find-room 'code vfi
                               (constant vspace-code)
                               (fx+ (constant header-size-code) len)
                               (constant type-typed-object))])
@@ -861,9 +900,18 @@
                                (constant type-code))
                   vfi)
        (set-uptr! new-p (constant code-length-disp) len vfi)
-       (set-ptr! new-p (constant code-name-disp) (copy name vfi) vfi)
+       (set-ptr! new-p (constant code-name-disp)
+                 (fasl-case* name
+                   [(string ty string)
+                    ;; imitate string interning that fasl read performs:
+                    (if (or (eqv? ty (constant fasl-type-string))
+                            (eqv? ty (constant fasl-type-immutable-string)))
+                        (string-copy string)
+                        (copy name vfi))]
+                   [else (copy name vfi)])
+                 vfi)
        (set-ptr! new-p (constant code-arity-mask-disp) (copy arity-mask vfi) vfi)
-       (set-uptr! new-p (constant code-arity-mask-disp) free vfi)
+       (set-uptr! new-p (constant code-closure-length-disp) free vfi)
        (set-ptr! new-p (constant code-info-disp) (copy info vfi) vfi)
        (set-ptr! new-p (constant code-pinfo*-disp) (copy pinfo* vfi) vfi)
        (copy-u8s! new-p (constant code-data-disp) bytes 0 len vfi)
@@ -871,13 +919,13 @@
        (set-ptr!/no-record new-p (constant code-reloc-disp) (copy-reloc m vreloc new-p vfi) vfi)
        new-p)]
     [(symbol-hashtable mutable? minlen subtype veclen vpfasl)
-     (let* ([flds (rtd-flds #%$symbol-ht-rtd)]
+     (let* ([flds (rtd-flds $symbol-ht-rtd)]
             [len (fx* (length flds) (constant ptr-bytes))]
-            [new-p (find-room vfi
+            [new-p (find-room 'symbol-ht vfi
                               (constant vspace-impure)
                               (fx+ (constant header-size-record) len)
                               (constant type-typed-object))]
-            [vec-p (find-room vfi
+            [vec-p (find-room 'symbol-ht-vector vfi
                               (constant vspace-impure)
                               (fx+ (constant header-size-vector) (fx* veclen (constant ptr-bytes)))
                               (constant type-typed-object))]
@@ -952,7 +1000,7 @@
   (fix (bitwise-ior tag (bitwise-arithmetic-shift-left pos (constant vfasl-reloc-tag-bits)))))
 
 (define (copy-reloc m vreloc code-p vfi)
-  (let* ([new-p (find-room vfi
+  (let* ([new-p (find-room 'reloc vfi
                            (constant vspace-reloc)
                            (fx+ (constant header-size-reloc-table) (fx* m (constant ptr-bytes)))
                            (constant typemod))])

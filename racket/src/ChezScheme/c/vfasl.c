@@ -262,7 +262,7 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
   bm = TO_VOIDP(ptr_add(TO_PTR(singletonrefs), VFASLHEADER_SINGLETONREF_COUNT(header) * sizeof(vfoff)));
   bm_end = TO_VOIDP(ptr_add(TO_PTR(table), VFASLHEADER_TABLE_SIZE(header)));
 
-#if 1
+#if 0
   printf("\n"
          "hdr  %ld\n"
          "syms %ld\n"
@@ -393,6 +393,10 @@ ptr S_vfasl(ptr bv, void *stream, iptr offset, iptr input_len)
 
         INITSYMVAL(sym) = sunbound;
         INITSYMCODE(sym,S_G.nonprocedure_code);
+
+#if 0
+        S_prin1(sym); printf("\n");
+#endif
 
         isym = S_intern4(sym);
         if (isym != sym) {
@@ -1287,18 +1291,29 @@ static ptr *singleton_refs[] = { &S_G.null_string,
 static int detect_singleton(ptr p) {
   unsigned i;
   for (i = 0; i < sizeof(singleton_refs) / sizeof(ptr*); i++) {
-    if (p == *(singleton_refs[i]))
-      return i+1;
+    if ((i+1) != singleton_symbol_ht_rtd)
+      if (p == *(singleton_refs[i]))
+        return i+1;
   }
   return 0;
 }
 
 static ptr lookup_singleton(iptr which) {
   ptr v;
+
   v = *(singleton_refs[which-1]);
 
-  if (v == Sfalse)
-    S_error_abort("vfasl: singleton not ready");
+  if (v == Sfalse) {
+    if (which == singleton_symbol_ht_rtd) {
+      S_G.symbol_ht_rtd = SYMVAL(S_intern((const unsigned char *)"$symbol-ht-rtd"));
+      if (!Srecordp(S_G.symbol_ht_rtd)) S_error_abort("$symbol-ht-rtd has not been set");
+    } else if (which == singleton_eq) {
+      S_G.eqp = SYMVAL(S_intern((const unsigned char *)"eq?"));
+      if (!Sprocedurep(S_G.eqp)) S_error_abort("eq? has not been set");
+    } else
+      S_error_abort("vfasl: singleton not ready");
+    v = *(singleton_refs[which-1]);
+  }
 
   return v;
 }  
