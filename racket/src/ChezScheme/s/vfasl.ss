@@ -47,8 +47,6 @@
           (mutable symref-count)
           (mutable symrefs)  ; offset into bv
 
-          (mutable base-rtd) ; track replacement #!base-rtd to recognize other rtds
-
           (mutable rtdref-count)
           (mutable rtdrefs)  ; offset into bv
 
@@ -60,6 +58,7 @@
           (mutable ptr-bitmap) ; #f or offset into bv
 
           (mutable graph)
+          (mutable base-rtd)   ; write base-rtd only once
 
           (mutable installs-library-entry?)) ; to determine whether vfasls can be combined
   (nongenerative))
@@ -72,8 +71,6 @@
 
                    0 ;symref-count
                    #f
-
-                   #!base-rtd
 
                    0 ; rtdref-count
                    #f
@@ -90,6 +87,7 @@
                    #f ; ptr-bitmap
 
                    (make-eq-hashtable)
+                   #f
 
                    #f)) ; installs-library-entry?
 
@@ -162,6 +160,7 @@
           (vfasl-info-rtdref-count-set! vfi 0)
           (vfasl-info-singletonref-count-set! vfi 0)
           (vfasl-info-graph-set! vfi (make-eq-hashtable))
+          (vfasl-info-base-rtd-set! vfi #f)
 
           ;; Write data
           (let ([v (copy v vfi)])
@@ -321,20 +320,22 @@
                  (fx> new-sz limit))
         ($oops 'vfasl "allocation overrun"))
       (when (fx< (bytevector-length (vfasl-chunk-bv vc)) new-sz)
-        (let ([bv (make-bytevector (if (fxzero? sz)
-                                       (constant bytes-per-segment)
-                                       (fx* 2 sz)))])
+        (let ([bv (make-bytevector (fx+ (if (fxzero? sz)
+                                            (constant bytes-per-segment)
+                                            (fx* 2 (bytevector-length (vfasl-chunk-bv vc))))
+                                        (segment-truncate n)))])
           (bytevector-copy! (vfasl-chunk-bv vc) 0 bv 0 sz)
           (vfasl-chunk-bv-set! vc bv)))
       (vfasl-chunk-alloc-set! vc new-sz)
-      (fx- sz (fx- (constant typemod) type)))))
+      (make-vptr (fx- sz (fx- (constant typemod) type))
+                 vspc))))
 
 (define vptr->bytevector+offset
   (case-lambda
-   [(p vfi) (vptr->bytevector+offset (vptr-v p) (vptr-vspace p) vfi)]
-   [(v vspc vfi)
-    (let ([vc (vector-ref (vfasl-info-spaces vfi) vspc)])
-      (values (vfasl-chunk-bv vc) (fx+ (vfasl-chunk-offset vc) v)))]))
+   [(p vfi) (vptr->bytevector+offset p 0 vfi)]
+   [(p delta vfi)
+    (let ([vc (vector-ref (vfasl-info-spaces vfi) (vptr-vspace p))])
+      (values (vfasl-chunk-bv vc) (fx+ (vfasl-chunk-offset vc) (vptr-v p) delta)))]))
 
 ;; Overloaded to either set in a bytevector or set in a vfasl image:
 (define set-uptr!
@@ -343,8 +344,8 @@
     (constant-case ptr-bytes
       [(4) (bytevector-u32-set! bv i uptr (constant native-endianness))]
       [(8) (bytevector-u64-set! bv i uptr (constant native-endianness))])]
-   [(v vspc uptr vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta uptr vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (set-uptr! bv offset uptr))]))
 
 ;; Overloaded in the same way as `set-uptr!`
@@ -354,8 +355,8 @@
     (constant-case ptr-bytes
       [(4) (bytevector-u32-ref bv i (constant native-endianness))]
       [(8) (bytevector-u64-ref bv i (constant native-endianness))])]
-   [(v vspc vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (ref-uptr bv offset))]))
 
 ;; Overloaded in the same way as `set-uptr!`
@@ -365,8 +366,8 @@
     (constant-case ptr-bytes
       [(4) (bytevector-s32-set! bv i uptr (constant native-endianness))]
       [(8) (bytevector-s64-set! bv i uptr (constant native-endianness))])]
-   [(v vspc uptr vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta uptr vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (set-iptr! bv offset uptr))]))
 
 ;; Overloaded in the same way as `set-uptr!`
@@ -374,8 +375,8 @@
   (case-lambda
    [(bv i dbl)
     (bytevector-ieee-double-set! bv i dbl (constant native-endianness))]
-   [(v vspc dbl vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta dbl vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (set-double! bv offset dbl))]))
 
 ;; Overloaded in the same way as `set-uptr!`
@@ -386,18 +387,18 @@
                           (constant type-char))])
       (constant-case string-char-bytes
         [(4) (bytevector-u32-set! bv i n (constant native-endianness))]))]
-   [(v vspc char vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta char vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (set-char! bv offset char))]))
 
 (define set-u8!
   (case-lambda
-   [(v vspc u8 vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta u8 vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (bytevector-u8-set! bv offset u8))]))
 
-(define (copy-u8s! v vspc bv bv-off len vfi)
-  (let-values ([(dest-bv offset) (vptr->bytevector+offset v vspc vfi)])
+(define (copy-u8s! p delta bv bv-off len vfi)
+  (let-values ([(dest-bv offset) (vptr->bytevector+offset p delta vfi)])
     (bytevector-copy! bv bv-off dest-bv offset len)))
 
 ;; Overloaded in the same way as `set-uptr!`
@@ -406,16 +407,16 @@
    [(bv i bigit)
     (constant-case bigit-bytes
       [(4) (bytevector-u32-set! bv i bigit (constant native-endianness))])]
-   [(v vspc bigit vfi)
-    (let-values ([(bv offset) (vptr->bytevector+offset v vspc vfi)])
+   [(p delta bigit vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (set-bigit! bv offset bigit))]))
 
 ;; Sets a pointer in a vfasl image, and optionally records the reference.
 ;; The pointer is written as a relative offset, and then it will get
 ;; adjusted when the vfasl image is loaded.
-(define (do-set-ptr! v vspc p vfi record?)
-  (let* ([vc (vector-ref (vfasl-info-spaces vfi) vspc)]
-         [rel-v (fx- (fx+ v (vfasl-chunk-offset vc))
+(define (do-set-ptr! at-p delta p vfi record?)
+  (let* ([vc (vector-ref (vfasl-info-spaces vfi) (vptr-vspace at-p))]
+         [rel-v (fx- (fx+ (vptr-v at-p) delta (vfasl-chunk-offset vc))
                      (vfasl-info-base-addr vfi))])
     (define (register! vfasl-info-ref-count
                        vfasl-info-ref-count-set!
@@ -438,7 +439,7 @@
                                     vfasl-info-symrefs))
                        ;; symbol reference are not registered in the bitmap,
                        ;; and the reference is as an index instead of address offset
-                       (fix (symbol-addr->index (vptr-v p) vfi))]
+                       (fix (symbol-vptr->index p vfi))]
                       [else
                        (when record?
                          (when (eqv? p-vspc (constant vspace-rtd))
@@ -460,14 +461,19 @@
                              vfasl-info-singletonrefs)
                   (fix (vsingleton-index p))]
                  [else p])])
-      (set-iptr! (vfasl-chunk-bv vc) (fx+ (vfasl-chunk-offset vc) v) val))))
+      (set-iptr! at-p delta val vfi))))
 
-(define (set-ptr! v vspc p vfi) (do-set-ptr! v vspc p vfi #t))
-(define (set-ptr!/no-record v vspc p vfi) (do-set-ptr! v vspc p vfi #f))
+(define (set-ptr! at-p delta p vfi) (do-set-ptr! at-p delta p vfi #t))
+(define (set-ptr!/no-record at-p delta p vfi) (do-set-ptr! at-p delta p vfi #f))
 
-(define (symbol-addr->index v vfi)
-  (let* ([vc (vector-ref (vfasl-info-spaces vfi) (constant vspace-symbol))])
-    (fxquotient (fx+ v (fx- (constant typemod) (constant type-symbol))) (constant size-symbol))))
+(define (symbol-vptr->index p vfi)
+  ;; There may be leftover space at the end of each segment containing symbols,
+  ;; we we have to compensate for that
+  (let* ([vc (vector-ref (vfasl-info-spaces vfi) (constant vspace-symbol))]
+         [offset (fx+ (vptr-v p) (fx- (constant typemod) (constant type-symbol)))]
+         [seg (quotient offset (constant bytes-per-segment))])
+    (fx+ (fx* seg (quotient (constant bytes-per-segment) (constant size-symbol)))
+         (fxquotient (fx- offset (fx* seg (constant bytes-per-segment))) (constant size-symbol)))))
 
 (define (build-exact-integer sign vuptr)
   (let loop ([v 0] [i 0])
@@ -495,6 +501,8 @@
       (do-copy v vfi)))
 
 (define (do-copy v vfi)
+  (define (graph! v new-p)
+    (eq-hashtable-set! (vfasl-info-graph vfi) v new-p))
   (define-syntax (vector-copy stx)
     (syntax-case stx ()
       [(_ v vec
@@ -507,64 +515,74 @@
           set-elem!
           vec-ref)
        #'(let* ([len (vec-length vec)]
-                [new-v (find-room vfi
+                [new-p (find-room vfi
                                   (constant vspace)
                                   (fx+ (constant header-size-vec) (fx* len (constant elem-bytes)))
-                                  (constant type-typed-object))]
-                [new-vptr (make-vptr new-v (constant vspace))])
-           (eq-hashtable-set! (vfasl-info-graph vfi) v new-vptr)
-           (set-uptr! (fx+ new-v (constant vec-type-disp)) (constant vspace) tag vfi)
+                                  (constant type-typed-object))])
+           (graph! v new-p)
+           (set-uptr! new-p (constant vec-type-disp) tag vfi)
            (let loop ([i 0])
              (unless (fx= i len)
-               (set-elem! (fx+ new-v (constant data-disp) (fx* i (constant elem-bytes))) (constant vspace)
+               (set-elem! new-p (fx+ (constant data-disp) (fx* i (constant elem-bytes)))
                           (vec-ref vec i)
                           vfi)
                (loop (fx+ i 1))))
-           new-vptr)]))
+           new-p)]))
   (define (exact-integer-copy v n)
     (if (<= (constant most-negative-fixnum) n (constant most-positive-fixnum))
         (fix n)
-        (let ([len (fxquotient (fx+ (integer-length v) (fx- (constant bigit-bits))) (constant bigit-bits))])
+        (let ([len (fxquotient (fx+ (integer-length n) (fx- (constant bigit-bits) 1)) (constant bigit-bits))])
           (vector-copy v n
                        (lambda (n) len)
                        vspace-data
                        header-size-bignum bignum-data-disp
                        bigit-bytes
                        (bitwise-ior (bitwise-arithmetic-shift-left len (constant bignum-length-offset))
-                                    (if (negative? v)
+                                    (if (negative? n)
                                         (constant type-negative-bignum)
                                         (constant type-positive-bignum)))
                        bignum-type-disp
                        set-bigit!
-                       (lambda (n i) (let ([i (fx* i (constant bigit-bits))])
-                                       (bitwise-bit-field n i (fx+ i (constant bigit-bits)))))))))
-  (define (symbol-copy name sym)
-    (let* ([vspc (constant vspace-symbol)]
-           [new-v (find-room vfi
-                             vspc
-                             (constant size-symbol)
-                             (constant type-symbol))])
-      (set-uptr! (fx+ new-v (constant symbol-value-disp)) vspc
+                       (lambda (n i)
+                         (let ([i (- len i 1)])
+                           (let ([i (fx* i (constant bigit-bits))])
+                             (bitwise-bit-field n i (fx+ i (constant bigit-bits))))))))))
+  (define (symbol-copy v name sym)
+    (let ([new-p (find-room vfi
+                            (constant vspace-symbol)
+                            (constant size-symbol)
+                            (constant type-symbol))])
+      (graph! v new-p)
+      (set-uptr! new-p (constant symbol-value-disp)
                  ;; use value slot to store symbol index
-                 (fix (symbol-addr->index new-v vfi))
+                 (fix (symbol-vptr->index new-p vfi))
                  vfi)
-      (set-uptr! (fx+ new-v (constant symbol-pvalue-disp)) vspc (constant snil) vfi)
-      (set-uptr! (fx+ new-v (constant symbol-plist-disp)) vspc (constant snil) vfi)
-      (set-ptr! (fx+ new-v (constant symbol-name-disp)) vspc name vfi)
-      (set-iptr! (fx+ new-v (constant symbol-hash-disp)) vspc (fix (symbol-hash sym)) vfi)
-      (make-vptr new-v (constant vspace-symbol))))
+      (set-uptr! new-p (constant symbol-pvalue-disp) (constant snil) vfi)
+      (set-uptr! new-p (constant symbol-plist-disp) (constant snil) vfi)
+      (set-ptr! new-p (constant symbol-name-disp) name vfi)
+      (set-uptr! new-p (constant symbol-splist-disp) (constant snil) vfi)
+      (set-iptr! new-p (constant symbol-hash-disp) (fix (symbol-hash sym)) vfi)
+      new-p))
   (define (pair-copy a d)
-    (let* ([vspc (constant vspace-impure)]
-           [new-v (find-room vfi
-                            vspc
-                            (constant size-pair)
-                            (constant type-pair))]
-           [new-vptr (make-vptr new-v vspc)])
-      (set-ptr! (fx+ new-v (constant pair-car-disp)) vspc a vfi)
-      (set-ptr! (fx+ new-v (constant pair-cdr-disp)) vspc d vfi)
-      new-vptr))
+    (let* ([new-p (find-room vfi
+                             (constant vspace-impure)
+                             (constant size-pair)
+                             (constant type-pair))])
+      (set-ptr! new-p (constant pair-car-disp) a vfi)
+      (set-ptr! new-p (constant pair-cdr-disp) d vfi)
+      new-p))
   (define (string-copy name)
     (copy (fasl-string (constant fasl-type-immutable-string) name) vfi))
+  (define (base-rtd-copy v)
+    (let ([new-p (or (vfasl-info-base-rtd vfi)
+                     (find-room vfi
+                                (constant vspace-rtd)
+                                (constant size-record-type)
+                                (constant type-typed-object)))])
+      ;; this is a placeholder, and there's no need to write any content
+      (graph! v new-p)
+      (vfasl-info-base-rtd-set! vfi new-p)
+      new-p))
   (define (build-flonum high low)
     (let ([bv (make-bytevector 8)])
       (bytevector-u64-native-set! bv 0 (bitwise-ior low (bitwise-arithmetic-shift high 32)))
@@ -580,13 +598,13 @@
     [(large-integer sign vuptr)
      (exact-integer-copy v (build-exact-integer sign vuptr))]
     [(flonum high low)
-     (let* ([vspc (constant vspace-data)]
-            [new-v (find-room vfi
-                              vspc
-                              (constant size-flonum)
-                              (constant type-flonum))])
-       (set-double! (fx+ new-v (constant flonum-data-disp)) vspc (build-flonum high low) vfi)
-       (make-vptr new-v (constant vspace-data)))]
+     (let ([new-p (find-room vfi
+                             (constant vspace-data)
+                             (constant size-flonum)
+                             (constant type-flonum))])
+       (graph! v new-p)
+       (set-double! new-p (constant flonum-data-disp) (build-flonum high low) vfi)
+       new-p)]
     [(pair vec)
      (let ([len (vector-length vec)]
            [vspc (constant vspace-impure)])
@@ -595,75 +613,66 @@
          [else
           ;; can't just use `pair-copy` for initial pair, because we need
           ;; to set up the graph:
-          (let* ([vspc (constant vspace-impure)]
-                 [new-v (find-room vfi
-                                   vspc
-                                   (constant size-pair)
-                                   (constant type-pair))]
-                 [new-vptr (make-vptr new-v vspc)])
-            (eq-hashtable-set! (vfasl-info-graph vfi) v new-vptr)
-            (set-ptr! (fx+ new-v (constant pair-car-disp)) vspc (copy (vector-ref vec 0) vfi) vfi)
+          (let ([new-p (find-room vfi
+                                  (constant vspace-impure)
+                                  (constant size-pair)
+                                  (constant type-pair))])
+            (graph! v new-p)
+            (set-ptr! new-p (constant pair-car-disp) (copy (vector-ref vec 0) vfi) vfi)
             (let ([d (let loop ([i 1])
                        (let ([e (copy (vector-ref vec i) vfi)]
                              [i (fx+ i 1)])
                          (if (fx= i len)
                              e
                              (pair-copy e (loop i)))))])
-              (set-ptr! (fx+ new-v (constant pair-cdr-disp)) vspc d vfi)
-              new-vptr))]))]
+              (set-ptr! new-p (constant pair-cdr-disp) d vfi)
+              new-p))]))]
     [(tuple ty vec)
      (constant-case* ty
-       [(fasl-type-base-rtd)
-        (let ([new-v (find-room vfi
-                                (constant vspace-rtd)
-                                (constant size-record-type)
-                                (constant type-typed-object))])
-          ;; this is a placeholder, and there's no need to write any content
-          (vfasl-info-base-rtd-set! vfi new-v)
-          (make-vptr new-v (constant vspace-rtd)))]
+       [(fasl-type-base-rtd) (base-rtd-copy v)]
        [(fasl-type-box fasl-type-immutable-box)
-        (let* ([vspc (constant vspace-impure)]
-               [new-v (find-room vfi
-                                 vspc
-                                 (constant size-box)
-                                 (constant type-typed-object))])
-          (set-uptr! (fx+ new-v (constant box-type-disp)) vspc
+        (let ([new-p (find-room vfi
+                                (constant vspace-impure)
+                                (constant size-box)
+                                (constant type-typed-object))])
+          (graph! v new-p)
+          (set-uptr! new-p (constant box-type-disp)
                      (if (eqv? ty (constant fasl-type-immutable-box))
                          (constant type-immutable-box)
                          (constant type-box))
                      vfi)
-          (set-ptr! (fx+ new-v (constant box-ref-disp)) vspc (copy (vector-ref vec 0) vfi) vfi)
-          (make-vptr new-v vspc))]
+          (set-ptr! new-p (constant box-ref-disp) (copy (vector-ref vec 0) vfi) vfi)
+          new-p)]
        [(fasl-type-ratnum)
-        (let* ([vspc (constant vspace-impure)]
-               [new-v (find-room vfi
-                                 vspc
-                                 (constant size-ratnum)
-                                 (constant type-typed-object))])
-          (set-uptr! (fx+ new-v (constant ratnum-type-disp)) vspc (constant type-ratnum) vfi)
-          (set-ptr! (fx+ new-v (constant ratnum-numerator-disp)) vspc (copy (vector-ref vec 0) vfi) vfi)
-          (set-ptr! (fx+ new-v (constant ratnum-denominator-disp)) vspc (copy (vector-ref vec 1) vfi) vfi)
-          (make-vptr new-v vspc))]
+        (let ([new-p (find-room vfi
+                                (constant vspace-impure)
+                                (constant size-ratnum)
+                                (constant type-typed-object))])
+          (graph! v new-p)
+          (set-uptr! new-p (constant ratnum-type-disp) (constant type-ratnum) vfi)
+          (set-ptr! new-p (constant ratnum-numerator-disp) (copy (vector-ref vec 0) vfi) vfi)
+          (set-ptr! new-p (constant ratnum-denominator-disp) (copy (vector-ref vec 1) vfi) vfi)
+          new-p)]
        [(fasl-type-exactnum)
-        (let* ([vspc (constant vspace-impure)]
-               [new-v (find-room vfi
-                                 vspc
-                                 (constant size-exactnum)
-                                 (constant type-typed-object))])
-          (set-uptr! (fx+ new-v (constant exactnum-type-disp)) vspc (constant type-exactnum) vfi)
-          (set-ptr! (fx+ new-v (constant exactnum-imag-disp)) vspc (copy (vector-ref vec 0) vfi) vfi)
-          (set-ptr! (fx+ new-v (constant exactnum-real-disp)) vspc (copy (vector-ref vec 1) vfi)vfi)
-          (make-vptr new-v vspc))]
+        (let ([new-p (find-room vfi
+                                (constant vspace-impure)
+                                (constant size-exactnum)
+                                (constant type-typed-object))])
+          (graph! v new-p)
+          (set-uptr! new-p (constant exactnum-type-disp) (constant type-exactnum) vfi)
+          (set-ptr! new-p (constant exactnum-imag-disp) (copy (vector-ref vec 0) vfi) vfi)
+          (set-ptr! new-p (constant exactnum-real-disp) (copy (vector-ref vec 1) vfi) vfi)
+          new-p)]
        [(fasl-type-inexactnum)
-        (let* ([vspc (constant vspace-data)]
-               [new-v (find-room vfi
-                                 vspc
-                                 (constant size-inexactnum)
-                                 (constant type-typed-object))])
-          (set-uptr! (fx+ new-v (constant inexactnum-type-disp)) vspc (constant type-exactnum) vfi)
-          (set-double! (fx+ new-v (constant inexactnum-imag-disp)) vspc (vector-ref vec 0) vfi)
-          (set-double! (fx+ new-v (constant inexactnum-real-disp)) vspc (vector-ref vec 1) vfi)
-          (make-vptr new-v vspc))]
+        (let ([new-p (find-room vfi
+                                (constant vspace-data)
+                                (constant size-inexactnum)
+                                (constant type-typed-object))])
+          (graph! v new-p)
+          (set-uptr! new-p (constant inexactnum-type-disp) (constant type-exactnum) vfi)
+          (set-double! new-p (constant inexactnum-imag-disp) (vector-ref vec 0) vfi)
+          (set-double! new-p (constant inexactnum-real-disp) (vector-ref vec 1) vfi)
+          new-p)]
        [(fasl-type-weak-pair)
         ($oops 'vfasl "weak pair not supported")]
        [(fasl-type-ephemeron)
@@ -675,7 +684,8 @@
        [(fasl-type-symbol)
         (when (string=? string "$install-library-entry")
           (vfasl-info-installs-library-entry?-set! vfi #t))
-        (symbol-copy (string-copy string)
+        (symbol-copy v
+                     (string-copy string)
                      (string->symbol string))]
        [else
         (cond
@@ -698,7 +708,7 @@
                         set-char!
                         string-ref)])])]
     [(gensym pname uname)
-     (symbol-copy (pair-copy (string-copy uname) (string-copy pname)) (gensym pname uname))]
+     (symbol-copy v (pair-copy (string-copy uname) (string-copy pname)) (gensym pname uname))]
     [(vector ty vec)
      (cond
        [(fx= 0 (vector-length vec))
@@ -786,79 +796,89 @@
                   set-ptr!
                   (lambda (v i) (copy (vector-ref v i) vfi)))]
     [(record maybe-uid size nflds rtd pad-ty* fld*)
-     ;; important to ensure that a parent is earlier in the vfasled output:
-     (let ([rtd-v (copy rtd vfi)])
-       (let* ([vspc (cond
-                      [maybe-uid
-                       (constant vspace-rtd)]
-                      [(eqv? 0 (let-values ([(bv offset) (vptr->bytevector+offset rtd-v vfi)])
-                                 (ref-uptr bv (fx+ offset (constant record-type-mpm-disp)))))
-                       (constant vspace-pure-typed)]
-                      [else
-                       (constant vspace-impure-record)])]
-              [new-v (find-room vfi vspc size (constant type-typed-object))])
-         (set-ptr! (fx+ new-v (constant record-type-disp)) vspc rtd-v vfi)
-         (let loop ([addr (fx+ new-v (constant record-data-disp))]
-                    [pad-ty* pad-ty*]
-                    [fld* fld*])
-           (unless (null? pad-ty*)
-             (let* ([pad-ty (car pad-ty*)]
-                    [addr (fx+ addr (fxsrl pad-ty 4))]
-                    [addr (field-case (car fld*)
-                            [ptr (elem)
-                             (safe-assert (eqv? (fxand pad-ty #xF) (constant fasl-fld-ptr)))
-                             (set-ptr! addr vspc (copy elem vfi) vfi)
-                             (fx+ addr (constant ptr-bytes))]
-                            [double (high low)
-                             (safe-assert (eqv? (fxand pad-ty #xF) (constant fasl-fld-double)))
-                             (set-double! addr
-                                          vspc
-                                          (build-flonum high low)
-                                          vfi)
-                             (fx+ addr (constant double-bytes))]
-                            [else
-                             (error 'vfasl "unsupported field: ~s" pad-ty)])])
-               (loop addr (cdr pad-ty*) (cdr fld*)))))
-         (make-vptr new-v vspc)))]
+     (cond
+       [(refers-back-to-self? v rtd)
+        (base-rtd-copy v)]
+       [else
+        (let ([rtd-p (copy rtd vfi)])
+          (when maybe-uid
+            ;; make sure parent type is earlier
+            (for-each (lambda (fld)
+                        (field-case (car fld*)
+                                    [ptr (elem) (copy elem vfi)]
+                                    [else (void)]))
+                      fld*))
+          (let* ([vspc (cond
+                         [maybe-uid
+                          (constant vspace-rtd)]
+                         [(eqv? 0 (let-values ([(bv offset) (vptr->bytevector+offset rtd-p vfi)])
+                                    (ref-uptr bv (fx+ offset (constant record-type-mpm-disp)))))
+                          (constant vspace-pure-typed)]
+                         [else
+                          (constant vspace-impure-record)])]
+                 [new-p (find-room vfi vspc size (constant type-typed-object))])
+            (graph! v new-p)
+            (set-ptr! new-p (constant record-type-disp) rtd-p vfi)
+            (let loop ([addr (constant record-data-disp)]
+                       [pad-ty* pad-ty*]
+                       [fld* fld*])
+              (unless (null? pad-ty*)
+                (let* ([pad-ty (car pad-ty*)]
+                       [addr (fx+ addr (fxsrl pad-ty 4))]
+                       [addr (field-case (car fld*)
+                               [ptr (elem)
+                                (safe-assert (eqv? (fxand pad-ty #xF) (constant fasl-fld-ptr)))
+                                (set-ptr! new-p addr (copy elem vfi) vfi)
+                                (fx+ addr (constant ptr-bytes))]
+                               [iptr (elem)
+                                (set-iptr! new-p addr elem vfi)
+                                (fx+ addr (constant ptr-bytes))]
+                               [double (high low)
+                                (safe-assert (eqv? (fxand pad-ty #xF) (constant fasl-fld-double)))
+                                (set-double! new-p addr
+                                             (build-flonum high low)
+                                             vfi)
+                                (fx+ addr (constant double-bytes))]
+                               [else
+                                (error 'vfasl "unsupported field: ~s" (car fld*))])])
+                  (loop addr (cdr pad-ty*) (cdr fld*)))))
+            new-p))])]
     [(closure offset c)
      (let* ([c-v (copy c vfi)]
-            [vspc (constant vspace-closure)]
-            [new-v (find-room vfi (constant vspace-closure) (constant header-size-closure) (constant type-closure))])
-       (set-ptr!/no-record (fx+ new-v (constant closure-code-disp)) vspc (vptr+ c-v offset) vfi)
-       (make-vptr new-v vspc))]
+            [new-p (find-room vfi (constant vspace-closure) (constant header-size-closure) (constant type-closure))])
+       (graph! v new-p)
+       (set-ptr!/no-record new-p (constant closure-code-disp) (vptr+ c-v offset) vfi)
+       new-p)]
     [(code flags free name arity-mask info pinfo* bytes m vreloc)
      (let* ([len (bytevector-length bytes)]
-            [vspc (constant vspace-code)]
-            [new-v (find-room vfi
-                              vspc
+            [new-p (find-room vfi
+                              (constant vspace-code)
                               (fx+ (constant header-size-code) len)
-                              (constant type-typed-object))]
-            [code-vptr (make-vptr new-v vspc)])
-       (set-uptr! (fx+ new-v (constant code-type-disp)) vspc
+                              (constant type-typed-object))])
+       (graph! v new-p)
+       (set-uptr! new-p (constant code-type-disp)
                   (bitwise-ior (bitwise-arithmetic-shift-left flags (constant code-flags-offset))
                                (constant type-code))
                   vfi)
-       (set-uptr! (fx+ new-v (constant code-length-disp)) vspc len vfi)
-       (set-ptr! (fx+ new-v (constant code-name-disp)) vspc (copy name vfi) vfi)
-       (set-ptr! (fx+ new-v (constant code-arity-mask-disp)) vspc (copy arity-mask vfi) vfi)
-       (set-uptr! (fx+ new-v (constant code-arity-mask-disp)) vspc free vfi)
-       (set-ptr! (fx+ new-v (constant code-info-disp)) vspc (copy info vfi) vfi)
-       (set-ptr! (fx+ new-v (constant code-pinfo*-disp)) vspc (copy pinfo* vfi) vfi)
-       (copy-u8s! (fx+ new-v (constant code-data-disp)) vspc bytes 0 len vfi)
+       (set-uptr! new-p (constant code-length-disp) len vfi)
+       (set-ptr! new-p (constant code-name-disp) (copy name vfi) vfi)
+       (set-ptr! new-p (constant code-arity-mask-disp) (copy arity-mask vfi) vfi)
+       (set-uptr! new-p (constant code-arity-mask-disp) free vfi)
+       (set-ptr! new-p (constant code-info-disp) (copy info vfi) vfi)
+       (set-ptr! new-p (constant code-pinfo*-disp) (copy pinfo* vfi) vfi)
+       (copy-u8s! new-p (constant code-data-disp) bytes 0 len vfi)
        ;; must be after code is copied into place:
-       (set-ptr!/no-record (fx+ new-v (constant code-reloc-disp)) vspc (copy-reloc m vreloc code-vptr vfi) vfi)
-       code-vptr)]
+       (set-ptr!/no-record new-p (constant code-reloc-disp) (copy-reloc m vreloc new-p vfi) vfi)
+       new-p)]
     [(symbol-hashtable mutable? minlen subtype veclen vpfasl)
-     (let* ([vspc (constant vspace-impure)]
-            [vec-vspc (constant vspace-impure)]
-            [flds (rtd-flds #%$symbol-ht-rtd)]
+     (let* ([flds (rtd-flds #%$symbol-ht-rtd)]
             [len (fx* (length flds) (constant ptr-bytes))]
-            [new-v (find-room vfi
-                              vspc
+            [new-p (find-room vfi
+                              (constant vspace-impure)
                               (fx+ (constant header-size-record) len)
                               (constant type-typed-object))]
-            [vec-v (find-room vfi
-                              vec-vspc
+            [vec-p (find-room vfi
+                              (constant vspace-impure)
                               (fx+ (constant header-size-vector) (fx* veclen (constant ptr-bytes)))
                               (constant type-typed-object))]
             [equiv (case subtype
@@ -873,14 +893,15 @@
              [(null? flds) ($oops 'vfasl "could not find symbol hash table field ~s" name)]
              [(eq? (fld-name (car flds)) name) addr]
              [else (loop (cdr flds) (fx+ addr (constant ptr-bytes)))])))
-       (set-ptr! (fx+ new-v (constant record-type-disp)) vspc (make-vsingleton (constant singleton-symbol-ht-rtd)) vfi)
-       (set-ptr! (fx+ new-v (field-offset 'type)) vspc (make-vsingleton (constant singleton-symbol-symbol)) vfi)
-       (set-ptr! (fx+ new-v (field-offset 'mutable?)) vspc (if mutable? (constant strue) (constant sfalse)) vfi)
-       (set-ptr! (fx+ new-v (field-offset 'vec)) vspc (make-vptr vec-v vec-vspc) vfi)
-       (set-ptr! (fx+ new-v (field-offset 'minlen)) vspc (fix minlen) vfi)
-       (set-ptr! (fx+ new-v (field-offset 'size)) vspc (fix (vector-length vpfasl)) vfi)
-       (set-ptr! (fx+ new-v (field-offset 'equiv?)) vspc equiv vfi)
-       (set-uptr! (fx+ vec-v (constant vector-type-disp)) vec-vspc
+       (graph! v new-p)
+       (set-ptr! new-p (constant record-type-disp) (make-vsingleton (constant singleton-symbol-ht-rtd)) vfi)
+       (set-ptr! new-p (field-offset 'type) (make-vsingleton (constant singleton-symbol-symbol)) vfi)
+       (set-ptr! new-p (field-offset 'mutable?) (if mutable? (constant strue) (constant sfalse)) vfi)
+       (set-ptr! new-p (field-offset 'vec) vec-p vfi)
+       (set-ptr! new-p (field-offset 'minlen) (fix minlen) vfi)
+       (set-ptr! new-p (field-offset 'size) (fix (vector-length vpfasl)) vfi)
+       (set-ptr! new-p (field-offset 'equiv?) equiv vfi)
+       (set-uptr! vec-p (constant vector-type-disp)
                   (bitwise-ior (bitwise-arithmetic-shift-left veclen (constant vector-length-offset))
                                (constant type-vector))
                   vfi)
@@ -894,25 +915,33 @@
                                              [(string ty string)
                                               (and (eqv? ty (constant fasl-type-symbol))
                                                    (symbol-hash (string->symbol string)))]
+                                             [(gensym pname uname)
+                                              (symbol-hash (gensym pname uname))]
                                              [else #f])
-                                           ($oops 'vfasl "symbol table key not a symbole ~s" (car p)))]
+                                           ($oops 'vfasl "symbol table key not a symbol ~s" (car p)))]
                                    [i (fxand hc (fx- veclen 1))])
                               (vector-set! to-vec i (pair-copy (pair-copy a b) (vector-ref to-vec i)))))
                           vpfasl)
          ;; install the vector slots:
          (let loop ([i 0])
            (unless (fx= i veclen)
-             (set-ptr! (fx+ vec-v (constant vector-data-disp) (fx* i (constant ptr-bytes))) vec-vspc
+             (set-ptr! vec-p (fx+ (constant vector-data-disp) (fx* i (constant ptr-bytes)))
                        (vector-ref to-vec i)
                        vfi)
              (loop (fx+ i 1)))))
-       (make-vptr new-v vspc))]
+       new-p)]
     [(indirect g i) (copy (vector-ref g i) vfi)]
     [else
      ($oops 'vfasl "unsupported ~s" v)]))
 
-(define (reloc-addr new-v n)
-  (fx+ new-v (constant reloc-table-data-disp) (fx* n (constant ptr-bytes))))
+(define (refers-back-to-self? v rtd)
+  (or (eq? v rtd)
+      (fasl-case* rtd
+        [(indirect g i) (refers-back-to-self? v (vector-ref g i))]
+        [else #f])))
+
+(define (reloc-addr n)
+  (fx+ (constant reloc-table-data-disp) (fx* n (constant ptr-bytes))))
 
 (define (make-short-reloc type code-offset item-offset)
   (bitwise-ior (bitwise-arithmetic-shift-left type (constant reloc-type-offset))
@@ -922,14 +951,13 @@
 (define (build-vfasl-reloc tag pos)
   (fix (bitwise-ior tag (bitwise-arithmetic-shift-left pos (constant vfasl-reloc-tag-bits)))))
 
-(define (copy-reloc m vreloc code-vptr vfi)
-  (let* ([vspc (constant vspace-reloc)]
-         [new-v (find-room vfi
-                           vspc
+(define (copy-reloc m vreloc code-p vfi)
+  (let* ([new-p (find-room vfi
+                           (constant vspace-reloc)
                            (fx+ (constant header-size-reloc-table) (fx* m (constant ptr-bytes)))
                            (constant typemod))])
-    (set-uptr! (fx+ new-v (constant reloc-table-size-disp)) vspc m vfi)
-    (set-ptr!/no-record (fx+ new-v (constant reloc-table-code-disp)) vspc code-vptr vfi)
+    (set-uptr! new-p (constant reloc-table-size-disp) m vfi)
+    (set-ptr!/no-record new-p (constant reloc-table-code-disp) code-p vfi)
     (let loop ([n 0] [a 0] [i 0])
       (unless (fx= n m)
         (fasl-case* (vector-ref vreloc i)
@@ -937,15 +965,15 @@
            (let* ([type (fxsra type-etc 2)]
                   [n (cond
                        [(fxlogtest type-etc 1)
-                        (set-uptr! (reloc-addr new-v n) vspc
+                        (set-uptr! new-p (reloc-addr n)
                                    (bitwise-ior (fxsll type (constant reloc-type-offset))
                                                 (constant reloc-extended-format))
                                    vfi)
-                        (set-uptr! (reloc-addr new-v (fx+ n 1)) vspc item-offset vfi)
-                        (set-uptr! (reloc-addr new-v (fx+ n 2)) vspc code-offset vfi)
+                        (set-uptr! new-p (reloc-addr (fx+ n 1)) item-offset vfi)
+                        (set-uptr! new-p (reloc-addr (fx+ n 2)) code-offset vfi)
                         (fx+ n 3)]
                        [else
-                        (set-uptr! (reloc-addr new-v n) vspc
+                        (set-uptr! new-p (reloc-addr n)
                                    (make-short-reloc type code-offset item-offset)
                                    vfi)
                         (fx+ n 1)])]
@@ -972,7 +1000,7 @@
                                      (cond
                                        [(eqv? (vptr-vspace elem-addr) (constant vspace-symbol))
                                         (build-vfasl-reloc (constant vfasl-reloc-symbol-tag)
-                                                           (symbol-addr->index (vptr-v elem-addr) vfi))]
+                                                           (symbol-vptr->index elem-addr vfi))]
                                        [else
                                         (let-values ([(bv offset) (vptr->bytevector+offset elem-addr vfi)])
                                           (safe-assert (not (fixed? offset)))
@@ -983,11 +1011,11 @@
                                                  (not (fixed? elem-addr)))
                                        ($oops 'vfasl "unexpected fixnum in relocation ~s" elem-addr))
                                      elem-addr])))])
-             (let-values ([(bv offset) (vptr->bytevector+offset code-vptr vfi)])
+             (let-values ([(bv offset) (vptr->bytevector+offset code-p vfi)])
                (vfasl-link-update! bv (fx+ a offset) type new-elem item-offset))
              (loop n a (fx+ i 1)))]
           [else ($oops 'vfasl "expected a relocation")])))
-    (make-vptr new-v vspc)))
+    new-p))
 
 (set! $fasl-to-vfasl to-vfasl)
 (set! $fasl-can-combine? fasl-can-combine?))

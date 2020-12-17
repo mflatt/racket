@@ -159,12 +159,16 @@ static void pstr(x) ptr x; {
 }
 
 static void display_string(x) ptr x; {
-  iptr i, n = Sstring_length(x);
-
-  for (i = 0; i < n; i += 1) {
-    int k = Sstring_ref(x, i);
-    if (k >= 256) k = '?';
-    putchar(k);
+  if (!Sstringp(x)) {
+    printf("#<garbage-string>");
+  } else {
+    iptr i, n = Sstring_length(x);
+    
+    for (i = 0; i < n; i += 1) {
+      int k = Sstring_ref(x, i);
+      if (k >= 256) k = '?';
+      putchar(k);
+    }
   }
 }
 

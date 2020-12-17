@@ -289,6 +289,14 @@
            (let ([n (read-uptr p)])
              (or (vector-ref g n)
                  (fasl-indirect g n)))]
+          [(fasl-type-begin)
+           (let loop ([n (read-uptr p)])
+             (if (fx= n 1)
+                 (read-fasl p g)
+                 (begin
+                   ;; will set graph definitions:
+                   (read-fasl p g)
+                   (loop (fx- n 1)))))]
           [else (bogus "unexpected fasl code ~s in ~a" ty (port-name p))]))))
 
   (define read-script-header

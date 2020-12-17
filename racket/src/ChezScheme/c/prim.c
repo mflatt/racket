@@ -314,7 +314,6 @@ static void s_link_code_object(co, objs) ptr co, objs; {
 
 static void s_vfasl_link_update(ptr bv, uptr offset, int orig_type, uptr val, iptr item_offset) {
   IFASLCODE type = S_abs_reloc_variant(orig_type);
-  printf("SC %d[%d] %ld %lx %ld\n", orig_type, type, offset, val, item_offset);
   S_set_code_obj("vfasl", type, TO_PTR(&BVIT(bv, 0)), offset, (ptr)val, item_offset);
 }
 

@@ -296,8 +296,6 @@ void S_fasl_init() {
         S_G.equalp = Sfalse;
         S_protect(&S_G.symboleqp);
         S_G.symboleqp = Sfalse;
-        S_protect(&S_G.symbol_ht_rtd);
-        S_G.symbol_ht_rtd = Sfalse;
     }
 
     MAKE_NAN(s_nan)
@@ -1331,6 +1329,16 @@ static IBOOL equalp(x, y) ptr x, y; {
 }
 
 static IBOOL rtd_equiv(x, y) ptr x, y; {
+
+  if (!(((RECORDINSTTYPE(x) == RECORDINSTTYPE(y))) &&
+        RECORDDESCPARENT(x) == RECORDDESCPARENT(y))) {
+    printf("uh oh... %p %p [base %p]\n", RECORDDESCPARENT(x), RECORDDESCPARENT(y), S_G.base_rtd);
+    S_prin1(RECORDDESCNAME(x)); printf("\n");
+    S_prin1(RECORDDESCUID(x)); printf("\n");
+    S_prin1(RECORDDESCNAME(y)); printf("\n");
+    S_prin1(RECORDDESCUID(y)); printf("\n");
+  }
+
   return ((RECORDINSTTYPE(x) == RECORDINSTTYPE(y))
           /* recognize `base-rtd` shape: */
           || ((RECORDINSTTYPE(x) == x)
