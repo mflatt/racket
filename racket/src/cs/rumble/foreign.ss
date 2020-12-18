@@ -522,14 +522,13 @@
    [(types abi alignment) (make-cstruct-type types abi alignment 'atomic)]
    [(types abi alignment malloc-mode)
     (let ([make-decls
-           (escapes-ok
-             (lambda (id next!-id)
-               (let-values ([(reps decls) (types->reps types next!-id)])
-                 (append decls
-                         `((define-ftype ,id
-                             (struct ,@(map (lambda (rep)
-                                              `[,(next!-id) ,rep])
-                                            reps))))))))])
+           (lambda (id next!-id)
+             (let-values ([(reps decls) (types->reps types next!-id)])
+               (append decls
+                       `((define-ftype ,id
+                           (struct ,@(map (lambda (rep)
+                                            `[,(next!-id) ,rep])
+                                          reps)))))))])
       (let-values ([(size alignment) (ctypes-sizeof+alignof types alignment)])
         (create-compound-ctype 'struct
                                'struct
@@ -545,14 +544,13 @@
   (for-each (lambda (type) (check who ctype? type))
             types)
   (let ([make-decls
-         (escapes-ok
-           (lambda (id next!-id)
-             (let-values ([(reps decls) (types->reps types next!-id)])
-               (append decls
-                       `((define-ftype ,id
-                           (union ,@(map (lambda (rep)
-                                           `[,(next!-id) ,rep])
-                                         reps))))))))]
+         (lambda (id next!-id)
+           (let-values ([(reps decls) (types->reps types next!-id)])
+             (append decls
+                     `((define-ftype ,id
+                         (union ,@(map (lambda (rep)
+                                         `[,(next!-id) ,rep])
+                                       reps)))))))]
         [size (apply max (map ctype-sizeof types))]
         [alignment (apply max (map ctype-alignof types))])
     (create-compound-ctype 'union
@@ -569,12 +567,11 @@
   (check who ctype? type)
   (check who exact-nonnegative-integer? count)
   (let ([make-decls
-         (escapes-ok
-           (lambda (id next!-id)
-             (let-values ([(reps decls) (types->reps (list type) next!-id)])
-               (append decls
-                       `((define-ftype ,id
-                           (array ,count ,(car reps))))))))]
+         (lambda (id next!-id)
+           (let-values ([(reps decls) (types->reps (list type) next!-id)])
+             (append decls
+                     `((define-ftype ,id
+                         (array ,count ,(car reps)))))))]
         [size (* count (ctype-sizeof type))]
         [alignment (ctype-alignof type)])
     (unless (fixnum? size)

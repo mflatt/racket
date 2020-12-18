@@ -528,6 +528,7 @@
        'schemify
        (define jitify-mode?
          (and (not just-expand?)
+              (not quick-mode?)
               (or (eq? linklet-compilation-mode 'jit)
                   (and (eq? linklet-compilation-mode 'mach)
                        (linklet-bigger-than? c linklet-compilation-limit serializable?)
@@ -559,9 +560,13 @@
                                (lambda (key) (values #f #f #f)))
                            import-keys))
        (define impl-lam/lifts
-         (lift-in-schemified-linklet (show pre-lift-on? "pre-lift" impl-lam)
-                                     ;; preserve loop forms?
-                                     (not (eq? linklet-compilation-mode 'interp))))
+         (if (and (eq? format 'interp)
+                  (not (and jitify-mode?
+                            (eq? linklet-compilation-mode 'mach))))
+             (lift-in-schemified-linklet (show pre-lift-on? "pre-lift" impl-lam)
+                                         ;; preserve loop forms?
+                                         #f)
+             impl-lam))
        (define impl-lam/jitified
          (cond
            [(not jitify-mode?) impl-lam/lifts]
