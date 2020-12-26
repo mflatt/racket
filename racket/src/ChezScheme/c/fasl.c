@@ -363,7 +363,7 @@ static INT uf_read(unbufFaslFile uf, octet *s, iptr n) {
 
     switch (uf->type) {
       case UFFO_TYPE_FD:
-        k = READ(uf->fd, s, (IO_SIZE_T)nx);
+        k = S_fd_read(uf->fd, s, (IO_SIZE_T)nx);
         if (k > 0)
           n -= k;
         else if (k == 0)
@@ -389,7 +389,7 @@ int S_fasl_stream_read(void *stream, octet *dest, iptr n)
 static void uf_skipbytes(unbufFaslFile uf, iptr n) {
   switch (uf->type) {
     case UFFO_TYPE_FD:
-       if (LSEEK(uf->fd, n, SEEK_CUR) == -1) {
+       if (S_fd_lseek(uf->fd, n, SEEK_CUR) == -1) {
          S_error1("", "error seeking ~a", uf->path);
        }
        break;

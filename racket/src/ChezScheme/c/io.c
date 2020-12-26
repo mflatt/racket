@@ -284,3 +284,120 @@ ptr S_directory_list(const char *inpath) {
   }
 }
 #endif /* WIN32 */
+
+/* ************************************************************ */
+
+#ifdef WIN32
+#define IO_SIZE_T unsigned int
+#else /* WIN32 */
+#define IO_SIZE_T size_t
+#endif /* WIN32 */
+
+#include <sys/stat.h>
+#include <sys/mman.h>
+
+typedef struct mapped_fd_t {
+  int fd;
+  int valid;
+  octet *data;
+  uptr read_head;
+  uptr file_offset, page_offset;
+  uptr limit;
+} mapped_fd_t;
+
+#define NUM_MAPPED_FDS 5
+static mapped_fd_t mapped_fd[NUM_MAPPED_FDS];
+
+void S_fd_map(int fd, uptr offset, iptr len) {
+  uptr page_size;
+  int i;
+
+  for (i = 0; i < NUM_MAPPED_FDS; i++) {
+    if (!mapped_fd[i].valid)
+      break;
+  }
+  if (i == NUM_MAPPED_FDS)
+    return;
+
+  if (len <= 0) {
+    len = LSEEK(fd, 0, SEEK_END);
+    if (len < 0)
+      return;
+  }
+
+  page_size = GETPAGESIZE();
+  mapped_fd[i].file_offset = offset & (~(page_size - 1));
+  mapped_fd[i].page_offset = offset & (page_size - 1);
+  mapped_fd[i].limit = len + mapped_fd[i].page_offset;
+
+  mapped_fd[i].data = mmap(NULL, mapped_fd[i].limit, PROT_READ, MAP_PRIVATE,
+                           fd, mapped_fd[i].file_offset);
+  if (mapped_fd[i].data == (octet *)MAP_FAILED)
+    return;
+  
+  mapped_fd[i].fd = fd;
+  mapped_fd[i].valid = 1;
+  mapped_fd[i].read_head = mapped_fd[i].page_offset;
+}
+
+void S_fd_unmap(int fd) {
+  int i;
+
+  for (i = 0; i < NUM_MAPPED_FDS; i++) {
+    if (mapped_fd[i].valid && (mapped_fd[i].fd == fd)) {
+      mapped_fd[i].valid = 0;
+      munmap(mapped_fd[i].data, mapped_fd[i].limit);
+      break;
+    }
+  }
+}
+
+void S_fd_close(int fd) {
+  S_fd_unmap(fd);
+  CLOSE(fd);
+}
+
+iptr S_fd_read(int fd, void *buf, uptr nbyte) {
+  int i;
+
+  for (i = 0; i < NUM_MAPPED_FDS; i++) {
+    if (mapped_fd[i].valid && (mapped_fd[i].fd == fd)) {
+      uptr got = mapped_fd[i].limit - mapped_fd[i].read_head;
+      if (nbyte < got)
+        got = nbyte;
+      memcpy(buf, mapped_fd[i].data + mapped_fd[i].read_head, got);
+      mapped_fd[i].read_head += got;
+      return got;
+    }
+  }
+
+  return READ(fd, buf, (IO_SIZE_T)nbyte);
+}
+
+iptr S_fd_lseek(int fd, iptr offset, int whence) {
+  int i;
+
+  for (i = 0; i < NUM_MAPPED_FDS; i++) {
+    if (mapped_fd[i].valid && (mapped_fd[i].fd == fd)) {
+      iptr dest;
+
+      if (whence == SEEK_SET)
+        dest = mapped_fd[i].page_offset + offset;
+      else if (whence == SEEK_CUR)
+        dest = mapped_fd[i].read_head + offset;
+      else
+        S_error_abort("bad lseek");
+
+      if ((dest < 0) || ((uptr)dest < mapped_fd[i].page_offset))
+        dest = mapped_fd[i].page_offset;
+      else if ((uptr)dest > mapped_fd[i].limit)
+        dest = mapped_fd[i].limit;
+
+      mapped_fd[i].read_head = dest;
+
+      return dest - mapped_fd[i].page_offset;
+    }
+  }
+
+  return LSEEK(fd, offset, whence);
+}

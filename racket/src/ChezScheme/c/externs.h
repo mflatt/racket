@@ -218,6 +218,12 @@ extern wchar_t *S_malloc_wide_pathname PROTO((const char *inpath));
 #endif
 extern IBOOL S_fixedpathp PROTO((const char *inpath));
 
+extern void S_fd_map(int fd, uptr offset, iptr len);
+extern void S_fd_unmap(int fd);
+extern void S_fd_close(int fd);
+extern iptr S_fd_read(int fd, void *buf, uptr nbyte);
+extern iptr S_fd_lseek(int fd, iptr offset, int whence);
+
 /* compress-io.c */
 extern INT S_zlib_compress_level PROTO((INT compress_level));
 extern INT S_lz4_compress_level PROTO((INT compress_level));

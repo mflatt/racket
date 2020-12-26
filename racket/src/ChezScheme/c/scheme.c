@@ -603,14 +603,14 @@ static IBOOL check_boot(int fd, IBOOL verbose, const char *path) {
       get_u8(fd) != 'e' ||
       get_u8(fd) != 'z') {
     if (verbose) fprintf(stderr, "malformed fasl-object header in %s\n", path);
-    CLOSE(fd);
+    S_fd_close(fd);
     return 0;
   }
 
   /* check version */
   if (get_uptr(fd, &n) != 0) {
     if (verbose) fprintf(stderr, "unexpected end of file on %s\n", path);
-    CLOSE(fd);
+    S_fd_close(fd);
     return 0;
   }
 
@@ -620,14 +620,14 @@ static IBOOL check_boot(int fd, IBOOL verbose, const char *path) {
       /* use separate fprintf since S_format_scheme_version returns static string */
       fprintf(stderr, "need Version %s\n", S_format_scheme_version(scheme_version));
     }
-    CLOSE(fd);
+    S_fd_close(fd);
     return 0;
   }
 
   /* check machine type */
   if (get_uptr(fd, &n) != 0) {
     if (verbose) fprintf(stderr, "unexpected end of file on %s\n", path);
-    CLOSE(fd);
+    S_fd_close(fd);
     return 0;
   }
 
@@ -635,7 +635,7 @@ static IBOOL check_boot(int fd, IBOOL verbose, const char *path) {
     if (verbose)
       fprintf(stderr, "%s is for machine-type %s; need machine-type %s\n", path,
               S_lookup_machine_type(n), S_lookup_machine_type(machine_type));
-    CLOSE(fd);
+    S_fd_close(fd);
     return 0;
   }
 
@@ -645,7 +645,7 @@ static IBOOL check_boot(int fd, IBOOL verbose, const char *path) {
 static void check_dependencies_header(int fd, const char *path) {
   if (get_u8(fd) != '(') {  /* ) */
     fprintf(stderr, "malformed boot file %s\n", path);
-    CLOSE(fd);
+    S_fd_close(fd);
     S_abnormal_exit();
   }
 }
@@ -654,7 +654,7 @@ static void finish_dependencies_header(int fd, const char *path, int c) {
   while (c != ')') {
     if (c < 0) {
       fprintf(stderr, "malformed boot file %s\n", path);
-      CLOSE(fd);
+      S_fd_close(fd);
       S_abnormal_exit();
     }
     c = get_u8(fd);
@@ -695,6 +695,8 @@ static IBOOL find_boot(const char *name, const char *ext, IBOOL direct_pathp,
     }
     if (verbose) fprintf(stderr, "trying %s...opened\n", path);
 
+    S_fd_map(fd, 0, -1);
+
     if (!check_boot(fd, 1, path))
       S_abnormal_exit();
   } else {
@@ -722,6 +724,7 @@ static IBOOL find_boot(const char *name, const char *ext, IBOOL direct_pathp,
         if (verbose) fprintf(stderr, "trying %s...cannot open\n", path);
         continue;
       }
+      S_fd_map(fd, 0, -1);
 
       if (verbose) fprintf(stderr, "trying %s...opened\n", path);
 
@@ -738,7 +741,7 @@ static IBOOL find_boot(const char *name, const char *ext, IBOOL direct_pathp,
   if ((c = get_u8(fd)) == ')') {
     if (boot_count != 0) {
       fprintf(stderr, "base boot file %s must come before other boot files\n", path);
-      CLOSE(fd);
+      S_fd_close(fd);
       S_abnormal_exit();
     }
   } else {
@@ -747,16 +750,16 @@ static IBOOL find_boot(const char *name, const char *ext, IBOOL direct_pathp,
        /* try to load heap or boot file this boot file requires */
         if (get_string(fd, buf, PATH_MAX, &c) != 0) {
           fprintf(stderr, "unexpected end of file on %s\n", path);
-          CLOSE(fd);
+          S_fd_close(fd);
           S_abnormal_exit();
         }
         if (find_boot(buf, ".boot", 0, -1, 0)) break;
         if (c == ')') {
           char *sep; char *wastebuf[8];
           fprintf(stderr, "cannot find subordinate boot file");
-          if (LSEEK(fd, 0, SEEK_SET) != 0 || READ(fd, wastebuf, 8) != 8) { /* attempt to rewind and read magic number */
+          if (S_fd_lseek(fd, 0, SEEK_SET) != 0 || S_fd_read(fd, wastebuf, 8) != 8) { /* attempt to rewind and read magic number */
             fprintf(stderr, "---retry with verbose flag for more information\n");
-            CLOSE(fd);
+            S_fd_close(fd);
             S_abnormal_exit();
           }
           (void) get_uptr(fd, &n); /* version */
@@ -769,7 +772,7 @@ static IBOOL find_boot(const char *name, const char *ext, IBOOL direct_pathp,
             fprintf(stderr, "%s%s.boot ", sep, buf);
           }
           fprintf(stderr, "required by %s\n", path);
-          CLOSE(fd);
+          S_fd_close(fd);
           S_abnormal_exit();
         }
       }
@@ -797,7 +800,7 @@ static IBOOL find_boot(const char *name, const char *ext, IBOOL direct_pathp,
 
 static octet get_u8(INT fd) {
   octet buf[1];
-  if (READ(fd, &buf, 1) != 1) return -1;
+  if (S_fd_read(fd, &buf, 1) != 1) return -1;
   return buf[0];
 }
 
@@ -865,10 +868,11 @@ static void load(tc, n, base) ptr tc; iptr n; IBOOL base; {
   ptr x; iptr i;
 
   if (bd[n].need_check) {
-    if (LSEEK(bd[n].fd, bd[n].offset, SEEK_SET) != bd[n].offset) {
+    if (S_fd_lseek(bd[n].fd, bd[n].offset, SEEK_SET) != bd[n].offset) {
       fprintf(stderr, "seek in boot file %s failed\n", bd[n].path);
       S_abnormal_exit();
     }
+    S_fd_map(bd[n].fd, bd[n].offset, bd[n].len);
     check_boot(bd[n].fd, 1, bd[n].path);
     check_dependencies_header(bd[n].fd, bd[n].path);
     finish_dependencies_header(bd[n].fd, bd[n].path, 0);
@@ -911,7 +915,9 @@ static void load(tc, n, base) ptr tc; iptr n; IBOOL base; {
 
   S_G.load_binary = Sfalse;
   if (bd[n].close_after)
-    CLOSE(bd[n].fd);
+    S_fd_close(bd[n].fd);
+  else
+    S_fd_unmap(bd[n].fd);
 }
 
 /***************************************************************************/
