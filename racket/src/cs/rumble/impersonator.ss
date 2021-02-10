@@ -2,6 +2,10 @@
 (define-record impersonator (val next props))
 (define-record chaperone impersonator ())
 
+;; Potentially faster than `inspector?` when we know that `s` is a struct:
+(define (struct-is-impersonator? s)
+  (record-instance? s (record-type-descriptor impersonator)))
+
 (define (impersonator-ephemeron i)
   (if (impersonator? i)
       (make-ephemeron (impersonator-val i) i)

@@ -1622,6 +1622,7 @@
   (record-constructor-descriptor? [sig [(ptr) -> (boolean)]] [flags pure unrestricted mifoldable discard cp02])
   (record-equal-procedure [sig [(record record) -> (maybe-procedure)]] [flags discard])
   (record-hash-procedure [sig [(record) -> (maybe-procedure)]] [flags discard])
+  (record-instance? [sig [(record rtd) -> (boolean)]] [flags pure mifoldable discard])
   (record-reader [sig [(sub-ptr) -> (ptr)] [(sub-ptr sub-ptr) -> (void)]] [flags])
   (record-type-equal-procedure [sig [(rtd) -> (maybe-procedure)] [(rtd maybe-procedure) -> (void)]] [flags])
   (record-type-hash-procedure [sig [(rtd) -> (maybe-procedure)] [(rtd maybe-procedure) -> (void)]] [flags])

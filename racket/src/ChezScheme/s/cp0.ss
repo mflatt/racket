@@ -120,7 +120,8 @@
   ; file for cross compilation, because the offsets may be incorrect
   (define rtd-flds (csv7:record-field-accessor #!base-rtd 'flds))
   (define rtd-ancestors (csv7:record-field-accessor #!base-rtd 'ancestors))
-  (define rtd-parent (lambda (x) (vector-ref (rtd-ancestors x) 0)))
+  (define rtd-parent (lambda (x) (let ([a (rtd-ancestors x)])
+                                   (vector-ref a (fx- (vector-length a) (constant ancestry-parent-offset))))))
   (define rtd-size (csv7:record-field-accessor #!base-rtd 'size))
   (define rtd-pm (csv7:record-field-accessor #!base-rtd 'pm))
   (define rtd-mpm (csv7:record-field-accessor #!base-rtd 'mpm))
