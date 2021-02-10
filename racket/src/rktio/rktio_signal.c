@@ -103,6 +103,52 @@ void rktio_set_signal_handler(int sig_id, void (*proc)(int))
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
   sa.sa_handler = proc;
+  rktio_will_modify_os_signal_handler(sig_id);
   sigaction(sig_id, &sa, NULL);
+}
+#endif
+
+/*========================================================================*/
+/* Signal handler original state                                          */
+/*========================================================================*/
+
+typedef struct signal_handler_saved_id {
+  int sig_id;
+  struct signal_handler_saved_id *next;
+} signal_handler_saved_id;
+
+static signal_handler_saved_id *saved_ids;
+
+void rktio_will_modify_os_signal_handler(int sig_id) {
+  signal_handler_saved_id *saved;
+
+  for (saved = saved_ids; saved; saved = saved->next)
+    if (saved->sig_id == sig_id)
+      return;
+
+  saved = malloc(sizeof(signal_handler_saved_id));
+  saved->next = saved_ids;
+  saved->sig_id = sig_id;
+  saved_ids = saved;
+}
+
+#ifdef RKTIO_SYSTEM_UNIX
+/* called in a child thread after `fork */
+void rktio_restore_modified_signal_handlers() {
+  if (saved_ids) {
+    signal_handler_saved_id *saved;
+    struct sigaction sa;
+
+    sigemptyset(&sa.sa_mask);
+    sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
+
+    sa.sa_flags = 0;
+    sa.sa_handler = SIG_DFL;
+
+    for (saved = saved_ids; saved; saved = saved->next) {
+      sigaction(saved->sig_id, &sa, NULL);
+    }
+
+  }
 }
 #endif
