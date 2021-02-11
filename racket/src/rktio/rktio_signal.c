@@ -106,3 +106,27 @@ void rktio_set_signal_handler(int sig_id, void (*proc)(int))
   sigaction(sig_id, &sa, NULL);
 }
 #endif
+
+#ifdef RKTIO_SYSTEM_UNIX
+/* called in a child thread after `fork */
+void rktio_restore_all_signal_handlers() {
+  struct sigaction sa;
+  int i;
+
+# ifndef MAX_SIGAL_HANDLER_ID
+  /* SIGPROF tends to be towards the end: */
+#  define MAX_SIGAL_HANDLER_ID SIGPROF
+# endif
+
+  sigemptyset(&sa.sa_mask);
+  sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
+
+  sa.sa_flags = 0;
+  sa.sa_handler = SIG_DFL;
+
+  for (i = 1; i <= MAX_SIGAL_HANDLER_ID; i++) {
+    /* might return an error for some IDs, such as SIGKILL: */
+    sigaction(i, &sa, NULL);
+  }
+}
+#endif
