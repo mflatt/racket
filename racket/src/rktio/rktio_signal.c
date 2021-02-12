@@ -143,6 +143,10 @@ void rktio_will_modify_os_signal_handler(int sig_id) {
 
 #if defined(RKTIO_SYSTEM_UNIX)
   sigaction(sig_id, NULL, &saved->sa);
+  if (saved->sa.sa_handler == SIG_IGN) {
+    printf("\"initially ignores %d\"\n", sig_id);
+    fflush(stdout);
+  }
 #endif
 }
 
@@ -152,16 +156,8 @@ void rktio_restore_modified_signal_handlers() {
   signal_handler_saved_disposition *saved;
   sigset_t set;
 
-  for (saved = saved_dispositions; saved; saved = saved->next) {
-    if (saved->sa.sa_handler == SIG_IGN) {
-      printf("\"ignores %d\"\n", saved->sig_id);
-      fflush(stdout);
-    }
-    if (sigaction(saved->sig_id, &saved->sa, NULL) != 0) {
-      printf("\"failed %d %d\"\n", saved->sig_id, errno);
-      fflush(stdout);
-    }
-  }
+  for (saved = saved_dispositions; saved; saved = saved->next)
+    sigaction(saved->sig_id, &saved->sa, NULL);
 
   sigemptyset(&set);
   sigprocmask(SIG_SETMASK, &set, NULL);
