@@ -142,6 +142,9 @@ void rktio_will_modify_os_signal_handler(int sig_id) {
 
 #if defined(RKTIO_SYSTEM_UNIX)
   sigaction(sig_id, NULL, &saved->sa);
+  if ((saved->sa.sa_handler == SIG_IGN) && (sig_id == SIGPIPE)) {
+    printf("SIGPIPE ignored on startup\n");
+  }
 #endif
 }
 
