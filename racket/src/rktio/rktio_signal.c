@@ -154,11 +154,11 @@ void rktio_restore_modified_signal_handlers() {
 
   for (saved = saved_dispositions; saved; saved = saved->next) {
     if (saved->sa.sa_handler == SIG_IGN) {
-      printf("(ignores %d)\n", saved->sig_id);
+      printf("\"ignores %d\"\n", saved->sig_id);
       fflush(stdout);
     }
     if (sigaction(saved->sig_id, &saved->sa, NULL) != 0) {
-      printf("(failed %d %d)\n", saved->sig_id, errno);
+      printf("\"failed %d %d\"\n", saved->sig_id, errno);
       fflush(stdout);
     }
   }
