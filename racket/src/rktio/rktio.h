@@ -1024,8 +1024,7 @@ RKTIO_EXTERN void rktio_will_modify_os_signal_handler(int sig_id);
    so that it can be restored after forking a new Unix process.
    Signal registrations should happen only before multiple threads use
    rktio, and registration of the signal can happen before any
-   `rktio_init` call. On the first `rktio_will_modify_os_signal_handler`
-   call, the signal mask is also recorded to be restored in a fork. */
+   `rktio_init` call. */
 
 /*************************************************/
 /* Time and date                                 */
