@@ -152,9 +152,16 @@ void rktio_restore_modified_signal_handlers() {
   signal_handler_saved_disposition *saved;
   sigset_t set;
 
-  for (saved = saved_dispositions; saved; saved = saved->next)
-    if (sigaction(saved->sig_id, &saved->sa, NULL) != 0)
+  for (saved = saved_dispositions; saved; saved = saved->next) {
+    if (saved->sa.sa_handler == SIG_IGN) {
+      printf("sigaction ignores %d\n", saved->sig_id);
+      fflush(stdout);
+    }
+    if (sigaction(saved->sig_id, &saved->sa, NULL) != 0) {
       printf("sigaction failed %d %d\n", saved->sig_id, errno);
+      fflush(stdout);
+    }
+  }
 
   sigemptyset(&set);
   sigprocmask(SIG_SETMASK, &set, NULL);
