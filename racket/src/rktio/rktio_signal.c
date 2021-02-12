@@ -5,6 +5,7 @@
 #include <stdio.h>
 #if defined(RKTIO_SYSTEM_UNIX)
 # include <signal.h>
+# include <errno.h>
 #endif
 
 static int handlers_installed = 0;
@@ -141,7 +142,6 @@ void rktio_will_modify_os_signal_handler(int sig_id) {
   saved_dispositions = saved;
 
 #if defined(RKTIO_SYSTEM_UNIX)
-  memset(&saved->sa, 0, sizeof(saved->sa));
   sigaction(sig_id, NULL, &saved->sa);
 #endif
 }
@@ -153,7 +153,8 @@ void rktio_restore_modified_signal_handlers() {
   sigset_t set;
 
   for (saved = saved_dispositions; saved; saved = saved->next)
-    sigaction(saved->sig_id, &saved->sa, NULL);
+    if (sigaction(saved->sig_id, &saved->sa, NULL) != 0)
+      printf("sigaction failed %d %d\n", saved->sig_id, errno);
 
   sigemptyset(&set);
   sigprocmask(SIG_SETMASK, &set, NULL);
