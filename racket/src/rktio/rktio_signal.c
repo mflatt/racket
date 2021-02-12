@@ -141,6 +141,7 @@ void rktio_will_modify_os_signal_handler(int sig_id) {
   saved_dispositions = saved;
 
 #if defined(RKTIO_SYSTEM_UNIX)
+  memset(&saved->sa, 0, sizeof(saved->sa));
   sigaction(sig_id, NULL, &saved->sa);
 #endif
 }
