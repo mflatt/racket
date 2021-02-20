@@ -232,6 +232,21 @@ Detailed instructions:
     compiling ".zo" files, creating launchers, or building
     documentation.
 
+    For a `--prefix` build, beware that ".zo" files are written to
+    collection and package directories that are installed by default
+    under "share", but ".zo" files are architecture-dependent for
+    Racket CS. Provide `--collectsdir=...` and `--pkgsdir=...` to move
+    those under the "lib" directory. Alternatively, usee
+    `--enable-zolib` to have just the "compiled" directories
+    containing ".zo" files moved to "lib" as the last step of
+    installation, with "config.rktd" updated to initialize
+    `current-compile-file-roots` so that the ".zo" files are found. If
+    you need to have additional packages in installation scope with
+    `--enable-zolib` (i.e., package that are not included with the
+    source distribution), then it's easiest to first make the install
+    tree in-place, then configure and install again for a `--prefix`
+    build, and the in-place installed packages will get carried along.
+
     If the installation fails because the target directory cannot be
     created, or because the target directory is not the one you want,
     then you can try repeating step 4 after running `configure` again
