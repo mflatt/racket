@@ -43,7 +43,7 @@ if test "${enable_origtree}" != "yes" -a "${enable_useprefix}" != "no" ; then
   if test "${collectsdir}" != '${exec_prefix}/share/${PACKAGE}/collects' ; then
     unixstyle=yes
   fi
-  if test "${pkgsdir}" != '${exec_prefix}/share/${PACKAGE}/pkgs' ; then
+  if test "${pkgsdir}" != '${datarootdir}/${PACKAGE}/pkgs' ; then
     unixstyle=yes
   fi
   if test "${appsdir}" != '${exec_prefix}/share/applications' ; then

@@ -513,6 +513,7 @@
 
 ;; --------------------------------------------------------------------------
 
+;; Does not support moving "collects" or "pkgs" outside of "share"
 (define (move/copy-distribution move? bundle?)
   (define do-tree (move/copy-tree move?))
   (current-directory rktdir)
