@@ -89,7 +89,7 @@ exit 0
        [(regexp-match #rx"localedir" l)
         ;; Hack: take over "localedir" for "appsdir":
         (cond
-         [(equal? l "localedir='${docdir}'")
+         [(equal? l "localedir='${datarootdir}/locale'")
           (displayln "appsdir='${exec_prefix}/share/applications'")]
          [(equal? l "  --localedir=DIR         locale-dependent data [DATAROOTDIR/locale]")
           (displayln "  --appsdir=DIR           .desktop files [EPREFIX/share/applications]")]

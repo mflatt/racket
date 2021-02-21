@@ -869,7 +869,7 @@ collectsdir='${exec_prefix}/share/${PACKAGE}/collects'
 pkgsdir='${datarootdir}/${PACKAGE}/pkgs'
 psdir='${docdir}'
 libdir='${exec_prefix}/lib'
-appsdir='${datarootdir}/apps'
+appsdir='${exec_prefix}/share/applications'
 mandir='${datarootdir}/man'
 
 ac_prev=
