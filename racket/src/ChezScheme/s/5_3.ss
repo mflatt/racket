@@ -65,6 +65,20 @@
    (lambda (x)
       (foreign-procedure x (scheme-object scheme-object) scheme-object)))
 
+;; For operations in the kernel that would take too long if they
+;; stayed in the kernel, preventing signals from firing. In that
+;; case, the operation returns a kind of continuation represented
+;; as a vector, which we step from Scheme code.
+(define schemeop2/trampoline
+  (let ([step (foreign-procedure "(cs)s_step_trampoline" (scheme-object) scheme-object)])
+    (lambda (x)
+      (let ([proc (foreign-procedure x (scheme-object scheme-object) scheme-object)])
+        (lambda (a b)
+          (let loop ([v (proc a b)])
+            (if (vector? v)
+                (loop (step v))
+                v)))))))
+
 (let ()
 
 (define biglength (schemeop1 "(cs)s_integer_length"))
@@ -82,10 +96,10 @@
 (define integer+ (schemeop2 "(cs)add"))
 (define integer* (schemeop2 "(cs)mul"))
 (define integer- (schemeop2 "(cs)sub"))
-(define integer/ (schemeop2 "(cs)s_div"))
-(define intquotient (schemeop2 "(cs)ss_trunc"))
-(define intquotient-remainder (schemeop2 "(cs)ss_trunc_rem"))
-(define intremainder (schemeop2 "(cs)rem"))
+(define integer/ (schemeop2/trampoline "(cs)s_div"))
+(define intquotient (schemeop2/trampoline "(cs)ss_trunc"))
+(define intquotient-remainder (schemeop2/trampoline "(cs)ss_trunc_rem"))
+(define intremainder (schemeop2/trampoline "(cs)rem"))
 
 (define $flsin (cflop1 "(cs)sin"))
 
@@ -2197,6 +2211,7 @@
           [else (nonnumber-error who x)])])))
 
 (set! $*
+  (let ([$bignum-trailing-zero-bits (foreign-procedure "(cs)s_big_trailing_zero_bits" (ptr) ptr)])
    (lambda (who x y)
     (cond
       [(and (fixnum? y) ($fxu< (#3%fx+ y 1) 3))
@@ -2217,13 +2232,13 @@
                               [(fx= x 1) (unless (number? y) (nonnumber-error who y)) y]
                               [else ($negate who y)])]
                             [else (integer* x y)])
-                            (let ()
+                           (let ()
                               ;; _Modern Computer Arithmetic_, Brent and Zimmermann
                               (define (karatsuba x y)
                                 (define xl (if (bignum? x) ($bignum-length x) 0))
                                 (define yl (if (bignum? y) ($bignum-length y) 0))
                                 (cond
-                                 [(and (fx< xl 10) (fx< yl 10))
+                                 [(and (fx< xl 30) (fx< yl 30))
                                   (integer* x y)]
                                  [else
                                   (let* ([k (fx* (fxquotient (fxmax xl yl) 2) (constant bigit-bits))]
@@ -2247,7 +2262,17 @@
                                                    [else
                                                     (- c1 (karatsuba (- x-lo x-hi) (- y-lo y-hi)))])])])
                                     (+ c0 (integer-ash (+ c0 c1-c2) k) (integer-ash c1 (fx* 2 k))))]))
-                              (karatsuba x y)))]
+                              ;; Multiplying numbers with trailing 0s is common, so
+                              ;; check for that case:
+                              (let ([xz ($bignum-trailing-zero-bits x)]
+                                    [yz (if (bignum? y) ($bignum-trailing-zero-bits y) 0)])
+                                (let ([z (fx+ xz yz)])
+                                  (if (fx= z 0)
+                                      (karatsuba x y)
+                                      (bitwise-arithmetic-shift-left
+                                       (karatsuba (bitwise-arithmetic-shift-right x xz)
+                                                  (bitwise-arithmetic-shift-right y yz))
+                                       z))))))]
              [(ratnum?) (/ (* x ($ratio-numerator y)) ($ratio-denominator y))]
              [($exactnum? $inexactnum?)
               (make-rectangular (* x (real-part y)) (* x (imag-part y)))]
@@ -2281,7 +2306,7 @@
                     [c (real-part y)] [d (imag-part y)])
                 (make-rectangular (- (* a c) (* b d)) (+ (* a d) (* b c))))]
              [else (nonnumber-error who y)])]
-          [else (nonnumber-error who x)])])))
+          [else (nonnumber-error who x)])]))))
 
 (set! $-
   (lambda (who x y)

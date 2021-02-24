@@ -179,7 +179,10 @@ static iptr s_fxdiv(x, y) iptr x, y; {
 static ptr s_trunc_rem(x, y) ptr x, y; {
   ptr q, r;
   S_trunc_rem(get_thread_context(), x, y, &q, &r);
-  return Scons(q, r);
+  if (S_trampoline_continuationp(q))
+    return q;
+  else
+    return Scons(q, r);
 }
 
 static ptr s_fltofx(x) ptr x; {
@@ -1765,6 +1768,7 @@ void S_prim5_init() {
     Sforeign_symbol("(cs)s_big_positive_bit_field", (void *)S_big_positive_bit_field);
     Sforeign_symbol("(cs)s_big_eq", (void *)S_big_eq);
     Sforeign_symbol("(cs)s_big_lt", (void *)S_big_lt);
+    Sforeign_symbol("(cs)s_big_trailing_zero_bits", (void *)S_big_trailing_zero_bits);
     Sforeign_symbol("(cs)s_bigoddp", (void *)s_bigoddp);
     Sforeign_symbol("(cs)s_div", (void *)S_div);
     Sforeign_symbol("(cs)s_float", (void *)s_float);
@@ -1782,6 +1786,7 @@ void S_prim5_init() {
     Sforeign_symbol("(cs)s_set_random_seed", (void *)s_set_random_seed);
     Sforeign_symbol("(cs)ss_trunc", (void *)S_trunc);
     Sforeign_symbol("(cs)ss_trunc_rem", (void *)s_trunc_rem);
+    Sforeign_symbol("(cs)s_step_trampoline", (void *)S_step_trampoline_continuation);
     Sforeign_symbol("(cs)sub", (void *)S_sub);
     Sforeign_symbol("(cs)rem", (void *)S_rem);
 #ifdef GETWD

@@ -36,7 +36,7 @@ static ptr big_mul PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl, IBOOL sign));
 static void big_short_trunc PROTO((ptr tc, ptr x, bigit s, iptr xl, IBOOL qs, IBOOL rs, ptr *q, ptr *r));
 static void big_trunc PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl, IBOOL qs, IBOOL rs, ptr *q, ptr *r));
 static INT normalize PROTO((bigit *xp, bigit *yp, iptr xl, iptr yl));
-static bigit quotient_digit PROTO((bigit *xp, bigit *yp, iptr yl));
+static bigit quotient_digit PROTO((ptr tc, bigit *xp, bigit *yp, iptr yl));
 static bigit qhat PROTO((bigit *xp, bigit *yp));
 static ptr big_short_gcd PROTO((ptr tc, ptr x, bigit y, iptr xl));
 static ptr big_gcd PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl));
@@ -53,28 +53,34 @@ static ptr big_logand PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl, IBOOL xs, I
 static ptr big_logor PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl, IBOOL xs, IBOOL ys));
 static ptr big_logxor PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl, IBOOL xs, IBOOL ys));
 
+#define TRUNC_TRAMP_CONT 1
+#define DIV_TRAMP_CONT   2
+#define QUOT_TRAMP_CONT  3
+#define REM_TRAMP_CONT   4
+
 /* use w/o trailing semicolon */
-#define PREPARE_BIGNUM(tc,x,l)\
- {if (x == FIX(0) || BIGLEN(x) < (l)) x = S_bignum(tc, (l)*2, 0);}
+#define PREPARE_BIGNUM(tc,x,l) do {                                     \
+    if (x == FIX(0) || BIGLEN(x) < (l)) x = S_bignum(tc, (l)*2, 0);     \
+  } while (0)
 
 #define bigit_mask (~(bigit)0)
 
 #define IBIGIT_TO_BIGNUM(tc,B,x,cnt,sign) {\
   ibigit _i_ = x;\
-  PREPARE_BIGNUM(tc, B, 1)\
+  PREPARE_BIGNUM(tc, B, 1);                     \
   *cnt = 1;\
   BIGIT(B,0) = (*sign = (_i_ < 0)) ? -_i_ : _i_;\
 }
 
 #define UBIGIT_TO_BIGNUM(tc,B,u,cnt) {\
-  PREPARE_BIGNUM(tc, B, 1)\
+  PREPARE_BIGNUM(tc, B, 1);         \
   *cnt = 1;\
   BIGIT(B,0) = u;\
 }
 
 #define IBIGITBIGIT_TO_BIGNUM(tc,B,x,cnt,sign) {\
   ibigitbigit _i_ = x; bigitbigit _u_; bigit _b_;\
-  PREPARE_BIGNUM(tc, B, 2)\
+  PREPARE_BIGNUM(tc, B, 2);                      \
   _u_ = (*sign = (_i_ < 0)) ? -_i_ : _i_;\
   if ((_b_ = (_u_ & (bigitbigit)bigit_mask)) == _u_) {\
     *cnt = 1;\
@@ -88,7 +94,7 @@ static ptr big_logxor PROTO((ptr tc, ptr x, ptr y, iptr xl, iptr yl, IBOOL xs, I
 
 #define UBIGITBIGIT_TO_BIGNUM(tc,B,x,cnt) {\
   bigitbigit _u_ = x; bigit _b_;\
-  PREPARE_BIGNUM(tc, B, 2)\
+  PREPARE_BIGNUM(tc, B, 2);                             \
   if ((_b_ = (_u_ & (bigitbigit)bigit_mask)) == _u_) {\
     *cnt = 1;\
     BIGIT(B,0) = (bigit)_u_;\
@@ -413,15 +419,15 @@ ptr Sinteger64(i) I64 i; { /* convert arg to Scheme integer */
   *(x) = _b_<<_n_ | *(k);\
   *(k) = _newk_;}
 
-#define ERSH(n,x,k) { /* undefined when n == 0 */\
+#define ERSH(n,x,k) do { /* undefined when n == 0 */\
   INT _n_ = (INT)(n); bigit _b_ = *(x), _newk_ = _b_<<(bigit_bits-_n_);\
   *(x) = _b_>>_n_ | *(k);\
-  *(k) = _newk_;}
+  *(k) = _newk_;} while (0)
 
-#define ERSH2(n,x,y,k) { /* undefined when n == 0 */\
+#define ERSH2(n,x,y,k) do { /* undefined when n == 0 */\
   INT _n_ = (INT)(n); bigit _b_ = (x), _newk_ = _b_<<(bigit_bits-_n_);\
   *(y) = _b_>>_n_ | *(k);\
-  *(k) = _newk_;}
+  *(k) = _newk_;} while (0)
 
 #define EADDC(a1, a2, sum, k) {\
   bigit _tmp1_, _tmp2_, _tmpk_;\
@@ -525,7 +531,7 @@ static ptr big_add_pos(tc, x, y, xl, yl, sign) ptr tc, x, y; iptr xl, yl; IBOOL 
   bigit *xp, *yp, *zp;
   bigit k = 0;
 
-  PREPARE_BIGNUM(tc, W(tc),xl+1)
+  PREPARE_BIGNUM(tc, W(tc),xl+1);
 
   xp = &BIGIT(x,xl-1); yp = &BIGIT(y,yl-1); zp = &BIGIT(W(tc),xl);
 
@@ -547,7 +553,7 @@ static ptr big_add_neg(tc, x, y, xl, yl, sign) ptr tc, x, y; iptr xl, yl; IBOOL 
   bigit *xp, *yp, *zp;
   bigit b = 0;
 
-  PREPARE_BIGNUM(tc, W(tc),xl)
+  PREPARE_BIGNUM(tc, W(tc),xl);
 
   xp = &BIGIT(x,xl-1); yp = &BIGIT(y,yl-1); zp = &BIGIT(W(tc),xl-1);
 
@@ -633,8 +639,11 @@ static ptr big_mul(tc, x, y, xl, yl, sign) ptr tc, x, y; iptr xl, yl; IBOOL sign
   bigit *xp, *yp, *zp, *zpa;
   bigit k, k1, prod;
 
-  PREPARE_BIGNUM(tc, W(tc),xl+yl)
+  PREPARE_BIGNUM(tc, W(tc),xl+yl);
   for (xi = xl, zp = &BIGIT(W(tc),xl+yl-1); xi-- > 0; ) *zp-- = 0;
+
+  /* account for nested loop: */
+  USE_TRAP_FUEL(tc, xl * yl);
 
   for (yi=yl,yp= &BIGIT(y,yl-1),zp= &BIGIT(W(tc),xl+yl-1); yi-- > 0; yp--, zp--)
     if (*yp == 0)
@@ -696,7 +705,8 @@ division
 ***
 */
 
-/* arguments must be integers (fixnums or bignums), y must be nonzero */
+/* arguments must be integers (fixnums or bignums), y must be nonzero;
+   for large arguments, the result can be a trampoline "continuation" */
 ptr S_div(x, y) ptr x, y; {
   ptr g, n, d;
   ptr tc = get_thread_context();
@@ -709,22 +719,45 @@ ptr S_div(x, y) ptr x, y; {
   S_trunc_rem(tc, x, g, &n, (ptr *)NULL);
   S_trunc_rem(tc, y, g, &d, (ptr *)NULL);
 
-  return S_rational(n, d);
+  if (S_trampoline_continuationp(n)
+      || S_trampoline_continuationp(d)) {
+    ptr k = S_vector(3);
+    INITVECTIT(k, 0) = FIX(DIV_TRAMP_CONT);
+    INITVECTIT(k, 1) = n;
+    INITVECTIT(k, 2) = d;
+    return k;
+  } else
+    return S_rational(n, d);
 }
 
+/* for large arguments, the result can be a trampoline "continuation" */
 ptr S_trunc(x, y) ptr x, y; {
   ptr q;
   S_trunc_rem(get_thread_context(), x, y, &q, (ptr *)NULL);
-  return q;
+  if (S_trampoline_continuationp(q)) {
+    ptr k = S_vector(2);
+    INITVECTIT(k, 0) = FIX(QUOT_TRAMP_CONT);
+    INITVECTIT(k, 1) = q;
+    return k;
+  } else
+    return q;
 }
 
+/* for large arguments, the result can be a trampoline "continuation" */
 ptr S_rem(x, y) ptr x, y; {
   ptr r;
   S_trunc_rem(get_thread_context(), x, y, (ptr *)NULL, &r);
-  return r;
+  if (S_trampoline_continuationp(r)) {
+    ptr k = S_vector(2);
+    INITVECTIT(k, 0) = FIX(REM_TRAMP_CONT);
+    INITVECTIT(k, 1) = r;
+    return k;
+  } else
+    return r;
 }
 
-/* arguments must be integers (fixnums or bignums), y must be nonzero */
+/* arguments must be integers (fixnums or bignums), y must be nonzero;
+   for large arguments, the result can be a trampoline "continuation" */
 void S_trunc_rem(tc, origx, y, q, r) ptr tc, origx, y, *q, *r; {
   iptr xl, yl; IBOOL xs, ys; ptr x = origx;
 
@@ -769,7 +802,7 @@ static void big_short_trunc(ptr tc, ptr x, bigit s, iptr xl, IBOOL qs, IBOOL rs,
   bigit *xp, *zp;
   bigit k;
 
-  PREPARE_BIGNUM(tc, W(tc),xl)
+  PREPARE_BIGNUM(tc, W(tc),xl);
 
   for (i = xl, k = 0, xp = &BIGIT(x,0), zp = &BIGIT(W(tc),0); i-- > 0; )
     EDIV(k, *xp++, s, zp++, &k)
@@ -786,33 +819,152 @@ static void big_trunc(tc, x, y, xl, yl, qs, rs, q, r)
   INT d;
   bigit k;
 
-  PREPARE_BIGNUM(tc, U(tc), xl+1)
+  PREPARE_BIGNUM(tc, U(tc), xl+1);
   for (i = xl, xp = &BIGIT(U(tc),xl+1), p = &BIGIT(x,xl); i-- > 0;) *--xp = *--p;
   *--xp = 0;
 
-  PREPARE_BIGNUM(tc, V(tc), yl)
+  PREPARE_BIGNUM(tc, V(tc), yl);
   for (i = yl, yp = &BIGIT(V(tc),yl), p = &BIGIT(y,yl); i-- > 0;) *--yp = *--p;
 
+  /* shift x and y up so that y's high bit is set: */
   d = normalize(xp, yp, xl, yl);
 
-  if (q == (ptr *)NULL) {
-    for (i = m; i-- > 0 ; xp++) (void) quotient_digit(xp, yp, yl);
-  } else {
-    PREPARE_BIGNUM(tc, W(tc),m)
-    p = &BIGIT(W(tc),0);
-    for (i = m; i-- > 0 ; xp++) *p++ = quotient_digit(xp, yp, yl);
-    *q = copy_normalize(tc, &BIGIT(W(tc),0),m,qs);
-  }
+  if (q != (ptr *)NULL)
+    PREPARE_BIGNUM(tc, W(tc), m);
 
-  if (r != (ptr *)NULL) {
-   /* unnormalize the remainder */
-    if (d != 0) {
-      for (i = yl, p = xp, k = 0; i-- > 0; p++) ERSH(d,p,&k)
+  if (m * yl < 10000) {
+    if (q == (ptr *)NULL) {
+      /* get only the remainder */
+      for (i = m; i-- > 0 ; xp++) (void) quotient_digit(tc, xp, yp, yl);
+    } else {
+      p = &BIGIT(W(tc),0);
+      for (i = m; i-- > 0 ; xp++) *p++ = quotient_digit(tc, xp, yp, yl);
+      *q = copy_normalize(tc, &BIGIT(W(tc),0),m,qs);
     }
-    *r = copy_normalize(tc, xp, yl, rs);
+
+    if (r != (ptr *)NULL) {
+      /* unnormalize the remainder (i.e., revert shift that set y's high bit) */
+      if (d != 0)
+        for (i = yl, p = xp, k = 0; i-- > 0; p++) ERSH(d,p,&k);
+      *r = copy_normalize(tc, xp, yl, rs);
+    }
+  } else {
+    /* nested loops can take too long; return a kind of continuation */
+    ptr c = S_vector(10);
+    INITVECTIT(c, 0) = FIX(TRUNC_TRAMP_CONT);
+    INITVECTIT(c, 1) = FIX(0);
+    INITVECTIT(c, 2) = U(tc);
+    U(tc) = FIX(0);
+    INITVECTIT(c, 3) = V(tc);
+    V(tc) = FIX(0);
+    if (q == (ptr *)NULL)
+      INITVECTIT(c, 4) = Sfalse;
+    else {
+      INITVECTIT(c, 4) = W(tc);
+      W(tc) = FIX(0);
+    }
+    INITVECTIT(c, 5) = FIX(yl);
+    INITVECTIT(c, 6) = FIX(m);
+    INITVECTIT(c, 7) = FIX(d);    
+    INITVECTIT(c, 8) = (qs ? Strue : Sfalse);
+    INITVECTIT(c, 9) = (rs ? Strue : Sfalse);
+
+    if (q)
+      *q = c;
+    if (r)
+      *r = c;
   }
 }
 
+static ptr step_trunc_trampoline_continuation(ptr c) {
+  ptr tc = get_thread_context();
+  iptr i = UNFIX(Svector_ref(c, 1));
+  ptr v = Svector_ref(c, 2);
+  bigit *xp = &BIGIT(v, 0);
+  ptr u = Svector_ref(c, 3);
+  bigit *yp = &BIGIT(u, 0);
+  ptr w = Svector_ref(c, 4);
+  bigit *p;
+  iptr yl = UNFIX(Svector_ref(c, 5));
+  INT m = (INT)UNFIX(Svector_ref(c, 6));
+  bigit k;
+
+  if (i >= m) {
+    INT d = (INT)UNFIX(Svector_ref(c, 7));
+    IBOOL qs = Sboolean_value(Svector_ref(c, 8));
+    IBOOL rs = Sboolean_value(Svector_ref(c, 9));
+    ptr q, r;
+
+    /* unnormalize the remainder (i.e., revert shift that set y's high bit) */
+    if (d != 0)
+      for (i = yl, p = xp + m, k = 0; i-- > 0; p++) ERSH(d,p,&k);
+
+    r = copy_normalize(tc, xp + m, yl, rs);
+
+    if (w == Sfalse)
+      q = FIX(0);
+    else
+      q = copy_normalize(tc, &BIGIT(w, 0), m, qs);
+
+    return Scons(q, r);
+  } else {
+    k = quotient_digit(tc, xp + i, yp, yl);
+
+    if (w != Sfalse)
+      BIGIT(w, i) = k;
+
+    INITVECTIT(c, 1) = FIX(i+1);
+
+    return c;
+  }
+}
+
+ptr S_step_trampoline_continuation(ptr k) {
+  int kind = UNFIX(Svector_ref(k, 0));
+  switch (kind) {
+  case TRUNC_TRAMP_CONT:
+    return step_trunc_trampoline_continuation(k);
+  case DIV_TRAMP_CONT:
+    {
+      ptr n = Svector_ref(k, 1);
+      ptr d = Svector_ref(k, 2);
+      if (S_trampoline_continuationp(n)) {
+        n = S_step_trampoline_continuation(n);
+        if (S_trampoline_continuationp(n))
+          Svector_set(k, 1, n);
+        else
+          Svector_set(k, 1, Scar(n));
+        return k;
+      } else if (S_trampoline_continuationp(d)) {
+        d = S_step_trampoline_continuation(d);
+        if (S_trampoline_continuationp(d))
+          Svector_set(k, 2, d);
+        else
+          Svector_set(k, 2, Scar(d));
+        return k;
+      } else {
+        return S_rational(n, d);
+      }
+    }
+  case QUOT_TRAMP_CONT:
+  case REM_TRAMP_CONT:
+    {
+      ptr t = Svector_ref(k, 1);
+      t = S_step_trampoline_continuation(t);
+      if (S_trampoline_continuationp(t)) {
+        Svector_set(k, 1, t);
+        return k;
+      } else if (kind == QUOT_TRAMP_CONT)
+        return Scar(t);
+      else
+        return Scdr(t);
+    }
+  default:
+    S_error1("", "~s is not a valid trampoline continuation", k);
+    return FIX(0);
+  }
+}
+  
 static INT normalize(xp, yp, xl, yl) bigit *xp, *yp; iptr xl, yl; {
   iptr i;
   bigit *p, k, b;
@@ -829,9 +981,12 @@ static INT normalize(xp, yp, xl, yl) bigit *xp, *yp; iptr xl, yl; {
   return shft;
 }
 
-static bigit quotient_digit(xp, yp, yl) bigit *xp, *yp; iptr yl; {
+static bigit quotient_digit(tc, xp, yp, yl) ptr tc; bigit *xp, *yp; iptr yl; {
   bigit *p1, *p2, q, k, b, prod;
   iptr i;
+
+  /* this function is called in loops, so use fuel every time */
+  USE_TRAP_FUEL(tc, yl);
 
   q = qhat(xp, yp);
 
@@ -912,13 +1067,13 @@ static ptr big_gcd(tc, x, y, xl, yl) ptr tc, x, y; iptr xl, yl; {
   bigit *p, *xp, *yp, k, b;
 
  /* Copy x to scratch bignum, with a leading zero */
-  PREPARE_BIGNUM(tc, U(tc),xl+1)
+  PREPARE_BIGNUM(tc, U(tc),xl+1);
   xp = &BIGIT(U(tc),xl+1);
   for (i = xl, p = &BIGIT(x,xl); i-- > 0; ) *--xp = *--p;
   *--xp = 0;                /* leave xp pointing at leading 0-bigit */
 
  /* Copy y to scratch bignum, with a leading zero */
-  PREPARE_BIGNUM(tc, V(tc),yl+1)
+  PREPARE_BIGNUM(tc, V(tc),yl+1);
   yp = &BIGIT(V(tc),yl+1);
   for (i = yl, p = &BIGIT(y,yl); i-- > 0; ) *--yp = *--p;
   *(yp-1) = 0;        /* leave yp pointing just after leading 0-bigit */
@@ -934,10 +1089,13 @@ static ptr big_gcd(tc, x, y, xl, yl) ptr tc, x, y; iptr xl, yl; {
     if (asc+shft >= bigit_bits) shft -= bigit_bits;
     asc += shft;
 
+    /* account for nested loops: */
+    USE_TRAP_FUEL(tc, xl + yl);
+
    /* shift left or right; adjust lengths, xp and yp */
     if (shft < 0) {                /* shift right */
-      for (i = yl--, p = yp++, k = 0; i-- > 0; p++) ERSH(-shft,p,&k)
-      for (i = xl+1, p = xp, k = 0; i-- > 0; p++) ERSH(-shft,p,&k)
+      for (i = yl--, p = yp++, k = 0; i-- > 0; p++) ERSH(-shft,p,&k);
+      for (i = xl+1, p = xp, k = 0; i-- > 0; p++) ERSH(-shft,p,&k);
      /* don't need two leading zeros */
       if (*(xp+1) == 0) xp++, xl--;
      /* we have shrunk y, so test the length here */
@@ -948,7 +1106,7 @@ static ptr big_gcd(tc, x, y, xl, yl) ptr tc, x, y; iptr xl, yl; {
     }
 
    /* destructive remainder x = x rem y */
-    for (i = xl-yl+1; i-- > 0; xp++) (void) quotient_digit(xp, yp, yl);
+    for (i = xl-yl+1; i-- > 0; xp++) (void) quotient_digit(tc, xp, yp, yl);
 
    /* strip leading zero bigits.  remainder is at most yl bigits long */
     for (i = yl ; *xp == 0 && i > 0; xp++, i--);
@@ -970,7 +1128,7 @@ static ptr big_gcd(tc, x, y, xl, yl) ptr tc, x, y; iptr xl, yl; {
  /* if y is already zero, shift x and leave */
   if (yl == 0) {
     if (asc != 0) {
-      for (i = xl, p = xp, k = 0; i-- > 0; p++) ERSH(asc,p,&k)
+      for (i = xl, p = xp, k = 0; i-- > 0; p++) ERSH(asc,p,&k);
     }
     return copy_normalize(tc, xp,xl,0);
   } else {
@@ -1085,7 +1243,7 @@ static double big_short_floatify(ptr tc, ptr x, bigit s, iptr xl, IBOOL sign) {
   iptr i;
   bigit *xp, *zp, k;
 
-  PREPARE_BIGNUM(tc, W(tc),enough+1)
+  PREPARE_BIGNUM(tc, W(tc),enough+1);
 
  /* compute only as much of quotient as we need */
   for (i = 0, k = 0, xp = &BIGIT(x,0), zp = &BIGIT(W(tc),0); i < enough; i++)
@@ -1106,22 +1264,22 @@ static double big_floatify(tc, x, y, xl, yl, sign) ptr tc, x, y; iptr xl, yl; IB
 
  /* copy x to U(tc), scaling with added zero bigits as necessary */
   ul = xl < yl + enough-1 ? yl + enough-1 : xl;
-  PREPARE_BIGNUM(tc, U(tc), ul+1)
+  PREPARE_BIGNUM(tc, U(tc), ul+1);
   for (i = ul - xl, xp = &BIGIT(U(tc),ul+1); i-- > 0;) *--xp = 0;
   for (i = xl, p = &BIGIT(x,xl); i-- > 0;) *--xp = *--p;
   *--xp = 0;
 
  /* copy y to V(tc) */
-  PREPARE_BIGNUM(tc, V(tc), yl)
+  PREPARE_BIGNUM(tc, V(tc), yl);
   for (i = yl, yp = &BIGIT(V(tc),yl), p = &BIGIT(y,yl); i-- > 0;) *--yp = *--p;
 
   (void) normalize(xp, yp, ul, yl);
 
-  PREPARE_BIGNUM(tc, W(tc),4)
+  PREPARE_BIGNUM(tc, W(tc),4);
   p = &BIGIT(W(tc),0);
 
  /* compute 'enough' bigits of the quotient */
-  for (i = enough; i-- > 0; xp++) *p++ = quotient_digit(xp, yp, yl);
+  for (i = enough; i-- > 0; xp++) *p++ = quotient_digit(tc, xp, yp, yl);
 
  /* set k if remainder is nonzero */
   k = 0;
@@ -1314,7 +1472,7 @@ static ptr s_big_ash(tc, xp, xl, sign, cnt) ptr tc; bigit *xp; iptr xl; IBOOL si
     cnt -= whole_bigits * bigit_bits;
 
     /* shift by remaining count to scratch bignum, tracking bits shifted off to the right */
-    PREPARE_BIGNUM(tc, W(tc),xl)
+    PREPARE_BIGNUM(tc, W(tc),xl);
     p1 = &BIGIT(W(tc), 0);
     p2 = xp;
     k = 0;
@@ -1361,7 +1519,7 @@ static ptr s_big_ash(tc, xp, xl, sign, cnt) ptr tc; bigit *xp; iptr xl; IBOOL si
    /* maximum total length includes +1 for shift out of top bigit */
     newxl = xl + xlplus + 1;
 
-    PREPARE_BIGNUM(tc, W(tc),newxl)
+    PREPARE_BIGNUM(tc, W(tc),newxl);
 
    /* fill bigits to right with zero */
     for (i = xlplus, p1 = &BIGIT(W(tc), newxl); i-- > 0; ) *--p1 = 0;
@@ -1456,7 +1614,7 @@ ptr S_big_positive_bit_field(ptr x, ptr fxstart, ptr fxend) {
   }
 
  /* copy to scratch bignum */
-  PREPARE_BIGNUM(tc, W(tc),wl)
+  PREPARE_BIGNUM(tc, W(tc),wl);
   p1 = &BIGIT(W(tc), wl);
   for (i = wl, p2 = xp + xl; i-- > 0; ) *--p1 = *--p2;
 
@@ -1466,10 +1624,27 @@ ptr S_big_positive_bit_field(ptr x, ptr fxstart, ptr fxend) {
  /* shift by remaining start bits */
   if (start != 0) {
     k = 0;
-    for (i = wl; i > 0; i -= 1, p1 += 1) ERSH(start,p1,&k)
+    for (i = wl; i > 0; i -= 1, p1 += 1) ERSH(start,p1,&k);
   }
 
   return copy_normalize(tc, &BIGIT(W(tc), 0), wl, 0);
+}
+
+/* returns a lower bound on the number of trailing 0 bits in the
+   binary representation: */
+ptr S_big_trailing_zero_bits(ptr x) {
+  bigit *xp = &BIGIT(x, 0);
+  iptr xl = BIGLEN(x), i;
+
+  for (i = xl; i-- > 0; ) {
+    if (xp[i] != 0)
+      break;
+  }
+
+  i = (xl - 1) - i;
+  i *= bigit_bits;
+
+  return FIX(i);
 }
 
 /* logical operations simulate two's complement operations using the
