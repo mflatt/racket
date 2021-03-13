@@ -221,7 +221,7 @@
   (cp src dst #:build-path? #t)
   (register-change! 'cp src dst))
 
-(define (fix-executable file)
+(define (fix-executable file #:ignore-non-executable? [ignore-non-executable? #f])
   (define (fix-binary file)
     (define (fix-one tag dir)
       (let-values ([(i o) (open-input-output-file file #:exists 'update)])
@@ -273,14 +273,16 @@
                (mv temp file)))]
           [(regexp-match #rx#"^#!/bin/sh" magic)
            (fix-script file)]
+          [ignore-non-executable? (void)]
           [else (error (format "unknown executable: ~a" file))])))
 
 (define (fix-executables bindir librktdir [binfiles #f] [libfiles #f])
   (for ([dir (in-list (list bindir librktdir))]
-        [files (in-list (list binfiles libfiles))])
+        [files (in-list (list binfiles libfiles))]
+        [ignore-non-executable? (in-list (list #f #t))])
     (parameterize ([current-directory dir])
       (for ([f (in-list (or files (ls)))] #:when (file-exists? f))
-        (fix-executable f)))))
+        (fix-executable f #:ignore-non-executable? ignore-non-executable?)))))
 
 (define (fix-desktop-files appsdir bindir sharerktdir [appfiles #f])
   ;; For absolute mode, change `Exec' and `Icon' lines to
