@@ -225,17 +225,20 @@
   (define (fix-binary file)
     (define (fix-one tag dir)
       (let-values ([(i o) (open-input-output-file file #:exists 'update)])
-        (let ([m (regexp-match-positions tag i)])
-          (unless m
-            (error
-             (format "could not find collection-path label in executable: ~a"
-                     file)))
-          (file-position o (cdar m))
-          (display dir o)
-          (write-byte 0 o)
-          (write-byte 0 o)
-          (close-input-port i)
-          (close-output-port o))))
+        (cond
+          [(regexp-match-positions tag i)
+           => (lambda (m)
+                (file-position o (cdar m))
+                (display dir o)
+                (write-byte 0 o)
+                (write-byte 0 o))]
+          [else
+           (unless ignore-non-executable?
+             (error
+              (format "could not find collection-path label in executable: ~a"
+                      file)))])
+        (close-input-port i)
+        (close-output-port o)))
     (fix-one #rx#"coLLECTs dIRECTORy:" (dir: 'collects))
     (fix-one #rx#"coNFIg dIRECTORy:" (dir: 'config)))
   (define (fix-script file)
