@@ -275,14 +275,12 @@
            (fix-script file)]
           [else (error (format "unknown executable: ~a" file))])))
 
-(define (fix-executables bindir librktdir [binfiles #f])
-  (parameterize ([current-directory bindir])
-    (for ([f (in-list (or binfiles (ls)))] #:when (file-exists? f))
-      (fix-executable f)))
-  ;; fix the gracket & starter executables too
-  (parameterize ([current-directory librktdir])
-    (when (file-exists? "gracket") (fix-executable "gracket"))
-    (when (file-exists? "starter") (fix-executable "starter"))))
+(define (fix-executables bindir librktdir [binfiles #f] [libfiles #f])
+  (for ([dir (in-list (list bindir librktdir))]
+        [files (in-list (list binfiles libfiles))])
+    (parameterize ([current-directory dir])
+      (for ([f (in-list (or files (ls)))] #:when (file-exists? f))
+        (fix-executable f)))))
 
 (define (fix-desktop-files appsdir bindir sharerktdir [appfiles #f])
   ;; For absolute mode, change `Exec' and `Icon' lines to
@@ -525,6 +523,7 @@
     (error "Cannot handle distribution of shared-libraries (yet)"))
   (with-handlers ([exn? (lambda (e) (undo-changes) (raise e))])
     (define binfiles (ls* "bin"))
+    (define libfiles (ls* "lib"))
     (if (eq? 'windows (cross-system-type))
         ;; Windows executables appear in the immediate directory:
         (for ([f (in-list (directory-list))])
@@ -558,7 +557,7 @@
       (error (format "leftovers in source tree: ~s" (ls))))
     ;; we need to know which files need fixing
     (unless bundle?
-      (fix-executables (dir: 'bin) (dir: 'librkt) binfiles)
+      (fix-executables (dir: 'bin) (dir: 'librkt) binfiles libfiles)
       (fix-desktop-files (dir: 'apps) (dir: 'bin) (dir: 'sharerkt) appfiles)
       (write-uninstaller)
       (write-config)))
