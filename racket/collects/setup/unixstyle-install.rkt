@@ -261,7 +261,10 @@
             (write-bytes buf (current-output-port) (cdadr m) (caadr m2))
             (printf "librktdir=\"~a\"\n" (escaped-dir: 'librkt)))
           (write-bytes buf (current-output-port) (cdadr (or m2 m)))))))
-  (let ([magic (with-input-from-file file (lambda () (read-bytes 10)))])
+  (let ([magic (with-input-from-file file (lambda () (let ([r (read-bytes 10)])
+                                                       (if (eof-object? r)
+                                                           #""
+                                                           r))))])
     (cond [(or (regexp-match #rx#"^\177ELF" magic)
                (regexp-match #rx#"^\316\372\355\376" magic)
                (regexp-match #rx#"^\317\372\355\376" magic))
