@@ -884,6 +884,11 @@
     (lambda (x)
       (and (integer? x) (exact? x))))
 
+  (define livemask?
+    (lambda (v)
+      ;; just check plausible:
+      (or (integer? v) (and (pair? v) (integer? (car v))))))
+
  ; calling conventions are imposed; clauses no longer have formals (they are
  ; now locals set by arguments from argument registers and frame); calls no
  ; longer have arguments; case-lambda is resposible for dispatching to correct
@@ -900,7 +905,7 @@
       (pred-primitive (pred-prim))
       (value-primitive (value-prim))
       (immediate (imm fs))
-      (exact-integer (lpm))
+      (livemask (lpm))
       (info (info))
       (return-label (mrvl))
       (label (l rpl))
@@ -1034,7 +1039,7 @@
       (pred-primitive (pred-prim))
       (value-primitive (value-prim))
       (immediate (imm fs))
-      (exact-integer (lpm))
+      (livemask (lpm))
       (live-info (live-info))
       (info (info))
       (label (l rpl))

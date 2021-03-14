@@ -12,7 +12,7 @@
 (define-record-type ctrpi ; compile-time version of rp-info
   (nongenerative #{ctrpi bcpkdd2y9yyv643zicd4jbe3y-1})
   (sealed #t)
-  (fields label src sexpr mask))
+  (fields label src sexpr mask)) ; mask is like a livemask: an integer or (cons size tree)
 
 (define-record-type info-lambda
   (nongenerative #{info-lambda bcpkdd2y9yyv643zicd4jbe3y-2})
@@ -56,7 +56,7 @@
     nfv*
     nfv**
     (mutable weight)
-    (mutable call-live*)
+    (mutable call-live*) ; a tree
     (mutable frame-words)
     (mutable local-save*))
   (protocol

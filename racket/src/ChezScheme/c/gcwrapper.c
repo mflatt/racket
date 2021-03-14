@@ -600,6 +600,14 @@ static void check_bignum(ptr p) {
     printf("!!! not a bignum %p\n", TO_VOIDP(p));
 }
 
+static void check_livemask(ptr p) {
+  if (!Sbignump(p)) {
+    if (!Spairp(p))
+      printf("!!! not a pair or bignum %p\n", TO_VOIDP(p));
+    /* to do: check more here! */
+  }
+}
+
 #include "heapcheck.inc"
 
 #ifdef PTHREADS

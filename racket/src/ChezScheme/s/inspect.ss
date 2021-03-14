@@ -1800,7 +1800,10 @@
 
 )
 
-(define inspect/object
+(let ()
+(include "tree.ss")
+
+(set-who! inspect/object
   (lambda (x)
     (define compute-size
       (let ([size-ht #f])
@@ -2258,7 +2261,7 @@
                       (values (source-file-descriptor-name sfd) fp))]
                 [(path line char) (values path line char)]))
             (values))))
-
+  
     (define-who make-continuation-object
       (lambda (x pos)
         (include "types.ss")
@@ -2285,19 +2288,21 @@
                (let ([cookie '(chocolate . chip)])
                  (let ([vals (make-vector len cookie)] [vars (make-vector len '())] [live (code-info-live info)])
                    ; fill vals based on live-pointer mask
-                   (let f ([i 1] [lpm lpm])
+                   (let f ([i 1])
                      (unless (>= i len)
-                       (when (odd? lpm)
+                       (when ($livemask-member? lpm (fx- i 1))
                          (vector-set! vals (fx1- i) ($continuation-stack-ref x i)))
-                       (f (fx1+ i) (ash lpm -1))))
+                       (f (fx1+ i))))
                    ; fill vars based on code-info variable mask
-                   (let f ([i 0] [mask (rp-info-mask rpi)])
-                     (unless (eqv? mask 0)
-                       (when (odd? mask)
-                         (let ([p (vector-ref live i)])
-                           (let ([index (fx1- (cdr p))])
-                             (vector-set! vars index (cons (car p) (vector-ref vars index))))))
-                       (f (+ i 1) (ash mask -1))))
+                   (let* ([mask (rp-info-mask rpi)]
+                          [mask-len ($livemask-size mask)])
+                     (let f ([i 0])
+                       (unless (fx= i mask-len)
+                         (when ($livemask-member? mask i)
+                           (let ([p (vector-ref live i)])
+                             (let ([index (fx1- (cdr p))])
+                               (vector-set! vars index (cons (car p) (vector-ref vars index))))))
+                         (f (+ i 1)))))
                    ; create return vector
                    (with-values
                      (let f ([i 0] [count 0] [cp #f] [cpvar* '()])
@@ -2357,13 +2362,13 @@
                        (real-make-continuation-object x (rp-info-src rpi) (rp-info-sexpr rpi) cp v frame-count pos))))))]
             [else
               (let ([v (list->vector
-                         (let f ([i 1] [lpm lpm])
+                         (let f ([i 1])
                            (cond
                              [(>= i len) '()]
-                             [(odd? lpm)
+                             [($livemask-member? lpm (fx- i 1))
                               (cons (make-variable-object ($continuation-stack-ref x i) #f)
-                                (f (fx1+ i) (ash lpm -1)))]
-                             [else (f (fx1+ i) (ash lpm -1))])))])
+                                (f (fx1+ i)))]
+                             [else (f (fx1+ i))])))])
                 (real-make-continuation-object x #f #f #f v (vector-length v) pos))]))))
 
     (define real-make-continuation-object
@@ -2557,13 +2562,14 @@
                       [livemask (if (not compact?)
                                     ($object-ref 'scheme-object ret (constant return-address-livemask-disp))
                                     (fxsrl mask+size+mode (constant compact-frame-mask-offset)))]
+                      [livemask-len ($livemask-size livemask)]
                       [next-frame (fx- frame size)])
-                 (let frame-loop ([p (fx+ next-frame 1)] [livemask livemask] [x* x*])
-                   (if (eqv? livemask 0)
+                 (let frame-loop ([p (fx+ next-frame 1)] [i 0] [x* x*])
+                   (if (fx= i livemask-len)
                        (loop next-frame x*)
                        (frame-loop (fx+ p 1)
-                                   (bitwise-arithmetic-shift-right livemask 1)
-                                   (if (bitwise-bit-set? livemask 0)
+                                   (fx+ i 1)
+                                   (if ($livemask-member? livemask i)
                                        (cons ($object-ref 'scheme-object p 0) x*)
                                        x*)))))])))]
         [else
@@ -2681,9 +2687,9 @@
                           ($split-continuation x 0)
                           ; not following RA slot at base of the frame, but this should always hold dounderflow,
                           ; which will be in the static generation and therefore ignored anyway after compact heap
-                          (let ([len ($continuation-stack-length x)])
+                          (let ([len ($continuation-stack-length x)]
+                                [lpm ($continuation-return-livemask x)])
                             (let loop ([i 1]
-                                       [lpm ($continuation-return-livemask x)]
                                        [size (fx+ (constant size-continuation)
                                                (align (fx* len (constant ptr-bytes)))
                                                (compute-size ($continuation-return-code x))
@@ -2693,7 +2699,7 @@
                                                (compute-size ($continuation-attachments x)))])
                               (if (fx>= i len)
                                   size
-                                  (loop (fx+ i 1) (ash lpm -1) (if (odd? lpm) (fx+ size (compute-size ($continuation-stack-ref x i))) size)))))))
+                                  (loop (fx+ i 1) (if ($livemask-member? lpm (fx- i 1)) (fx+ size (compute-size ($continuation-stack-ref x i))) size)))))))
                     (let ([n ($closure-length x)])
                       (do ([i 0 (fx+ i 1)]
                            [size (fx+ (align (fx+ (constant header-size-closure) (fx* n (constant ptr-bytes)))) (compute-size ($closure-code x)))
@@ -2868,12 +2874,13 @@
                      (compute-composition! ($continuation-link x))
                      (compute-composition! ($continuation-winders x))
                      (compute-composition! ($continuation-attachments x))
-                     (let ([len ($continuation-stack-length x)])
+                     (let ([len ($continuation-stack-length x)]
+                           [lpm ($continuation-return-livemask x)])
                        (incr! stack (align (fx* len (constant ptr-bytes))))
-                       (let loop ([i 1] [lpm ($continuation-return-livemask x)])
+                       (let loop ([i 1])
                          (unless (fx>= i len)
-                           (when (odd? lpm) (compute-composition! ($continuation-stack-ref x i)))
-                           (loop (fx+ i 1) (ash lpm -1)))))))
+                           (when ($livemask-member? lpm (fx- i 1)) (compute-composition! ($continuation-stack-ref x i)))
+                           (loop (fx+ i 1)))))))
                  (begin
                    (compute-composition! ($closure-code x))
                    (let ([n ($closure-length x)])
@@ -3019,14 +3026,15 @@
                                  ($split-continuation x 0)
                                  ; not following RA slot at base of the frame, but this should always hold dounderflow,
                                  ; which will be in the static generation and therefore ignored anyway after compact heap
-                                 (let ([len ($continuation-stack-length x)])
-                                   (let loop ([i 1] [lpm ($continuation-return-livemask x)])
+                                 (let ([len ($continuation-stack-length x)]
+                                       [lpm ($continuation-return-livemask x)])
+                                   (let loop ([i 1])
                                      (if (fx>= i len)
                                          (construct-proc ($continuation-return-code x) ($closure-code x) ($continuation-link x)
                                                          ($continuation-winders x) ($continuation-attachments x) next-proc)
-                                         (if (odd? lpm)
-                                             (construct-proc ($continuation-stack-ref x i) (loop (fx+ i 1) (ash lpm -1))) 
-                                             (loop (fx+ i 1) (ash lpm -1))))))))
+                                         (if ($livemask-member? lpm (fx- i 1))
+                                             (construct-proc ($continuation-stack-ref x i) (loop (fx+ i 1))) 
+                                             (loop (fx+ i 1))))))))
                            (construct-proc ($closure-code x)
                              (let ([n ($closure-length x)])
                                (let f ([i 0])
@@ -3065,6 +3073,7 @@
                   (begin (set! saved-next-proc next-proc) path)
                   (next-proc)))))
         (rec find-next (lambda () (saved-next-proc)))))))
+)
 
 (let ()
   (define filter-generation

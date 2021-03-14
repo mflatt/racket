@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x09050504)
+(define-constant scheme-version #x09050505)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -1695,7 +1695,7 @@
 (define-primitive-structure-disps rp-header typemod
   ([uptr toplink]
    [uptr mv-return-address]
-   [ptr livemask]
+   [ptr livemask] ; a fixnum or (cons size tree)
    [iptr frame-size])) ; low bit is 0 to distinguish from a `rp-compact-header`
 (define-constant return-address-mv-return-address-disp
   (- (constant rp-header-mv-return-address-disp) (constant size-rp-header)))

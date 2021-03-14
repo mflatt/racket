@@ -231,6 +231,7 @@
          last-pair
          oblist
          make-hashtable
+         make-eqv-hashtable
          make-weak-eq-hashtable
          symbol-hash
          hashtable-keys
@@ -980,6 +981,9 @@
      (make-hash)]
     [else
      (make-custom-hash eql? hash (lambda (a) 1))]))
+
+(define (make-eqv-hashtable)
+  (make-hasheqv))
 
 (define (make-weak-eq-hashtable)
   (make-weak-hasheq))
