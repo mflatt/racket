@@ -2368,6 +2368,7 @@
   ($src-condition-start [flags single-valued])
   ($sremprop [flags single-valued])
   ($stencil-vector-set! [sig [(stencil-vector uptr ptr) -> (void)]] [flags true])
+  ($stencil-vector-truncate! [sig [(stencil-vector uptr uptr) -> (void)]] [flags true])
   ($stencil-vector-update [sig [(stencil-vector uptr uptr ptr ...) -> (stencil-vector)]] [flags true])
   ($string-char-foldcase [flags single-valued])
   ($string-ref-check? [sig [(ptr ptr) -> (boolean)]] [flags unrestricted pure])

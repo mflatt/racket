@@ -591,10 +591,11 @@
       (unless (and (fixnum? new-mask)
                    (fx< -1 new-mask (fxsll 1 (constant stencil-vector-mask-bits))))
         ($oops who "invalid mask ~s" new-mask))
-      (let ([old-mask (stencil-vector-mask v)])
-        (unless (fx<= (fxpopcount new-mask) (fxpopcount old-mask))
+      (let ([old-mask (stencil-vector-mask v)]
+            [new-count (fxpopcount new-mask)])
+        (unless (fx<= new-count (fxpopcount old-mask))
           ($oops who "new mask ~s is larger than old mask ~s" new-mask old-mask))
-        (stencil-vector-truncate! v new-mask))))
+        ($stencil-vector-truncate! v new-count new-mask))))
 
   ;; unsafe variant, which assumes that the arguments are consistent;
   ;; recognize the case where all slots are replaced

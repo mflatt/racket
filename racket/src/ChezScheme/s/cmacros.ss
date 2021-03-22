@@ -1131,9 +1131,8 @@
 (define-constant bytevector-length-factor (expt 2 (constant bytevector-length-offset)))
 (define-constant char-factor          (expt 2 (constant char-data-offset)))
 
-(define-constant stencil-vector-mask-offset  (integer-length (constant mask-stencil-vector)))
-(define-constant stencil-vector-mask-bits    (fx- (constant ptr-bits)
-                                                  (constant stencil-vector-mask-offset)))
+(define-constant stencil-vector-length-offset  (integer-length (constant mask-stencil-vector)))
+(define-constant stencil-vector-mask-bits    (- (constant fixnum-bits) 2)) ; stay clear of fixnum limits
 
 ;; ---------------------------------------------------------------------
 ;; Helpers to define object layouts:
@@ -1441,6 +1440,7 @@
 
 (define-primitive-structure-disps stencil-vector type-typed-object
   ([iptr type]
+   [ptr mask]
    [ptr data 0]))
 
 ; WARNING: implementation of real-part and imag-part assumes that

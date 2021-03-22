@@ -778,7 +778,8 @@ ptr S_stencil_vector(mask) uptr mask; {
 
     d = size_stencil_vector(n);
     newspace_find_room(tc, type_typed_object, d, p);
-    VECTTYPE(p) = (mask << stencil_vector_mask_offset) | type_stencil_vector;
+    STENVECTTYPE(p) = (n << stencil_vector_length_offset) | type_stencil_vector;
+    STENVECTMASK(p) = FIX(mask);
     return p;
 }
 

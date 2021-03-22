@@ -404,8 +404,9 @@
       (mark within-segment) ; see assertion
       (assert-stencil-vector-size)
       (copy-type stencil-vector-type)
+      (copy stencil-vector-mask)
       (trace-ptrs stencil-vector-data len)
-      (pad (when (== (& len 1) 0)
+      (pad (when (!= (& len 1) 0)
              (set! (stencil-vector-data _copy_ len) (FIX 0))))
       (count countof-stencil-vector)]
 

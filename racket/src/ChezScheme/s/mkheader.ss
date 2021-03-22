@@ -338,10 +338,10 @@
         (defref Sunbox box ref)
   
         (def "Sstencil_vector_length(x)"
-          (format "Spopcount(((uptr)~a)>>~d)"
-            (access "x" vector type)
-            ($ stencil-vector-mask-offset)))
-        (defref Sstencil_vector_ref vector data)
+          (format "((iptr)((uptr)~a>>~d))"
+            (access "x" stencil-vector type)
+            ($ stencil-vector-length-offset)))
+        (defref Sstencil_vector_ref stencil-vector data)
         
         (export "iptr" "Sinteger_value" "(ptr)")
         (def "Sunsigned_value(x)" "(uptr)Sinteger_value(x)")
@@ -1035,6 +1035,7 @@
 
         (defref STENVECTTYPE stencil-vector type)
         (definit INITSTENVECTIT stencil-vector data)
+        (defref STENVECTMASK stencil-vector mask)
 
         (defref INEXACTNUM_TYPE inexactnum type)
         (defref INEXACTNUM_REAL_PART inexactnum real)

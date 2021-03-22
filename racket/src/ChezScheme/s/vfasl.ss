@@ -728,16 +728,18 @@
                      set-u8!
                      bytevector-u8-ref)])]
     [(stencil-vector mask vec)
-     (vector-copy v vec vfi
-                  vector-length
-                  vspace-impure
-                  header-size-stencil-vector stencil-vector-data-disp
-                  ptr-bytes
-                  (bitwise-ior (bitwise-arithmetic-shift-left mask (constant stencil-vector-mask-offset))
-                               (constant type-stencil-vector))
-                  stencil-vector-type-disp
-                  set-ptr!
-                  (lambda (v i) (copy (vector-ref v i) vfi)))]
+     (let ([p (vector-copy v vec vfi
+                           vector-length
+                           vspace-impure
+                           header-size-stencil-vector stencil-vector-data-disp
+                           ptr-bytes
+                           (bitwise-ior (bitwise-arithmetic-shift-left (vector-length vec) (constant stencil-vector-length-offset))
+                                        (constant type-stencil-vector))
+                           stencil-vector-type-disp
+                           set-ptr!
+                           (lambda (v i) (copy (vector-ref v i) vfi)))])
+       (set-uptr! p (constant stencil-vector-mask-disp) (fix mask) vfi)
+       p)]
     [(record maybe-uid size nflds rtd pad-ty* fld*)
      (cond
        [(refers-back-to-self? v rtd)

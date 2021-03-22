@@ -6482,8 +6482,9 @@
           (def-len flvector-length flvector-type-disp flvector-length-offset)
           (def-len string-length string-type-disp string-length-offset)
           (def-len bytevector-length bytevector-type-disp bytevector-length-offset)
-          (def-len $bignum-length bignum-type-disp bignum-length-offset)
-          (def-len stencil-vector-mask stencil-vector-type-disp stencil-vector-mask-offset))
+          (def-len $bignum-length bignum-type-disp bignum-length-offset))
+        (define-inline 3 stencil-vector-mask
+          [(e) (%mref ,e ,(constant stencil-vector-mask-disp))])
         (let ()
           (define-syntax def-len
             (syntax-rules ()
@@ -6501,8 +6502,16 @@
           (def-len fxvector-length mask-fxvector type-fxvector fxvector-type-disp fxvector-length-offset)
           (def-len flvector-length mask-flvector type-flvector flvector-type-disp flvector-length-offset)
           (def-len string-length mask-string type-string string-type-disp string-length-offset)
-          (def-len bytevector-length mask-bytevector type-bytevector bytevector-type-disp bytevector-length-offset)
-          (def-len stencil-vector-mask mask-stencil-vector type-stencil-vector stencil-vector-type-disp stencil-vector-mask-offset))
+          (def-len bytevector-length mask-bytevector type-bytevector bytevector-type-disp bytevector-length-offset))
+        (define-inline 2 stencil-vector-mask
+          [(e)
+           (let ([Lerr (make-local-label 'Lerr)])
+             (bind #t (e)
+               `(if ,(%type-check mask-typed-object type-typed-object ,e)
+                    (if ,(%type-check mask-stencil-vector type-stencil-vector ,(%mref ,e ,(constant stencil-vector-type-disp)))
+                        ,(%mref ,e ,(constant stencil-vector-mask-disp))
+                        (goto ,Lerr))
+                    (label ,Lerr ,(build-libcall #t #f sexpr stencil-vector-mask e)))))])
         ; TODO: consider adding integer-valued?, rational?, rational-valued?,
         ; real?, and real-valued?
         (define-inline 2 integer?
@@ -10706,24 +10715,28 @@
           (meta-assert (= (constant log2-ptr-bytes) (constant fixnum-offset)))
           (let ()
             (define build-stencil-vector-type
-              (lambda (e-mask) ; e-mask is used only once
+              (lambda (e-len) ; e-len is used only once
                 (%inline logor
                          (immediate ,(constant type-stencil-vector))
-                         ,(%inline sll ,e-mask (immediate ,(fx- (constant stencil-vector-mask-offset)
-                                                                (constant fixnum-offset)))))))
+                         ,(%inline sll ,e-len (immediate ,(fx- (constant stencil-vector-length-offset)
+                                                               (constant fixnum-offset)))))))
             (define do-stencil-vector
               (lambda (e-mask e-val*)
                 (list-bind #f (e-val*)
                   (bind #f (e-mask)
-                      (let ([t-vec (make-tmp 'tvec)])
+                      (let ([t-vec (make-tmp 'tvec)]
+                            [len (length e-val*)])
                         `(let ([,t-vec ,(%constant-alloc type-typed-object
                                                          (fx+ (constant header-size-stencil-vector)
-                                                              (fx* (length e-val*) (constant ptr-bytes))))])
+                                                              (fx* len (constant ptr-bytes))))])
                            ,(let loop ([e-val* e-val*] [i 0])
                               (if (null? e-val*)
-                                  `(seq
-                                     (set! ,(%mref ,t-vec ,(constant stencil-vector-type-disp))
-                                           ,(build-stencil-vector-type e-mask))
+                                  (%seq
+                                     (set! ,(%mref ,t-vec ,(constant stencil-vector-type-disp)) 
+                                           (immediate ,(fxior (constant type-stencil-vector)
+                                                              (fxsll len (constant stencil-vector-length-offset)))))
+                                     (set! ,(%mref ,t-vec ,(constant stencil-vector-mask-disp)) 
+                                           ,e-mask)
                                      ,t-vec)
                                   `(seq
                                     (set! ,(%mref ,t-vec ,(fx+ i (constant stencil-vector-data-disp))) ,(car e-val*))
@@ -10741,7 +10754,8 @@
                                                          (immediate ,(- (constant byte-alignment)))))])
                                ,(%seq
                                  (set! ,(%mref ,t-vec ,(constant stencil-vector-type-disp))
-                                       ,(build-stencil-vector-type e-mask))
+                                       ,(build-stencil-vector-type e-length))
+                                 (set! ,(%mref ,t-vec ,(constant stencil-vector-mask-disp)) ,e-mask)
                                  ;; Content not filled! This function is meant to be called by
                                  ;; `$stencil-vector-update`, which has GC disabled between
                                  ;; allocation and filling in the data
@@ -10758,13 +10772,16 @@
                `(call ,(make-info-call src sexpr #f #f #f) #f
                       ,(lookup-primref 3 '$stencil-vector-update)
                       ,e-vec ,e-sub-mask ,e-add-mask ,e-val* ...)])
-            (define-inline 3 stencil-vector-truncate!
-              [(e-vec e-mask)
-               (bind #f (e-vec e-mask)
-                 `(seq
-                   (set! ,(%mref ,e-vec ,(constant stencil-vector-type-disp))
-                         ,(build-stencil-vector-type e-mask))
-                   ,(%constant svoid)))])))
+            (define-inline 3 $stencil-vector-truncate!
+              [(e-vec e-len e-mask)
+               (bind #t (e-vec)
+                 (bind #f (e-len e-mask)
+                   (%seq
+                     (set! ,(%mref ,e-vec ,(constant stencil-vector-type-disp))
+                           ,(build-stencil-vector-type e-len))
+                     (set! ,(%mref ,e-vec ,(constant stencil-vector-mask-disp))
+                           ,e-mask)
+                     ,(%constant svoid))))])))
         (let ()
           (meta-assert (= (constant log2-ptr-bytes) (constant fixnum-offset)))
           (define-inline 3 $make-eqhash-vector
