@@ -111,9 +111,10 @@
 
 (define (intmap-set t key val)
   (let ([et (intmap-eqtype t)])
-    (make-intmap
-     et
-     ($intmap-set et (intmap-root t) (hash-code et key) key val))))
+    (let ([r ($intmap-set et (intmap-root t) (hash-code et key) key val)])
+      (if (eq? r (intmap-root t))
+          t
+          (make-intmap et r)))))
 
 (define ($intmap-set et t h key val)
   (cond
@@ -124,9 +125,9 @@
        [(not (match-prefix? h p m))
         (join h (make-Lf h key val) p t)]
        [(fx<= h p)
-        (br p m ($intmap-set et (Br-left t) h key val) (Br-right t))]
+        (br/maybe t p m ($intmap-set et (Br-left t) h key val) (Br-right t))]
        [else
-        (br p m (Br-left t) ($intmap-set et (Br-right t) h key val))]))]
+        (br/maybe t p m (Br-left t) ($intmap-set et (Br-right t) h key val))]))]
 
    [(Lf? t)
     (let ([j (Lf-hash t)])
@@ -134,7 +135,10 @@
        [(not (fx= h j))
         (join h (make-Lf h key val) j t)]
        [(key=? et key (Lf-key t))
-        (make-Lf h key val)]
+        (if (and (eq? key (Lf-key t))
+                 (eq? val (Lf-value t)))
+            t
+            (make-Lf h key val))]
        [else
         (make-Co h (list (cons key val) (cons (Lf-key t) (Lf-value t))))]))]
 
@@ -158,7 +162,9 @@
   (let ([et (intmap-eqtype t)])
     (let ([r ($intmap-remove et (intmap-root t) (hash-code et key) key)])
       (if r
-          (make-intmap et r)
+          (if (eq? r (intmap-root t))
+              t
+              (make-intmap et r))
           (case et
            [(eq) empty-hasheq]
            [(equal) empty-hash]
@@ -173,9 +179,9 @@
        [(not (match-prefix? h p m))
         t]
        [(fx<= h p)
-        (br/check-left p m ($intmap-remove et (Br-left t) h key) (Br-right t))]
+        (br/check-left t p m ($intmap-remove et (Br-left t) h key) (Br-right t))]
        [else
-        (br/check-right p m (Br-left t) ($intmap-remove et (Br-right t) h key))]))]
+        (br/check-right t p m (Br-left t) ($intmap-remove et (Br-right t) h key))]))]
 
    [(Lf? t)
     (if (key=? et key (Lf-key t))
@@ -243,14 +249,20 @@
   (let ([c (fx+ ($intmap-count l) ($intmap-count r))])
     (make-Br c p m l r)))
 
-(define (br/check-left p m l r)
+(define (br/maybe t p m l r)
+  (if (and (eq? (Br-left t) l)
+           (eq? (Br-right t) r))
+      t
+      (br p m l r)))
+
+(define (br/check-left t p m l r)
   (if l
-      (br p m l r)
+      (br/maybe t p m l r)
       r))
 
-(define (br/check-right p m l r)
+(define (br/check-right t p m l r)
   (if r
-      (br p m l r)
+      (br/maybe t p m l r)
       l))
 
 (define-syntax-rule (key=? et k1 k2)
@@ -258,10 +270,13 @@
         [(eq? et 'eqv) (eqv? k1 k2)]
         [else          (key-equal? k1 k2)]))
 
+(define-syntax-rule (to-fxpositive e)
+  (fxand e (most-positive-fixnum)))
+
 (define-syntax-rule (hash-code et k)
-  (cond [(eq? et 'eq)  (eq-hash-code k)]
-        [(eq? et 'eqv) (eqv-hash-code k)]
-        [else          (key-equal-hash-code k)]))
+  (cond [(eq? et 'eq)  (to-fxpositive (eq-hash-code k))]
+        [(eq? et 'eqv) (to-fxpositive (eqv-hash-code k))]
+        [else          (to-fxpositive (key-equal-hash-code k))]))
 
 ;; iteration
 (define (intmap-iterate-first t)
