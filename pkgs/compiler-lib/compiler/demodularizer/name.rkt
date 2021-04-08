@@ -1,11 +1,11 @@
 #lang racket/base
-(require compiler/zo-structs
+(require "linklet.rkt"
          "run.rkt"
          "import.rkt")
 
 (provide select-names
          find-name)
-
+        
 (define (select-names runs)
   (define names (make-hash)) ; path/submod+phase+sym -> symbol
   (define used-names (make-hasheq))
@@ -38,16 +38,16 @@
         (hash-set! names (cons path/submod+phase name) new-name)
         (set-box! category (cons new-name (unbox category)))))
 
-    (select-names! (linkl-exports linkl) internals)
-    (select-names! (linkl-internals linkl) internals)
-    (select-names! (linkl-lifts linkl) lifts))
+    (select-names! (linklet*-exports linkl) internals)
+    (select-names! (linklet*-internals linkl) internals)
+    (select-names! (linklet*-lifts linkl) lifts))
 
   ;; Record any imports that will remain as imports; anything
   ;; not yet mapped must be a leftover import
   (for ([r (in-list runs)])
     (define linkl (run-linkl r))
-    (for ([import-names (in-list (linkl-importss linkl))]
-          [import-shapes (in-list (linkl-import-shapess linkl))]
+    (for ([import-names (in-list (linklet*-importss linkl))]
+          [import-shapes (in-list (linklet*-import-shapess linkl))]
           [use (in-list (run-uses r))])
       (for ([name (in-list import-names)]
             [shape (in-list import-shapes)])

@@ -6,7 +6,8 @@
          "merge.rkt"
          "gc.rkt"
          "bundle.rkt"
-         "write.rkt")
+         "write.rkt"
+         racket/pretty)
 
 (provide demodularize
 
@@ -19,32 +20,54 @@
 
 (define logger (make-logger 'demodularizer (current-logger)))
 
-(define (demodularize input-file [given-output-file #f])
+(define (demodularize input-file [given-output-file #f]
+                      #:work-directory [given-work-directory #f])
+  (define work-directory (and (eq? 'chez-scheme (system-type 'vm))
+                              (or given-work-directory
+                                  (build-path (find-system-path 'temp-dir) "demod-work"))))
+  
   (parameterize ([current-logger logger]
                  [current-excluded-modules (for/set ([path (in-set (current-excluded-modules))])
                                              (normal-case-path (simplify-path (path->complete-path path))))])
 
-    (log-info "Compiling module")
-    (parameterize ([current-namespace (make-base-empty-namespace)])
-      (managed-compile-zo input-file))
+    (cond
+      [work-directory
+       (log-info "Compiling modules to ~s" work-directory)
+       (parameterize ([current-namespace (make-empty-namespace)]
+                      [current-compiled-file-roots (list (build-path work-directory "native")
+                                                         (build-path work-directory "linklet"))]
+                      [current-compile-target-machine #f]
+                      [current-multi-compile-any #t])
+         (namespace-attach-module (variable-reference->namespace (#%variable-reference)) ''#%builtin)
+         (managed-compile-zo input-file))]
+      [else
+       (log-info "Compiling module")
+       (parameterize ([current-namespace (make-base-empty-namespace)])
+         (managed-compile-zo input-file))])
 
     (log-info "Finding modules")
-    (define-values (runs excluded-module-mpis) (find-modules input-file))
+    (define-values (runs excluded-module-mpis)
+      (parameterize ([current-compiled-file-roots (if work-directory
+                                                      (list (build-path work-directory "linklet"))
+                                                      (current-compiled-file-roots))])
+        (find-modules input-file)))
 
     (log-info "Selecting names")
     (define-values (names internals lifts imports) (select-names runs))
 
     (log-info "Merging linklets")
-    (define-values (body first-internal-pos get-merge-info)
+    (define-values (body first-internal-pos new-internals linkl-mode get-merge-info)
       (merge-linklets runs names internals lifts imports))
 
     (log-info "GCing definitions")
-    (define-values (new-body new-internals new-lifts)
-      (gc-definitions body internals lifts first-internal-pos
+    (define-values (new-body gced-internals new-lifts)
+      (gc-definitions linkl-mode body internals lifts first-internal-pos new-internals
                       #:assume-pure? (garbage-collect-toplevels-enabled)))
 
+    (pretty-print new-body)
+
     (log-info "Bundling linklet")
-    (define bundle (wrap-bundle new-body new-internals new-lifts
+    (define bundle (wrap-bundle new-body gced-internals new-lifts
                                 excluded-module-mpis
                                 get-merge-info
                                 (let-values ([(base name dir?) (split-path input-file)])

@@ -363,13 +363,13 @@
         (let ((app_1 (|#%app| range-ref v_0 0)))
           (values values #f app_0 app_1 (|#%app| range-ref v_0 2) #f #f))))))))
 (define check-range
-  (lambda (a_0 b_0 step_0)
+  (lambda (a_0 b_0 step_0) (check-range-generic 'in-range a_0 b_0 step_0)))
+(define check-range-generic
+  (lambda (who_0 a_0 b_0 step_0)
     (begin
-      (if (real? a_0) (void) (raise-argument-error 'in-range "real?" a_0))
-      (if (real? b_0) (void) (raise-argument-error 'in-range "real?" b_0))
-      (if (real? step_0)
-        (void)
-        (raise-argument-error 'in-range "real?" step_0)))))
+      (if (real? a_0) (void) (raise-argument-error who_0 "real?" a_0))
+      (if (real? b_0) (void) (raise-argument-error who_0 "real?" b_0))
+      (if (real? step_0) (void) (raise-argument-error who_0 "real?" step_0)))))
 (define-values
  (struct:list-stream
   make-list-stream
@@ -865,6 +865,18 @@
         (void)
         (raise-argument-error 'hash-empty? "hash?" table_0))
       (zero? (hash-count table_0)))))
+(define print-value-columns
+  (make-parameter
+   +inf.0
+   (lambda (c_0)
+     (if (let ((or-part_0 (eqv? c_0 +inf.0)))
+           (if or-part_0 or-part_0 (if (exact-integer? c_0) (> c_0 5) #f)))
+       c_0
+       (raise-argument-error
+        'print-value-columns
+        "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
+        c_0)))
+   'print-value-columns))
 (define finish27
   (make-struct-type-install-properties
    '(queue)
@@ -12592,7 +12604,7 @@
 (define check-place-activity void)
 (define set-check-place-activity!
   (lambda (proc_0) (set! check-place-activity proc_0)))
-(define finish454
+(define finish457
   (make-struct-type-install-properties
    '(alarm-evt)
    1
@@ -12625,7 +12637,7 @@
    #f
    1
    0))
-(define effect_2822 (finish454 struct:alarm-evt))
+(define effect_2822 (finish457 struct:alarm-evt))
 (define alarm-evt1.1
   (|#%name|
    alarm-evt
@@ -13151,7 +13163,7 @@
        (begin (call-with-semaphore/enable-break_0 s_0 proc_0 #f null)))
       ((s_0 proc_0 try-fail12_0 . args_0)
        (call-with-semaphore/enable-break_0 s_0 proc_0 try-fail12_0 args_0))))))
-(define finish459
+(define finish462
   (make-struct-type-install-properties
    '(will-executor)
    2
@@ -13180,7 +13192,7 @@
    #f
    2
    0))
-(define effect_2170 (finish459 struct:will-executor))
+(define effect_2170 (finish462 struct:will-executor))
 (define will-executor1.1
   (|#%name|
    will-executor
@@ -13497,7 +13509,7 @@
           v_0))
        v_0))
    'current-thread-initial-stack-size))
-(define finish463
+(define finish466
   (make-struct-type-install-properties
    '(place-event)
    4
@@ -13518,7 +13530,7 @@
    #f
    4
    15))
-(define effect_2598 (finish463 struct:place-event))
+(define effect_2598 (finish466 struct:place-event))
 (define place-event1.1
   (|#%name|
    place-event
@@ -14181,7 +14193,7 @@
                          (|#%app| (sandman-do-sleep the-sandman) #f))
                         (loop_0)))))))))))
        (loop_0)))))
-(define finish479
+(define finish482
   (make-struct-type-install-properties
    '(place-dead-evt)
    2
@@ -14225,7 +14237,7 @@
    #f
    2
    0))
-(define effect_2480 (finish479 struct:place-done-evt))
+(define effect_2480 (finish482 struct:place-done-evt))
 (define place-done-evt3.1
   (|#%name|
    place-done-evt
@@ -14287,7 +14299,7 @@
            (void)
            (raise-argument-error 'place-dead-evt "place?" p_0))
          (place-done-evt3.1 p_0 #f))))))
-(define finish483
+(define finish486
   (make-struct-type-install-properties
    '(message-queue)
    6
@@ -14308,7 +14320,7 @@
    #f
    6
    22))
-(define effect_2109 (finish483 struct:message-queue))
+(define effect_2109 (finish486 struct:message-queue))
 (define message-queue4.1
   (|#%name|
    message-queue
@@ -14442,7 +14454,7 @@
                       (void))
                     (|#%app| host:mutex-release lock_0)
                     (|#%app| success-k_0 (car q_0))))))))))))
-(define finish487
+(define finish490
   (make-struct-type-install-properties
    '(place-channel)
    6
@@ -14482,7 +14494,7 @@
    #f
    6
    0))
-(define effect_2172 (finish487 struct:pchannel))
+(define effect_2172 (finish490 struct:pchannel))
 (define pchannel5.1
   (|#%name|
    pchannel
@@ -14731,7 +14743,7 @@
       (lambda () (place-has-activity! (unsafe-place-local-ref cell.1$2)))
       (lambda () (ensure-wakeup-handle!))))
     (void)))
-(define finish497
+(define finish500
   (make-struct-type-install-properties
    '(fsemaphore)
    4
@@ -14752,7 +14764,7 @@
    #f
    4
    13))
-(define effect_2528 (finish497 struct:fsemaphore))
+(define effect_2528 (finish500 struct:fsemaphore))
 (define fsemaphore1.1
   (|#%name|
    fsemaphore
@@ -14774,7 +14786,7 @@
   (|#%name| set-fsemaphore-dependents! (record-mutator struct:fsemaphore 2)))
 (define set-fsemaphore-dep-box!
   (|#%name| set-fsemaphore-dep-box! (record-mutator struct:fsemaphore 3)))
-(define finish502
+(define finish505
   (make-struct-type-install-properties
    '(fsemaphore-box-evt)
    1
@@ -14801,7 +14813,7 @@
    #f
    1
    0))
-(define effect_2415 (finish502 struct:fsemaphore-box-evt))
+(define effect_2415 (finish505 struct:fsemaphore-box-evt))
 (define fsemaphore-box-evt2.1
   (|#%name|
    fsemaphore-box-evt
@@ -14976,7 +14988,7 @@
           fork-pthread
           (lambda () (begin (start-atomic) (|#%app| proc_0))))
          (void))))))
-(define finish505
+(define finish508
   (make-struct-type-install-properties
    '(os-semaphore)
    3
@@ -14997,7 +15009,7 @@
    #f
    3
    1))
-(define effect_2703 (finish505 struct:os-semaphore))
+(define effect_2703 (finish508 struct:os-semaphore))
 (define os-semaphore1.1
   (|#%name|
    os-semaphore

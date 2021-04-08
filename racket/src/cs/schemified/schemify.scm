@@ -1583,13 +1583,13 @@
         (let ((app_1 (|#%app| range-ref v_0 0)))
           (values values #f app_0 app_1 (|#%app| range-ref v_0 2) #f #f))))))))
 (define check-range
-  (lambda (a_0 b_0 step_0)
+  (lambda (a_0 b_0 step_0) (check-range-generic 'in-range a_0 b_0 step_0)))
+(define check-range-generic
+  (lambda (who_0 a_0 b_0 step_0)
     (begin
-      (if (real? a_0) (void) (raise-argument-error 'in-range "real?" a_0))
-      (if (real? b_0) (void) (raise-argument-error 'in-range "real?" b_0))
-      (if (real? step_0)
-        (void)
-        (raise-argument-error 'in-range "real?" step_0)))))
+      (if (real? a_0) (void) (raise-argument-error who_0 "real?" a_0))
+      (if (real? b_0) (void) (raise-argument-error who_0 "real?" b_0))
+      (if (real? step_0) (void) (raise-argument-error who_0 "real?" step_0)))))
 (define check-naturals
   (lambda (n_0)
     (if (if (integer? n_0) (if (exact? n_0) (>= n_0 0) #f) #f)
@@ -1780,6 +1780,18 @@
             (check-not-unsafe-undefined sort 'sort)
             lst5_0
             less?6_0)))))))
+(define print-value-columns
+  (make-parameter
+   +inf.0
+   (lambda (c_0)
+     (if (let ((or-part_0 (eqv? c_0 +inf.0)))
+           (if or-part_0 or-part_0 (if (exact-integer? c_0) (> c_0 5) #f)))
+       c_0
+       (raise-argument-error
+        'print-value-columns
+        "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
+        c_0)))
+   'print-value-columns))
 (define correlated?$1 syntax?)
 (define correlated-e$1 syntax-e)
 (define correlated-property$1 syntax-property)
@@ -30642,7 +30654,7 @@
                            (schemify-body_0 (cdr l_0) wcm-state_2))))))))))
              (schemify_0 v_1 wcm-state_1)))))))
      (schemify/knowns_0 knowns_0 8 wcm-state_0 v_0))))
-(define finish1668
+(define finish1671
   (make-struct-type-install-properties
    '(convert-mode)
    4
@@ -30663,7 +30675,7 @@
    #f
    4
    0))
-(define effect_2443 (finish1668 struct:convert-mode))
+(define effect_2443 (finish1671 struct:convert-mode))
 (define convert-mode1.1
   (|#%name|
    convert-mode
@@ -39786,7 +39798,7 @@
                         (if (|#%app| need-exposed?_0 q_0)
                           #t
                           (if (extflonum? q_0) #t #f))))))))))))))
-(define finish2138
+(define finish2156
   (make-struct-type-install-properties
    '(to-unfasl)
    3
@@ -39807,7 +39819,7 @@
    #f
    3
    0))
-(define effect_2898 (finish2138 struct:to-unfasl))
+(define effect_2898 (finish2156 struct:to-unfasl))
 (define to-unfasl1.1
   (|#%name|
    to-unfasl
@@ -39937,7 +39949,7 @@
      'write
      "cannot marshal value that is embedded in compiled code\n  value: ~v"
      v_0)))
-(define finish2146
+(define finish2164
   (make-struct-type-install-properties
    '(node)
    5
@@ -39958,7 +39970,7 @@
    #f
    5
    0))
-(define effect_2547 (finish2146 struct:node))
+(define effect_2547 (finish2164 struct:node))
 (define node1.1
   (|#%name|
    node
@@ -40259,7 +40271,7 @@
                          app_2
                          (stack-set stack_1 pos_1 (car vals_1))))))))))))
          (loop_0 pos_0 vals_0 count_0 stack_0))))))
-(define finish2192
+(define finish2210
   (make-struct-type-install-properties
    '(stack-info)
    5
@@ -40280,7 +40292,7 @@
    #f
    5
    28))
-(define effect_2334 (finish2192 struct:stack-info))
+(define effect_2334 (finish2210 struct:stack-info))
 (define stack-info4.1
   (|#%name|
    stack-info
@@ -40617,7 +40629,7 @@
 (define stack-info-non-tail!
   (lambda (stk-i_0 stack-depth_0)
     (set-stack-info-non-tail-call-later?! stk-i_0 #t)))
-(define finish2206
+(define finish2227
   (make-struct-type-install-properties
    '(indirect)
    2
@@ -40638,7 +40650,7 @@
    #f
    2
    0))
-(define effect_2125 (finish2206 struct:indirect))
+(define effect_2125 (finish2227 struct:indirect))
 (define indirect1.1
   (|#%name|
    indirect
@@ -40685,7 +40697,7 @@
          s
          'indirect
          'element))))))
-(define finish2211
+(define finish2232
   (make-struct-type-install-properties
    '(boxed)
    1
@@ -40706,7 +40718,7 @@
    #f
    1
    0))
-(define effect_2970 (finish2211 struct:boxed))
+(define effect_2970 (finish2232 struct:boxed))
 (define boxed2.1
   (|#%name|
    boxed
@@ -40730,7 +40742,7 @@
        (boxed-pos_2515 s)
        ($value
         (impersonate-ref boxed-pos_2515 struct:boxed 0 s 'boxed 'pos))))))
-(define finish2215
+(define finish2236
   (make-struct-type-install-properties
    '(boxed/check)
    0
@@ -40751,7 +40763,7 @@
    #f
    0
    0))
-(define effect_2937 (finish2215 struct:boxed/check))
+(define effect_2937 (finish2236 struct:boxed/check))
 (define boxed/check3.1
   (|#%name|
    boxed/check

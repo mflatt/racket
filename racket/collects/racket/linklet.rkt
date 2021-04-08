@@ -44,7 +44,8 @@
          correlated-span)
 
 ;; The `#%kernel` primitive table is more primitive than the
-;; `#%kernel` module:
+;; `#%kernel` module, and the "syntax" functions there are really
+;; "correlated" functions:
 (define kernel (primitive-table '#%kernel))
 (define-syntax-rule (bounce id ...)
   (begin (define id (hash-ref kernel 'id)) ...))

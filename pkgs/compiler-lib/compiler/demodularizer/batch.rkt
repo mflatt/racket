@@ -17,6 +17,7 @@
                 [("-r" "--recompile") "Recompile final module to re-run optimizations"
                  (recompile-enabled #t)]                         
                 #:args (filename)
+                #;
                 (unless (eq? 'racket (system-type 'vm))
                   (raise-user-error (format "~a: supported only on Racket BC"
                                             (short-program+command-name))))
