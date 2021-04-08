@@ -51,7 +51,7 @@
                            (loop (fx+ pos 1)
                                  (if (eqv? 0 (bytes-ref is-converted pos))
                                      r
-                                     (+ r 1)))))]
+                                     (- r 1)))))]
        [else r]))]
 
   ;; in atomic mode

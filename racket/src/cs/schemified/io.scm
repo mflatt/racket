@@ -9215,7 +9215,7 @@
                                  0
                                  (unsafe-bytes-ref is-converted404_0 pos_0))
                               r_1
-                              (+ r_1 1))))))))))
+                              (- r_1 1))))))))))
                 (loop_0 start-pos_0 r_0))
                r_0))))))))
 (define temp9.1
