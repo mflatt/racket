@@ -112,14 +112,14 @@ double rktio_get_inexact_monotonic_milliseconds(rktio_t *rktio)
 #ifdef RKTIO_SYSTEM_WINDOWS
   if (!rktio->got_hires_freq) {
     if (!QueryPerformanceFrequency(&rktio->hires_freq))
-      rktio->hires_freq = 0;
+      rktio->hires_freq.QuadPart = 0;
     rktio->got_hires_freq = 1;
   }
 
-  if (rktio->hires_freq != 0) {
+  if (rktio->hires_freq.QuadPart != 0) {
     LARGE_INTEGER count;
     if (QueryPerformanceCounter(&count))
-      return ((double)count.QuadPart * 1000.0) / hires_freq;
+      return ((double)count.QuadPart * 1000.0) / (double)rktio->hires_freq.QuadPart;
   }
 #else
 # ifdef CLOCK_MONOTONIC_HR
