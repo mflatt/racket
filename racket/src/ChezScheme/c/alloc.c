@@ -1054,6 +1054,8 @@ ptr S_bignum(tc, n, sign) ptr tc; iptr n; IBOOL sign; {
 ptr S_code(tc, type, n) ptr tc; iptr type, n; {
     ptr p; iptr d;
 
+    start_code_mod_ok();
+    
     d = size_code(n);
     find_room(tc, space_code, 0, type_typed_object, d, p);
     CODETYPE(p) = type;

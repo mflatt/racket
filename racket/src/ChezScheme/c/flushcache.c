@@ -16,6 +16,12 @@
 
 #include "system.h"
 
+int code_mod_ok = 0;
+
+void start_code_mod_ok() {
+  code_mod_ok = 1;
+}
+
 #ifdef FLUSHCACHE
 typedef struct {
   uptr start;
@@ -44,6 +50,8 @@ void S_record_code_mod(ptr tc, uptr addr, uptr bytes) {
   uptr end = addr + bytes;
   ptr ls = CODERANGESTOFLUSH(tc);
 
+  if (!code_mod_ok) abort();
+
   if (ls != Snil) {
     ptr last_mod = Scar(ls);
     uptr last_end = mod_range_end(last_mod);
@@ -70,6 +78,7 @@ extern void S_flush_instruction_cache(ptr tc) {
     S_doflush(mod_range_start(Scar(ls)), mod_range_end(Scar(ls)));
   }
   CODERANGESTOFLUSH(tc) = Snil;
+  code_mod_ok = 0;
 }
 
 extern void S_flushcache_init() {

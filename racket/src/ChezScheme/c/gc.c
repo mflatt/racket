@@ -878,6 +878,8 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
       S_flush_instruction_cache(t_tc);
     }
 
+    start_code_mod_ok();
+
     tlcs_to_rehash = Snil;
     conts_to_promote = Snil;
 #ifndef NO_DIRTY_NEWSPACE_POINTERS

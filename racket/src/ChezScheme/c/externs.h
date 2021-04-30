@@ -468,3 +468,5 @@ IBOOL S_random_state_check PROTO((double x10, double x11, double x12,
 
 /* statics.c */
 extern void scheme_statics();
+
+extern void start_code_mod_ok();

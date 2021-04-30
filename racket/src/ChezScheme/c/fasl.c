@@ -507,7 +507,8 @@ static ptr fasl_entry(ptr tc, IFASLCODE situation, unbufFaslFile uf, ptr externa
            boot code may have interned symbols, for example */
         Scompact_heap();
       }
-
+      
+      start_code_mod_ok();
       S_thread_start_code_write(tc, S_vfasl_boot_mode ? static_generation : 0, 1, NULL);
 
       switch (ty) {
@@ -569,6 +570,7 @@ static ptr bv_fasl_entry(ptr tc, ptr bv, int ty, uptr offset, uptr len, unbufFas
   ptr x; ptr strbuf = S_G.null_string;
   struct faslFileObj ffo;
 
+  start_code_mod_ok();
   S_thread_start_code_write(tc, S_vfasl_boot_mode ? static_generation : 0, 1, NULL);
 
   if (ty == fasl_type_vfasl) {
