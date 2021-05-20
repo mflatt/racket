@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x09050505)
+(define-constant scheme-version #x09050506)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -440,8 +440,8 @@
 
 ; (typemod = type modulus)
 ; The typemod defines the range of primary types and is also the
-; offset that we subtract off of the actual addresses before adding
-; in the primary type tag to obtain a ptr.
+; number of bits that that we drop off a pointer to get to an
+; address.
 ;
 ; The typemod imposes a lower bound on our choice of alignment
 ; since the low n bits of aligned addresses must be zero so that
@@ -808,6 +808,8 @@
 (define-constant type-closure      #b101)
 (define-constant type-immediate    #b110)
 (define-constant type-typed-object #b111)
+
+(define-constant type-untyped      0)
 
 ;; ---------------------------------------------------------------------
 ;; Immediate values; note that these all end with `type-immediate`:
@@ -1305,6 +1307,9 @@
            [else x]))])))
 )
 
+;; This is the same as `record-type-disp`, but helps bootstrap:
+(define-constant record-ptr-offset (fx- (constant type-record)))
+
 (define-syntax define-primitive-structure-disps
   (lambda (x)
     (include "layout.ss")
@@ -1342,7 +1347,7 @@
        (with-syntax ([((field-type field-name field-length) ...)
                       (map parse-field #'(field1 field2 ...))])
          (with-values (compute-field-offsets 'define-primitive-structure-disps
-                        (- (constant typemod) (lookup-constant (datum type)))
+                        (- (lookup-constant (datum type)))
                         (map (lambda (type name len)
                                (list (filter-scheme-type type)
                                      name
@@ -1407,10 +1412,10 @@
    [ptr next]))
 
 (define-primitive-structure-disps symbol type-symbol
-  ([ptr value]
-   [ptr pvalue]
+  ([ptr pvalue]
+   [ptr value] ; offset from tagged ptr to `value` needs to be positive
    [ptr plist]
-   [ptr name] ; (cons str #f) => uninterned; #f or (cons ptr str) => gensym
+   [ptr name]  ; (cons str #f) => uninterned; #f or (cons ptr str) => gensym
    [ptr splist]
    [ptr hash]))
 
@@ -1515,7 +1520,7 @@
    [ptr pinfo*]
    [octet data 0]))
 
-(define-primitive-structure-disps reloc-table typemod
+(define-primitive-structure-disps reloc-table type-untyped
   ([iptr size]
    [ptr code]
    [uptr data 0]))
@@ -1542,7 +1547,7 @@
 (define-constant maximum-parallel-collect-threads 16)
 
 ;;; make sure gc sweeps all ptrs
-(define-primitive-structure-disps tc typemod
+(define-primitive-structure-disps tc type-untyped
   ([xptr arg-regs (constant asm-arg-reg-max)]
    [xptr ac0]
    [xptr ac1]
@@ -1682,7 +1687,7 @@
                           (+ b (constant ptr-bytes))
                           (cdr e*)))])))))))
 
-(define-primitive-structure-disps guardian-entry typemod
+(define-primitive-structure-disps guardian-entry type-untyped
   ([ptr obj]
    [ptr rep]
    [ptr tconc]
@@ -1697,15 +1702,15 @@
 ;;; forwarding addresses are recorded with a single forward-marker
 ;;; bit pattern (a special Scheme object) followed by the forwarding
 ;;; address, a ptr to the forwarded object.
-(define-primitive-structure-disps forward typemod
+(define-primitive-structure-disps forward type-untyped
   ([ptr marker]
    [ptr address]))
 
-(define-primitive-structure-disps cached-stack typemod
+(define-primitive-structure-disps cached-stack type-untyped
   ([iptr size]
    [ptr link]))
 
-(define-primitive-structure-disps rp-header typemod
+(define-primitive-structure-disps rp-header type-untyped
   ([uptr toplink]
    [uptr mv-return-address]
    [ptr livemask]
@@ -1719,7 +1724,7 @@
 (define-constant return-address-livemask-disp
   (- (constant rp-header-livemask-disp) (constant size-rp-header)))
 
-(define-primitive-structure-disps rp-compact-header typemod
+(define-primitive-structure-disps rp-compact-header type-untyped
   ([uptr toplink]
    [iptr mask+size+mode])) ; low bit is 1 to distinguish from a `rp-header`
 ;; mask+size+mode: bit 0 is 1 [=> compact-header-mask]
@@ -2237,7 +2242,7 @@
 
 (define-constant vspaces-offsets-count (- (constant vspaces-count) 1))
 
-(define-primitive-structure-disps vfasl-header typemod
+(define-primitive-structure-disps vfasl-header type-untyped
   ([uptr data-size]
    [uptr table-size]
    

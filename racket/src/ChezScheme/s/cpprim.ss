@@ -724,12 +724,10 @@
                      ,(build-libcall #t src sexpr real->flonum x who)))))))
     (define build-$inexactnum-real-part
       (lambda (e)
-        (%lea ,e (fx+ (constant inexactnum-real-disp)
-                   (fx- (constant type-flonum) (constant typemod))))))
+        (%lea ,e (fx+ (constant inexactnum-real-disp) (constant type-flonum)))))
     (define build-$inexactnum-imag-part
       (lambda (e)
-        (%lea ,e (fx+ (constant inexactnum-imag-disp)
-                   (fx- (constant type-flonum) (constant typemod))))))
+        (%lea ,e (fx+ (constant inexactnum-imag-disp) (constant type-flonum)))))
     (define make-build-fill
       (lambda (elt-bytes data-disp)
         (define ptr-bytes (constant ptr-bytes))
@@ -2943,9 +2941,7 @@
                                  ,(k s2))
                             (k s2))))]
                  [else (k s3)]))
-             `(let ([,ptr ,(%inline srl ,(if object?
-                                             (%inline + ,e (immediate ,(fx- (constant typemod) 1)))
-                                             e)
+             `(let ([,ptr ,(%inline srl ,e
                                     (immediate ,(constant segment-offset-bits)))])
                 (let ([,seginfo (literal ,(make-info-literal #f 'entry (lookup-c-entry segment-info) 0))])
                   ,(build-level-3 seginfo
@@ -3003,7 +2999,7 @@
                        (let ([,list-bits ,(%mref ,si ,(constant seginfo-list-bits-disp))])
                          (if ,(%inline eq? ,list-bits (immediate 0))
                              (immediate 0)
-                             (let ([,offset ,(%inline srl ,(%inline logand ,(%inline + ,e (immediate ,(fx- (constant typemod) 1)))
+                             (let ([,offset ,(%inline srl ,(%inline logand ,e
                                                                     (immediate ,(fx- (constant bytes-per-segment) 1)))
                                                       (immediate ,(constant log2-ptr-bytes)))])
                                (let ([,byte (inline ,(make-info-load 'unsigned-8 #f) ,%load ,list-bits ,%zero ,(%inline srl ,offset (immediate 3)))])
@@ -3443,7 +3439,7 @@
     (define-inline 3 $install-guardian
       [(e-obj e-rep e-tconc ordered?)
        (bind #f (e-obj e-rep e-tconc ordered?)
-         (bind #t ([t (%constant-alloc typemod (constant size-guardian-entry))])
+         (bind #t ([t (%constant-alloc type-untyped (constant size-guardian-entry))])
            (%seq
              (set! ,(%mref ,t ,(constant guardian-entry-obj-disp)) ,e-obj)
              (set! ,(%mref ,t ,(constant guardian-entry-rep-disp)) ,e-rep)
@@ -3456,7 +3452,7 @@
     (define-inline 3 $install-ftype-guardian
       [(e-obj e-tconc)
        (bind #f (e-obj e-tconc)
-         (bind #t ([t (%constant-alloc typemod (constant size-guardian-entry))])
+         (bind #t ([t (%constant-alloc type-untyped (constant size-guardian-entry))])
            (%seq
              (set! ,(%mref ,t ,(constant guardian-entry-obj-disp)) ,e-obj)
              (set! ,(%mref ,t ,(constant guardian-entry-rep-disp)) (immediate ,(constant ftype-guardian-rep)))
@@ -7872,7 +7868,7 @@
                 ,(%primcall #f sexpr $gensym->pretty-name ,e-sym))))])
     (define-inline 3 $fxaddress
       [(e) (%inline logand
-              ,(let ([n (- (log2 (constant typemod)) (constant fixnum-offset))])
+              ,(let ([n (- (constant primary-type-bits) (constant fixnum-offset))])
                  (if (> n 0) (%inline sra ,e (immediate ,n)) e))
               (immediate ,(- (constant fixnum-factor))))])
     (define-inline 3 $set-timer

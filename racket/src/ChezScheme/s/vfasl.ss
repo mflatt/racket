@@ -336,7 +336,7 @@
           (bytevector-copy! (vfasl-chunk-bv vc) 0 bv 0 sz)
           (vfasl-chunk-bv-set! vc bv)))
       (vfasl-chunk-alloc-set! vc new-sz)
-      (make-vptr (fx- sz (fx- (constant typemod) type))
+      (make-vptr (fx+ sz type)
                  vspc))))
 
 (define vptr->bytevector+offset
@@ -480,7 +480,7 @@
   ;; There may be leftover space at the end of each segment containing symbols,
   ;; we we have to compensate for that
   (let* ([vc (vector-ref (vfasl-info-spaces vfi) (constant vspace-symbol))]
-         [offset (fx+ (vptr-v p) (fx- (constant typemod) (constant type-symbol)))]
+         [offset (fx+ (vptr-v p) (constant type-symbol))]
          [seg (quotient offset (constant bytes-per-segment))])
     (fx+ (fx* seg (quotient (constant bytes-per-segment) (constant size-symbol)))
          (fxquotient (fx- offset (fx* seg (constant bytes-per-segment))) (constant size-symbol)))))
@@ -1030,7 +1030,7 @@
   (let* ([new-p (find-room 'reloc vfi
                            (constant vspace-reloc)
                            (fx+ (constant header-size-reloc-table) (fx* m (constant ptr-bytes)))
-                           (constant typemod))])
+                           (constant type-untyped))])
     (set-uptr! new-p (constant reloc-table-size-disp) m vfi)
     (set-ptr!/no-record new-p (constant reloc-table-code-disp) code-p vfi)
     (let loop ([n 0] [a 0] [i 0])

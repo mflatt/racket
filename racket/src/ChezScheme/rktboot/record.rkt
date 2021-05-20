@@ -50,15 +50,15 @@
 ;; below don't matter, since they're fixed up for the target plaform.
 (define base-rtd-fields
   (map vector-copy
-       '(#(fld ancestors #f scheme-object 9)
-         #(fld size #f scheme-object 17)
-         #(fld pm #f scheme-object 25)
-         #(fld mpm #f scheme-object 33)
-         #(fld name #f scheme-object 41)
-         #(fld flds #f scheme-object 49)
-         #(fld flags #f scheme-object 57)
-         #(fld uid #f scheme-object 65)
-         #(fld counts #f scheme-object 73))))
+       '(#(fld ancestors #f scheme-object 1)
+         #(fld size #f scheme-object 9)
+         #(fld pm #f scheme-object 17)
+         #(fld mpm #f scheme-object 25)
+         #(fld name #f scheme-object 33)
+         #(fld flds #f scheme-object 41)
+         #(fld flags #f scheme-object 49)
+         #(fld uid #f scheme-object 57)
+         #(fld counts #f scheme-object 65))))
 
 (define base-rtd-ancestry (vector #f base-rtd))
 (define ANCESTRY-PARENT-OFFSET 2)

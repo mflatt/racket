@@ -150,7 +150,7 @@
     (lambda (name mask tag)
       (def name "(x)" (typep "x" mask tag))))
   (define deftotypep
-    (let ((type-disp (- ($ typemod) ($ type-typed-object))))
+    (let ((type-disp (- ($ type-typed-object))))
       (lambda (name mask tag)
         (def name "(x)"
           (format "(~a &&\\~%    ~a)"
@@ -953,7 +953,7 @@
               (let-values ([(pm mpm flds size)
                             ((let () (include "layout.ss") compute-field-offsets)
                              'mkheader
-                             (fx- (constant typemod) (constant type-typed-object))
+                             (fx- (constant type-typed-object))
                              (cons '(immutable scheme-object rtd) (csv7:record-type-field-decls rtd)))])
                 (for-each
                   (lambda (fld)

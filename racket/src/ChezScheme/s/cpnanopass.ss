@@ -5312,7 +5312,7 @@
                                 (if ,(%inline eq? ,%sfp ,(%constant snil))
                                     ,(%seq
                                        (set! ,%ac0 ,%xp)
-                                       (set! ,%xp ,(%constant-alloc typemod (constant default-stack-size)))
+                                       (set! ,%xp ,(%constant-alloc type-untyped (constant default-stack-size)))
                                        (set! ,%sfp ,%xp)
                                        (set! ,(%tc-ref scheme-stack) ,%sfp)
                                        (set! ,(%tc-ref scheme-stack-size) ,(%constant default-stack-size))
@@ -6665,7 +6665,7 @@
                      [else `(seq (set! ,%ts ,refap) ,(p %ts (lambda (e) `(seq ,e (set! ,refap ,%ts)))))]))
                  (lambda (ap store-ap)
                    (%seq
-                     (set! ,%xp ,(%inline + ,ap (immediate ,(- (info-alloc-tag info) (constant typemod)))))
+                     (set! ,%xp ,(%inline + ,ap (immediate ,(info-alloc-tag info))))
                      ,(nanopass-case (L14 Triv) t
                         [(immediate ,imm)
                          (guard (fixnum? imm) (fx< imm (constant bytes-per-segment)))
