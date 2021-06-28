@@ -41,7 +41,6 @@
  
  deserialize-syntax
  deserialize-datum->syntax
- current-arm-inspectors
 
  syntax-place-init!)
 

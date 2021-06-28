@@ -27,7 +27,6 @@
          push-scope
 
          syntax-e ; handles lazy scope and taint propagation
-         syntax-e/no-taint ; like `syntax-e`, but doesn't explode a dye pack
 
          syntax-scope-set
          syntax-any-scopes?
@@ -484,12 +483,6 @@
             (syntax-propagated-content* s))]
        [else content*])]))
 
-(define (syntax-e/no-taint s)
-  (define content* (syntax-propagated-content* s))
-  (if (modified-content? content*)
-      (modified-content-content content*)
-      content*))
-
 (define (syntax-e s)
   (define e (syntax-content* s))
   (cond
@@ -498,17 +491,9 @@
     ;; General case:
     [else
      (define content* (syntax-propagated-content* s))
-     (cond
-       [(modified-content? content*)
-        (define content (modified-content-content content*))
-        (define prop (modified-content-scope-propagations+tamper content*))
-        ;; Since we just called `syntax-propagate-content*`, we know that
-        ;; `prop` is not a propagation
-        (cond
-          [(not (tamper-armed? prop)) content]
-          [(datum-has-elements? content) (taint-content content)]
-          [else content])]
-       [else content*])]))
+     (if (modified-content? content*)
+         (modified-content-content content*)
+         content*)]))
 
 ;; When a representative-scope is manipulated, we want to
 ;; manipulate the multi scope, instead (at a particular
@@ -562,7 +547,7 @@
                              [content* (re-modify-content s d)]
                              [shifted-multi-scopes
                               (push (syntax-shifted-multi-scopes s))]))
-              syntax-e/no-taint))
+              syntax-e))
 
 ;; ----------------------------------------
 
@@ -810,7 +795,7 @@
                                    [content* (re-modify-content s d)]
                                    [shifted-multi-scopes
                                     (shift-all (syntax-shifted-multi-scopes s))]))
-                    syntax-e/no-taint))))
+                    syntax-e))))
 
 ;; ----------------------------------------
 
@@ -854,7 +839,7 @@
                                    [scopes (swap-scs (syntax-scopes s))]
                                    [shifted-multi-scopes
                                     (swap-smss (syntax-shifted-multi-scopes s))]))
-                    syntax-e/no-taint))))
+                    syntax-e))))
 
 ;; ----------------------------------------
 
