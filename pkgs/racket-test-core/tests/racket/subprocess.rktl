@@ -2,7 +2,8 @@
 (load-relative "testing.rktl")
 
 (require racket/system
-         racket/file)
+         racket/file
+         ffi/unsafe/port)
 
 (Section 'subprocess)
 
@@ -673,6 +674,43 @@
   (try-arg "a\\\\\\\"b" "a\\\"b")
   (try-arg "a\\\\\\\\\"b" "a\\\\b")
   (try-arg "a\\\\\\\\\\\"b" "a\\\\\"b"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; check file-descriptor sharing
+
+(define (check-sharing keep-mode)
+  (define fn (make-temporary-file))
+  (call-with-output-file*
+   fn
+   #:exists 'update
+   (lambda (o)
+     (display "123" o)))
+
+  (define f (open-input-file fn))
+  (define fd (unsafe-port->file-descriptor f))
+
+  (define o (open-output-bytes))
+
+  (define ok?
+    (parameterize ([current-output-port o]
+                   [current-subprocess-keep-file-descriptors 'all])
+      (system* self
+               "-l" "racket/base"
+               "-l" "ffi/unsafe/port"
+               "-e"
+               (format "(define f (unsafe-file-descriptor->port ~a 'in '(read)))" fd)
+               "-e"
+               "(displayln (read-char f))")))
+
+  (close-input-port f)
+  (delete-directory/files fn)
+
+  (list ok? (get-output-bytes o)))
+
+(unless (eq? 'windows (system-type))
+  (test '(#t #"1\n") check-sharing 'all))
+(test '(#t #"1\n") check-sharing 'inherited)
+(test '(#t #"1\n") check-sharing '())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
