@@ -1678,3 +1678,40 @@
        (#%require 'fish-kettle)
        ,(in-space 'soup 'kettle ns #:introduce? #f)))
    "ambiguous"))
+
+;; ----------------------------------------
+;; Constant syntax
+
+(eval-module-declaration
+ '(module constant-syntax '#%kernel
+    (#%require (constant bread-and-butter (quote (bread butter)))
+               (for-meta 5 (constant bread-and-butter (bread5 butter5))))
+    (#%provide result result5 bread-and-butter)
+    (define-values (bread) (quote bound))
+    (define-values (use) bread-and-butter)
+    (define-values (result) (identifier-binding-constant-syntax
+                             (quote-syntax bread-and-butter)))
+    (define-values (result5) (identifier-binding-constant-syntax
+                              (quote-syntax bread-and-butter)
+                              5))))
+
+(define bread-and-butter1 (parameterize ([current-namespace demo-ns])
+                            (dynamic-require ''constant-syntax 'result)))
+bread-and-butter1
+(identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter1)))))
+
+(parameterize ([current-namespace demo-ns])
+  (dynamic-require ''constant-syntax 'result5))
+
+(eval-module-declaration
+ '(module import-constant-syntax '#%kernel
+    (#%require 'constant-syntax)
+    (#%provide result)
+    (define-values (use) bread-and-butter)
+    (define-values (result) (identifier-binding-constant-syntax
+                             (quote-syntax bread-and-butter)))))
+
+(define bread-and-butter2 (parameterize ([current-namespace demo-ns])
+                            (dynamic-require ''import-constant-syntax 'result)))
+bread-and-butter2
+(identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter2)))))

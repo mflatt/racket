@@ -10,7 +10,8 @@
   (#%provide define 
              define-syntax 
              define-values-for-syntax
-             define-for-syntax)
+             define-for-syntax
+             define-constant-transformer-for-meta)
 
   (define-syntaxes (define-values-for-syntax)
     (lambda (stx)
@@ -22,7 +23,20 @@
                          (raise-syntax-error #f "not an identifier" x stx)))
                      (syntax->list #'(id ...)))
            #'(begin-for-syntax
-              (define-values (id ...) expr)))])))
+               (define-values (id ...) expr)))])))
+
+  (define-syntaxes (define-constant-transformer-for-meta)
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ id phase content)
+         (begin
+           (unless (identifier? #'id)
+             (raise-syntax-error #f "not an identifier" #'id stx))
+           (let ([ph (syntax-e #'phase)])
+             (unless (or (not ph)
+                         (exact-integer? ph))
+               (raise-syntax-error #f "not a phase" #'phase stx)))
+           #'(#%require (for-meta phase (constant id content))))])))
 
   (define-syntaxes (define define-syntax define-for-syntax)
     (let ([go

@@ -42,6 +42,7 @@
                                      #:copy-variable-as-constant? [copy-variable-as-constant? #f]
                                      #:skip-variable-phase-level [skip-variable-phase-level #f]
                                      #:initial-require? [initial-require? #f]
+                                     #:add-defined-constant [add-defined-constant void]
                                      #:who who)
   (let loop ([reqs reqs]
              [top-req #f]
@@ -205,6 +206,20 @@
                just-space
                (adjust-rename (m 'id:to) (syntax-e (m 'id:from)))
                #f #f 'path)]
+        [(constant)
+         (unless (and (eq? just-meta 'all)
+                      (eq? just-space #t)
+                      (not adjust))
+           (raise-syntax-error #f "invalid nested context for form" orig-s req))
+         (define-match m req '(constant id form))
+         (perform-constant-syntax-bind! (m 'id) (m 'form) req
+                                        #:phase-shift phase-shift
+                                        #:space-level space-level
+                                        #:requires+provides requires+provides
+                                        #:add-defined-constant add-defined-constant
+                                        #:self self
+                                        #:who who)
+         (set! initial-require? #f)]
         [else
          (define maybe-mp (syntax->datum req))
          (unless (or (module-path? maybe-mp)
@@ -465,8 +480,17 @@
     (define need-except?
       (and bulk-callback
            (bulk-callback provides provide-phase+space)))
+    (define constant-syntaxes?
+      (for/or ([sym (in-list (or only-syms (hash-keys provides)))])
+        (define binding/p (hash-ref provides sym #f))
+        (and binding/p
+             (binding-const-stx (provided-as-binding binding/p)))))
+    (define constant-syntax-lookup
+      (and constant-syntaxes?
+           (namespace-module-get-constant-syntax-lookup ns mpi phase-shift)))
     (when bind?
-      (when filter
+      (when (or filter
+                constant-syntaxes?)
         (for ([sym (in-list (or only-syms (hash-keys provides)))])
           (define binding/p (hash-ref provides sym #f))
           (when binding/p
@@ -474,14 +498,19 @@
                                                           #:self self
                                                           #:mpi mpi
                                                           #:provide-phase+space provide-phase+space
-                                                          #:phase+space-shift phase+space-shift))
-            (let-values ([(sym) (filter b (provided-as-transformer? binding/p))])
+                                                          #:phase+space-shift phase+space-shift
+                                                          #:constant-syntax-lookup constant-syntax-lookup))
+            (let ([sym (if filter
+                           (filter b (provided-as-transformer? binding/p))
+                           sym)])
               (when (and sym
-                         (not can-bulk?)) ;; bulk binding added later
+                         (or (not can-bulk?) ;; bulk binding added later
+                             constant-syntaxes?))
                 ;; Add a non-bulk binding, since `filter` has checked/adjusted it
                 (add-binding! (add-space-scope (datum->syntax in-stx sym) space) b phase))))))
       ;; Add bulk binding after all filtering
-      (when can-bulk?
+      (when (and can-bulk?
+                 (not constant-syntaxes?))
         (define bulk-binding-registry (namespace-bulk-binding-registry ns))
         (add-bulk-binding! (add-space-scope in-stx space)
                            (bulk-binding (or (and (not bulk-prefix)
@@ -560,3 +589,26 @@
                                                     (module-binding-sym binding)
                                                     (module-binding-phase binding))))))
   (namespace-set-variable! m-ns (phase+ phase-shift phase-level) adjusted-sym val as-constant?))
+
+;; ----------------------------------------
+
+;; More of a definition form, really, but we use
+;;   (#%require (for-meta <phase> (constant <id> <stx>))
+;; as an alternative to a `define-for-meta` core form
+;;   (define-for-meta <stx> <id> <phase>)
+(define (perform-constant-syntax-bind! id const-stx orig-s
+                                       #:self self
+                                       #:phase-shift phase-shift
+                                       #:space-level space-level
+                                       #:requires+provides requires+provides
+                                       #:add-defined-constant add-defined-constant
+                                       #:who who)
+  (define bind-phase phase-shift)
+  (define bind-space (space+ #f space-level))
+  (define s (add-space-scope id bind-space))
+  (define sym
+    (if add-defined-constant
+        (add-defined-constant s bind-phase const-stx orig-s)
+        (syntax-e s)))
+  (define binding (make-module-binding self bind-phase sym #:const-stx const-stx))
+  (add-binding! s binding bind-phase))

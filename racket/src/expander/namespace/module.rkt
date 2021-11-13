@@ -51,6 +51,8 @@
          namespace-visit-available-modules!
          namespace-run-available-modules!
 
+         namespace-module-get-constant-syntax-lookup
+
          namespace-module-use->module+linklet-instances)
 
 (module+ for-module-reflect
@@ -77,7 +79,8 @@
                 inspector       ; declaration-time inspector
                 submodule-names ; associated submodules (i.e, when declared together)
                 supermodule-name ; associated supermodule (i.e, when declared together)
-                get-all-variables) ; for `module->indirect-exports`
+                get-all-variables ; for `module->indirect-exports`
+                get-syntax-constant-callback) ; for `identifier-binding-constant-syntax`
   #:authentic)
 
 ;; [*] Beware that tables in `provides` may map non-interned symbols
@@ -115,7 +118,8 @@
                      #:no-protected? [no-protected? #f]
                      #:submodule-names [submodule-names null]
                      #:supermodule-name [supermodule-name #f]
-                     #:get-all-variables [get-all-variables (lambda () null)]) ; ok to omit exported
+                     #:get-all-variables [get-all-variables (lambda () null)] ; ok to omit exported
+                     #:get-syntax-constant-callback [get-syntax-constant-callback (lambda (data-box sym phase) #f)])
   (module source-name
           self
           (fresh-requires requires)
@@ -134,7 +138,8 @@
           (current-code-inspector)
           submodule-names
           supermodule-name
-          get-all-variables))
+          get-all-variables
+          get-syntax-constant-callback))
 
 (struct module-instance (namespace
                          module                        ; can be #f for the module being expanded
@@ -413,6 +418,25 @@
 
 (define (namespace-module-make-available! ns mpi instance-phase #:visit-phase [visit-phase (namespace-phase ns)])
   (namespace-module-instantiate! ns mpi instance-phase #:run-phase (add1 visit-phase) #:skip-run? #t))
+
+(define (namespace-module-get-constant-syntax-lookup ns mpi phase-shift)
+  (unless (module-path-index? mpi)
+    (error "not a module path index:" mpi))
+  (define name (module-path-index-resolve mpi #t))
+  (define m (namespace->module ns name))
+  (unless m (raise-unknown-module-error 'constant-syntax-lookup name))
+  ;; Get or create a namespace for the module+phase combination:
+  (define mi (or (namespace->module-instance ns name phase-shift)
+                 (namespace-create-module-instance! ns name phase-shift m mpi)))
+  (define m-ns (module-instance-namespace mi))
+  (define bulk-binding-registry (namespace-bulk-binding-registry m-ns))
+  (define insp (module-inspector m))
+  (define data-box (module-instance-data-box mi))
+  (define prep (module-prepare-instance m))
+  (prep data-box m-ns phase-shift mpi bulk-binding-registry insp)
+  (define get (module-get-syntax-constant-callback m))
+  (lambda (phase sym)
+    (get data-box phase sym)))
 
 ;; The `instance-phase` corresponds to the phase shift for the module
 ;; instances. The module may have content at different phase levels,

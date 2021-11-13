@@ -271,7 +271,7 @@
                       (for/fold ([env env]) ([key (in-list keys)]
                                              [val (in-list vals)]
                                              [id (in-list ids)])
-                        (maybe-install-free=id-in-context! val id phase ctx)
+                        (maybe-install-free=id-or-const-stx-in-context! val id phase ctx)
                         (env-extend env key val))))
     (when syntaxes?
       (log-expand ctx 'next-group))

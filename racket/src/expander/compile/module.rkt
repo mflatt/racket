@@ -103,6 +103,7 @@
    (define body-context-simple? (parsed-module-root-ctx-simple? p))
    (define language-info (filter-language-info (syntax-property (parsed-s p) 'module-language)))
    (define bodys (parsed-module-body p))
+   (define constant-transformers (parsed-module-constant-transformers p))
    
    (define empty-result-for-module->namespace? #f)
 
@@ -138,8 +139,8 @@
    
    ;; Compile the sequence of body forms:
    (define-values (body-linklets
-                   min-phase
-                   max-phase
+                   body-min-phase
+                   body-max-phase
                    phase-to-link-module-uses
                    phase-to-link-module-uses-expr
                    phase-to-link-extra-inspectorsss
@@ -178,6 +179,11 @@
                     #:to-correlated-linklet? to-correlated-linklet?
                     #:unsafe?-box unsafe?-box))
 
+   ;; register any constant-transformer syntax objects:
+   (define-values (const-stxes max-phase min-phase)
+     (add-constant-transformers syntax-literals constant-transformers
+                                body-max-phase body-min-phase))
+   
    (when modules-being-compiled
      ;; Record this module's linklets for cross-module inlining among (sub)modules
      ;; that are compiled together
@@ -205,7 +211,8 @@
                   ['compile 'module 'linklet]
                   (compile-linklet s 'decl))))
            (generate-module-declaration-linklet mpis self requires provides
-                                                phase-to-link-module-uses-expr))))
+                                                phase-to-link-module-uses-expr
+                                                const-stxes))))
    
    ;; Assemble a linklet that shifts syntax objects on demand.
    ;; Include an encoding of the root expand context, if any, so that
@@ -365,6 +372,7 @@
                       phase-to-link-module-uses
                       (current-code-inspector)
                       phase-to-link-extra-inspectorsss
+                      const-stxes
                       (mpis-as-vector mpis)
                       (syntax-literals-as-vector syntax-literals)
                       (map cdr pre-submodules)
@@ -404,6 +412,21 @@
                                               (compiled-in-memory-compile-time-inspector cim)
                                               (and phase-to-extra-inspectorsss
                                                    (hash-ref phase-to-extra-inspectorsss phase #f))))))))
+
+;; ----------------------------------------
+
+(define (add-constant-transformers syntax-literals constant-transformers
+                                   body-max-phase body-min-phase)
+  (for/fold ([const-stxes #hasheq()] [max-phase body-max-phase] [min-phase body-min-phase])
+            ([(phase ht) (in-hash constant-transformers)])
+    (define new-const-stxes
+      (hash-set const-stxes
+                phase
+                (for/hasheq ([(sym stx) (in-hash ht)])
+                  (values sym (add-syntax-literal! syntax-literals stx)))))
+    (if (integer? phase)
+        (values new-const-stxes (max (add1 phase) max-phase) (min (add1 phase) min-phase))
+        (values new-const-stxes max-phase min-phase))))
 
 ;; ----------------------------------------
 

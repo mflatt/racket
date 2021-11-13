@@ -229,7 +229,8 @@
       ,(generate-module-path-index-deserialize mpis))))
 
 (define (generate-module-declaration-linklet mpis self requires provides
-                                             phase-to-link-module-uses-expr)
+                                             phase-to-link-module-uses-expr
+                                             const-stxes)
   `(linklet
     ;; imports
     (,deserialize-imports
@@ -238,13 +239,15 @@
     (self-mpi
      requires
      provides
-     phase-to-link-modules)
+     phase-to-link-modules
+     const-stxes)
     ;; body
     (define-values (self-mpi) ,(add-module-path-index! mpis self))
     (define-values (requires) ,(generate-deserialize requires #:mpis mpis #:syntax-support? #f))
     (define-values (provides) ,(generate-deserialize provides #:mpis mpis #:syntax-support? #f
                                                      #:phase+space-hasheqv provides))
-    (define-values (phase-to-link-modules) ,phase-to-link-module-uses-expr)))
+    (define-values (phase-to-link-modules) ,phase-to-link-module-uses-expr)
+    (define-values (const-stxes) (quote ,const-stxes))))
 
 ;; ----------------------------------------
 ;; Module-use serialization --- as an expression, like module path
@@ -874,12 +877,13 @@
                nominal-sym
                nominal-require-phase
                free=id
+               const-stx
                extra-inspector
                extra-nominal-bindings))]
     [(#:simple-module-binding)
      (decode* (deserialize-simple-module-binding module sym phase nominal-module))]
     [(#:local-binding)
-     (decode* (deserialize-full-local-binding key free=id))]
+     (decode* (deserialize-full-local-binding key free=id const-stx))]
     [(#:bulk-binding)
      (decode* (deserialize-bulk-binding prefix excepts mpi provide-phase-level phase-shift bulk-binding-registry))]
     [(#:like-ambiguous-binding)

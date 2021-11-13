@@ -10,10 +10,13 @@
          (except-in "../syntax/binding.rkt"
                     free-identifier=?
                     identifier-binding
-                    identifier-binding-symbol)
+                    identifier-binding-symbol
+                    identifier-distinct-binding
+                    identifier-binding-constant-syntax)
          "../namespace/core.rkt"
          "../expand/set-bang-trans.rkt"
          "../expand/rename-trans.rkt"
+         "../expand/constant-trans.rkt"
          "../expand/liberal-def-ctx.rkt"
          "../expand/syntax-local.rkt"
          "../expand/definition-context.rkt"
@@ -67,6 +70,8 @@
                       identifier-template-binding
                       identifier-label-binding
                       identifier-binding-symbol
+                      identifier-distinct-binding
+                      (protect identifier-binding-constant-syntax)
                       identifier-prune-lexical-context
                       syntax-debug-info
                       syntax-track-origin
@@ -190,7 +195,11 @@
                       rename-transformer?
                       prop:rename-transformer
                       make-rename-transformer
-                      rename-transformer-target
+                      (protect rename-transformer-target)
+
+                      constant-transformer?
+                      make-constant-transformer
+                      (protect constant-transformer-target)
 
                       prop:liberal-define-context
                       liberal-define-context?

@@ -33,6 +33,7 @@
          "prepare.rkt"
          "log.rkt"
          "syntax-id-error.rkt"
+         "constant-trans.rkt"
          "../compile/main.rkt"
          "../eval/top.rkt"
          "../eval/module.rkt"
@@ -168,8 +169,12 @@
                    (define-match m scoped-s '(_ _ _ body ...))
                    (m 'body)))
    
+   ;; Record defined constant-syntax transformers, so the constant can be extracted
+   ;; without running the module; provides may also add to this table
+   (define constant-syntaxes (make-hasheqv))
+
    ;; To keep track of all requires and provides
-   (define requires+provides (make-requires+provides self))
+   (define requires+provides (make-requires+provides self #:constant-syntaxes constant-syntaxes))
 
    ;; Table of symbols picked for each binding in this module:
    (define defined-syms (root-expand-context-defined-syms root-ctx)) ; phase -> sym -> id
@@ -352,6 +357,7 @@
                                    #:compiled-submodules compiled-submodules
                                    #:modules-being-compiled modules-being-compiled
                                    #:mpis-to-reset mpis-to-reset
+                                   #:constant-syntaxes constant-syntaxes
                                    #:loop pass-1-and-2-loop))
 
          ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -432,6 +438,7 @@
                                             #:root-ctx root-ctx
                                             #:ctx submod-ctx
                                             #:modules-being-compiled modules-being-compiled
+                                            #:constant-syntaxes constant-syntaxes
                                             #:fill compiled-module-box)))
      
      (define fully-expanded-bodys
@@ -539,6 +546,7 @@
                           (if (expanded+parsed? expanded-mb)
                               (expanded+parsed-parsed expanded-mb)
                               expanded-mb))
+                         constant-syntaxes
                          (unbox compiled-module-box)
                          compiled-submodules)))
    
@@ -714,6 +722,7 @@
                                 #:compiled-submodules compiled-submodules
                                 #:modules-being-compiled modules-being-compiled
                                 #:mpis-to-reset mpis-to-reset
+                                #:constant-syntaxes constant-syntaxes
                                 #:loop pass-1-and-2-loop)
   (namespace-visit-available-modules! m-ns phase)
   (let loop ([tail? #t] [bodys bodys])
@@ -829,7 +838,8 @@
             (for ([sym (in-list syms)]
                   [val (in-list vals)]
                   [id (in-list ids)])
-              (maybe-install-free=id-in-context! val id phase partial-body-ctx)
+              (maybe-install-free=id-or-const-stx-in-context! val id phase partial-body-ctx)
+              (maybe-add-const-stx! constant-syntaxes val sym phase)
               (namespace-set-transformer! m-ns phase sym val)))
           ;; Expand and evaluate RHS:
           (define-values (exp-rhs parsed-rhs vals)
@@ -866,7 +876,22 @@
                                        m-ns phase #:run-phase phase
                                        requires+provides
                                        #:declared-submodule-names declared-submodule-names
-                                       #:who 'module)
+                                       #:who 'module
+                                       #:add-defined-constant
+                                       (lambda (id phase const-stx orig-s)
+                                         (check-ids-unbound (list id) phase requires+provides #:in orig-s)
+                                         (define syms (select-defined-syms-and-bind! (list id) defined-syms
+                                                                                     self phase all-scopes-stx
+                                                                                     #:requires+provides requires+provides
+                                                                                     #:in orig-s
+                                                                                     #:frame-id frame-id
+                                                                                     #:as-transformer? #t))
+                                         (add-defined-syms! requires+provides syms phase #:as-transformer? #t)
+                                         (define sym (car syms))
+                                         (define t (make-constant-transformer const-stx))
+                                         (namespace-set-transformer! m-ns phase sym t)
+                                         (maybe-add-const-stx! constant-syntaxes t sym phase)
+                                         sym))
           (log-expand partial-body-ctx 'exit-case ready-body)
           (cons ready-body
                 (loop tail? rest-bodys))]
@@ -1166,6 +1191,7 @@
                                       #:root-ctx root-ctx
                                       #:ctx ctx
                                       #:modules-being-compiled modules-being-compiled
+                                      #:constant-syntaxes constant-syntaxes
                                       #:fill compiled-module-box)
   
   (define-values (requires provides) (extract-requires-and-provides requires+provides self self))
@@ -1180,6 +1206,7 @@
                    (requires+provides-all-bindings-simple? requires+provides)
                    (root-expand-context-encode-for-module root-ctx self self)
                    (parsed-only fully-expanded-bodys-except-post-submodules)
+                   constant-syntaxes
                    #f
                    (hasheq)))
 
@@ -1484,3 +1511,12 @@
 (define (lifted-defns-extract-syntax lifted-defns)
   (for/list ([lifted-defn (in-list lifted-defns)])
     (defn-extract-syntax lifted-defn)))
+
+;; ----------------------------------------
+
+(define (maybe-add-const-stx! constant-syntaxes val sym phase)
+  (when (constant-transformer? val)
+    (define ht (hash-ref constant-syntaxes phase #hasheq()))
+    (hash-set! constant-syntaxes
+               phase
+               (hash-set ht sym (constant-transformer-target val)))))

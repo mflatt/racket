@@ -243,6 +243,11 @@
                               #`#,(free-identifier=? ((syntax-local-value #'m)) #'y))])
               (n))))))
 
+(test '(3) 'constant-transformer
+      (let ([x 3])
+	(let-syntax ([f (make-constant-transformer #'(list x))])
+	  f)))
+
 (test #t set!-transformer? (make-set!-transformer void))
 (test #t rename-transformer? (make-rename-transformer #'void))
 
@@ -683,6 +688,111 @@
     (list (get x*) (get x**))))
 
 (test '(#t #f) (dynamic-require ''rename-transformer-tests:n 'go))
+
+;; ----------------------------------------
+
+(module constant-transformer-tests racket/base
+  (require (for-syntax racket/base))
+
+  (provide result
+           foo)
+
+  (define x 12)
+  (define-syntax foo (make-constant-transformer #'x))
+
+  (define result
+    (identifier-binding-constant-syntax #'foo)))
+
+(test #t identifier? (dynamic-require ''constant-transformer-tests 'result))
+(test 'x syntax-e (dynamic-require ''constant-transformer-tests 'result))
+
+(require (only-in 'constant-transformer-tests
+                  [foo constant-transformer-tests:foo]))
+(test 'x syntax-e (identifier-binding-constant-syntax #'constant-transformer-tests:foo))
+(test (module-path-index-join ''constant-transformer-tests #f)
+      car
+      (identifier-binding (identifier-binding-constant-syntax #'constant-transformer-tests:foo)))
+
+(require (for-meta 5 (only-in 'constant-transformer-tests
+                              [foo constant-transformer-tests5:foo])))
+(test 'x syntax-e (identifier-binding-constant-syntax #'constant-transformer-tests5:foo 5))
+(test #f identifier-binding-constant-syntax #'constant-transformer-tests:foo 5)
+(test #f identifier-binding-constant-syntax #'constant-transformer-testsL:foo)
+(test (module-path-index-join ''constant-transformer-tests #f)
+      car
+      (identifier-binding (identifier-binding-constant-syntax #'constant-transformer-tests5:foo 5) 5))
+
+(require (for-label (only-in 'constant-transformer-tests
+                             [foo constant-transformer-testsL:foo])))
+(test 'x syntax-e (identifier-binding-constant-syntax #'constant-transformer-testsL:foo #f))
+(test #f identifier-binding-constant-syntax #'constant-transformer-tests:foo #f)
+(test #f identifier-binding-constant-syntax #'constant-transformer-tests5:foo #f)
+(test #f identifier-binding-constant-syntax #'constant-transformer-testsL:foo)
+(test (module-path-index-join ''constant-transformer-tests #f)
+      car
+      (identifier-binding (identifier-binding-constant-syntax #'constant-transformer-testsL:foo #f) #f))
+
+(module defines-and-exports-constant-syntax racket/base
+  (define-constant-transformer-for-meta bread-and-butter 0 (quote (bread butter)))
+  (define-constant-transformer-for-meta bread-and-butter 5 (bread5 butter5))
+  (provide result result5 bread-and-butter)
+  (define bread (quote bound))
+  (define use bread-and-butter)
+  (define result (identifier-binding-constant-syntax
+                  (quote-syntax bread-and-butter)))
+  (define result5 (identifier-binding-constant-syntax
+                   (quote-syntax bread-and-butter)
+                   5)))
+
+(define bread-and-butter1 (dynamic-require ''defines-and-exports-constant-syntax 'result))
+(test 'quote syntax-e (car (syntax-e bread-and-butter1)))
+(test 'bread syntax-e (car (syntax-e (cadr (syntax-e bread-and-butter1)))))
+(test #t list? (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter1))))))
+(test (module-path-index-join ''defines-and-exports-constant-syntax #f)
+      car (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter1))))))
+
+(define bread-and-butter5 (dynamic-require ''defines-and-exports-constant-syntax 'result5))
+(test 'bread5 syntax-e (car (syntax-e bread-and-butter5)))
+
+(module imports-constant-syntax racket/base
+  (require 'defines-and-exports-constant-syntax)
+  (provide result)
+  (define use bread-and-butter)
+  (define result (identifier-binding-constant-syntax
+                  (quote-syntax bread-and-butter))))
+
+(define bread-and-butter2 (dynamic-require ''imports-constant-syntax 'result))
+(test 'quote syntax-e (car (syntax-e bread-and-butter2)))
+(test 'bread syntax-e (car (syntax-e (cadr (syntax-e bread-and-butter2)))))
+(test #t list? (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter2))))))
+(test (module-path-index-join ''defines-and-exports-constant-syntax #f)
+      car (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter2))))))
+
+;; ----------------------------------------
+
+(module distinct-binding-tests racket/base
+  (require (for-syntax racket/base))
+  (provide result)
+
+  (define-syntax-rule (go get)
+    (begin
+      (require racket/base)
+      (define (get wrt) (identifier-distinct-binding #'cons wrt))))
+  (go get)
+  
+  (define result
+    (list (identifier-distinct-binding #'cons (datum->syntax #f 'cons))
+          (identifier-distinct-binding #'cons (datum->syntax #f 'cons) 1)
+          (get #'cons)
+          ;; #f results:
+          (identifier-distinct-binding #'cons #'cons)
+          (identifier-distinct-binding #'kons (datum->syntax #f 'kons))
+          (identifier-distinct-binding #'cons #'cons 2))))
+
+(test #t list? (car (dynamic-require ''distinct-binding-tests 'result)))
+(test #t list? (cadr (dynamic-require ''distinct-binding-tests 'result)))
+(test #t list? (caddr (dynamic-require ''distinct-binding-tests 'result)))
+(test '(#f #f #f) cdddr (dynamic-require ''distinct-binding-tests 'result))
 
 ;; ----------------------------------------
 

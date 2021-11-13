@@ -29,7 +29,7 @@
      (cond
       [trans?
        (when trans-val
-         (maybe-install-free=id! trans-val id phase))]
+         (maybe-install-free=id-or-const-stx! trans-val id phase))]
       [else
        (namespace-unset-transformer! ns phase sym)]))
    

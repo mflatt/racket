@@ -3,6 +3,7 @@
          "../compile/serialize-state.rkt"
          "binding-table.rkt" ; defines `prop:bulk-binding`
          "binding.rkt"
+         "scope.rkt"
          "../common/module-path.rkt"
          "../common/phase+space.rkt"
          "../namespace/provided.rkt")
@@ -48,7 +49,8 @@
                                             #:self self ; the providing module's view of itself
                                             #:mpi mpi   ; the requiring module's view
                                             #:provide-phase+space provide-phase+space
-                                            #:phase+space-shift phase+space-shift)
+                                            #:phase+space-shift phase+space-shift
+                                            #:constant-syntax-lookup [constant-syntax-lookup #f])
   (define binding (provided-as-binding binding/p))
   (define from-mod (module-binding-module binding))
   (module-binding-update binding
@@ -58,6 +60,19 @@
                          #:nominal-sym sym
                          #:nominal-require-phase+space-shift phase+space-shift
                          #:frame-id #f
+                         #:const-stx (cond
+                                       [(binding-const-stx binding)
+                                        => (lambda (key)
+                                             (unless constant-syntax-lookup
+                                               (error "unexpected constant syntax in provided binding"))
+                                             (define stx (constant-syntax-lookup provide-phase+space key))
+                                             (unless stx
+                                               (error "constant syntax not found ~s ~s" provide-phase+space key))
+                                             ;; no mpi shift needed, because it's propagated from the
+                                             ;; syntax object using this binding; no phase shift needed
+                                             ;; because it's built into `constant-syntax-lookup`:
+                                             stx)]
+                                       [else #f])
                          #:extra-inspector (and (not (provided-as-protected? binding/p)) ; see [*] below
                                                 (module-binding-extra-inspector binding))
                          #:extra-nominal-bindings null))
@@ -69,7 +84,7 @@
 ;; providing module should guard the use of the inspector attached to
 ;; the binding. For now, we approximate(!) that conditional use by
 ;; just dropping the extra inspector, which means that the original
-;; binding (bounding by te rename transformer) is accessible only if
+;; binding (bounding by the rename transformer) is accessible only if
 ;; the end user has access to the original binding directly.
 
 ;; ----------------------------------------

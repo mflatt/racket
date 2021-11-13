@@ -13,12 +13,14 @@
          "like-ambiguous-binding.rkt"
          "datum-map.rkt"
          "../expand/rename-trans.rkt"
+         "../expand/constant-trans.rkt"
          "../common/module-path.rkt"
          "cache.rkt")
 
 (provide
  binding-frame-id
  binding-free=id
+ binding-const-stx
  (all-from-out "module-binding.rkt")
  (all-from-out "local-binding.rkt")
 
@@ -27,9 +29,12 @@
  same-binding-nominals?
  identifier-binding
  identifier-binding-symbol
+ identifier-distinct-binding
+ identifier-binding-constant-syntax
  
- maybe-install-free=id!
+ maybe-install-free=id-or-const-stx!
  binding-set-free=id
+ binding-set-const-stx
 
  resolve+shift
  syntax-module-path-index-shift
@@ -117,14 +122,33 @@
     'lexical]
    [else #f]))
 
+(define (identifier-distinct-binding id other-id phase)
+  (define scs (resolve id phase #:get-scopes? #t))
+  (cond
+    [(not scs) #f]
+    [else
+     (define other-scs (syntax-scope-set other-id phase))
+     (and (not (subset? scs other-scs))
+          (identifier-binding id phase))]))
+
+(define (identifier-binding-constant-syntax id phase)
+  (define b (resolve+shift id phase #:unbound-sym? #t))
+  (and b
+       (binding-const-stx b)))
+
 ;; ----------------------------------------
 
-(define (maybe-install-free=id! val id phase)
-  (when (rename-transformer? val)
-    (define free=id (rename-transformer-target val))
-    (unless (syntax-property free=id 'not-free-identifier=?)
-      (define b (resolve+shift id phase #:exactly? #t #:immediate? #t))
-      (add-binding-in-scopes! (syntax-scope-set id phase) (syntax-e id) (binding-set-free=id b free=id)))))
+(define (maybe-install-free=id-or-const-stx! val id phase)
+  (cond
+    [(rename-transformer? val)
+     (define free=id (rename-transformer-target val))
+     (unless (syntax-property free=id 'not-free-identifier=?)
+       (define b (resolve+shift id phase #:exactly? #t #:immediate? #t))
+       (add-binding-in-scopes! (syntax-scope-set id phase) (syntax-e id) (binding-set-free=id b free=id)))]
+    [(constant-transformer? val)
+     (define const-stx (constant-transformer-target val))
+     (define b (resolve+shift id phase #:exactly? #t #:immediate? #t))
+     (add-binding-in-scopes! (syntax-scope-set id phase) (syntax-e id) (binding-set-const-stx b const-stx))]))
 
 ;; Helper to add a `free-identifier=?` equivance to a binding
 (define (binding-set-free=id b free=id)
@@ -132,6 +156,13 @@
    [(module-binding? b) (module-binding-update b #:free=id free=id)]
    [(local-binding? b) (local-binding-update b #:free=id free=id)]
    [else (error "bad binding for free=id:" b)]))
+
+;; Helper to add a constant syntax-object expansion to a binding
+(define (binding-set-const-stx b const-stx)
+  (cond
+   [(module-binding? b) (module-binding-update b #:const-stx const-stx)]
+   [(local-binding? b) (local-binding-update b #:const-stx const-stx)]
+   [else (error "bad binding for const-stx:" b)]))
 
 ; ----------------------------------------
 
@@ -238,6 +269,7 @@
              (if (and (eq? mod shifted-mod)
                       (eq? nominal-mod shifted-nominal-mod)
                       (not (binding-free=id b))
+                      (not (binding-const-stx b))
                       (null? (module-binding-extra-nominal-bindings b)))
                  b
                  (module-binding-update b
@@ -245,6 +277,8 @@
                                         #:nominal-module shifted-nominal-mod
                                         #:free=id (and (binding-free=id b)
                                                        (syntax-transfer-shifts (binding-free=id b) s))
+                                        #:const-stx (and (binding-const-stx b)
+                                                         (syntax-transfer-shifts (binding-const-stx b) s))
                                         #:extra-nominal-bindings
                                         (for/list ([b (in-list (module-binding-extra-nominal-bindings b))])
                                           (apply-syntax-shifts-to-binding b mpi-shifts)))))
@@ -295,6 +329,9 @@
                            #:nominal-module (module-path-index-shift (module-binding-nominal-module b)
                                                                      from-mpi
                                                                      to-mpi)
+                           #:const-stx (let ([stx (binding-const-stx b)])
+                                         (and stx
+                                              (syntax-module-path-index-shift stx from-mpi to-mpi #f)))
                            #:extra-nominal-bindings (for/list ([b (in-list (module-binding-extra-nominal-bindings b))])
                                                       (binding-module-path-index-shift b from-mpi to-mpi)))]
    [else b]))
