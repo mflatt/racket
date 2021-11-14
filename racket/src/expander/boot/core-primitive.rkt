@@ -15,7 +15,6 @@
          "../namespace/core.rkt"
          "../expand/set-bang-trans.rkt"
          "../expand/rename-trans.rkt"
-         "../expand/constant-trans.rkt"
          "../expand/liberal-def-ctx.rkt"
          "../expand/syntax-local.rkt"
          "../expand/definition-context.rkt"
@@ -70,6 +69,7 @@
                       identifier-label-binding
                       identifier-binding-symbol
                       identifier-distinct-binding
+                      (protect identifier-binding-binned-syntax)
                       identifier-prune-lexical-context
                       syntax-debug-info
                       syntax-track-origin
@@ -148,7 +148,6 @@
                       
                       (protect syntax-local-value)
                       (protect syntax-local-value/immediate)
-                      (protect syntax-local-identifier-constant-syntax)
                       
                       syntax-local-lift-expression
                       syntax-local-lift-values-expression

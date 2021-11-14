@@ -20,7 +20,6 @@
          "log.rkt"
          "module-path.rkt"
          "definition-context.rkt"
-         "constant-trans.rkt"
          "../common/module-path.rkt"
          "../namespace/namespace.rkt"
          "../namespace/module.rkt"
@@ -44,7 +43,6 @@
          
          syntax-local-value
          syntax-local-value/immediate
-         syntax-local-identifier-constant-syntax
          
          syntax-local-lift-expression
          syntax-local-lift-values-expression
@@ -235,11 +233,6 @@
 
 (define/who (syntax-local-value/immediate id [failure-thunk #f] [intdef #f])
   (do-syntax-local-value who #:immediate? #t id intdef failure-thunk))
-
-(define/who (syntax-local-identifier-constant-syntax id)
-  (define v (do-syntax-local-value who #:immediate? #f id #f (lambda () #f)))
-  (and (constant-transformer? v)
-       (constant-transformer-target v)))
 
 ;; ----------------------------------------
 

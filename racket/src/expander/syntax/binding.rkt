@@ -13,7 +13,6 @@
          "like-ambiguous-binding.rkt"
          "datum-map.rkt"
          "../expand/rename-trans.rkt"
-         "../expand/constant-trans.rkt"
          "../common/module-path.rkt"
          "cache.rkt")
 

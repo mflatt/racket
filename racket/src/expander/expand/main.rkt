@@ -30,7 +30,6 @@
          "already-expanded.rkt"
          "liberal-def-ctx.rkt"
          "rename-trans.rkt"
-         "constant-trans.rkt"
          "allowed-context.rkt"
          "lift-key.rkt"
          "../syntax/debug.rkt"

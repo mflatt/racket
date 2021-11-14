@@ -163,8 +163,7 @@
      (declare-core-module! ns)
      (declare-hash-based-module! '#%read read-primitives #:namespace ns)
      (declare-hash-based-module! '#%main main-primitives #:namespace ns
-                                 #:protected '(current-compile
-                                               namespace-identifier-constant-syntax))
+                                 #:protected '(current-compile))
      (declare-hash-based-module! '#%utils utils-primitives #:namespace ns)
      (declare-hash-based-module! '#%place-struct place-struct-primitives #:namespace ns
                                  ;; Treat place creation as "unsafe", since the new place starts with

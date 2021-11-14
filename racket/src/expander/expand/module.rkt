@@ -33,7 +33,7 @@
          "prepare.rkt"
          "log.rkt"
          "syntax-id-error.rkt"
-         "constant-trans.rkt"
+         "binned-syntax.rkt"
          "../compile/main.rkt"
          "../eval/top.rkt"
          "../eval/module.rkt"
@@ -147,12 +147,17 @@
    ;; A frame-id is used to determine when use-site scopes are needed
    (define frame-id (root-expand-context-frame-id root-ctx))
 
+   ;; Record binned-require syntax (so the bin description can be extracted
+   ;; without running the module)
+   (define binned-syntaxes (make-hasheqv))
+
    ;; Make a namespace for module expansion
    (define (make-m-ns ns #:for-submodule? [for-submodule? (and enclosing-self #t)])
      (make-module-namespace ns
                             #:mpi self
                             #:root-expand-context root-ctx
-                            #:for-submodule? for-submodule?))
+                            #:for-submodule? for-submodule?
+                            #:binned-syntaxes binned-syntaxes))
    (define m-ns (make-m-ns (expand-context-namespace init-ctx)))
    
    ;; Initial context for all body expansions:
@@ -169,12 +174,8 @@
                    (define-match m scoped-s '(_ _ _ body ...))
                    (m 'body)))
    
-   ;; Record defined constant-syntax transformers, so the constant can be extracted
-   ;; without running the module; provides may also add to this table
-   (define constant-syntaxes (make-hasheqv))
-
    ;; To keep track of all requires and provides
-   (define requires+provides (make-requires+provides self #:constant-syntaxes constant-syntaxes))
+   (define requires+provides (make-requires+provides self #:binned-syntaxes binned-syntaxes))
 
    ;; Table of symbols picked for each binding in this module:
    (define defined-syms (root-expand-context-defined-syms root-ctx)) ; phase -> sym -> id
@@ -357,7 +358,7 @@
                                    #:compiled-submodules compiled-submodules
                                    #:modules-being-compiled modules-being-compiled
                                    #:mpis-to-reset mpis-to-reset
-                                   #:constant-syntaxes constant-syntaxes
+                                   #:binned-syntaxes binned-syntaxes
                                    #:loop pass-1-and-2-loop))
 
          ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -438,7 +439,7 @@
                                             #:root-ctx root-ctx
                                             #:ctx submod-ctx
                                             #:modules-being-compiled modules-being-compiled
-                                            #:constant-syntaxes constant-syntaxes
+                                            #:binned-syntaxes binned-syntaxes
                                             #:fill compiled-module-box)))
      
      (define fully-expanded-bodys
@@ -546,7 +547,7 @@
                           (if (expanded+parsed? expanded-mb)
                               (expanded+parsed-parsed expanded-mb)
                               expanded-mb))
-                         constant-syntaxes
+                         binned-syntaxes
                          (unbox compiled-module-box)
                          compiled-submodules)))
    
@@ -722,7 +723,7 @@
                                 #:compiled-submodules compiled-submodules
                                 #:modules-being-compiled modules-being-compiled
                                 #:mpis-to-reset mpis-to-reset
-                                #:constant-syntaxes constant-syntaxes
+                                #:binned-syntaxes binned-syntaxes
                                 #:loop pass-1-and-2-loop)
   (namespace-visit-available-modules! m-ns phase)
   (let loop ([tail? #t] [bodys bodys])
@@ -876,8 +877,8 @@
                                        requires+provides
                                        #:declared-submodule-names declared-submodule-names
                                        #:who 'module
-                                       #:add-defined-constant
-                                       (lambda (id phase const-stx orig-s)
+                                       #:add-defined-bin
+                                       (lambda (id phase binned-stx orig-s)
                                          (check-ids-unbound (list id) phase requires+provides #:in orig-s)
                                          (define syms (select-defined-syms-and-bind! (list id) defined-syms
                                                                                      self phase all-scopes-stx
@@ -887,9 +888,9 @@
                                                                                      #:as-transformer? #t))
                                          (add-defined-syms! requires+provides syms phase #:as-transformer? #t)
                                          (define sym (car syms))
-                                         (define t (make-constant-transformer const-stx))
+                                         (define t (binned-syntax binned-stx))
                                          (namespace-set-transformer! m-ns phase sym t)
-                                         (add-const-stx! constant-syntaxes t sym phase)
+                                         (add-binned-stx! binned-syntaxes t sym phase)
                                          sym))
           (log-expand partial-body-ctx 'exit-case ready-body)
           (cons ready-body
@@ -1190,7 +1191,7 @@
                                       #:root-ctx root-ctx
                                       #:ctx ctx
                                       #:modules-being-compiled modules-being-compiled
-                                      #:constant-syntaxes constant-syntaxes
+                                      #:binned-syntaxes binned-syntaxes
                                       #:fill compiled-module-box)
   
   (define-values (requires provides) (extract-requires-and-provides requires+provides self self))
@@ -1205,7 +1206,7 @@
                    (requires+provides-all-bindings-simple? requires+provides)
                    (root-expand-context-encode-for-module root-ctx self self)
                    (parsed-only fully-expanded-bodys-except-post-submodules)
-                   constant-syntaxes
+                   binned-syntaxes
                    #f
                    (hasheq)))
 
@@ -1513,8 +1514,8 @@
 
 ;; ----------------------------------------
 
-(define (add-const-stx! constant-syntaxes val sym phase)
-  (define ht (hash-ref constant-syntaxes phase #hasheq()))
-  (hash-set! constant-syntaxes
+(define (add-binned-stx! binned-syntaxes val sym phase)
+  (define ht (hash-ref binned-syntaxes phase #hasheq()))
+  (hash-set! binned-syntaxes
              phase
-             (hash-set ht sym (constant-transformer-target val))))
+             (hash-set ht sym (binned-syntax-stx val))))

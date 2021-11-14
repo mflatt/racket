@@ -139,7 +139,7 @@
 
   (define self (decl 'self-mpi))
   (define phase-to-link-modules (decl 'phase-to-link-modules))
-  (define const-stxes (decl 'const-stxes))
+  (define binned-stxes (decl 'binned-stxes))
 
   (define unsafe? (hash-ref orig-h 'unsafe? #f))
 
@@ -216,7 +216,7 @@
                                                           (decl 'requires)
                                                           (decl 'provides)
                                                           phase-to-link-module-uses-expr
-                                                          const-stxes)
+                                                          binned-stxes)
                      'decl))
 
   (define new-bundle
