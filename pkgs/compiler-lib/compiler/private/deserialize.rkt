@@ -104,7 +104,7 @@
           (define-values (stx? stx?-rest) (loop prot?-rest))
           (values (provided bdg prot? stx?) stx?-rest)]
          [(#:module-binding)
-          (values 'binding (discard r 11))]
+          (values 'binding (discard r 10))]
          [(#:simple-module-binding)
           (values 'binding (discard r 4))]
          [else

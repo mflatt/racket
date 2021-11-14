@@ -119,7 +119,7 @@
                      #:submodule-names [submodule-names null]
                      #:supermodule-name [supermodule-name #f]
                      #:get-all-variables [get-all-variables (lambda () null)] ; ok to omit exported
-                     #:get-syntax-constant-callback [get-syntax-constant-callback (lambda (data-box sym phase) #f)])
+                     #:get-syntax-constant-callback [get-syntax-constant-callback (lambda (data-box phase sym) #f)])
   (module source-name
           self
           (fresh-requires requires)

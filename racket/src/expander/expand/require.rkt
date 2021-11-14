@@ -480,17 +480,8 @@
     (define need-except?
       (and bulk-callback
            (bulk-callback provides provide-phase+space)))
-    (define constant-syntaxes?
-      (for/or ([sym (in-list (or only-syms (hash-keys provides)))])
-        (define binding/p (hash-ref provides sym #f))
-        (and binding/p
-             (binding-const-stx (provided-as-binding binding/p)))))
-    (define constant-syntax-lookup
-      (and constant-syntaxes?
-           (namespace-module-get-constant-syntax-lookup ns mpi phase-shift)))
     (when bind?
-      (when (or filter
-                constant-syntaxes?)
+      (when filter
         (for ([sym (in-list (or only-syms (hash-keys provides)))])
           (define binding/p (hash-ref provides sym #f))
           (when binding/p
@@ -498,19 +489,14 @@
                                                           #:self self
                                                           #:mpi mpi
                                                           #:provide-phase+space provide-phase+space
-                                                          #:phase+space-shift phase+space-shift
-                                                          #:constant-syntax-lookup constant-syntax-lookup))
-            (let ([sym (if filter
-                           (filter b (provided-as-transformer? binding/p))
-                           sym)])
+                                                          #:phase+space-shift phase+space-shift))
+            (let ([sym (filter b (provided-as-transformer? binding/p))])
               (when (and sym
-                         (or (not can-bulk?) ;; bulk binding added later
-                             constant-syntaxes?))
+                         (not can-bulk?)) ;; bulk binding added later
                 ;; Add a non-bulk binding, since `filter` has checked/adjusted it
                 (add-binding! (add-space-scope (datum->syntax in-stx sym) space) b phase))))))
       ;; Add bulk binding after all filtering
-      (when (and can-bulk?
-                 (not constant-syntaxes?))
+      (when can-bulk?
         (define bulk-binding-registry (namespace-bulk-binding-registry ns))
         (add-bulk-binding! (add-space-scope in-stx space)
                            (bulk-binding (or (and (not bulk-prefix)
@@ -610,5 +596,5 @@
     (if add-defined-constant
         (add-defined-constant s bind-phase const-stx orig-s)
         (syntax-e s)))
-  (define binding (make-module-binding self bind-phase sym #:const-stx const-stx))
+  (define binding (make-module-binding self bind-phase sym))
   (add-binding! s binding bind-phase))

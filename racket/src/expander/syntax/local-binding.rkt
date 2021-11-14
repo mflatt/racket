@@ -28,33 +28,28 @@
     ;; Data that is interpreted by the deserializer:
     (ser-push! 'tag '#:local-binding)
     (ser-push! (full-local-binding-key b))
-    (ser-push! (full-binding-free=id b))
-    (ser-push! (full-binding-const-stx b))))
+    (ser-push! (full-binding-free=id b))))
 
-(define (deserialize-full-local-binding key free=id const-stx)
-  (full-local-binding #f free=id const-stx key))
+(define (deserialize-full-local-binding key free=id)
+  (full-local-binding #f free=id key))
 
 (define (make-local-binding key
                             #:frame-id [frame-id #f]
-                            #:free=id [free=id #f]
-                            #:const-stx [const-stx #f])
+                            #:free=id [free=id #f])
   (cond
    [(and (not frame-id)
-         (not free=id)
-         (not const-stx))
+         (not free=id))
     key]
    [else
-    (full-local-binding frame-id free=id const-stx key)]))
+    (full-local-binding frame-id free=id key)]))
 
 (define (local-binding-update b
                               #:key [key (local-binding-key b)]
                               #:frame-id [frame-id (binding-frame-id b)]
-                              #:free=id [free=id (binding-free=id b)]
-                              #:const-stx [const-stx (binding-const-stx b)])
+                              #:free=id [free=id (binding-free=id b)])
   (make-local-binding key
                       #:frame-id frame-id
-                      #:free=id free=id
-                      #:const-stx const-stx))
+                      #:free=id free=id))
 
 (define (local-binding-key b)
   (if (full-local-binding? b)

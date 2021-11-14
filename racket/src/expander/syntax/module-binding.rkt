@@ -29,13 +29,11 @@
                              #:nominal-require-phase+space-shift [nominal-require-phase+space-shift 0]
                              #:frame-id [frame-id #f]
                              #:free=id [free=id #f]
-                             #:const-stx [const-stx #f]
                              #:extra-inspector [extra-inspector #f]
                              #:extra-nominal-bindings [extra-nominal-bindings null])
   (cond
    [(or frame-id
         free=id
-        const-stx
         extra-inspector
         (not (and (eqv? nominal-phase+space phase)
                   (eq? nominal-sym sym)
@@ -43,7 +41,6 @@
                   (null? extra-nominal-bindings))))
     (full-module-binding frame-id
                          free=id
-                         const-stx
                          module phase sym
                          nominal-module nominal-phase+space nominal-sym
                          nominal-require-phase+space-shift
@@ -62,7 +59,6 @@
                                #:nominal-require-phase+space-shift [nominal-require-phase+space-shift (module-binding-nominal-require-phase+space-shift b)]
                                #:frame-id [frame-id (binding-frame-id b)]
                                #:free=id [free=id (binding-free=id b)]
-                               #:const-stx [const-stx (binding-const-stx b)]
                                #:extra-inspector [extra-inspector (module-binding-extra-inspector b)]
                                #:extra-nominal-bindings [extra-nominal-bindings (module-binding-extra-nominal-bindings b)])
   (make-module-binding module phase sym
@@ -72,7 +68,6 @@
                        #:nominal-require-phase+space-shift nominal-require-phase+space-shift
                        #:frame-id frame-id
                        #:free=id free=id
-                       #:const-stx const-stx
                        #:extra-inspector extra-inspector
                        #:extra-nominal-bindings extra-nominal-bindings))
 
@@ -107,7 +102,6 @@
        (ser-push! (full-module-binding-nominal-sym b))
        (ser-push! (full-module-binding-nominal-require-phase+space-shift b))
        (ser-push! (full-binding-free=id b))
-       (ser-push! (full-binding-const-stx b))
        (if (full-module-binding-extra-inspector b)
            (ser-push! 'tag '#:inspector)
            (ser-push! #f))
@@ -132,7 +126,6 @@
                                          nominal-sym
                                          nominal-require-phase+space-shift
                                          free=id
-                                         const-stx
                                          extra-inspector
                                          extra-nominal-bindings)
   (make-module-binding module phase sym
@@ -141,7 +134,6 @@
                        #:nominal-sym nominal-sym
                        #:nominal-require-phase+space-shift (intern-phase+space-shift nominal-require-phase+space-shift)
                        #:free=id free=id
-                       #:const-stx const-stx
                        #:extra-inspector extra-inspector
                        #:extra-nominal-bindings extra-nominal-bindings))
 

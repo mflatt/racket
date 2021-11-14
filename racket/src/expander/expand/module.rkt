@@ -838,8 +838,7 @@
             (for ([sym (in-list syms)]
                   [val (in-list vals)]
                   [id (in-list ids)])
-              (maybe-install-free=id-or-const-stx-in-context! val id phase partial-body-ctx)
-              (maybe-add-const-stx! constant-syntaxes val sym phase)
+              (maybe-install-free=id-in-context! val id phase partial-body-ctx)
               (namespace-set-transformer! m-ns phase sym val)))
           ;; Expand and evaluate RHS:
           (define-values (exp-rhs parsed-rhs vals)
@@ -890,7 +889,7 @@
                                          (define sym (car syms))
                                          (define t (make-constant-transformer const-stx))
                                          (namespace-set-transformer! m-ns phase sym t)
-                                         (maybe-add-const-stx! constant-syntaxes t sym phase)
+                                         (add-const-stx! constant-syntaxes t sym phase)
                                          sym))
           (log-expand partial-body-ctx 'exit-case ready-body)
           (cons ready-body
@@ -1514,9 +1513,8 @@
 
 ;; ----------------------------------------
 
-(define (maybe-add-const-stx! constant-syntaxes val sym phase)
-  (when (constant-transformer? val)
-    (define ht (hash-ref constant-syntaxes phase #hasheq()))
-    (hash-set! constant-syntaxes
-               phase
-               (hash-set ht sym (constant-transformer-target val)))))
+(define (add-const-stx! constant-syntaxes val sym phase)
+  (define ht (hash-ref constant-syntaxes phase #hasheq()))
+  (hash-set! constant-syntaxes
+             phase
+             (hash-set ht sym (constant-transformer-target val))))

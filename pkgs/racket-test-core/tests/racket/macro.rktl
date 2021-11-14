@@ -243,11 +243,6 @@
                               #`#,(free-identifier=? ((syntax-local-value #'m)) #'y))])
               (n))))))
 
-(test '(3) 'constant-transformer
-      (let ([x 3])
-	(let-syntax ([f (make-constant-transformer #'(list x))])
-	  f)))
-
 (test #t set!-transformer? (make-set!-transformer void))
 (test #t rename-transformer? (make-rename-transformer #'void))
 
@@ -698,49 +693,48 @@
            foo)
 
   (define x 12)
-  (define-syntax foo (make-constant-transformer #'x))
+  (define-constant-syntax-for-meta foo 0 x)
 
   (define result
-    (identifier-binding-constant-syntax #'foo)))
+    (namespace-identifier-constant-syntax #'foo)))
 
 (test #t identifier? (dynamic-require ''constant-transformer-tests 'result))
 (test 'x syntax-e (dynamic-require ''constant-transformer-tests 'result))
 
 (require (only-in 'constant-transformer-tests
                   [foo constant-transformer-tests:foo]))
-(test 'x syntax-e (identifier-binding-constant-syntax #'constant-transformer-tests:foo))
+(test 'x syntax-e (namespace-identifier-constant-syntax #'constant-transformer-tests:foo))
 (test (module-path-index-join ''constant-transformer-tests #f)
       car
-      (identifier-binding (identifier-binding-constant-syntax #'constant-transformer-tests:foo)))
+      (identifier-binding (namespace-identifier-constant-syntax #'constant-transformer-tests:foo)))
 
 (require (for-meta 5 (only-in 'constant-transformer-tests
                               [foo constant-transformer-tests5:foo])))
-(test 'x syntax-e (identifier-binding-constant-syntax #'constant-transformer-tests5:foo 5))
-(test #f identifier-binding-constant-syntax #'constant-transformer-tests:foo 5)
-(test #f identifier-binding-constant-syntax #'constant-transformer-testsL:foo)
+(test 'x syntax-e (namespace-identifier-constant-syntax #'constant-transformer-tests5:foo 5))
+(test #f namespace-identifier-constant-syntax #'constant-transformer-tests:foo 5)
+(test #f namespace-identifier-constant-syntax #'constant-transformer-testsL:foo)
 (test (module-path-index-join ''constant-transformer-tests #f)
       car
-      (identifier-binding (identifier-binding-constant-syntax #'constant-transformer-tests5:foo 5) 5))
+      (identifier-binding (namespace-identifier-constant-syntax #'constant-transformer-tests5:foo 5) 5))
 
 (require (for-label (only-in 'constant-transformer-tests
                              [foo constant-transformer-testsL:foo])))
-(test 'x syntax-e (identifier-binding-constant-syntax #'constant-transformer-testsL:foo #f))
-(test #f identifier-binding-constant-syntax #'constant-transformer-tests:foo #f)
-(test #f identifier-binding-constant-syntax #'constant-transformer-tests5:foo #f)
-(test #f identifier-binding-constant-syntax #'constant-transformer-testsL:foo)
+(test 'x syntax-e (namespace-identifier-constant-syntax #'constant-transformer-testsL:foo #f))
+(test #f namespace-identifier-constant-syntax #'constant-transformer-tests:foo #f)
+(test #f namespace-identifier-constant-syntax #'constant-transformer-tests5:foo #f)
+(test #f namespace-identifier-constant-syntax #'constant-transformer-testsL:foo)
 (test (module-path-index-join ''constant-transformer-tests #f)
       car
-      (identifier-binding (identifier-binding-constant-syntax #'constant-transformer-testsL:foo #f) #f))
+      (identifier-binding (namespace-identifier-constant-syntax #'constant-transformer-testsL:foo #f) #f))
 
 (module defines-and-exports-constant-syntax racket/base
-  (define-constant-transformer-for-meta bread-and-butter 0 (quote (bread butter)))
-  (define-constant-transformer-for-meta bread-and-butter 5 (bread5 butter5))
+  (define-constant-syntax-for-meta bread-and-butter 0 (quote (bread butter)))
+  (define-constant-syntax-for-meta bread-and-butter 5 (bread5 butter5))
   (provide result result5 bread-and-butter)
   (define bread (quote bound))
-  (define use bread-and-butter)
-  (define result (identifier-binding-constant-syntax
+  (define result (namespace-identifier-constant-syntax
                   (quote-syntax bread-and-butter)))
-  (define result5 (identifier-binding-constant-syntax
+  (define result5 (namespace-identifier-constant-syntax
                    (quote-syntax bread-and-butter)
                    5)))
 
@@ -757,8 +751,7 @@
 (module imports-constant-syntax racket/base
   (require 'defines-and-exports-constant-syntax)
   (provide result)
-  (define use bread-and-butter)
-  (define result (identifier-binding-constant-syntax
+  (define result (namespace-identifier-constant-syntax
                   (quote-syntax bread-and-butter))))
 
 (define bread-and-butter2 (dynamic-require ''imports-constant-syntax 'result))
@@ -767,6 +760,28 @@
 (test #t list? (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter2))))))
 (test (module-path-index-join ''defines-and-exports-constant-syntax #f)
       car (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter2))))))
+
+(module uses-syntax-local-constant-syntax racket/base
+  (require (for-syntax racket/base))
+  (provide macro result bread-and-butter)
+  (define-constant-syntax-for-meta bread-and-butter 0 (quote (bread butter)))
+  (define-syntax (macro stx)
+    (syntax-local-identifier-constant-syntax (quote-syntax bread-and-butter)))
+  (define result macro))
+
+(test '(bread butter) dynamic-require ''uses-syntax-local-constant-syntax 'result)
+(test '(bread butter) dynamic-require ''uses-syntax-local-constant-syntax 'macro)
+
+(module uses-uses-syntax-local-constant-syntax racket/base
+  (require (for-syntax racket/base)
+           'uses-syntax-local-constant-syntax)
+  (provide macro result)
+  (define-syntax (macro stx)
+    (syntax-local-identifier-constant-syntax (quote-syntax bread-and-butter)))
+  (define result macro))
+
+(test '(bread butter) dynamic-require ''uses-uses-syntax-local-constant-syntax 'result)
+(test '(bread butter) dynamic-require ''uses-uses-syntax-local-constant-syntax 'macro)
 
 ;; ----------------------------------------
 

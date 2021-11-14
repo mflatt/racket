@@ -8279,22 +8279,18 @@
             #f
             inspector_0)))
       (datum->syntax$1 s_0 content_0 s_0 s_0))))
-(define finish_2925
+(define finish_2247
   (make-struct-type-install-properties
    '(full-binding)
-   3
+   2
    0
    #f
    (list
     (cons prop:authentic #t)
-    (cons
-     prop:binding-reach-scopes
-     (lambda (b_0)
-       (let ((or-part_0 (binding-free=id b_0)))
-         (if or-part_0 or-part_0 (binding-const-stx b_0))))))
+    (cons prop:binding-reach-scopes (lambda (b_0) (binding-free=id b_0))))
    (current-inspector)
    #f
-   '(0 1 2)
+   '(0 1)
    #f
    'full-binding))
 (define struct:full-binding
@@ -8304,9 +8300,9 @@
    (|#%nongenerative-uid| full-binding)
    #f
    #f
-   3
+   2
    0))
-(define effect_2734 (finish_2925 struct:full-binding))
+(define effect_2734 (finish_2247 struct:full-binding))
 (define full-binding1.1
   (|#%name|
    full-binding
@@ -8318,14 +8314,10 @@
   (|#%name| full-binding-frame-id (record-accessor struct:full-binding 0)))
 (define full-binding-free=id
   (|#%name| full-binding-free=id (record-accessor struct:full-binding 1)))
-(define full-binding-const-stx
-  (|#%name| full-binding-const-stx (record-accessor struct:full-binding 2)))
 (define binding-frame-id
   (lambda (b_0) (if (full-binding? b_0) (full-binding-frame-id b_0) #f)))
 (define binding-free=id
   (lambda (b_0) (if (full-binding? b_0) (full-binding-free=id b_0) #f)))
-(define binding-const-stx
-  (lambda (b_0) (if (full-binding? b_0) (full-binding-const-stx b_0) #f)))
 (define cell.1$7 (unsafe-make-place-local (make-weak-hash)))
 (define phase+space-place-init!
   (lambda () (unsafe-place-local-set! cell.1$7 (make-weak-hash))))
@@ -8379,156 +8371,144 @@
 (define make-module-binding.1
   (|#%name|
    make-module-binding
-   (lambda (const-stx7_0
-            extra-inspector8_0
-            extra-nominal-bindings9_0
+   (lambda (extra-inspector7_0
+            extra-nominal-bindings8_0
             frame-id5_0
             free=id6_0
             nominal-module1_0
             nominal-phase+space2_0
             nominal-require-phase+space-shift4_0
             nominal-sym3_0
-            module19_0
-            phase20_0
-            sym21_0)
+            module17_0
+            phase18_0
+            sym19_0)
      (begin
        (let ((nominal-module_0
               (if (eq? nominal-module1_0 unsafe-undefined)
-                module19_0
+                module17_0
                 nominal-module1_0)))
          (let ((nominal-phase+space_0
                 (if (eq? nominal-phase+space2_0 unsafe-undefined)
-                  phase20_0
+                  phase18_0
                   nominal-phase+space2_0)))
            (let ((nominal-sym_0
                   (if (eq? nominal-sym3_0 unsafe-undefined)
-                    sym21_0
+                    sym19_0
                     nominal-sym3_0)))
              (if (if frame-id5_0
                    frame-id5_0
                    (if free=id6_0
                      free=id6_0
-                     (if const-stx7_0
-                       const-stx7_0
-                       (if extra-inspector8_0
-                         extra-inspector8_0
-                         (not
-                          (if (eqv? nominal-phase+space_0 phase20_0)
-                            (if (eq? nominal-sym_0 sym21_0)
-                              (if (eqv? nominal-require-phase+space-shift4_0 0)
-                                (null? extra-nominal-bindings9_0)
-                                #f)
+                     (if extra-inspector7_0
+                       extra-inspector7_0
+                       (not
+                        (if (eqv? nominal-phase+space_0 phase18_0)
+                          (if (eq? nominal-sym_0 sym19_0)
+                            (if (eqv? nominal-require-phase+space-shift4_0 0)
+                              (null? extra-nominal-bindings8_0)
                               #f)
-                            #f))))))
-               (full-module-binding49.1
+                            #f)
+                          #f)))))
+               (full-module-binding45.1
                 frame-id5_0
                 free=id6_0
-                const-stx7_0
-                module19_0
-                phase20_0
-                sym21_0
+                module17_0
+                phase18_0
+                sym19_0
                 nominal-module_0
                 nominal-phase+space_0
                 nominal-sym_0
                 nominal-require-phase+space-shift4_0
-                extra-inspector8_0
-                extra-nominal-bindings9_0)
-               (simple-module-binding50.1
-                module19_0
-                phase20_0
-                sym21_0
+                extra-inspector7_0
+                extra-nominal-bindings8_0)
+               (simple-module-binding46.1
+                module17_0
+                phase18_0
+                sym19_0
                 nominal-module_0)))))))))
 (define module-binding-update.1
   (|#%name|
    module-binding-update
-   (lambda (const-stx32_0
-            extra-inspector33_0
-            extra-nominal-bindings34_0
-            frame-id30_0
-            free=id31_0
-            module23_0
-            nominal-module26_0
-            nominal-phase+space27_0
-            nominal-require-phase+space-shift29_0
-            nominal-sym28_0
-            phase24_0
-            sym25_0
-            b47_0)
+   (lambda (extra-inspector30_0
+            extra-nominal-bindings31_0
+            frame-id28_0
+            free=id29_0
+            module21_0
+            nominal-module24_0
+            nominal-phase+space25_0
+            nominal-require-phase+space-shift27_0
+            nominal-sym26_0
+            phase22_0
+            sym23_0
+            b43_0)
      (begin
        (let ((module_0
-              (if (eq? module23_0 unsafe-undefined)
-                (module-binding-module b47_0)
-                module23_0)))
+              (if (eq? module21_0 unsafe-undefined)
+                (module-binding-module b43_0)
+                module21_0)))
          (let ((phase_0
-                (if (eq? phase24_0 unsafe-undefined)
-                  (module-binding-phase b47_0)
-                  phase24_0)))
+                (if (eq? phase22_0 unsafe-undefined)
+                  (module-binding-phase b43_0)
+                  phase22_0)))
            (let ((sym_0
-                  (if (eq? sym25_0 unsafe-undefined)
-                    (module-binding-sym b47_0)
-                    sym25_0)))
+                  (if (eq? sym23_0 unsafe-undefined)
+                    (module-binding-sym b43_0)
+                    sym23_0)))
              (let ((nominal-module_0
-                    (if (eq? nominal-module26_0 unsafe-undefined)
-                      (module-binding-nominal-module b47_0)
-                      nominal-module26_0)))
+                    (if (eq? nominal-module24_0 unsafe-undefined)
+                      (module-binding-nominal-module b43_0)
+                      nominal-module24_0)))
                (let ((nominal-phase+space_0
-                      (if (eq? nominal-phase+space27_0 unsafe-undefined)
-                        (module-binding-nominal-phase+space b47_0)
-                        nominal-phase+space27_0)))
+                      (if (eq? nominal-phase+space25_0 unsafe-undefined)
+                        (module-binding-nominal-phase+space b43_0)
+                        nominal-phase+space25_0)))
                  (let ((nominal-sym_0
-                        (if (eq? nominal-sym28_0 unsafe-undefined)
-                          (module-binding-nominal-sym b47_0)
-                          nominal-sym28_0)))
+                        (if (eq? nominal-sym26_0 unsafe-undefined)
+                          (module-binding-nominal-sym b43_0)
+                          nominal-sym26_0)))
                    (let ((nominal-require-phase+space-shift_0
                           (if (eq?
-                               nominal-require-phase+space-shift29_0
+                               nominal-require-phase+space-shift27_0
                                unsafe-undefined)
                             (module-binding-nominal-require-phase+space-shift
-                             b47_0)
-                            nominal-require-phase+space-shift29_0)))
+                             b43_0)
+                            nominal-require-phase+space-shift27_0)))
                      (let ((frame-id_0
-                            (if (eq? frame-id30_0 unsafe-undefined)
-                              (binding-frame-id b47_0)
-                              frame-id30_0)))
+                            (if (eq? frame-id28_0 unsafe-undefined)
+                              (binding-frame-id b43_0)
+                              frame-id28_0)))
                        (let ((free=id_0
-                              (if (eq? free=id31_0 unsafe-undefined)
-                                (binding-free=id b47_0)
-                                free=id31_0)))
-                         (let ((const-stx_0
-                                (if (eq? const-stx32_0 unsafe-undefined)
-                                  (binding-const-stx b47_0)
-                                  const-stx32_0)))
-                           (let ((extra-inspector_0
+                              (if (eq? free=id29_0 unsafe-undefined)
+                                (binding-free=id b43_0)
+                                free=id29_0)))
+                         (let ((extra-inspector_0
+                                (if (eq? extra-inspector30_0 unsafe-undefined)
+                                  (module-binding-extra-inspector b43_0)
+                                  extra-inspector30_0)))
+                           (let ((extra-nominal-bindings_0
                                   (if (eq?
-                                       extra-inspector33_0
+                                       extra-nominal-bindings31_0
                                        unsafe-undefined)
-                                    (module-binding-extra-inspector b47_0)
-                                    extra-inspector33_0)))
-                             (let ((extra-nominal-bindings_0
-                                    (if (eq?
-                                         extra-nominal-bindings34_0
-                                         unsafe-undefined)
-                                      (module-binding-extra-nominal-bindings
-                                       b47_0)
-                                      extra-nominal-bindings34_0)))
-                               (make-module-binding.1
-                                const-stx_0
-                                extra-inspector_0
-                                extra-nominal-bindings_0
-                                frame-id_0
-                                free=id_0
-                                nominal-module_0
-                                nominal-phase+space_0
-                                nominal-require-phase+space-shift_0
-                                nominal-sym_0
-                                module_0
-                                phase_0
-                                sym_0)))))))))))))))))
+                                    (module-binding-extra-nominal-bindings
+                                     b43_0)
+                                    extra-nominal-bindings31_0)))
+                             (make-module-binding.1
+                              extra-inspector_0
+                              extra-nominal-bindings_0
+                              frame-id_0
+                              free=id_0
+                              nominal-module_0
+                              nominal-phase+space_0
+                              nominal-require-phase+space-shift_0
+                              nominal-sym_0
+                              module_0
+                              phase_0
+                              sym_0))))))))))))))))
 (define module-binding?
   (lambda (b_0)
     (let ((or-part_0 (simple-module-binding? b_0)))
       (if or-part_0 or-part_0 (full-module-binding? b_0)))))
-(define finish_2667
+(define finish_2397
   (make-struct-type-install-properties
    '(full-module-binding)
    9
@@ -8542,7 +8522,6 @@
        (let ((simplified-b_0
               (if (full-binding-frame-id b_0)
                 (module-binding-update.1
-                 unsafe-undefined
                  unsafe-undefined
                  unsafe-undefined
                  #f
@@ -8571,7 +8550,6 @@
               ser-push!_0
               (full-module-binding-nominal-require-phase+space-shift b_0))
              (|#%app| ser-push!_0 (full-binding-free=id b_0))
-             (|#%app| ser-push!_0 (full-binding-const-stx b_0))
              (if (full-module-binding-extra-inspector b_0)
                (|#%app| ser-push!_0 'tag kw1932)
                (|#%app| ser-push!_0 #f))
@@ -8593,8 +8571,8 @@
    #f
    9
    0))
-(define effect_2481 (finish_2667 struct:full-module-binding))
-(define full-module-binding49.1
+(define effect_2481 (finish_2397 struct:full-module-binding))
+(define full-module-binding45.1
   (|#%name|
    full-module-binding
    (record-constructor
@@ -8671,7 +8649,7 @@
    4
    0))
 (define effect_2891 (finish_2371 struct:simple-module-binding))
-(define simple-module-binding50.1
+(define simple-module-binding46.1
   (|#%name|
    simple-module-binding
    (record-constructor
@@ -8705,29 +8683,27 @@
            nominal-sym_0
            nominal-require-phase+space-shift_0
            free=id_0
-           const-stx_0
            extra-inspector_0
            extra-nominal-bindings_0)
-    (let ((temp71_0 (intern-phase+space nominal-phase+space_0)))
-      (let ((temp73_0
+    (let ((temp66_0 (intern-phase+space nominal-phase+space_0)))
+      (let ((temp68_0
              (intern-phase+space-shift nominal-require-phase+space-shift_0)))
-        (let ((temp71_1 temp71_0))
+        (let ((temp66_1 temp66_0))
           (make-module-binding.1
-           const-stx_0
            extra-inspector_0
            extra-nominal-bindings_0
            #f
            free=id_0
            nominal-module_0
-           temp71_1
-           temp73_0
+           temp66_1
+           temp68_0
            nominal-sym_0
            module_0
            phase_0
            sym_0))))))
 (define deserialize-simple-module-binding
   (lambda (module_0 sym_0 phase_0 nominal-module_0)
-    (simple-module-binding50.1 module_0 phase_0 sym_0 nominal-module_0)))
+    (simple-module-binding46.1 module_0 phase_0 sym_0 nominal-module_0)))
 (define module-binding-module
   (lambda (b_0)
     (if (simple-module-binding? b_0)
@@ -13216,7 +13192,7 @@
   (lambda (b_0)
     (let ((or-part_0 (full-local-binding? b_0)))
       (if or-part_0 or-part_0 (symbol? b_0)))))
-(define finish_2128
+(define finish_2041
   (make-struct-type-install-properties
    '(full-local-binding)
    1
@@ -13230,8 +13206,7 @@
        (begin
          (|#%app| ser-push!_0 'tag kw2677)
          (|#%app| ser-push!_0 (full-local-binding-key b_0))
-         (|#%app| ser-push!_0 (full-binding-free=id b_0))
-         (|#%app| ser-push!_0 (full-binding-const-stx b_0))))))
+         (|#%app| ser-push!_0 (full-binding-free=id b_0))))))
    (current-inspector)
    #f
    '(0)
@@ -13246,7 +13221,7 @@
    #f
    1
    0))
-(define effect_3011 (finish_2128 struct:full-local-binding))
+(define effect_3011 (finish_2041 struct:full-local-binding))
 (define full-local-binding1.1
   (|#%name|
    full-local-binding
@@ -13259,48 +13234,33 @@
    full-local-binding-key
    (record-accessor struct:full-local-binding 0)))
 (define deserialize-full-local-binding
-  (lambda (key_0 free=id_0 const-stx_0)
-    (full-local-binding1.1 #f free=id_0 const-stx_0 key_0)))
+  (lambda (key_0 free=id_0) (full-local-binding1.1 #f free=id_0 key_0)))
 (define make-local-binding.1
   (|#%name|
    make-local-binding
-   (lambda (const-stx4_0 frame-id2_0 free=id3_0 key8_0)
+   (lambda (frame-id2_0 free=id3_0 key6_0)
      (begin
-       (if (if (not frame-id2_0)
-             (if (not free=id3_0) (not const-stx4_0) #f)
-             #f)
-         key8_0
-         (full-local-binding1.1
-          frame-id2_0
-          free=id3_0
-          const-stx4_0
-          key8_0))))))
+       (if (if (not frame-id2_0) (not free=id3_0) #f)
+         key6_0
+         (full-local-binding1.1 frame-id2_0 free=id3_0 key6_0))))))
 (define local-binding-update.1
   (|#%name|
    local-binding-update
-   (lambda (const-stx13_0 frame-id11_0 free=id12_0 key10_0 b18_0)
+   (lambda (frame-id9_0 free=id10_0 key8_0 b14_0)
      (begin
        (let ((key_0
-              (if (eq? key10_0 unsafe-undefined)
-                (local-binding-key b18_0)
-                key10_0)))
+              (if (eq? key8_0 unsafe-undefined)
+                (local-binding-key b14_0)
+                key8_0)))
          (let ((frame-id_0
-                (if (eq? frame-id11_0 unsafe-undefined)
-                  (binding-frame-id b18_0)
-                  frame-id11_0)))
+                (if (eq? frame-id9_0 unsafe-undefined)
+                  (binding-frame-id b14_0)
+                  frame-id9_0)))
            (let ((free=id_0
-                  (if (eq? free=id12_0 unsafe-undefined)
-                    (binding-free=id b18_0)
-                    free=id12_0)))
-             (let ((const-stx_0
-                    (if (eq? const-stx13_0 unsafe-undefined)
-                      (binding-const-stx b18_0)
-                      const-stx13_0)))
-               (make-local-binding.1
-                const-stx_0
-                frame-id_0
-                free=id_0
-                key_0)))))))))
+                  (if (eq? free=id10_0 unsafe-undefined)
+                    (binding-free=id b14_0)
+                    free=id10_0)))
+             (make-local-binding.1 frame-id_0 free=id_0 key_0))))))))
 (define local-binding-key
   (lambda (b_0)
     (if (full-local-binding? b_0) (full-local-binding-key b_0) b_0)))
@@ -13440,125 +13400,67 @@
   (|#%name|
    rename-transformer-target
    (lambda (t_0) (begin (|#%app| (rename-transformer-value t_0) t_0)))))
-(define-values
- (prop:constant-transformer 1/constant-transformer? constant-transformer-value)
- (make-struct-type-property
-  'constant-transformer
-  (lambda (v_0 info_0)
-    (begin
-      (if (let ((or-part_0 (exact-nonnegative-integer? v_0)))
-            (if or-part_0 or-part_0 (syntax?$1 v_0)))
-        (void)
-        (raise-argument-error
-         'guard-for-prop:constant-transformer
-         (string-append "(or/c exact-nonnegative-integer?\n" "      syntax?)")
-         v_0))
-      (begin
-        (if (exact-nonnegative-integer? v_0)
-          (begin
-            (if (<= v_0 (list-ref info_0 1))
-              (void)
-              (raise-arguments-error
-               'guard-for-prop:constant-transformer
-               "field index >= initialized-field count for structure type"
-               "field index"
-               v_0
-               "initialized-field count"
-               (list-ref info_0 1)))
-            (if (member v_0 (list-ref info_0 5))
-              (void)
-              (raise-arguments-error
-               'guard-for-prop:constant-transformer
-               "field index not declared immutable"
-               "field index"
-               v_0)))
-          (void))
-        (let ((ref_0 (list-ref info_0 3)))
-          (if (identifier? v_0)
-            (lambda (t_0) v_0)
-            (lambda (t_0)
-              (let ((val_0 (|#%app| ref_0 t_0 v_0)))
-                (if (syntax?$1 val_0) val_0 (datum->syntax$1 #f '?)))))))))))
-(define finish_2671
+(define finish_2154
   (make-struct-type-install-properties
-   '(constant-transformer)
+   '(syntax-constant)
    1
    0
    #f
-   (list
-    (cons
-     new-prop:procedure
-     (lambda (t_0 stx_0) (1/constant-transformer-target t_0)))
-    (cons prop:constant-transformer 0))
+   null
    (current-inspector)
    #f
    '(0)
    #f
-   'syntax-constant-transformer))
-(define struct:syntax-constant-transformer
+   'constant-transformer))
+(define struct:constant-transformer
   (make-record-type-descriptor*
-   'constant-transformer
+   'syntax-constant
    #f
-   (|#%nongenerative-uid| constant-transformer)
+   (|#%nongenerative-uid| syntax-constant)
    #f
    #f
    1
    0))
-(define effect_2981 (finish_2671 struct:syntax-constant-transformer))
-(define syntax-constant-transformer1.1
+(define effect_2491 (finish_2154 struct:constant-transformer))
+(define constant-transformer1.1
   (|#%name|
-   syntax-constant-transformer
+   constant-transformer
    (record-constructor
-    (make-record-constructor-descriptor
-     struct:syntax-constant-transformer
-     #f
-     #f))))
-(define syntax-constant-transformer?_2601
+    (make-record-constructor-descriptor struct:constant-transformer #f #f))))
+(define constant-transformer?_2946
+  (|#%name| syntax-constant? (record-predicate struct:constant-transformer)))
+(define constant-transformer?
   (|#%name|
-   constant-transformer?
-   (record-predicate struct:syntax-constant-transformer)))
-(define syntax-constant-transformer?
-  (|#%name|
-   constant-transformer?
+   syntax-constant?
    (lambda (v)
-     (if (syntax-constant-transformer?_2601 v)
+     (if (constant-transformer?_2946 v)
        #t
        ($value
         (if (impersonator? v)
-          (syntax-constant-transformer?_2601 (impersonator-val v))
+          (constant-transformer?_2946 (impersonator-val v))
           #f))))))
-(define syntax-constant-transformer-id_2259
+(define constant-transformer-stx_2464
   (|#%name|
-   constant-transformer-id
-   (record-accessor struct:syntax-constant-transformer 0)))
-(define syntax-constant-transformer-id
+   syntax-constant-stx
+   (record-accessor struct:constant-transformer 0)))
+(define constant-transformer-stx
   (|#%name|
-   constant-transformer-id
+   syntax-constant-stx
    (lambda (s)
-     (if (syntax-constant-transformer?_2601 s)
-       (syntax-constant-transformer-id_2259 s)
+     (if (constant-transformer?_2946 s)
+       (constant-transformer-stx_2464 s)
        ($value
         (impersonate-ref
-         syntax-constant-transformer-id_2259
-         struct:syntax-constant-transformer
+         constant-transformer-stx_2464
+         struct:constant-transformer
          0
          s
-         'constant-transformer
-         'id))))))
-(define 1/make-constant-transformer
-  (|#%name|
-   make-constant-transformer
-   (lambda (stx_0)
-     (begin
-       (begin
-         (if (syntax?$1 stx_0)
-           (void)
-           (raise-argument-error 'make-constant-transformer "syntax?" stx_0))
-         (syntax-constant-transformer1.1 stx_0))))))
-(define 1/constant-transformer-target
-  (|#%name|
-   constant-transformer-target
-   (lambda (t_0) (begin (|#%app| (constant-transformer-value t_0) t_0)))))
+         'syntax-constant
+         'stx))))))
+(define make-constant-transformer
+  (lambda (stx_0) (constant-transformer1.1 stx_0)))
+(define constant-transformer-target
+  (lambda (t_0) (constant-transformer-stx t_0)))
 (define free-identifier=?$1
   (|#%name|
    free-identifier=?
@@ -13706,48 +13608,27 @@
              (if (not (begin-unsafe (hash-keys-subset? scs_0 other-scs_0)))
                (identifier-binding$1 id_0 phase_0)
                #f))))))))
-(define identifier-binding-constant-syntax$1
-  (|#%name|
-   identifier-binding-constant-syntax
-   (lambda (id_0 phase_0)
-     (begin
-       (let ((b_0
-              (resolve+shift.1 #f #f null unsafe-undefined #t id_0 phase_0)))
-         (if b_0 (binding-const-stx b_0) #f))))))
-(define maybe-install-free=id-or-const-stx!
+(define maybe-install-free=id!
   (lambda (val_0 id_0 phase_0)
     (if (1/rename-transformer? val_0)
       (let ((free=id_0 (1/rename-transformer-target val_0)))
         (if (syntax-property$1 free=id_0 'not-free-identifier=?)
           (void)
           (let ((b_0 (resolve+shift.1 #f #t null #t #f id_0 phase_0)))
-            (let ((temp56_0 (syntax-scope-set id_0 phase_0)))
-              (let ((temp57_0 (syntax-e$1 id_0)))
-                (let ((temp58_0 (binding-set-free=id b_0 free=id_0)))
-                  (let ((temp57_1 temp57_0) (temp56_1 temp56_0))
+            (let ((temp53_0 (syntax-scope-set id_0 phase_0)))
+              (let ((temp54_0 (syntax-e$1 id_0)))
+                (let ((temp55_0 (binding-set-free=id b_0 free=id_0)))
+                  (let ((temp54_1 temp54_0) (temp53_1 temp53_0))
                     (add-binding-in-scopes!.1
                      #f
-                     temp56_1
-                     temp57_1
-                     temp58_0))))))))
-      (if (1/constant-transformer? val_0)
-        (let ((const-stx_0 (1/constant-transformer-target val_0)))
-          (let ((b_0 (resolve+shift.1 #f #t null #t #f id_0 phase_0)))
-            (let ((temp63_0 (syntax-scope-set id_0 phase_0)))
-              (let ((temp64_0 (syntax-e$1 id_0)))
-                (let ((temp65_0 (binding-set-const-stx b_0 const-stx_0)))
-                  (let ((temp64_1 temp64_0) (temp63_1 temp63_0))
-                    (add-binding-in-scopes!.1
-                     #f
-                     temp63_1
-                     temp64_1
-                     temp65_0)))))))
-        (void)))))
+                     temp53_1
+                     temp54_1
+                     temp55_0))))))))
+      (void))))
 (define binding-set-free=id
   (lambda (b_0 free=id_0)
     (if (module-binding? b_0)
       (module-binding-update.1
-       unsafe-undefined
        unsafe-undefined
        unsafe-undefined
        unsafe-undefined
@@ -13763,36 +13644,10 @@
       (if (local-binding? b_0)
         (local-binding-update.1
          unsafe-undefined
-         unsafe-undefined
          free=id_0
          unsafe-undefined
          b_0)
         (error "bad binding for free=id:" b_0)))))
-(define binding-set-const-stx
-  (lambda (b_0 const-stx_0)
-    (if (module-binding? b_0)
-      (module-binding-update.1
-       const-stx_0
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       unsafe-undefined
-       b_0)
-      (if (local-binding? b_0)
-        (local-binding-update.1
-         const-stx_0
-         unsafe-undefined
-         unsafe-undefined
-         unsafe-undefined
-         b_0)
-        (error "bad binding for const-stx:" b_0)))))
 (define finish_2455
   (make-struct-type-install-properties
    '(non-source-shift)
@@ -13885,12 +13740,12 @@
                       (modified-content-content content*_0)
                       content*_0)))
                (if (syntax?$1 s8_0)
-                 (let ((mpi-shifts79_0
+                 (let ((mpi-shifts65_0
                         (shift-cons shift_0 (syntax-mpi-shifts s8_0))))
-                   (let ((inspector80_0
+                   (let ((inspector66_0
                           (let ((or-part_0 (syntax-inspector s8_0)))
                             (if or-part_0 or-part_0 inspector7_0))))
-                     (let ((content*81_0
+                     (let ((content*67_0
                             (if (datum-has-elements? content_0)
                               (modified-content1.1
                                content_0
@@ -13905,16 +13760,16 @@
                                 (syntax-shifted-multi-scopes s8_0)
                                 (syntax-mpi-shifts s8_0)))
                               content*_0)))
-                       (let ((inspector80_1 inspector80_0)
-                             (mpi-shifts79_1 mpi-shifts79_0))
+                       (let ((inspector66_1 inspector66_0)
+                             (mpi-shifts65_1 mpi-shifts65_0))
                          (syntax2.1
-                          content*81_0
+                          content*67_0
                           (syntax-scopes s8_0)
                           (syntax-shifted-multi-scopes s8_0)
-                          mpi-shifts79_1
+                          mpi-shifts65_1
                           (syntax-srcloc$1 s8_0)
                           (syntax-props s8_0)
-                          inspector80_1)))))
+                          inspector66_1)))))
                  (raise-argument-error 'struct-copy "syntax?" s8_0))))))))))
 (define shift-cons
   (lambda (shift_0 shifts_0)
@@ -13965,19 +13820,19 @@
                                 (binding-free=id immediate-b_0)
                                 #f)
                               #f)
-                          (let ((temp87_0 (binding-free=id immediate-b_0)))
-                            (let ((temp89_0
+                          (let ((temp73_0 (binding-free=id immediate-b_0)))
+                            (let ((temp75_0
                                    (append
                                     extra-shifts16_0
                                     (syntax-mpi-shifts s22_0))))
-                              (let ((temp87_1 temp87_0))
+                              (let ((temp73_1 temp73_0))
                                 (resolve+shift.1
                                  ambiguous-value12_0
                                  exactly?13_0
-                                 temp89_0
+                                 temp75_0
                                  unsafe-undefined
                                  unbound-sym?15_0
-                                 temp87_1
+                                 temp73_1
                                  phase23_0))))
                           immediate-b_0)))
                    (if (module-binding? b_0)
@@ -14001,91 +13856,75 @@
                                                    nominal-mod_0
                                                    shifted-nominal-mod_0)
                                                 (if (not (binding-free=id b_0))
-                                                  (if (not
-                                                       (binding-const-stx b_0))
-                                                    (null?
-                                                     (module-binding-extra-nominal-bindings
-                                                      b_0))
-                                                    #f)
+                                                  (null?
+                                                   (module-binding-extra-nominal-bindings
+                                                    b_0))
                                                   #f)
                                                 #f)
                                               #f)
                                           b_0
-                                          (let ((temp96_0
+                                          (let ((temp82_0
                                                  (if (binding-free=id b_0)
-                                                   (let ((temp99_0
+                                                   (let ((temp84_0
                                                           (binding-free=id
                                                            b_0)))
                                                      (syntax-transfer-shifts.1
                                                       #f
-                                                      temp99_0
+                                                      temp84_0
                                                       s22_0
                                                       #f))
                                                    #f)))
-                                            (let ((temp97_0
-                                                   (if (binding-const-stx b_0)
-                                                     (let ((temp101_0
-                                                            (binding-const-stx
-                                                             b_0)))
-                                                       (syntax-transfer-shifts.1
-                                                        #f
-                                                        temp101_0
-                                                        s22_0
-                                                        #f))
-                                                     #f)))
-                                              (let ((temp98_0
-                                                     (reverse$1
-                                                      (let ((lst_0
-                                                             (module-binding-extra-nominal-bindings
-                                                              b_0)))
-                                                        (begin
-                                                          (letrec*
-                                                           ((for-loop_0
-                                                             (|#%name|
-                                                              for-loop
-                                                              (lambda (fold-var_0
-                                                                       lst_1)
-                                                                (begin
-                                                                  (if (pair?
-                                                                       lst_1)
-                                                                    (let ((b_1
-                                                                           (unsafe-car
+                                            (let ((temp83_0
+                                                   (reverse$1
+                                                    (let ((lst_0
+                                                           (module-binding-extra-nominal-bindings
+                                                            b_0)))
+                                                      (begin
+                                                        (letrec*
+                                                         ((for-loop_0
+                                                           (|#%name|
+                                                            for-loop
+                                                            (lambda (fold-var_0
+                                                                     lst_1)
+                                                              (begin
+                                                                (if (pair?
+                                                                     lst_1)
+                                                                  (let ((b_1
+                                                                         (unsafe-car
+                                                                          lst_1)))
+                                                                    (let ((rest_0
+                                                                           (unsafe-cdr
                                                                             lst_1)))
-                                                                      (let ((rest_0
-                                                                             (unsafe-cdr
-                                                                              lst_1)))
-                                                                        (let ((fold-var_1
-                                                                               (let ((fold-var_1
-                                                                                      (cons
-                                                                                       (apply-syntax-shifts-to-binding
-                                                                                        b_1
-                                                                                        mpi-shifts_0)
-                                                                                       fold-var_0)))
-                                                                                 (values
-                                                                                  fold-var_1))))
-                                                                          (for-loop_0
-                                                                           fold-var_1
-                                                                           rest_0))))
-                                                                    fold-var_0))))))
-                                                           (for-loop_0
-                                                            null
-                                                            lst_0)))))))
-                                                (let ((temp97_1 temp97_0)
-                                                      (temp96_1 temp96_0))
-                                                  (module-binding-update.1
-                                                   temp97_1
-                                                   unsafe-undefined
-                                                   temp98_0
-                                                   unsafe-undefined
-                                                   temp96_1
-                                                   shifted-mod_0
-                                                   shifted-nominal-mod_0
-                                                   unsafe-undefined
-                                                   unsafe-undefined
-                                                   unsafe-undefined
-                                                   unsafe-undefined
-                                                   unsafe-undefined
-                                                   b_0))))))))
+                                                                      (let ((fold-var_1
+                                                                             (let ((fold-var_1
+                                                                                    (cons
+                                                                                     (apply-syntax-shifts-to-binding
+                                                                                      b_1
+                                                                                      mpi-shifts_0)
+                                                                                     fold-var_0)))
+                                                                               (values
+                                                                                fold-var_1))))
+                                                                        (for-loop_0
+                                                                         fold-var_1
+                                                                         rest_0))))
+                                                                  fold-var_0))))))
+                                                         (for-loop_0
+                                                          null
+                                                          lst_0)))))))
+                                              (let ((temp82_1 temp82_0))
+                                                (module-binding-update.1
+                                                 unsafe-undefined
+                                                 temp83_0
+                                                 unsafe-undefined
+                                                 temp82_1
+                                                 shifted-mod_0
+                                                 shifted-nominal-mod_0
+                                                 unsafe-undefined
+                                                 unsafe-undefined
+                                                 unsafe-undefined
+                                                 unsafe-undefined
+                                                 unsafe-undefined
+                                                 b_0)))))))
                                    (begin
                                      (if can-cache?_0
                                        (resolve+shift-cache-set!
@@ -14135,79 +13974,66 @@
 (define binding-module-path-index-shift
   (lambda (b_0 from-mpi_0 to-mpi_0)
     (if (module-binding? b_0)
-      (let ((temp104_0
+      (let ((temp87_0
              (module-path-index-shift
               (module-binding-module b_0)
               from-mpi_0
               to-mpi_0)))
-        (let ((temp105_0
+        (let ((temp88_0
                (module-path-index-shift
                 (module-binding-nominal-module b_0)
                 from-mpi_0
                 to-mpi_0)))
-          (let ((temp106_0
-                 (let ((stx_0 (binding-const-stx b_0)))
-                   (if stx_0
-                     (syntax-module-path-index-shift.1
-                      #f
-                      stx_0
-                      from-mpi_0
-                      to-mpi_0
-                      #f)
-                     #f))))
-            (let ((temp107_0
-                   (reverse$1
-                    (let ((lst_0 (module-binding-extra-nominal-bindings b_0)))
-                      (begin
-                        (letrec*
-                         ((for-loop_0
-                           (|#%name|
-                            for-loop
-                            (lambda (fold-var_0 lst_1)
-                              (begin
-                                (if (pair? lst_1)
-                                  (let ((b_1 (unsafe-car lst_1)))
-                                    (let ((rest_0 (unsafe-cdr lst_1)))
-                                      (let ((fold-var_1
-                                             (let ((fold-var_1
-                                                    (cons
-                                                     (binding-module-path-index-shift
-                                                      b_1
-                                                      from-mpi_0
-                                                      to-mpi_0)
-                                                     fold-var_0)))
-                                               (values fold-var_1))))
-                                        (for-loop_0 fold-var_1 rest_0))))
-                                  fold-var_0))))))
-                         (for-loop_0 null lst_0)))))))
-              (let ((temp106_1 temp106_0)
-                    (temp105_1 temp105_0)
-                    (temp104_1 temp104_0))
-                (module-binding-update.1
-                 temp106_1
-                 unsafe-undefined
-                 temp107_0
-                 unsafe-undefined
-                 unsafe-undefined
-                 temp104_1
-                 temp105_1
-                 unsafe-undefined
-                 unsafe-undefined
-                 unsafe-undefined
-                 unsafe-undefined
-                 unsafe-undefined
-                 b_0))))))
+          (let ((temp89_0
+                 (reverse$1
+                  (let ((lst_0 (module-binding-extra-nominal-bindings b_0)))
+                    (begin
+                      (letrec*
+                       ((for-loop_0
+                         (|#%name|
+                          for-loop
+                          (lambda (fold-var_0 lst_1)
+                            (begin
+                              (if (pair? lst_1)
+                                (let ((b_1 (unsafe-car lst_1)))
+                                  (let ((rest_0 (unsafe-cdr lst_1)))
+                                    (let ((fold-var_1
+                                           (let ((fold-var_1
+                                                  (cons
+                                                   (binding-module-path-index-shift
+                                                    b_1
+                                                    from-mpi_0
+                                                    to-mpi_0)
+                                                   fold-var_0)))
+                                             (values fold-var_1))))
+                                      (for-loop_0 fold-var_1 rest_0))))
+                                fold-var_0))))))
+                       (for-loop_0 null lst_0)))))))
+            (let ((temp88_1 temp88_0) (temp87_1 temp87_0))
+              (module-binding-update.1
+               unsafe-undefined
+               temp89_0
+               unsafe-undefined
+               unsafe-undefined
+               temp87_1
+               temp88_1
+               unsafe-undefined
+               unsafe-undefined
+               unsafe-undefined
+               unsafe-undefined
+               unsafe-undefined
+               b_0)))))
       b_0)))
 (define syntax-transfer-shifts.1
   (|#%name|
    syntax-transfer-shifts
    (lambda (non-source?25_0 to-s28_0 from-s29_0 inspector27_0)
      (begin
-       (let ((temp113_0 (syntax-mpi-shifts from-s29_0)))
+       (let ((temp91_0 (syntax-mpi-shifts from-s29_0)))
          (syntax-add-shifts.1
           non-source?25_0
           to-s28_0
-          temp113_0
+          temp91_0
           inspector27_0))))))
 (define syntax-add-shifts.1
   (|#%name|
@@ -14229,22 +14055,20 @@
                          (let ((rest_0 (unsafe-cdr lst_1)))
                            (let ((s_1
                                   (let ((s_1
-                                         (let ((temp117_0
-                                                (shift-from shift_0)))
-                                           (let ((temp118_0
-                                                  (shift-to shift_0)))
-                                             (let ((temp119_0
+                                         (let ((temp95_0 (shift-from shift_0)))
+                                           (let ((temp96_0 (shift-to shift_0)))
+                                             (let ((temp97_0
                                                     (if (zero? pos_0)
                                                       inspector33_0
                                                       #f)))
-                                               (let ((temp118_1 temp118_0)
-                                                     (temp117_1 temp117_0))
+                                               (let ((temp96_1 temp96_0)
+                                                     (temp95_1 temp95_0))
                                                  (syntax-module-path-index-shift.1
                                                   non-source?31_0
                                                   s_0
-                                                  temp117_1
-                                                  temp118_1
-                                                  temp119_0)))))))
+                                                  temp95_1
+                                                  temp96_1
+                                                  temp97_0)))))))
                                     (values s_1))))
                              (for-loop_0 s_1 rest_0 (+ pos_0 1)))))
                        s_0))))))
@@ -14258,8 +14082,8 @@
                content*_0)))
         (if (syntax?$1 s_0)
           (let ((or-part_0 (syntax-inspector s_0)))
-            (let ((inspector121_0 (if or-part_0 or-part_0 insp_0)))
-              (let ((content*122_0
+            (let ((inspector99_0 (if or-part_0 or-part_0 insp_0)))
+              (let ((content*100_0
                      (if (datum-has-elements? content_0)
                        (modified-content1.1
                         content_0
@@ -14274,15 +14098,15 @@
                          (syntax-shifted-multi-scopes s_0)
                          (syntax-mpi-shifts s_0)))
                        content*_0)))
-                (let ((inspector121_1 inspector121_0))
+                (let ((inspector99_1 inspector99_0))
                   (syntax2.1
-                   content*122_0
+                   content*100_0
                    (syntax-scopes s_0)
                    (syntax-shifted-multi-scopes s_0)
                    (syntax-mpi-shifts s_0)
                    (syntax-srcloc$1 s_0)
                    (syntax-props s_0)
-                   inspector121_1)))))
+                   inspector99_1)))))
           (raise-argument-error 'struct-copy "syntax?" s_0))))))
 (define 1/syntax-source-module
   (let ((syntax-source-module_0
@@ -14366,12 +14190,12 @@
             id_0))
          (let ((the-struct_0 (datum->syntax$1 #f (syntax-e$1 id_0) id_0 id_0)))
            (if (syntax?$1 the-struct_0)
-             (let ((mpi-shifts123_0 (syntax-mpi-shifts id_0)))
+             (let ((mpi-shifts101_0 (syntax-mpi-shifts id_0)))
                (syntax2.1
                 (syntax-content* the-struct_0)
                 (syntax-scopes the-struct_0)
                 (syntax-shifted-multi-scopes the-struct_0)
-                mpi-shifts123_0
+                mpi-shifts101_0
                 (syntax-srcloc$1 the-struct_0)
                 (syntax-props the-struct_0)
                 (syntax-inspector the-struct_0)))
@@ -14444,47 +14268,24 @@
            (let ((temp18_0
                   (module-path-index-shift from-mod_0 self1_0 mpi2_0)))
              (let ((temp24_0
-                    (let ((c1_0 (binding-const-stx binding_0)))
-                      (if c1_0
-                        (begin
-                          (if constant-syntax-lookup5_0
-                            (void)
-                            (error
-                             "unexpected constant syntax in provided binding"))
-                          (let ((stx_0
-                                 (|#%app|
-                                  constant-syntax-lookup5_0
-                                  provide-phase+space3_0
-                                  c1_0)))
-                            (begin
-                              (if stx_0
-                                (void)
-                                (error
-                                 "constant syntax not found ~s ~s"
-                                 provide-phase+space3_0
-                                 c1_0))
-                              stx_0)))
-                        #f))))
-               (let ((temp25_0
-                      (if (not (provided-as-protected? binding/p11_0))
-                        (module-binding-extra-inspector binding_0)
-                        #f)))
-                 (let ((temp24_1 temp24_0) (temp18_1 temp18_0))
-                   (module-binding-update.1
-                    temp24_1
-                    temp25_0
-                    null
-                    #f
-                    unsafe-undefined
-                    temp18_1
-                    mpi2_0
-                    provide-phase+space3_0
-                    phase+space-shift4_0
-                    sym12_0
-                    unsafe-undefined
-                    unsafe-undefined
-                    binding_0)))))))))))
-(define finish_2471
+                    (if (not (provided-as-protected? binding/p11_0))
+                      (module-binding-extra-inspector binding_0)
+                      #f)))
+               (let ((temp18_1 temp18_0))
+                 (module-binding-update.1
+                  temp24_0
+                  null
+                  #f
+                  unsafe-undefined
+                  temp18_1
+                  mpi2_0
+                  provide-phase+space3_0
+                  phase+space-shift4_0
+                  sym12_0
+                  unsafe-undefined
+                  unsafe-undefined
+                  binding_0))))))))))
+(define finish_2837
   (make-struct-type-install-properties
    '(bulk-binding)
    8
@@ -14565,7 +14366,7 @@
                                    adjusted-provides_0)
                                   adjusted-provides_0))))))))))))))
       (lambda (b_0 binding_0 sym_0)
-        (let ((temp29_0
+        (let ((temp28_0
                (if (bulk-binding-prefix b_0)
                  (string->symbol
                   (let ((app_0 (symbol->string sym_0)))
@@ -14574,22 +14375,22 @@
                      (string-length
                       (symbol->string (bulk-binding-prefix b_0))))))
                  sym_0)))
-          (let ((temp30_0 (bulk-binding-self b_0)))
-            (let ((temp31_0 (bulk-binding-mpi b_0)))
-              (let ((temp32_0 (bulk-binding-provide-phase+space b_0)))
-                (let ((temp33_0 (bulk-binding-phase+space-shift b_0)))
-                  (let ((temp32_1 temp32_0)
-                        (temp31_1 temp31_0)
+          (let ((temp29_0 (bulk-binding-self b_0)))
+            (let ((temp30_0 (bulk-binding-mpi b_0)))
+              (let ((temp31_0 (bulk-binding-provide-phase+space b_0)))
+                (let ((temp32_0 (bulk-binding-phase+space-shift b_0)))
+                  (let ((temp31_1 temp31_0)
                         (temp30_1 temp30_0)
-                        (temp29_1 temp29_0))
+                        (temp29_1 temp29_0)
+                        (temp28_1 temp28_0))
                     (provide-binding-to-require-binding.1
                      #f
-                     temp31_1
-                     temp33_0
-                     temp32_1
                      temp30_1
+                     temp32_0
+                     temp31_1
+                     temp29_1
                      binding_0
-                     temp29_1))))))))
+                     temp28_1))))))))
       (lambda (b_0 mpi-shifts_0)
         (begin-unsafe
          (1/module-path-index-resolve
@@ -14608,7 +14409,7 @@
    #f
    8
    9))
-(define effect_2834 (finish_2471 struct:bulk-binding))
+(define effect_2834 (finish_2837 struct:bulk-binding))
 (define bulk-binding14.1
   (|#%name|
    bulk-binding
@@ -14915,7 +14716,7 @@
   (|#%name|
    root-expand-context-frame-id
    (record-accessor struct:root-expand-context/outer 3)))
-(define finish_2837
+(define finish_2838
   (make-struct-type-install-properties
    '(root-expand-context/inner)
    7
@@ -14936,7 +14737,7 @@
    #f
    7
    0))
-(define effect_2880 (finish_2837 struct:root-expand-context/inner))
+(define effect_2880 (finish_2838 struct:root-expand-context/inner))
 (define root-expand-context/inner2.1
   (|#%name|
    root-expand-context/inner
@@ -16367,7 +16168,6 @@
                         as-sym_0
                         as-phase_0
                         (make-module-binding.1
-                         #f
                          inspector_0
                          null
                          #f
@@ -17098,7 +16898,7 @@
                     (if (eq? get-syntax-constant-callback21_0 unsafe-undefined)
                       (|#%name|
                        get-syntax-constant-callback
-                       (lambda (data-box_0 sym_0 phase_0) (begin #f)))
+                       (lambda (data-box_0 phase_0 sym_0) (begin #f)))
                       get-syntax-constant-callback21_0)))
                (let ((app_0 (fresh-requires requires5_0)))
                  (module1.1
@@ -18716,7 +18516,6 @@
                               #f)
                           (let ((temp5_0 (syntax-inspector id_1)))
                             (module-binding-update.1
-                             unsafe-undefined
                              temp5_0
                              unsafe-undefined
                              unsafe-undefined
@@ -19019,7 +18818,7 @@
                  (begin
                    (let ((temp56_0 (syntax-scope-set id30_0 phase31_0)))
                      (let ((temp58_0
-                            (make-local-binding.1 #f frame-id25_0 #f key_0)))
+                            (make-local-binding.1 frame-id25_0 #f key_0)))
                        (let ((temp56_1 temp56_0))
                          (add-binding-in-scopes!.1
                           #f
@@ -27300,7 +27099,7 @@
                                                 bulk-binding-registry_0
                                                 shared_0))
                                              (case-lambda
-                                              ((const-stx_0 next-pos_8)
+                                              ((extra-inspector_0 next-pos_8)
                                                (call-with-values
                                                 (lambda ()
                                                   (decode
@@ -27311,38 +27110,21 @@
                                                    bulk-binding-registry_0
                                                    shared_0))
                                                 (case-lambda
-                                                 ((extra-inspector_0
+                                                 ((extra-nominal-bindings_0
                                                    next-pos_9)
-                                                  (call-with-values
-                                                   (lambda ()
-                                                     (decode
-                                                      vec_0
-                                                      next-pos_9
-                                                      mpis_0
-                                                      inspector_0
-                                                      bulk-binding-registry_0
-                                                      shared_0))
-                                                   (case-lambda
-                                                    ((extra-nominal-bindings_0
-                                                      next-pos_10)
-                                                     (values
-                                                      (deserialize-full-module-binding
-                                                       module_0
-                                                       sym_0
-                                                       phase_0
-                                                       nominal-module_0
-                                                       nominal-phase_0
-                                                       nominal-sym_0
-                                                       nominal-require-phase_0
-                                                       free=id_0
-                                                       const-stx_0
-                                                       extra-inspector_0
-                                                       extra-nominal-bindings_0)
-                                                      next-pos_10))
-                                                    (args
-                                                     (raise-binding-result-arity-error
-                                                      2
-                                                      args)))))
+                                                  (values
+                                                   (deserialize-full-module-binding
+                                                    module_0
+                                                    sym_0
+                                                    phase_0
+                                                    nominal-module_0
+                                                    nominal-phase_0
+                                                    nominal-sym_0
+                                                    nominal-require-phase_0
+                                                    free=id_0
+                                                    extra-inspector_0
+                                                    extra-nominal-bindings_0)
+                                                   next-pos_9))
                                                  (args
                                                   (raise-binding-result-arity-error
                                                    2
@@ -27418,7 +27200,7 @@
                                ((nominal-module_0 next-pos_3)
                                 (values
                                  (begin-unsafe
-                                  (simple-module-binding50.1
+                                  (simple-module-binding46.1
                                    module_0
                                    phase_0
                                    sym_0
@@ -27453,26 +27235,10 @@
                          shared_0))
                       (case-lambda
                        ((free=id_0 next-pos_1)
-                        (call-with-values
-                         (lambda ()
-                           (decode
-                            vec_0
-                            next-pos_1
-                            mpis_0
-                            inspector_0
-                            bulk-binding-registry_0
-                            shared_0))
-                         (case-lambda
-                          ((const-stx_0 next-pos_2)
-                           (values
-                            (begin-unsafe
-                             (full-local-binding1.1
-                              #f
-                              free=id_0
-                              const-stx_0
-                              key_0))
-                            next-pos_2))
-                          (args (raise-binding-result-arity-error 2 args)))))
+                        (values
+                         (begin-unsafe
+                          (full-local-binding1.1 #f free=id_0 key_0))
+                         next-pos_1))
                        (args (raise-binding-result-arity-error 2 args)))))
                     (args (raise-binding-result-arity-error 2 args))))
                   (call-with-values
@@ -30124,7 +29890,6 @@
                                                                  b_0))))
                                                           (module-binding-update.1
                                                            unsafe-undefined
-                                                           unsafe-undefined
                                                            temp162_0
                                                            unsafe-undefined
                                                            unsafe-undefined
@@ -30717,7 +30482,6 @@
                                     unsafe-undefined
                                     unsafe-undefined
                                     unsafe-undefined
-                                    unsafe-undefined
                                     #f
                                     unsafe-undefined
                                     unsafe-undefined
@@ -30727,52 +30491,7 @@
                                     unsafe-undefined
                                     unsafe-undefined
                                     binding93_0)
-                                   (let ((c1_0
-                                          (binding-const-stx binding93_0)))
-                                     (if c1_0
-                                       (let ((key_0
-                                              (if (eq?
-                                                   (module-binding-module
-                                                    binding93_0)
-                                                   (requires+provides-self
-                                                    r+p90_0))
-                                                (module-binding-sym
-                                                 binding93_0)
-                                                (let ((constant-syntaxes_0
-                                                       (requires+provides-constant-syntaxes
-                                                        r+p90_0)))
-                                                  (let ((at-phase_1
-                                                         (hash-ref
-                                                          constant-syntaxes_0
-                                                          phase+space92_0
-                                                          hash2610)))
-                                                    (let ((key_0
-                                                           (hash-count
-                                                            at-phase_1)))
-                                                      (begin
-                                                        (hash-set!
-                                                         constant-syntaxes_0
-                                                         phase+space92_0
-                                                         (hash-set
-                                                          at-phase_1
-                                                          key_0
-                                                          c1_0))
-                                                        key_0)))))))
-                                         (module-binding-update.1
-                                          key_0
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          unsafe-undefined
-                                          binding93_0))
-                                       binding93_0)))))
+                                   binding93_0)))
                             (hash-set
                              at-phase_0
                              sym91_0
@@ -30811,9 +30530,9 @@
                 (let ((phase-to-mpis-in-order_0
                        (requires+provides-require-mpis-in-order r+p_0)))
                   (let ((phases-in-order_0
-                         (let ((temp173_0
+                         (let ((temp171_0
                                 (hash-keys phase-to-mpis-in-order_0)))
-                           (sort.1 #f #f temp173_0 phase<?))))
+                           (sort.1 #f #f temp171_0 phase<?))))
                     (reverse$1
                      (begin
                        (letrec*
@@ -34067,199 +33786,130 @@
                                                        provides_0
                                                        provide-phase+space_0)
                                                       #f)))
-                                               (let ((constant-syntaxes?_0
-                                                      (let ((lst_0
-                                                             (if only83_0
-                                                               only83_0
-                                                               (hash-keys
-                                                                provides_0))))
-                                                        (begin
-                                                          (letrec*
-                                                           ((for-loop_1
-                                                             (|#%name|
-                                                              for-loop
-                                                              (lambda (result_0
-                                                                       lst_1)
-                                                                (begin
-                                                                  (if (pair?
-                                                                       lst_1)
-                                                                    (let ((sym_0
-                                                                           (unsafe-car
-                                                                            lst_1)))
-                                                                      (let ((rest_0
-                                                                             (unsafe-cdr
-                                                                              lst_1)))
-                                                                        (let ((result_1
-                                                                               (let ((result_1
-                                                                                      (let ((binding/p_0
-                                                                                             (hash-ref
-                                                                                              provides_0
-                                                                                              sym_0
-                                                                                              #f)))
-                                                                                        (if binding/p_0
-                                                                                          (binding-const-stx
-                                                                                           (provided-as-binding
-                                                                                            binding/p_0))
-                                                                                          #f))))
-                                                                                 (values
-                                                                                  result_1))))
-                                                                          (if (if (not
-                                                                                   (let ((x_0
-                                                                                          (list
-                                                                                           sym_0)))
-                                                                                     result_1))
-                                                                                #t
-                                                                                #f)
-                                                                            (for-loop_1
-                                                                             result_1
-                                                                             rest_0)
-                                                                            result_1))))
-                                                                    result_0))))))
-                                                           (for-loop_1
-                                                            #f
-                                                            lst_0))))))
-                                                 (let ((constant-syntax-lookup_0
-                                                        (if constant-syntaxes?_0
-                                                          (namespace-module-get-constant-syntax-lookup
-                                                           ns107_0
-                                                           mpi108_0
-                                                           phase-shift105_0)
-                                                          #f)))
-                                                   (if bind?86_0
+                                               (if bind?86_0
+                                                 (begin
+                                                   (if filter90_0
                                                      (begin
-                                                       (if (if filter90_0
-                                                             filter90_0
-                                                             constant-syntaxes?_0)
+                                                       (let ((lst_0
+                                                              (if only83_0
+                                                                only83_0
+                                                                (hash-keys
+                                                                 provides_0))))
                                                          (begin
-                                                           (let ((lst_0
-                                                                  (if only83_0
-                                                                    only83_0
-                                                                    (hash-keys
-                                                                     provides_0))))
-                                                             (begin
-                                                               (letrec*
-                                                                ((for-loop_1
-                                                                  (|#%name|
-                                                                   for-loop
-                                                                   (lambda (lst_1)
-                                                                     (begin
-                                                                       (if (pair?
-                                                                            lst_1)
-                                                                         (let ((sym_0
-                                                                                (unsafe-car
-                                                                                 lst_1)))
-                                                                           (let ((rest_0
-                                                                                  (unsafe-cdr
-                                                                                   lst_1)))
-                                                                             (begin
-                                                                               (let ((binding/p_0
-                                                                                      (hash-ref
-                                                                                       provides_0
-                                                                                       sym_0
-                                                                                       #f)))
-                                                                                 (if binding/p_0
-                                                                                   (let ((b_0
-                                                                                          (provide-binding-to-require-binding.1
-                                                                                           constant-syntax-lookup_0
-                                                                                           mpi108_0
-                                                                                           phase+space-shift_0
-                                                                                           provide-phase+space_0
-                                                                                           self_0
-                                                                                           binding/p_0
-                                                                                           sym_0)))
-                                                                                     (let ((sym_1
-                                                                                            (if filter90_0
-                                                                                              (|#%app|
-                                                                                               filter90_0
-                                                                                               b_0
-                                                                                               (provided-as-transformer?
-                                                                                                binding/p_0))
-                                                                                              sym_0)))
-                                                                                       (if (if sym_1
-                                                                                             (let ((or-part_0
-                                                                                                    (not
-                                                                                                     can-bulk?87_0)))
-                                                                                               (if or-part_0
-                                                                                                 or-part_0
-                                                                                                 constant-syntaxes?_0))
-                                                                                             #f)
-                                                                                         (let ((temp356_0
-                                                                                                (add-space-scope
-                                                                                                 (datum->syntax$1
-                                                                                                  in-stx104_0
-                                                                                                  sym_1)
-                                                                                                 space_0)))
-                                                                                           (add-binding!.1
-                                                                                            #f
-                                                                                            #f
-                                                                                            temp356_0
-                                                                                            b_0
-                                                                                            phase_0))
-                                                                                         (void))))
-                                                                                   (void)))
-                                                                               (for-loop_1
-                                                                                rest_0))))
-                                                                         (values)))))))
-                                                                (for-loop_1
-                                                                 lst_0))))
-                                                           (void))
-                                                         (void))
-                                                       (if (if can-bulk?87_0
-                                                             (not
-                                                              constant-syntaxes?_0)
-                                                             #f)
-                                                         (let ((bulk-binding-registry_0
-                                                                (namespace-bulk-binding-registry
-                                                                 ns107_0)))
-                                                           (let ((temp359_0
-                                                                  (add-space-scope
-                                                                   in-stx104_0
-                                                                   space_0)))
-                                                             (let ((temp360_0
-                                                                    (bulk-binding14.1
-                                                                     (let ((or-part_0
-                                                                            (if (not
-                                                                                 bulk-prefix88_0)
-                                                                              (if (zero?
-                                                                                   (hash-count
-                                                                                    bulk-excepts89_0))
-                                                                                provides_0
-                                                                                #f)
-                                                                              #f)))
-                                                                       (if or-part_0
-                                                                         or-part_0
-                                                                         (if (not
-                                                                              (registered-bulk-provide?
-                                                                               bulk-binding-registry_0
-                                                                               module-name109_0))
-                                                                           (bulk-provides-add-prefix-remove-exceptions
+                                                           (letrec*
+                                                            ((for-loop_1
+                                                              (|#%name|
+                                                               for-loop
+                                                               (lambda (lst_1)
+                                                                 (begin
+                                                                   (if (pair?
+                                                                        lst_1)
+                                                                     (let ((sym_0
+                                                                            (unsafe-car
+                                                                             lst_1)))
+                                                                       (let ((rest_0
+                                                                              (unsafe-cdr
+                                                                               lst_1)))
+                                                                         (begin
+                                                                           (let ((binding/p_0
+                                                                                  (hash-ref
+                                                                                   provides_0
+                                                                                   sym_0
+                                                                                   #f)))
+                                                                             (if binding/p_0
+                                                                               (let ((b_0
+                                                                                      (provide-binding-to-require-binding.1
+                                                                                       #f
+                                                                                       mpi108_0
+                                                                                       phase+space-shift_0
+                                                                                       provide-phase+space_0
+                                                                                       self_0
+                                                                                       binding/p_0
+                                                                                       sym_0)))
+                                                                                 (let ((sym_1
+                                                                                        (|#%app|
+                                                                                         filter90_0
+                                                                                         b_0
+                                                                                         (provided-as-transformer?
+                                                                                          binding/p_0))))
+                                                                                   (if (if sym_1
+                                                                                         (not
+                                                                                          can-bulk?87_0)
+                                                                                         #f)
+                                                                                     (let ((temp355_0
+                                                                                            (add-space-scope
+                                                                                             (datum->syntax$1
+                                                                                              in-stx104_0
+                                                                                              sym_1)
+                                                                                             space_0)))
+                                                                                       (add-binding!.1
+                                                                                        #f
+                                                                                        #f
+                                                                                        temp355_0
+                                                                                        b_0
+                                                                                        phase_0))
+                                                                                     (void))))
+                                                                               (void)))
+                                                                           (for-loop_1
+                                                                            rest_0))))
+                                                                     (values)))))))
+                                                            (for-loop_1
+                                                             lst_0))))
+                                                       (void))
+                                                     (void))
+                                                   (if can-bulk?87_0
+                                                     (let ((bulk-binding-registry_0
+                                                            (namespace-bulk-binding-registry
+                                                             ns107_0)))
+                                                       (let ((temp358_0
+                                                              (add-space-scope
+                                                               in-stx104_0
+                                                               space_0)))
+                                                         (let ((temp359_0
+                                                                (bulk-binding14.1
+                                                                 (let ((or-part_0
+                                                                        (if (not
+                                                                             bulk-prefix88_0)
+                                                                          (if (zero?
+                                                                               (hash-count
+                                                                                bulk-excepts89_0))
                                                                             provides_0
-                                                                            bulk-prefix88_0
-                                                                            bulk-excepts89_0)
-                                                                           #f)))
-                                                                     bulk-prefix88_0
-                                                                     bulk-excepts89_0
-                                                                     self_0
-                                                                     mpi108_0
-                                                                     provide-phase+space_0
-                                                                     phase-shift105_0
-                                                                     bulk-binding-registry_0)))
-                                                               (let ((temp363_0
-                                                                      (if need-except?_0
-                                                                        defines-mpi82_0
-                                                                        #f)))
-                                                                 (let ((temp360_1
-                                                                        temp360_0)
-                                                                       (temp359_1
-                                                                        temp359_0))
-                                                                   (add-bulk-binding!.1
-                                                                    in81_0
-                                                                    temp363_0
-                                                                    temp359_1
-                                                                    temp360_1
-                                                                    phase_0))))))
-                                                         (void)))
-                                                     (void)))))))))
+                                                                            #f)
+                                                                          #f)))
+                                                                   (if or-part_0
+                                                                     or-part_0
+                                                                     (if (not
+                                                                          (registered-bulk-provide?
+                                                                           bulk-binding-registry_0
+                                                                           module-name109_0))
+                                                                       (bulk-provides-add-prefix-remove-exceptions
+                                                                        provides_0
+                                                                        bulk-prefix88_0
+                                                                        bulk-excepts89_0)
+                                                                       #f)))
+                                                                 bulk-prefix88_0
+                                                                 bulk-excepts89_0
+                                                                 self_0
+                                                                 mpi108_0
+                                                                 provide-phase+space_0
+                                                                 phase-shift105_0
+                                                                 bulk-binding-registry_0)))
+                                                           (let ((temp362_0
+                                                                  (if need-except?_0
+                                                                    defines-mpi82_0
+                                                                    #f)))
+                                                             (let ((temp359_1
+                                                                    temp359_0)
+                                                                   (temp358_1
+                                                                    temp358_0))
+                                                               (add-bulk-binding!.1
+                                                                in81_0
+                                                                temp362_0
+                                                                temp358_1
+                                                                temp359_1
+                                                                phase_0))))))
+                                                     (void)))
+                                                 (void)))))))
                                      (values))
                                    (values)))
                                (case-lambda
@@ -34300,7 +33950,7 @@
                                    (syntax-e$1 req_1)
                                    req_1)))
                             (if (pair? s_0)
-                              (let ((for-meta367_0
+                              (let ((for-meta366_0
                                      (let ((s_1 (car s_0))) s_1)))
                                 (call-with-values
                                  (lambda ()
@@ -34310,9 +33960,9 @@
                                               (syntax-e$1 s_1)
                                               s_1)))
                                        (if (pair? s_2)
-                                         (let ((phase-level370_0
+                                         (let ((phase-level369_0
                                                 (let ((s_3 (car s_2))) s_3)))
-                                           (let ((spec371_0
+                                           (let ((spec370_0
                                                   (let ((s_3 (cdr s_2)))
                                                     (let ((s_4
                                                            (if (syntax?$1 s_3)
@@ -34327,34 +33977,34 @@
                                                            "bad syntax"
                                                            req_1)
                                                           flat-s_0))))))
-                                             (let ((phase-level370_1
-                                                    phase-level370_0))
+                                             (let ((phase-level369_1
+                                                    phase-level369_0))
                                                (values
-                                                phase-level370_1
-                                                spec371_0))))
+                                                phase-level369_1
+                                                spec370_0))))
                                          (raise-syntax-error$1
                                           #f
                                           "bad syntax"
                                           req_1)))))
                                  (case-lambda
-                                  ((phase-level368_0 spec369_0)
-                                   (let ((for-meta367_1 for-meta367_0))
+                                  ((phase-level367_0 spec368_0)
+                                   (let ((for-meta366_1 for-meta366_0))
                                      (values
-                                      for-meta367_1
-                                      phase-level368_0
-                                      spec369_0)))
+                                      for-meta366_1
+                                      phase-level367_0
+                                      spec368_0)))
                                   (args
                                    (raise-binding-result-arity-error
                                     2
                                     args)))))
                               (raise-syntax-error$1 #f "bad syntax" req_1))))
                         (case-lambda
-                         ((for-meta364_0 phase-level365_0 spec366_0)
-                          (values #t for-meta364_0 phase-level365_0 spec366_0))
+                         ((for-meta363_0 phase-level364_0 spec365_0)
+                          (values #t for-meta363_0 phase-level364_0 spec365_0))
                          (args (raise-binding-result-arity-error 3 args)))))
                      (case-lambda
-                      ((ok?_0 for-meta364_0 phase-level365_0 spec366_0)
-                       (let ((p_0 (syntax-e$1 phase-level365_0)))
+                      ((ok?_0 for-meta363_0 phase-level364_0 spec365_0)
+                       (let ((p_0 (syntax-e$1 phase-level364_0)))
                          (begin
                            (if (phase? p_0)
                              (void)
@@ -34362,9 +34012,9 @@
                            (let ((new-req_0
                                   (let ((app_0 (phase+ p_0 1)))
                                     (list*
-                                     for-meta364_0
+                                     for-meta363_0
                                      app_0
-                                     (map_1346 (loop_0 #t) spec366_0)))))
+                                     (map_1346 (loop_0 #t) spec365_0)))))
                              (begin-unsafe
                               (begin
                                 (datum->syntax$1
@@ -34383,9 +34033,9 @@
                                      (syntax-e$1 req_1)
                                      req_1)))
                               (if (pair? s_0)
-                                (let ((for-syntax374_0
+                                (let ((for-syntax373_0
                                        (let ((s_1 (car s_0))) s_1)))
-                                  (let ((spec375_0
+                                  (let ((spec374_0
                                          (let ((s_1 (cdr s_0)))
                                            (let ((s_2
                                                   (if (syntax?$1 s_1)
@@ -34399,20 +34049,20 @@
                                                   "bad syntax"
                                                   req_1)
                                                  flat-s_0))))))
-                                    (let ((for-syntax374_1 for-syntax374_0))
-                                      (values for-syntax374_1 spec375_0))))
+                                    (let ((for-syntax373_1 for-syntax373_0))
+                                      (values for-syntax373_1 spec374_0))))
                                 (raise-syntax-error$1 #f "bad syntax" req_1))))
                           (case-lambda
-                           ((for-syntax372_0 spec373_0)
-                            (values #t for-syntax372_0 spec373_0))
+                           ((for-syntax371_0 spec372_0)
+                            (values #t for-syntax371_0 spec372_0))
                            (args (raise-binding-result-arity-error 2 args)))))
                        (case-lambda
-                        ((ok?_0 for-syntax372_0 spec373_0)
+                        ((ok?_0 for-syntax371_0 spec372_0)
                          (let ((new-req_0
                                 (list*
                                  'for-meta
                                  2
-                                 (map_1346 (loop_0 #t) spec373_0))))
+                                 (map_1346 (loop_0 #t) spec372_0))))
                            (begin-unsafe
                             (begin
                               (datum->syntax$1 req_1 new-req_0 req_1 req_1)))))
@@ -34427,9 +34077,9 @@
                                        (syntax-e$1 req_1)
                                        req_1)))
                                 (if (pair? s_0)
-                                  (let ((for-template378_0
+                                  (let ((for-template377_0
                                          (let ((s_1 (car s_0))) s_1)))
-                                    (let ((spec379_0
+                                    (let ((spec378_0
                                            (let ((s_1 (cdr s_0)))
                                              (let ((s_2
                                                     (if (syntax?$1 s_1)
@@ -34443,25 +34093,25 @@
                                                     "bad syntax"
                                                     req_1)
                                                    flat-s_0))))))
-                                      (let ((for-template378_1
-                                             for-template378_0))
-                                        (values for-template378_1 spec379_0))))
+                                      (let ((for-template377_1
+                                             for-template377_0))
+                                        (values for-template377_1 spec378_0))))
                                   (raise-syntax-error$1
                                    #f
                                    "bad syntax"
                                    req_1))))
                             (case-lambda
-                             ((for-template376_0 spec377_0)
-                              (values #t for-template376_0 spec377_0))
+                             ((for-template375_0 spec376_0)
+                              (values #t for-template375_0 spec376_0))
                              (args
                               (raise-binding-result-arity-error 2 args)))))
                          (case-lambda
-                          ((ok?_0 for-template376_0 spec377_0)
+                          ((ok?_0 for-template375_0 spec376_0)
                            (let ((new-req_0
                                   (list*
                                    'for-meta
                                    0
-                                   (map_1346 (loop_0 #t) spec377_0))))
+                                   (map_1346 (loop_0 #t) spec376_0))))
                              (begin-unsafe
                               (begin
                                 (datum->syntax$1
@@ -34480,9 +34130,9 @@
                                          (syntax-e$1 req_1)
                                          req_1)))
                                   (if (pair? s_0)
-                                    (let ((for-label382_0
+                                    (let ((for-label381_0
                                            (let ((s_1 (car s_0))) s_1)))
-                                      (let ((spec383_0
+                                      (let ((spec382_0
                                              (let ((s_1 (cdr s_0)))
                                                (let ((s_2
                                                       (if (syntax?$1 s_1)
@@ -34497,23 +34147,23 @@
                                                       "bad syntax"
                                                       req_1)
                                                      flat-s_0))))))
-                                        (let ((for-label382_1 for-label382_0))
-                                          (values for-label382_1 spec383_0))))
+                                        (let ((for-label381_1 for-label381_0))
+                                          (values for-label381_1 spec382_0))))
                                     (raise-syntax-error$1
                                      #f
                                      "bad syntax"
                                      req_1))))
                               (case-lambda
-                               ((for-label380_0 spec381_0)
-                                (values #t for-label380_0 spec381_0))
+                               ((for-label379_0 spec380_0)
+                                (values #t for-label379_0 spec380_0))
                                (args
                                 (raise-binding-result-arity-error 2 args)))))
                            (case-lambda
-                            ((ok?_0 for-label380_0 spec381_0)
+                            ((ok?_0 for-label379_0 spec380_0)
                              (let ((new-req_0
                                     (list*
-                                     for-label380_0
-                                     (map_1346 (loop_0 #t) spec381_0))))
+                                     for-label379_0
+                                     (map_1346 (loop_0 #t) spec380_0))))
                                (begin-unsafe
                                 (begin
                                   (datum->syntax$1
@@ -34532,7 +34182,7 @@
                                            (syntax-e$1 req_1)
                                            req_1)))
                                     (if (pair? s_0)
-                                      (let ((just-meta387_0
+                                      (let ((just-meta386_0
                                              (let ((s_1 (car s_0))) s_1)))
                                         (call-with-values
                                          (lambda ()
@@ -34542,10 +34192,10 @@
                                                       (syntax-e$1 s_1)
                                                       s_1)))
                                                (if (pair? s_2)
-                                                 (let ((phase-level390_0
+                                                 (let ((phase-level389_0
                                                         (let ((s_3 (car s_2)))
                                                           s_3)))
-                                                   (let ((spec391_0
+                                                   (let ((spec390_0
                                                           (let ((s_3
                                                                  (cdr s_2)))
                                                             (let ((s_4
@@ -34564,23 +34214,23 @@
                                                                    "bad syntax"
                                                                    req_1)
                                                                   flat-s_0))))))
-                                                     (let ((phase-level390_1
-                                                            phase-level390_0))
+                                                     (let ((phase-level389_1
+                                                            phase-level389_0))
                                                        (values
-                                                        phase-level390_1
-                                                        spec391_0))))
+                                                        phase-level389_1
+                                                        spec390_0))))
                                                  (raise-syntax-error$1
                                                   #f
                                                   "bad syntax"
                                                   req_1)))))
                                          (case-lambda
-                                          ((phase-level388_0 spec389_0)
-                                           (let ((just-meta387_1
-                                                  just-meta387_0))
+                                          ((phase-level387_0 spec388_0)
+                                           (let ((just-meta386_1
+                                                  just-meta386_0))
                                              (values
-                                              just-meta387_1
-                                              phase-level388_0
-                                              spec389_0)))
+                                              just-meta386_1
+                                              phase-level387_0
+                                              spec388_0)))
                                           (args
                                            (raise-binding-result-arity-error
                                             2
@@ -34590,24 +34240,24 @@
                                        "bad syntax"
                                        req_1))))
                                 (case-lambda
-                                 ((just-meta384_0 phase-level385_0 spec386_0)
+                                 ((just-meta383_0 phase-level384_0 spec385_0)
                                   (values
                                    #t
-                                   just-meta384_0
-                                   phase-level385_0
-                                   spec386_0))
+                                   just-meta383_0
+                                   phase-level384_0
+                                   spec385_0))
                                  (args
                                   (raise-binding-result-arity-error 3 args)))))
                              (case-lambda
                               ((ok?_0
-                                just-meta384_0
-                                phase-level385_0
-                                spec386_0)
+                                just-meta383_0
+                                phase-level384_0
+                                spec385_0)
                                (let ((new-req_0
                                       (list*
-                                       just-meta384_0
-                                       phase-level385_0
-                                       (map_1346 (loop_0 #f) spec386_0))))
+                                       just-meta383_0
+                                       phase-level384_0
+                                       (map_1346 (loop_0 #f) spec385_0))))
                                  (begin-unsafe
                                   (begin
                                     (datum->syntax$1
@@ -34631,21 +34281,21 @@
            phase-shift_0
            as-constant?_0)
     (let ((i-ns_0
-           (let ((temp393_0
+           (let ((temp392_0
                   (1/module-path-index-resolve
                    (module-binding-module binding_0))))
-             (let ((temp394_0
+             (let ((temp393_0
                     (phase+
                      (phase- (module-binding-phase binding_0) phase-level_0)
                      (namespace-phase m-ns_0))))
-               (let ((temp393_1 temp393_0))
+               (let ((temp392_1 temp392_0))
                  (namespace->module-namespace.1
                   #f
                   #t
                   void
                   m-ns_0
-                  temp393_1
-                  temp394_0))))))
+                  temp392_1
+                  temp393_0))))))
       (let ((val_0
              (let ((app_0 (module-binding-phase binding_0)))
                (namespace-get-variable
@@ -34701,7 +34351,6 @@
                     (syntax-e$1 s_0))))
              (let ((binding_0
                     (make-module-binding.1
-                     const-stx125_0
                      #f
                      null
                      #f
@@ -34736,7 +34385,6 @@
                         (root-expand-context/outer-frame-id v_0)))))
                 (make-module-binding.1
                  #f
-                 #f
                  null
                  temp7_0
                  #f
@@ -34751,7 +34399,7 @@
            (add-binding!.1 #f #f id_0 b_0 phase_0)
            (if trans?_0
              (if trans-val_0
-               (maybe-install-free=id-or-const-stx! trans-val_0 id_0 phase_0)
+               (maybe-install-free=id! trans-val_0 id_0 phase_0)
                (void))
              (namespace-unset-transformer! ns_0 phase_0 sym_0))))))
    top-level-require!-id
@@ -38354,7 +38002,6 @@
                       (let ((temp39_0 (syntax-e$1 (parsed-s p16_0))))
                         (let ((temp38_1 temp38_0) (temp37_1 temp37_0))
                           (make-module-binding.1
-                           #f
                            #f
                            null
                            #f
@@ -44914,7 +44561,6 @@
       (let ((temp9_0
              (make-module-binding.1
               #f
-              #f
               null
               #f
               #f
@@ -44972,7 +44618,6 @@
                                                                                   (lambda ()
                                                                                     (let ((b_0
                                                                                            (make-module-binding.1
-                                                                                            #f
                                                                                             #f
                                                                                             null
                                                                                             #f
@@ -45290,7 +44935,6 @@
                                                (let ((b_0
                                                       (make-module-binding.1
                                                        #f
-                                                       #f
                                                        null
                                                        frame-id1_0
                                                        #f
@@ -45527,7 +45171,6 @@
                                                            (begin
                                                              (let ((temp11_0
                                                                     (make-module-binding.1
-                                                                     #f
                                                                      #f
                                                                      null
                                                                      #f
@@ -46239,8 +45882,9 @@
                                                                                                                                               ns_2
                                                                                                                                               app_0
                                                                                                                                               key_0
-                                                                                                                                              (1/make-constant-transformer
-                                                                                                                                               const-stx_0))))
+                                                                                                                                              (begin-unsafe
+                                                                                                                                               (constant-transformer1.1
+                                                                                                                                                const-stx_0)))))
                                                                                                                                          (void))
                                                                                                                                        (for-loop_0
                                                                                                                                         (hash-iterate-next
@@ -50667,7 +50311,6 @@
       (let ((temp3_0
              (make-module-binding.1
               #f
-              #f
               null
               #f
               #f
@@ -53615,15 +53258,14 @@
      current-expand-context
      ctx_0
      (1/rename-transformer-target t_0))))
-(define maybe-install-free=id-or-const-stx-in-context!
+(define maybe-install-free=id-in-context!
   (lambda (val_0 id_0 phase_0 ctx_0)
-    (if (let ((or-part_0 (1/rename-transformer? val_0)))
-          (if or-part_0 or-part_0 (1/constant-transformer? val_0)))
+    (if (1/rename-transformer? val_0)
       (with-continuation-mark*
        authentic
        current-expand-context
        ctx_0
-       (maybe-install-free=id-or-const-stx! val_0 id_0 phase_0))
+       (maybe-install-free=id! val_0 id_0 phase_0))
       (void))))
 (define transfer-srcloc
   (lambda (new-s_0 old-s_0)
@@ -54458,7 +54100,7 @@
                                                                                                (cons
                                                                                                 (begin
                                                                                                   (if local-ctx_0
-                                                                                                    (maybe-install-free=id-or-const-stx-in-context!
+                                                                                                    (maybe-install-free=id-in-context!
                                                                                                      val_0
                                                                                                      intdef-id_0
                                                                                                      phase_0
@@ -55835,6 +55477,22 @@
        (syntax-local-value/immediate_0 id_0 failure-thunk_0 intdef18_0))
       ((id_0 failure-thunk17_0)
        (syntax-local-value/immediate_0 id_0 failure-thunk17_0 #f))))))
+(define 1/syntax-local-identifier-constant-syntax
+  (|#%name|
+   syntax-local-identifier-constant-syntax
+   (lambda (id_0)
+     (begin
+       (let ((temp102_0 (lambda () #f)))
+         (let ((v_0
+                (do-syntax-local-value.1
+                 #f
+                 'syntax-local-identifier-constant-syntax
+                 id_0
+                 #f
+                 temp102_0)))
+           (if (constant-transformer? v_0)
+             (begin-unsafe (constant-transformer-stx v_0))
+             #f)))))))
 (define do-lift-values-expression
   (lambda (who_0 n_0 s_0)
     (begin
@@ -56137,9 +55795,9 @@
        (let ((sc_0 (new-scope 'lifted-require)))
          (call-with-values
           (lambda ()
-            (let ((temp105_0 (datum->syntax$1 #f s_0)))
-              (let ((temp106_0 "could not find target context"))
-                (let ((temp108_0
+            (let ((temp113_0 (datum->syntax$1 #f s_0)))
+              (let ((temp114_0 "could not find target context"))
+                (let ((temp116_0
                        (lambda ()
                          (if (syntax?$1 use-s_0)
                            (void)
@@ -56147,36 +55805,36 @@
                             'syntax-local-lift-require
                             "syntax?"
                             use-s_0)))))
-                  (let ((expand-context-require-lifts109_0
+                  (let ((expand-context-require-lifts117_0
                          expand-context-require-lifts))
-                    (let ((temp112_0
+                    (let ((temp120_0
                            (lambda (s_1 phase_0 require-lift-ctx_0)
                              (require-spec-shift-for-syntax s_1))))
-                      (let ((temp113_0
+                      (let ((temp121_0
                              (lambda (s_1 phase_0 require-lift-ctx_0)
                                (wrap-form
                                 '|#%require|
                                 (add-scope s_1 sc_0)
                                 phase_0))))
-                        (let ((temp112_1 temp112_0)
-                              (expand-context-require-lifts109_1
-                               expand-context-require-lifts109_0)
-                              (temp108_1 temp108_0)
-                              (temp106_1 temp106_0)
-                              (temp105_1 temp105_0))
+                        (let ((temp120_1 temp120_0)
+                              (expand-context-require-lifts117_1
+                               expand-context-require-lifts117_0)
+                              (temp116_1 temp116_0)
+                              (temp114_1 temp114_0)
+                              (temp113_1 temp113_0))
                           (do-local-lift-to-module.1
                            add-lifted-require!
-                           expand-context-require-lifts109_1
+                           expand-context-require-lifts117_1
                            require-lift-context-wrt-phase
                            #f
                            #f
-                           temp108_1
-                           temp106_1
-                           temp113_0
+                           temp116_1
+                           temp114_1
+                           temp121_0
                            unsafe-undefined
-                           temp112_1
+                           temp120_1
                            'syntax-local-lift-require
-                           temp105_1)))))))))
+                           temp113_1)))))))))
           (case-lambda
            ((ctx_0 added-s_0)
             (begin
@@ -56214,28 +55872,28 @@
      (begin
        (call-with-values
         (lambda ()
-          (let ((temp117_0 "not expanding in a module run-time body"))
-            (let ((expand-context-to-module-lifts118_0
+          (let ((temp125_0 "not expanding in a module run-time body"))
+            (let ((expand-context-to-module-lifts126_0
                    expand-context-to-module-lifts))
-              (let ((add-lifted-to-module-provide!120_0
+              (let ((add-lifted-to-module-provide!128_0
                      add-lifted-to-module-provide!))
-                (let ((temp121_0
+                (let ((temp129_0
                        (lambda (s_1 phase_0 to-module-lift-ctx_0)
                          (wrap-form 'for-syntax s_1 #f))))
-                  (let ((temp122_0
+                  (let ((temp130_0
                          (lambda (s_1 phase_0 to-module-lift-ctx_0)
                            (wrap-form '|#%provide| s_1 phase_0))))
                     (do-local-lift-to-module.1
-                     add-lifted-to-module-provide!120_0
-                     expand-context-to-module-lifts118_0
+                     add-lifted-to-module-provide!128_0
+                     expand-context-to-module-lifts126_0
                      to-module-lift-context-wrt-phase
                      #t
                      #f
                      void
-                     temp117_0
-                     temp122_0
+                     temp125_0
+                     temp130_0
                      unsafe-undefined
-                     temp121_0
+                     temp129_0
                      'syntax-local-lift-provide
                      s_0)))))))
         (case-lambda
@@ -56255,33 +55913,33 @@
      (begin
        (call-with-values
         (lambda ()
-          (let ((temp127_0
+          (let ((temp135_0
                  "not currently transforming an expression within a module declaration"))
-            (let ((expand-context-to-module-lifts128_0
+            (let ((expand-context-to-module-lifts136_0
                    expand-context-to-module-lifts))
-              (let ((temp129_0 (lambda (lift-ctx_0) 0)))
-                (let ((add-lifted-to-module-end!130_0
+              (let ((temp137_0 (lambda (lift-ctx_0) 0)))
+                (let ((add-lifted-to-module-end!138_0
                        add-lifted-to-module-end!))
-                  (let ((temp131_0
+                  (let ((temp139_0
                          (lambda (orig-s_0 phase_0 to-module-lift-ctx_0)
                            (if (to-module-lift-context-end-as-expressions?
                                 to-module-lift-ctx_0)
                              (wrap-form '|#%expression| orig-s_0 phase_0)
                              orig-s_0))))
-                    (let ((temp132_0
+                    (let ((temp140_0
                            (lambda (s_1 phase_0 to-module-lift-ctx_0)
                              (wrap-form 'begin-for-syntax s_1 phase_0))))
                       (do-local-lift-to-module.1
-                       add-lifted-to-module-end!130_0
-                       expand-context-to-module-lifts128_0
-                       temp129_0
+                       add-lifted-to-module-end!138_0
+                       expand-context-to-module-lifts136_0
+                       temp137_0
                        #t
                        'lift-end-decl
                        void
-                       temp127_0
+                       temp135_0
                        unsafe-undefined
-                       temp131_0
-                       temp132_0
+                       temp139_0
+                       temp140_0
                        'syntax-local-lift-module-end-declaration
                        s_0))))))))
         (case-lambda
@@ -57437,90 +57095,59 @@
          (identifier-distinct-binding_0 id_0 other-id_0 unsafe-undefined)))
       ((id_0 other-id_0 phase31_0)
        (identifier-distinct-binding_0 id_0 other-id_0 phase31_0))))))
-(define 1/identifier-binding-constant-syntax
-  (let ((identifier-binding-constant-syntax_0
-         (|#%name|
-          identifier-binding-constant-syntax
-          (lambda (id35_0 phase34_0)
-            (begin
-              (let ((phase_0
-                     (if (eq? phase34_0 unsafe-undefined)
-                       (1/syntax-local-phase-level)
-                       phase34_0)))
-                (begin
-                  (if (identifier? id35_0)
-                    (void)
-                    (raise-argument-error
-                     'identifier-binding-constant-syntax
-                     "identifier?"
-                     id35_0))
-                  (if (phase? phase_0)
-                    (void)
-                    (raise-argument-error
-                     'identifier-binding-constant-syntax
-                     phase?-string
-                     phase_0))
-                  (identifier-binding-constant-syntax$1 id35_0 phase_0))))))))
-    (|#%name|
-     identifier-binding-constant-syntax
-     (case-lambda
-      ((id_0)
-       (begin (identifier-binding-constant-syntax_0 id_0 unsafe-undefined)))
-      ((id_0 phase34_0)
-       (identifier-binding-constant-syntax_0 id_0 phase34_0))))))
 (define 1/identifier-prune-lexical-context
   (let ((identifier-prune-lexical-context_0
          (|#%name|
           identifier-prune-lexical-context
-          (lambda (id37_0 syms36_0)
+          (lambda (id35_0 syms34_0)
             (begin
               (begin
-                (if (identifier? id37_0)
+                (if (identifier? id35_0)
                   (void)
                   (raise-argument-error
                    'identifier-prune-lexical-context
                    "identifier?"
-                   id37_0))
-                (if (if (list? syms36_0) (andmap_2344 symbol? syms36_0) #f)
+                   id35_0))
+                (if (if (list? syms34_0) (andmap_2344 symbol? syms34_0) #f)
                   (void)
                   (raise-argument-error
                    'identifier-prune-lexical-context
                    "(listof symbol?)"
-                   syms36_0))
-                id37_0))))))
+                   syms34_0))
+                id35_0))))))
     (|#%name|
      identifier-prune-lexical-context
      (case-lambda
       ((id_0) (begin (identifier-prune-lexical-context_0 id_0 null)))
-      ((id_0 syms36_0) (identifier-prune-lexical-context_0 id_0 syms36_0))))))
+      ((id_0 syms34_0) (identifier-prune-lexical-context_0 id_0 syms34_0))))))
 (define 1/syntax-debug-info
   (let ((syntax-debug-info_0
          (|#%name|
           syntax-debug-info
-          (lambda (s40_0 phase38_0 all-bindings?39_0)
+          (lambda (s38_0 phase36_0 all-bindings?37_0)
             (begin
               (let ((phase_0
-                     (if (eq? phase38_0 unsafe-undefined)
+                     (if (eq? phase36_0 unsafe-undefined)
                        (1/syntax-local-phase-level)
-                       phase38_0)))
+                       phase36_0)))
                 (begin
-                  (if (syntax?$1 s40_0)
+                  (if (syntax?$1 s38_0)
                     (void)
-                    (raise-argument-error 'syntax-debug-info "syntax?" s40_0))
+                    (raise-argument-error 'syntax-debug-info "syntax?" s38_0))
                   (if (phase? phase_0)
                     (void)
                     (raise-argument-error
                      'syntax-debug-info
                      phase?-string
                      phase_0))
-                  (syntax-debug-info$1 s40_0 phase_0 all-bindings?39_0))))))))
+                  (syntax-debug-info$1 s38_0 phase_0 all-bindings?37_0))))))))
     (|#%name|
      syntax-debug-info
      (case-lambda
       ((s_0) (begin (syntax-debug-info_0 s_0 unsafe-undefined #f)))
-      ((s_0 phase_0 all-bindings?39_0)
-       (syntax-debug-info_0 s_0 phase_0 all-bindings?39_0))
-      ((s_0 phase38_0) (syntax-debug-info_0 s_0 phase38_0 #f))))))
+      ((s_0 phase_0 all-bindings?37_0)
+       (syntax-debug-info_0 s_0 phase_0 all-bindings?37_0))
+      ((s_0 phase36_0) (syntax-debug-info_0 s_0 phase36_0 #f))))))
 (define 1/syntax-shift-phase-level
   (|#%name|
    syntax-shift-phase-level
@@ -58230,29 +57857,29 @@
                                   add-ns-scopes
                                   (lambda (s_0)
                                     (begin
-                                      (let ((temp40_0
+                                      (let ((temp43_0
                                              (add-scopes
                                               (push-scope s_0 post-scope_0)
                                               other-namespace-scopes_0)))
-                                        (let ((temp41_0
+                                        (let ((temp44_0
                                                (begin-unsafe
                                                 (root-expand-context/inner-all-scopes-stx
                                                  (root-expand-context/outer-inner
                                                   root-ctx_0)))))
-                                          (let ((temp42_0
+                                          (let ((temp45_0
                                                  (let ((or-part_0
                                                         (namespace-declaration-inspector
                                                          ns_0)))
                                                    (if or-part_0
                                                      or-part_0
                                                      (current-code-inspector)))))
-                                            (let ((temp41_1 temp41_0)
-                                                  (temp40_1 temp40_0))
+                                            (let ((temp44_1 temp44_0)
+                                                  (temp43_1 temp43_0))
                                               (syntax-transfer-shifts.1
                                                #t
-                                               temp40_1
-                                               temp41_1
-                                               temp42_0))))))))))
+                                               temp43_1
+                                               temp44_1
+                                               temp45_0))))))))))
                             (let ((maybe-module-id_0
                                    (if (pair? (1/syntax-e s2_0))
                                      (if (identifier? (car (1/syntax-e s2_0)))
@@ -58349,13 +57976,13 @@
                      (root-expand-context/outer-inner v_0)))))))
            (if (let ((or-part_0 (1/module-path-index? req15_0)))
                  (if or-part_0 or-part_0 (1/module-path? req15_0)))
-             (let ((temp46_0
+             (let ((temp49_0
                     (if (1/module-path-index? req15_0)
                       req15_0
                       (1/module-path-index-join req15_0 #f))))
-               (let ((temp53_0 (namespace-phase ns16_0)))
-                 (let ((temp54_0 (namespace-phase ns16_0)))
-                   (let ((temp53_1 temp53_0) (temp46_1 temp46_0))
+               (let ((temp56_0 (namespace-phase ns16_0)))
+                 (let ((temp57_0 (namespace-phase ns16_0)))
+                   (let ((temp56_1 temp56_0) (temp49_1 temp49_0))
                      (perform-require!.1
                       #f
                       #t
@@ -58365,24 +57992,24 @@
                       #f
                       'all
                       #t
-                      temp53_1
+                      temp56_1
                       #f
-                      temp54_0
+                      temp57_0
                       run?4_0
                       skip-variable-phase-level8_0
                       unsafe-undefined
                       visit?5_0
                       who14_0
-                      temp46_1
+                      temp49_1
                       #f
                       #f
                       ctx-stx_0
                       ns16_0)))))
-             (let ((temp61_0 (list (1/datum->syntax ctx-stx_0 req15_0))))
-               (let ((temp64_0 (namespace-phase ns16_0)))
-                 (let ((temp65_0
+             (let ((temp64_0 (list (1/datum->syntax ctx-stx_0 req15_0))))
+               (let ((temp67_0 (namespace-phase ns16_0)))
+                 (let ((temp68_0
                         (make-requires+provides.1 unsafe-undefined #f #f)))
-                   (let ((temp64_1 temp64_0) (temp61_1 temp61_0))
+                   (let ((temp67_1 temp67_0) (temp64_1 temp64_0))
                      (parse-and-perform-requires!.1
                       void
                       copy-variable-as-constant?7_0
@@ -58395,11 +58022,11 @@
                       skip-variable-phase-level8_0
                       visit?5_0
                       who14_0
-                      temp61_1
+                      temp64_1
                       #f
                       ns16_0
-                      temp64_1
-                      temp65_0))))))))))))
+                      temp67_1
+                      temp68_0))))))))))))
 (define 1/namespace-require
   (let ((namespace-require_0
          (|#%name|
@@ -58550,7 +58177,7 @@
                                  (call-with-values
                                   (lambda ()
                                     (if b_0
-                                      (let ((temp98_0 (namespace-phase ns_0)))
+                                      (let ((temp101_0 (namespace-phase ns_0)))
                                         (binding-lookup.1
                                          #t
                                          #f
@@ -58559,7 +58186,7 @@
                                          empty-env
                                          null
                                          ns_0
-                                         temp98_0
+                                         temp101_0
                                          id_0))
                                       (values variable #f #f #f)))
                                   (case-lambda
@@ -58704,13 +58331,12 @@
                        (namespace-phase ns_0)
                        sym33_0)
                       (let ((id_0 (1/datum->syntax #f sym33_0)))
-                        (let ((temp101_0
+                        (let ((temp104_0
                                (1/namespace-syntax-introduce id_0 ns_0)))
-                          (let ((temp102_0
-                                 (let ((temp104_0 (namespace-mpi ns_0)))
-                                   (let ((temp105_0 (namespace-phase ns_0)))
+                          (let ((temp105_0
+                                 (let ((temp107_0 (namespace-mpi ns_0)))
+                                   (let ((temp108_0 (namespace-phase ns_0)))
                                      (make-module-binding.1
-                                      #f
                                       #f
                                       null
                                       #f
@@ -58719,18 +58345,18 @@
                                       unsafe-undefined
                                       0
                                       unsafe-undefined
-                                      temp104_0
-                                      temp105_0
+                                      temp107_0
+                                      temp108_0
                                       sym33_0)))))
-                            (let ((temp103_0 (namespace-phase ns_0)))
-                              (let ((temp102_1 temp102_0)
-                                    (temp101_1 temp101_0))
+                            (let ((temp106_0 (namespace-phase ns_0)))
+                              (let ((temp105_1 temp105_0)
+                                    (temp104_1 temp104_0))
                                 (add-binding!.1
                                  #f
                                  #f
-                                 temp101_1
-                                 temp102_1
-                                 temp103_0)))))))
+                                 temp104_1
+                                 temp105_1
+                                 temp106_0)))))))
                     (void)))))))))
     (|#%name|
      namespace-set-variable-value!
@@ -58867,6 +58493,75 @@
          (registry-call-with-lock
           (namespace-module-registry$1 ns_0)
           thunk_0))))))
+(define 1/namespace-identifier-constant-syntax
+  (let ((namespace-identifier-constant-syntax_0
+         (|#%name|
+          namespace-identifier-constant-syntax
+          (lambda (id41_0 phase39_0 ns40_0)
+            (begin
+              (let ((ns_0
+                     (if (eq? ns40_0 unsafe-undefined)
+                       (1/current-namespace)
+                       ns40_0)))
+                (begin
+                  (if (identifier? id41_0)
+                    (void)
+                    (raise-argument-error
+                     'namespace-identifier-constant-syntax
+                     "identifier?"
+                     id41_0))
+                  (begin
+                    (if (phase? phase39_0)
+                      (void)
+                      (raise-argument-error
+                       'namespace-identifier-constant-syntax
+                       phase?-string
+                       phase39_0))
+                    (begin
+                      (if (1/namespace? ns_0)
+                        (void)
+                        (raise-argument-error
+                         'namespace-identifier-constant-syntax
+                         "namespace?"
+                         ns_0))
+                      (let ((b_0
+                             (resolve+shift.1
+                              #f
+                              #f
+                              null
+                              unsafe-undefined
+                              #t
+                              id41_0
+                              phase39_0)))
+                        (if (module-binding? b_0)
+                          (let ((phase-shift_0
+                                 (phase-
+                                  phase39_0
+                                  (module-binding-phase b_0))))
+                            (let ((constant-syntax-lookup_0
+                                   (namespace-module-get-constant-syntax-lookup
+                                    ns_0
+                                    (module-binding-module b_0)
+                                    phase-shift_0)))
+                              (let ((app_0 (module-binding-phase b_0)))
+                                (|#%app|
+                                 constant-syntax-lookup_0
+                                 app_0
+                                 (module-binding-sym b_0)))))
+                          #f)))))))))))
+    (|#%name|
+     namespace-identifier-constant-syntax
+     (case-lambda
+      ((id_0)
+       (begin
+         (namespace-identifier-constant-syntax_0 id_0 0 unsafe-undefined)))
+      ((id_0 phase_0 ns40_0)
+       (namespace-identifier-constant-syntax_0 id_0 phase_0 ns40_0))
+      ((id_0 phase39_0)
+       (namespace-identifier-constant-syntax_0
+        id_0
+        phase39_0
+        unsafe-undefined))))))
 (define 1/eval
   (let ((eval_0
          (|#%name|
@@ -73797,7 +73492,6 @@
                                                             (let ((binding_0
                                                                    (make-module-binding.1
                                                                     #f
-                                                                    #f
                                                                     null
                                                                     #f
                                                                     #f
@@ -75462,7 +75156,6 @@
    'identifier-label-binding
    'identifier-binding-symbol
    'identifier-distinct-binding
-   'identifier-binding-constant-syntax
    'identifier-prune-lexical-context
    'syntax-debug-info
    'syntax-track-origin
@@ -75531,6 +75224,7 @@
    'syntax-local-make-delta-introducer
    'syntax-local-value
    'syntax-local-value/immediate
+   'syntax-local-identifier-constant-syntax
    'syntax-local-lift-expression
    'syntax-local-lift-values-expression
    'syntax-local-lift-context
@@ -75567,9 +75261,6 @@
    'prop:rename-transformer
    'make-rename-transformer
    'rename-transformer-target
-   'constant-transformer?
-   'make-constant-transformer
-   'constant-transformer-target
    'prop:liberal-define-context
    'liberal-define-context?
    'prop:expansion-contexts
@@ -75598,7 +75289,7 @@
    'variable-reference->module-declaration-inspector
    'read-syntax
    'read-syntax/recursive))
-(define effect_2395
+(define effect_1851
   (begin
     (void
      (begin
@@ -75641,10 +75332,6 @@
         #f
         'identifier-distinct-binding
         1/identifier-distinct-binding)
-       (add-core-primitive!.1
-        #t
-        'identifier-binding-constant-syntax
-        1/identifier-binding-constant-syntax)
        (add-core-primitive!.1
         #f
         'identifier-prune-lexical-context
@@ -75706,14 +75393,14 @@
        (add-core-primitive!.1 #f 'exn:fail:syntax make-exn:fail:syntax$1)
        (add-core-primitive!.1 #f 'make-exn:fail:syntax make-exn:fail:syntax$1)
        (add-core-primitive!.1 #f 'exn:fail:syntax? 1/exn:fail:syntax?)
-       (let ((exn:fail:syntax-exprs103_0
+       (let ((exn:fail:syntax-exprs100_0
               (check-not-unsafe-undefined
                1/exn:fail:syntax-exprs
                '1/exn:fail:syntax-exprs)))
          (add-core-primitive!.1
           #f
           'exn:fail:syntax-exprs
-          exn:fail:syntax-exprs103_0))
+          exn:fail:syntax-exprs100_0))
        (add-core-primitive!.1
         #f
         'struct:exn:fail:syntax:unbound
@@ -75759,14 +75446,14 @@
         #f
         'exn:fail:filesystem:missing-module?
         1/exn:fail:filesystem:missing-module?)
-       (let ((exn:fail:filesystem:missing-module-path129_0
+       (let ((exn:fail:filesystem:missing-module-path126_0
               (check-not-unsafe-undefined
                1/exn:fail:filesystem:missing-module-path
                '1/exn:fail:filesystem:missing-module-path)))
          (add-core-primitive!.1
           #f
           'exn:fail:filesystem:missing-module-path
-          exn:fail:filesystem:missing-module-path129_0))
+          exn:fail:filesystem:missing-module-path126_0))
        (add-core-primitive!.1
         #f
         'struct:exn:fail:syntax:missing-module
@@ -75783,14 +75470,14 @@
         #f
         'exn:fail:syntax:missing-module?
         1/exn:fail:syntax:missing-module?)
-       (let ((exn:fail:syntax:missing-module-path139_0
+       (let ((exn:fail:syntax:missing-module-path136_0
               (check-not-unsafe-undefined
                1/exn:fail:syntax:missing-module-path
                '1/exn:fail:syntax:missing-module-path)))
          (add-core-primitive!.1
           #f
           'exn:fail:syntax:missing-module-path
-          exn:fail:syntax:missing-module-path139_0))
+          exn:fail:syntax:missing-module-path136_0))
        (add-core-primitive!.1 #f 'syntax-transforming? 1/syntax-transforming?)
        (add-core-primitive!.1
         #f
@@ -75839,6 +75526,10 @@
         #t
         'syntax-local-value/immediate
         1/syntax-local-value/immediate)
+       (add-core-primitive!.1
+        #t
+        'syntax-local-identifier-constant-syntax
+        1/syntax-local-identifier-constant-syntax)
        (add-core-primitive!.1
         #f
         'syntax-local-lift-expression
@@ -75976,18 +75667,6 @@
         1/rename-transformer-target)
        (add-core-primitive!.1
         #f
-        'constant-transformer?
-        1/constant-transformer?)
-       (add-core-primitive!.1
-        #f
-        'make-constant-transformer
-        1/make-constant-transformer)
-       (add-core-primitive!.1
-        #t
-        'constant-transformer-target
-        1/constant-transformer-target)
-       (add-core-primitive!.1
-        #f
         'prop:liberal-define-context
         1/prop:liberal-define-context)
        (add-core-primitive!.1
@@ -76028,12 +75707,12 @@
         #f
         'module-path-index-submodule
         1/module-path-index-submodule)
-       (let ((current-module-name-resolver282_0
+       (let ((current-module-name-resolver275_0
               1/current-module-name-resolver))
          (add-core-primitive!.1
           #t
           'current-module-name-resolver
-          current-module-name-resolver282_0))
+          current-module-name-resolver275_0))
        (add-core-primitive!.1
         #f
         'current-module-declare-name
@@ -76281,7 +75960,6 @@
                                                              (void))
                                                            (let ((binding_0
                                                                   (make-module-binding.1
-                                                                   #f
                                                                    #f
                                                                    null
                                                                    #f
@@ -76717,6 +76395,8 @@
    1/namespace-base-phase
    'namespace-call-with-registry-lock
    1/namespace-call-with-registry-lock
+   'namespace-identifier-constant-syntax
+   1/namespace-identifier-constant-syntax
    'module-declared?
    1/module-declared?
    'module-predefined?
@@ -80360,7 +80040,7 @@
                                                                                                            (let ((env_1
                                                                                                                   (let ((env_1
                                                                                                                          (begin
-                                                                                                                           (maybe-install-free=id-or-const-stx-in-context!
+                                                                                                                           (maybe-install-free=id-in-context!
                                                                                                                             val_0
                                                                                                                             id_0
                                                                                                                             phase_0
@@ -83663,7 +83343,7 @@
                                                                                                                               (let ((env_2
                                                                                                                                      (let ((env_2
                                                                                                                                             (begin
-                                                                                                                                              (maybe-install-free=id-or-const-stx-in-context!
+                                                                                                                                              (maybe-install-free=id-in-context!
                                                                                                                                                val_0
                                                                                                                                                id_0
                                                                                                                                                phase_0
@@ -93268,16 +92948,11 @@
                                                                                                                                     lst_2)))
                                                                                                                               (begin
                                                                                                                                 (begin
-                                                                                                                                  (maybe-install-free=id-or-const-stx-in-context!
+                                                                                                                                  (maybe-install-free=id-in-context!
                                                                                                                                    val_0
                                                                                                                                    id_0
                                                                                                                                    phase42_0
                                                                                                                                    ctx43_0)
-                                                                                                                                  (maybe-add-const-stx!
-                                                                                                                                   constant-syntaxes56_0
-                                                                                                                                   val_0
-                                                                                                                                   sym_0
-                                                                                                                                   phase42_0)
                                                                                                                                   (namespace-set-transformer!
                                                                                                                                    namespace44_0
                                                                                                                                    phase42_0
@@ -93589,15 +93264,16 @@
                                                                                                       (car
                                                                                                        syms_0)))
                                                                                                  (let ((t_0
-                                                                                                        (1/make-constant-transformer
-                                                                                                         const-stx_0)))
+                                                                                                        (begin-unsafe
+                                                                                                         (constant-transformer1.1
+                                                                                                          const-stx_0))))
                                                                                                    (begin
                                                                                                      (namespace-set-transformer!
                                                                                                       namespace44_0
                                                                                                       phase_0
                                                                                                       sym_0
                                                                                                       t_0)
-                                                                                                     (maybe-add-const-stx!
+                                                                                                     (add-const-stx!
                                                                                                       constant-syntaxes56_0
                                                                                                       t_0
                                                                                                       sym_0
@@ -96059,15 +95735,16 @@
                        (for-loop_0 fold-var_1 rest_0))))
                  fold-var_0))))))
         (for-loop_0 null lifted-defns_0))))))
-(define maybe-add-const-stx!
+(define add-const-stx!
   (lambda (constant-syntaxes_0 val_0 sym_0 phase_0)
-    (if (1/constant-transformer? val_0)
-      (let ((ht_0 (hash-ref constant-syntaxes_0 phase_0 hash2610)))
-        (hash-set!
-         constant-syntaxes_0
-         phase_0
-         (hash-set ht_0 sym_0 (1/constant-transformer-target val_0))))
-      (void))))
+    (let ((ht_0 (hash-ref constant-syntaxes_0 phase_0 hash2610)))
+      (hash-set!
+       constant-syntaxes_0
+       phase_0
+       (hash-set
+        ht_0
+        sym_0
+        (begin-unsafe (constant-transformer-stx val_0)))))))
 (define as-expand-time-top-level-bindings
   (lambda (ids_0 s_0 ctx_0)
     (let ((top-level-bind-scope_0
@@ -96918,7 +96595,8 @@
           #f
           '|#%read|
           read-primitives)
-         (let ((temp7_0 '(current-compile)))
+         (let ((temp7_0
+                '(current-compile namespace-identifier-constant-syntax)))
            (declare-hash-based-module!.1
             ns_0
             #f

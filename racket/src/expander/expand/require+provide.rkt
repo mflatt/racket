@@ -556,29 +556,10 @@
                     ;; identifier that remains, which means that it doesn't have a binding.
                     ;; The serializer and deserializer won't be able to handle that, and
                     ;; it's not relevant to further comparisons.
-                    ;; Similarly, strip away and constant-syntax part of the binding, and
-                    ;; rely on constant-syntax exports being recorded separately with the
-                    ;; module.
                     (define plain-binding
-                      (cond
-                        [(binding-free=id binding)
-                         (module-binding-update binding #:free=id #f)]
-                        [(binding-const-stx binding)
-                         => (lambda (stx)
-                              ;; if imported, update binding to record a key into the constant-syntax
-                              ;; table; that way, the binding is reconstructed on reimport
-                              (define key
-                                (cond
-                                  [(eq? (module-binding-module binding) (requires+provides-self r+p))
-                                   (module-binding-sym binding)]
-                                  [else
-                                   (define constant-syntaxes (requires+provides-constant-syntaxes r+p))
-                                   (define at-phase (hash-ref constant-syntaxes phase+space #hasheq()))
-                                   (define key (hash-count at-phase))
-                                   (hash-set! constant-syntaxes phase+space (hash-set at-phase key stx))
-                                   key]))
-                              (module-binding-update binding #:const-stx key))]
-                        [else binding]))
+                      (if (binding-free=id binding)
+                          (module-binding-update binding #:free=id #f)
+                          binding))
                     (hash-set at-phase sym (if (or as-protected? as-transformer?)
                                                (provided plain-binding as-protected? as-transformer?)
                                                plain-binding))]

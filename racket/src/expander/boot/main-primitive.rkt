@@ -79,6 +79,7 @@
           'namespace-mapped-symbols namespace-mapped-symbols 
           'namespace-base-phase namespace-base-phase
           'namespace-call-with-registry-lock namespace-call-with-registry-lock
+          'namespace-identifier-constant-syntax namespace-identifier-constant-syntax ; protected
           
           'module-declared? module-declared?
           'module-predefined? module-predefined?

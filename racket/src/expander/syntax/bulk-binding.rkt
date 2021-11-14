@@ -60,19 +60,6 @@
                          #:nominal-sym sym
                          #:nominal-require-phase+space-shift phase+space-shift
                          #:frame-id #f
-                         #:const-stx (cond
-                                       [(binding-const-stx binding)
-                                        => (lambda (key)
-                                             (unless constant-syntax-lookup
-                                               (error "unexpected constant syntax in provided binding"))
-                                             (define stx (constant-syntax-lookup provide-phase+space key))
-                                             (unless stx
-                                               (error "constant syntax not found ~s ~s" provide-phase+space key))
-                                             ;; no mpi shift needed, because it's propagated from the
-                                             ;; syntax object using this binding; no phase shift needed
-                                             ;; because it's built into `constant-syntax-lookup`:
-                                             stx)]
-                                       [else #f])
                          #:extra-inspector (and (not (provided-as-protected? binding/p)) ; see [*] below
                                                 (module-binding-extra-inspector binding))
                          #:extra-nominal-bindings null))

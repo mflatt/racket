@@ -11,8 +11,7 @@
                     free-identifier=?
                     identifier-binding
                     identifier-binding-symbol
-                    identifier-distinct-binding
-                    identifier-binding-constant-syntax)
+                    identifier-distinct-binding)
          "../namespace/core.rkt"
          "../expand/set-bang-trans.rkt"
          "../expand/rename-trans.rkt"
@@ -71,7 +70,6 @@
                       identifier-label-binding
                       identifier-binding-symbol
                       identifier-distinct-binding
-                      (protect identifier-binding-constant-syntax)
                       identifier-prune-lexical-context
                       syntax-debug-info
                       syntax-track-origin
@@ -150,6 +148,7 @@
                       
                       (protect syntax-local-value)
                       (protect syntax-local-value/immediate)
+                      (protect syntax-local-identifier-constant-syntax)
                       
                       syntax-local-lift-expression
                       syntax-local-lift-values-expression
@@ -196,10 +195,6 @@
                       prop:rename-transformer
                       make-rename-transformer
                       (protect rename-transformer-target)
-
-                      constant-transformer?
-                      make-constant-transformer
-                      (protect constant-transformer-target)
 
                       prop:liberal-define-context
                       liberal-define-context?

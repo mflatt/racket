@@ -44,7 +44,9 @@
 
          namespace-base-phase
 
-         namespace-call-with-registry-lock)
+         namespace-call-with-registry-lock
+
+         namespace-identifier-constant-syntax)
 
 (define (make-empty-namespace)
   (define current-ns (current-namespace))
@@ -268,3 +270,20 @@
   (registry-call-with-lock
    (namespace-module-registry ns)
    thunk))
+
+(define/who (namespace-identifier-constant-syntax id
+                                                  [phase 0]
+                                                  [ns (current-namespace)])
+  (check who identifier? id)
+  (check who phase? #:contract phase?-string phase)
+  (check who namespace? ns)
+  (define b (resolve+shift id phase #:unbound-sym? #t))
+  (cond
+    [(module-binding? b)
+     (define phase-shift (phase- phase (module-binding-phase b)))
+     (define constant-syntax-lookup
+       (namespace-module-get-constant-syntax-lookup ns
+                                                    (module-binding-module b)
+                                                    phase-shift))
+     (constant-syntax-lookup (module-binding-phase b) (module-binding-sym b))]
+    [else #f]))

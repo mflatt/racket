@@ -877,13 +877,12 @@
                nominal-sym
                nominal-require-phase
                free=id
-               const-stx
                extra-inspector
                extra-nominal-bindings))]
     [(#:simple-module-binding)
      (decode* (deserialize-simple-module-binding module sym phase nominal-module))]
     [(#:local-binding)
-     (decode* (deserialize-full-local-binding key free=id const-stx))]
+     (decode* (deserialize-full-local-binding key free=id))]
     [(#:bulk-binding)
      (decode* (deserialize-bulk-binding prefix excepts mpi provide-phase-level phase-shift bulk-binding-registry))]
     [(#:like-ambiguous-binding)

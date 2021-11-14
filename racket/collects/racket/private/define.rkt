@@ -11,7 +11,7 @@
              define-syntax 
              define-values-for-syntax
              define-for-syntax
-             define-constant-transformer-for-meta)
+             define-constant-syntax-for-meta)
 
   (define-syntaxes (define-values-for-syntax)
     (lambda (stx)
@@ -25,7 +25,7 @@
            #'(begin-for-syntax
                (define-values (id ...) expr)))])))
 
-  (define-syntaxes (define-constant-transformer-for-meta)
+  (define-syntaxes (define-constant-syntax-for-meta)
     (lambda (stx)
       (syntax-case stx ()
         [(_ id phase content)

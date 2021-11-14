@@ -18,8 +18,7 @@
                     [free-identifier=? raw:free-identifier=?]
                     [identifier-binding raw:identifier-binding]
                     [identifier-binding-symbol raw:identifier-binding-symbol]
-                    [identifier-distinct-binding raw:identifier-distinct-binding]
-                    [identifier-binding-constant-syntax raw:identifier-binding-constant-syntax])
+                    [identifier-distinct-binding raw:identifier-distinct-binding])
          (rename-in "track.rkt"
                     [syntax-track-origin raw:syntax-track-origin])
          (rename-in "binding-set.rkt"
@@ -65,7 +64,6 @@
          identifier-label-binding
          identifier-binding-symbol
          identifier-distinct-binding
-         identifier-binding-constant-syntax
          identifier-prune-lexical-context
          syntax-shift-phase-level
          syntax-track-origin
@@ -213,11 +211,6 @@
   (check who identifier? other-id)
   (check who phase? #:contract phase?-string phase)
   (raw:identifier-distinct-binding id other-id phase))
-
-(define/who (identifier-binding-constant-syntax id [phase (syntax-local-phase-level)])
-  (check who identifier? id)
-  (check who phase? #:contract phase?-string phase)
-  (raw:identifier-binding-constant-syntax id phase))
 
 (define/who (identifier-prune-lexical-context id [syms null])
   (check who identifier? id)

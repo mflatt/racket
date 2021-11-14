@@ -127,7 +127,7 @@
                                           [sym (in-list syms)]
                                           [val (in-list vals)])
                                  (when local-ctx
-                                   (maybe-install-free=id-or-const-stx-in-context! val intdef-id phase local-ctx))
+                                   (maybe-install-free=id-in-context! val intdef-id phase local-ctx))
                                  (env-mixin intdef-id sym val (make-weak-hasheq)))
                                (unbox env-mixins)))
   (log-expand ctx 'exit-local-bind)

@@ -66,7 +66,7 @@
          increment-binding-layer
          accumulate-def-ctx-scopes
          rename-transformer-target-in-context
-         maybe-install-free=id-or-const-stx-in-context!
+         maybe-install-free=id-in-context!
          
          maybe-create-use-site-scope
          maybe-add-post-expansion)
@@ -812,12 +812,11 @@
 ;; In case the rename-transformer has a callback, ensure that the
 ;; current expansion context is available while installing a
 ;; `free-identifier=?` equivalence
-(define (maybe-install-free=id-or-const-stx-in-context! val id phase ctx)
-  (when (or (rename-transformer? val)
-            (constant-transformer? val))
+(define (maybe-install-free=id-in-context! val id phase ctx)
+  (when (rename-transformer? val)
     (parameterize-like
      #:with ([current-expand-context ctx])
-     (maybe-install-free=id-or-const-stx! val id phase))))
+     (maybe-install-free=id! val id phase))))
 
 ;; Transfer the original ID's source location, if any, when expanding
 ;; a reference to a rename transformer

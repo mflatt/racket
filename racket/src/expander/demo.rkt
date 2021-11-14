@@ -1688,10 +1688,9 @@
                (for-meta 5 (constant bread-and-butter (bread5 butter5))))
     (#%provide result result5 bread-and-butter)
     (define-values (bread) (quote bound))
-    (define-values (use) bread-and-butter)
-    (define-values (result) (identifier-binding-constant-syntax
+    (define-values (result) (namespace-identifier-constant-syntax
                              (quote-syntax bread-and-butter)))
-    (define-values (result5) (identifier-binding-constant-syntax
+    (define-values (result5) (namespace-identifier-constant-syntax
                               (quote-syntax bread-and-butter)
                               5))))
 
@@ -1707,11 +1706,24 @@ bread-and-butter1
  '(module import-constant-syntax '#%kernel
     (#%require 'constant-syntax)
     (#%provide result)
-    (define-values (use) bread-and-butter)
-    (define-values (result) (identifier-binding-constant-syntax
+    (define-values (result) (namespace-identifier-constant-syntax
                              (quote-syntax bread-and-butter)))))
 
 (define bread-and-butter2 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''import-constant-syntax 'result)))
 bread-and-butter2
 (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter2)))))
+
+(eval-module-declaration
+ '(module constant-syntax-local '#%kernel
+    (#%require (for-syntax '#%kernel)
+               (constant bread-and-butter (quote (bread butter))))
+    (#%provide macro
+               result)
+    (define-syntaxes (macro)
+      (lambda (stx)
+        (syntax-local-identifier-constant-syntax (quote-syntax bread-and-butter))))
+    (define-values (result) macro)))
+
+(parameterize ([current-namespace demo-ns])
+  (dynamic-require ''constant-syntax-local 'result))
