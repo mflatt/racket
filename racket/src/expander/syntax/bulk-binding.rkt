@@ -68,10 +68,9 @@
                                              (define stx (constant-syntax-lookup provide-phase+space key))
                                              (unless stx
                                                (error "constant syntax not found ~s ~s" provide-phase+space key))
-                                             ;; no mpi shift needed, because it's propagated from the
-                                             ;; syntax object using this binding; no phase shift needed
-                                             ;; because it's built into `constant-syntax-lookup`:
-                                             stx)]
+                                             (syntax-module-path-index-shift
+                                              (syntax-shift-phase-level stx (phase+space-phase phase+space-shift))
+                                              self mpi))]
                                        [else #f])
                          #:extra-inspector (and (not (provided-as-protected? binding/p)) ; see [*] below
                                                 (module-binding-extra-inspector binding))

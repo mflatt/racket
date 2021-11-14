@@ -487,7 +487,7 @@
              (binding-const-stx (provided-as-binding binding/p)))))
     (define constant-syntax-lookup
       (and constant-syntaxes?
-           (namespace-module-get-constant-syntax-lookup ns mpi phase-shift)))
+           (module-get-constant-syntax-lookup m (namespace-bulk-binding-registry ns))))
     (when bind?
       (when (or filter
                 constant-syntaxes?)

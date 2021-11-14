@@ -14463,7 +14463,17 @@
                                  "constant syntax not found ~s ~s"
                                  provide-phase+space3_0
                                  c1_0))
-                              stx_0)))
+                              (let ((temp27_0
+                                     (syntax-shift-phase-level$1
+                                      stx_0
+                                      (phase+space-phase
+                                       phase+space-shift4_0))))
+                                (syntax-module-path-index-shift.1
+                                 #f
+                                 temp27_0
+                                 self1_0
+                                 mpi2_0
+                                 #f)))))
                         #f))))
                (let ((temp25_0
                       (if (not (provided-as-protected? binding/p11_0))
@@ -14484,7 +14494,7 @@
                     unsafe-undefined
                     unsafe-undefined
                     binding_0)))))))))))
-(define finish_2471
+(define finish_2607
   (make-struct-type-install-properties
    '(bulk-binding)
    8
@@ -14565,7 +14575,7 @@
                                    adjusted-provides_0)
                                   adjusted-provides_0))))))))))))))
       (lambda (b_0 binding_0 sym_0)
-        (let ((temp29_0
+        (let ((temp32_0
                (if (bulk-binding-prefix b_0)
                  (string->symbol
                   (let ((app_0 (symbol->string sym_0)))
@@ -14574,22 +14584,22 @@
                      (string-length
                       (symbol->string (bulk-binding-prefix b_0))))))
                  sym_0)))
-          (let ((temp30_0 (bulk-binding-self b_0)))
-            (let ((temp31_0 (bulk-binding-mpi b_0)))
-              (let ((temp32_0 (bulk-binding-provide-phase+space b_0)))
-                (let ((temp33_0 (bulk-binding-phase+space-shift b_0)))
-                  (let ((temp32_1 temp32_0)
-                        (temp31_1 temp31_0)
-                        (temp30_1 temp30_0)
-                        (temp29_1 temp29_0))
+          (let ((temp33_0 (bulk-binding-self b_0)))
+            (let ((temp34_0 (bulk-binding-mpi b_0)))
+              (let ((temp35_0 (bulk-binding-provide-phase+space b_0)))
+                (let ((temp36_0 (bulk-binding-phase+space-shift b_0)))
+                  (let ((temp35_1 temp35_0)
+                        (temp34_1 temp34_0)
+                        (temp33_1 temp33_0)
+                        (temp32_1 temp32_0))
                     (provide-binding-to-require-binding.1
                      #f
-                     temp31_1
-                     temp33_0
-                     temp32_1
-                     temp30_1
+                     temp34_1
+                     temp36_0
+                     temp35_1
+                     temp33_1
                      binding_0
-                     temp29_1))))))))
+                     temp32_1))))))))
       (lambda (b_0 mpi-shifts_0)
         (begin-unsafe
          (1/module-path-index-resolve
@@ -14608,7 +14618,7 @@
    #f
    8
    9))
-(define effect_2834 (finish_2471 struct:bulk-binding))
+(define effect_2834 (finish_2607 struct:bulk-binding))
 (define bulk-binding14.1
   (|#%name|
    bulk-binding
@@ -16996,10 +17006,8 @@
   (|#%name| module-supermodule-name (record-accessor struct:module 18)))
 (define module-get-all-variables
   (|#%name| module-get-all-variables (record-accessor struct:module 19)))
-(define module-get-syntax-constant-callback
-  (|#%name|
-   module-get-syntax-constant-callback
-   (record-accessor struct:module 20)))
+(define module-get-syntax-constant-box
+  (|#%name| module-get-syntax-constant-box (record-accessor struct:module 20)))
 (define set-module-access!
   (|#%name| set-module-access! (record-mutator struct:module 4)))
 (define finish_2550
@@ -17101,28 +17109,29 @@
                        (lambda (data-box_0 sym_0 phase_0) (begin #f)))
                       get-syntax-constant-callback21_0)))
                (let ((app_0 (fresh-requires requires5_0)))
-                 (module1.1
-                  source-name3_0
-                  self4_0
-                  app_0
-                  provides6_0
-                  #f
-                  language-info13_0
-                  min-phase-level7_0
-                  max-phase-level8_0
-                  phase-level-linklet-info-callback_0
-                  force-bulk-binding-callback10_0
-                  prepare-instance-callback11_0
-                  instantiate-phase-callback9_0
-                  primitive?14_0
-                  predefined?15_0
-                  cross-phase-persistent?_0
-                  no-protected?17_0
-                  (current-code-inspector)
-                  submodule-names18_0
-                  supermodule-name19_0
-                  get-all-variables_0
-                  get-syntax-constant-callback_0))))))))))
+                 (let ((app_1 (current-code-inspector)))
+                   (module1.1
+                    source-name3_0
+                    self4_0
+                    app_0
+                    provides6_0
+                    #f
+                    language-info13_0
+                    min-phase-level7_0
+                    max-phase-level8_0
+                    phase-level-linklet-info-callback_0
+                    force-bulk-binding-callback10_0
+                    prepare-instance-callback11_0
+                    instantiate-phase-callback9_0
+                    primitive?14_0
+                    predefined?15_0
+                    cross-phase-persistent?_0
+                    no-protected?17_0
+                    app_1
+                    submodule-names18_0
+                    supermodule-name19_0
+                    get-all-variables_0
+                    (box get-syntax-constant-callback_0))))))))))))
 (define finish_2326
   (make-struct-type-install-properties
    '(module-instance)
@@ -17812,63 +17821,51 @@
             ns101_0
             mpi102_0
             instance-phase103_0)))))))
-(define namespace-module-get-constant-syntax-lookup
-  (lambda (ns_0 mpi_0 phase-shift_0)
-    (begin
-      (if (1/module-path-index? mpi_0)
-        (void)
-        (error "not a module path index:" mpi_0))
-      (let ((name_0 (1/module-path-index-resolve mpi_0 #t)))
-        (let ((m_0 (namespace->module ns_0 name_0)))
-          (begin
-            (if m_0
-              (void)
-              (begin-unsafe
-               (raise-arguments-error
-                'constant-syntax-lookup
-                "unknown module"
-                "module name"
-                (module-name->error-string name_0))))
-            (let ((mi_0
-                   (let ((or-part_0
-                          (namespace->module-instance.1
-                           #f
-                           #f
-                           void
-                           ns_0
-                           name_0
-                           phase-shift_0)))
-                     (if or-part_0
-                       or-part_0
-                       (namespace-create-module-instance!
-                        ns_0
-                        name_0
-                        phase-shift_0
-                        m_0
-                        mpi_0)))))
-              (let ((m-ns_0 (module-instance-namespace mi_0)))
-                (let ((bulk-binding-registry_0
-                       (namespace-bulk-binding-registry m-ns_0)))
-                  (let ((insp_0 (module-inspector m_0)))
-                    (let ((data-box_0 (module-instance-data-box mi_0)))
-                      (let ((prep_0 (module-prepare-instance m_0)))
-                        (begin
-                          (|#%app|
-                           prep_0
-                           data-box_0
-                           m-ns_0
-                           phase-shift_0
-                           mpi_0
-                           bulk-binding-registry_0
-                           insp_0)
-                          (let ((get_0
-                                 (module-get-syntax-constant-callback m_0)))
+(define module-get-constant-syntax-lookup
+  (lambda (m_0 bulk-binding-registry_0)
+    (let ((get-syntax-constant-box_0 (module-get-syntax-constant-box m_0)))
+      (let ((get-syntax-constant_0 (unbox get-syntax-constant-box_0)))
+        (if (procedure? get-syntax-constant_0)
+          (let ((mpi_0 (module-self m_0)))
+            (let ((insp_0 (module-inspector m_0)))
+              (let ((data-box_0 (box #f)))
+                (let ((prep_0 (module-prepare-instance m_0)))
+                  (begin
+                    (|#%app|
+                     prep_0
+                     data-box_0
+                     #f
+                     0
+                     mpi_0
+                     bulk-binding-registry_0
+                     insp_0)
+                    (let ((getter_0
+                           (box
                             (lambda (phase_0 sym_0)
                               (|#%app|
-                               get_0
+                               get-syntax-constant_0
                                data-box_0
                                phase_0
-                               sym_0))))))))))))))))
+                               sym_0)))))
+                      (letrec*
+                       ((loop_0
+                         (|#%name|
+                          loop
+                          (lambda ()
+                            (begin
+                              (let ((get-syntax-constant_1
+                                     (unbox get-syntax-constant-box_0)))
+                                (if (procedure?
+                                     (unbox get-syntax-constant-box_0))
+                                  (if (unsafe-box*-cas!
+                                       get-syntax-constant-box_0
+                                       get-syntax-constant_1
+                                       getter_0)
+                                    (unbox getter_0)
+                                    (loop_0))
+                                  (unbox get-syntax-constant_1))))))))
+                       (loop_0))))))))
+          (unbox get-syntax-constant_0))))))
 (define run-module-instance!.1
   (|#%name|
    run-module-instance!
@@ -18061,33 +18058,33 @@
                                                                                 (unsafe-cdr
                                                                                  lst_3)))
                                                                            (begin
-                                                                             (let ((temp208_0
+                                                                             (let ((temp205_0
                                                                                     (phase+
                                                                                      instance-phase_0
                                                                                      req-phase_0)))
-                                                                               (let ((temp212_0
+                                                                               (let ((temp209_0
                                                                                       (hash-set
                                                                                        seen108_0
                                                                                        mi117_0
                                                                                        #t)))
-                                                                                 (let ((temp213_0
+                                                                                 (let ((temp210_0
                                                                                         (cons
                                                                                          mi117_0
                                                                                          seen-list109_0)))
-                                                                                   (let ((temp212_1
-                                                                                          temp212_0)
-                                                                                         (temp208_1
-                                                                                          temp208_0))
+                                                                                   (let ((temp209_1
+                                                                                          temp209_0)
+                                                                                         (temp205_1
+                                                                                          temp205_0))
                                                                                      (namespace-module-instantiate!.1
                                                                                       inspector_0
                                                                                       otherwise-available?107_0
                                                                                       run-phase105_0
-                                                                                      temp212_1
-                                                                                      temp213_0
+                                                                                      temp209_1
+                                                                                      temp210_0
                                                                                       skip-run?106_0
                                                                                       ns118_0
                                                                                       req-mpi_0
-                                                                                      temp208_1)))))
+                                                                                      temp205_1)))))
                                                                              (for-loop_1
                                                                               rest_1))))
                                                                        (values)))))))
@@ -18354,7 +18351,7 @@
      (begin
        (let ((mod_0 (module-use-module mu131_0)))
          (let ((mi_0
-                (let ((temp226_0
+                (let ((temp223_0
                        (1/module-path-index-resolve
                         (if shift-from124_0
                           (module-path-index-shift
@@ -18367,7 +18364,7 @@
                    #t
                    void
                    ns130_0
-                   temp226_0
+                   temp223_0
                    phase-shift126_0))))
            (let ((m-ns_0 (module-instance-namespace mi_0)))
              (let ((small-ht_0 (namespace-phase-level-to-definitions m-ns_0)))
@@ -18783,7 +18780,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish740
+  (let ((finish739
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -18797,7 +18794,7 @@
           'set!-transformer)))
     (let ((struct:set!-transformer_0
            (make-record-type-descriptor* 'set!-transformer #f #f #f #f 1 0)))
-      (let ((effect741 (finish740 struct:set!-transformer_0)))
+      (let ((effect740 (finish739 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -34120,10 +34117,10 @@
                                                             lst_0))))))
                                                  (let ((constant-syntax-lookup_0
                                                         (if constant-syntaxes?_0
-                                                          (namespace-module-get-constant-syntax-lookup
-                                                           ns107_0
-                                                           mpi108_0
-                                                           phase-shift105_0)
+                                                          (module-get-constant-syntax-lookup
+                                                           m103_0
+                                                           (namespace-bulk-binding-registry
+                                                            ns107_0))
                                                           #f)))
                                                    (if bind?86_0
                                                      (begin
@@ -46672,50 +46669,54 @@
               (set-box!
                data-box_0
                (instance-data9.1 syntax-literals-instance_0 cache-key_0))
-              (let ((get-encoded-root-expand-ctx_0
-                     (instance-variable-value
-                      syntax-literals-instance_0
-                      'get-encoded-root-expand-ctx)))
-                (if (eq? get-encoded-root-expand-ctx_0 'empty)
-                  (let ((root-ctx_0
-                         (promise1.1
-                          (lambda ()
-                            (shift-to-inside-root-context
-                             (make-root-expand-context.1
-                              #f
-                              null
-                              unsafe-undefined
-                              unsafe-undefined
-                              self_0)))
-                          #f)))
-                    (begin-unsafe
-                     (set-box! (namespace-root-expand-ctx ns_0) root-ctx_0)))
-                  (if (procedure? get-encoded-root-expand-ctx_0)
+              (if ns_0
+                (let ((get-encoded-root-expand-ctx_0
+                       (instance-variable-value
+                        syntax-literals-instance_0
+                        'get-encoded-root-expand-ctx)))
+                  (if (eq? get-encoded-root-expand-ctx_0 'empty)
                     (let ((root-ctx_0
                            (promise1.1
                             (lambda ()
                               (shift-to-inside-root-context
-                               (root-expand-context-decode-for-module
-                                (|#%app| get-encoded-root-expand-ctx_0)
+                               (make-root-expand-context.1
+                                #f
+                                null
+                                unsafe-undefined
+                                unsafe-undefined
                                 self_0)))
                             #f)))
                       (begin-unsafe
                        (set-box! (namespace-root-expand-ctx ns_0) root-ctx_0)))
-                    (let ((root-ctx_0
-                           (promise1.1
-                            (lambda ()
-                              (shift-to-inside-root-context
-                               (|#%app|
-                                create-root-expand-context-from-module_0
-                                ns_0
-                                phase-shift_0
-                                original-self_0
-                                self_0)))
-                            #f)))
-                      (begin-unsafe
-                       (set-box!
-                        (namespace-root-expand-ctx ns_0)
-                        root-ctx_0)))))))))))))
+                    (if (procedure? get-encoded-root-expand-ctx_0)
+                      (let ((root-ctx_0
+                             (promise1.1
+                              (lambda ()
+                                (shift-to-inside-root-context
+                                 (root-expand-context-decode-for-module
+                                  (|#%app| get-encoded-root-expand-ctx_0)
+                                  self_0)))
+                              #f)))
+                        (begin-unsafe
+                         (set-box!
+                          (namespace-root-expand-ctx ns_0)
+                          root-ctx_0)))
+                      (let ((root-ctx_0
+                             (promise1.1
+                              (lambda ()
+                                (shift-to-inside-root-context
+                                 (|#%app|
+                                  create-root-expand-context-from-module_0
+                                  ns_0
+                                  phase-shift_0
+                                  original-self_0
+                                  self_0)))
+                              #f)))
+                        (begin-unsafe
+                         (set-box!
+                          (namespace-root-expand-ctx ns_0)
+                          root-ctx_0))))))
+                (void)))))))))
 (define force-syntax-deserialize
   (lambda (syntax-literals-data-instance_0 bulk-binding-registry_0)
     (if (let ((or-part_0

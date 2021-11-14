@@ -1688,6 +1688,7 @@
                (for-meta 5 (constant bread-and-butter (bread5 butter5))))
     (#%provide result result5 bread-and-butter)
     (define-values (bread) (quote bound))
+    (define-values (bread5) (quote also-bound))
     (define-values (use) bread-and-butter)
     (define-values (result) (identifier-binding-constant-syntax
                              (quote-syntax bread-and-butter)))
@@ -1700,8 +1701,10 @@
 bread-and-butter1
 (identifier-binding (car (syntax-e (cadr (syntax-e bread-and-butter1)))))
 
-(parameterize ([current-namespace demo-ns])
-  (dynamic-require ''constant-syntax 'result5))
+(define bread-and-butter5 (parameterize ([current-namespace demo-ns])
+                            (dynamic-require ''constant-syntax 'result5)))
+bread-and-butter5
+(identifier-binding (car (syntax-e bread-and-butter5)))
 
 (eval-module-declaration
  '(module import-constant-syntax '#%kernel
