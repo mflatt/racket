@@ -1684,47 +1684,54 @@
 
 (eval-module-declaration
  '(module bread-and-butter '#%kernel
-    (#%provide bread butter jam)
+    (#%require (for-syntax '#%kernel))
+    (#%provide bread butter jam has-jam)
+    (define-syntaxes (has-jam) (make-glue-syntax (quote-syntax jam)))
     (define-values (bread) 'Bread)
     (define-values (butter) 'Butter)
     (define-values (jam) 'Jam)))
 
 (eval-module-declaration
  '(module constant-syntax '#%kernel
-    (#%require (binned bread-and-butter
-                       (expose 'bread-and-butter jam))
-               (for-meta 5 (binned bread-and-butter 'bread-and-butter)))
-    (#%provide result result5 result-j bread-and-butter)
-    (define-values (result) (identifier-binding-binned-syntax
+    (#%require (glue bread-and-butter import
+                     (expose 'bread-and-butter jam has-jam))
+               (for-meta 5 (glue bread-and-butter import 'bread-and-butter)))
+    (#%provide result result5 result-j0 result-j bread-and-butter)
+    (define-values (result) (identifier-binding-glue-syntax
                              (quote-syntax bread-and-butter)))
-    (define-values (result5) (identifier-binding-binned-syntax
+    (define-values (result5) (identifier-binding-glue-syntax
                               (quote-syntax bread-and-butter)
                               5))
-    (define-values (result-j) jam)))
+    (define-values (result-j) jam)
+    (define-values (result-j0) (identifier-binding-glue-syntax
+                                (quote-syntax has-jam)))))
 
 (define bread-and-butter1 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''constant-syntax 'result)))
 bread-and-butter1
-(identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter1)) 'bread))
-(identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter1)) 'butter))
+(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter1)) 'bread))
+(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter1)) 'butter))
 
 (define bread-and-butter5 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''constant-syntax 'result5)))
 bread-and-butter5
-(identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter5)) 'bread) 5)
+(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter5)) 'bread) 5)
 
 (parameterize ([current-namespace demo-ns])
   (dynamic-require ''constant-syntax 'result-j))
+
+(parameterize ([current-namespace demo-ns])
+  (dynamic-require ''constant-syntax 'result-j0))
 
 (eval-module-declaration
  '(module import-constant-syntax '#%kernel
     (#%require 'constant-syntax)
     (#%provide result)
-    (define-values (result) (identifier-binding-binned-syntax
+    (define-values (result) (identifier-binding-glue-syntax
                              (quote-syntax bread-and-butter)))))
 
 (define bread-and-butter2 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''import-constant-syntax 'result)))
 bread-and-butter2
-(identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter2)) 'bread))
-(identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter2)) 'butter))
+(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'bread))
+(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'butter))

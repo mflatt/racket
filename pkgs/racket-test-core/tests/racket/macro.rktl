@@ -686,19 +686,23 @@
 
 ;; ----------------------------------------
 
+(test #f glue-syntax? 0)
+(test #t glue-syntax? (make-glue-syntax #'hi))
+(err/rt-test (make-glue-syntax 'hi))
+
 (module root-constant-transformer-tests racket/base
   (provide x)
   (define x 12))
 
 (module constant-transformer-tests racket/base
   (require (for-syntax racket/base))
-  (#%require (binned foo 'root-constant-transformer-tests))
+  (#%require (glue foo any 'root-constant-transformer-tests))
 
   (provide foo))
 
 (define (namespace-identifier-constant-syntax id [phase 0])
-  (define stx (identifier-binding-binned-syntax id phase))
-  (and stx (datum->syntax (cdr (syntax-e stx)) 'x)))
+  (define stx (identifier-binding-glue-syntax id phase))
+  (and stx (datum->syntax (caddr (syntax->list stx)) 'x)))
 
 (require (only-in 'constant-transformer-tests
                   [foo constant-transformer-tests:foo]))
@@ -733,50 +737,51 @@
   (define jam 'Jam))
 
 (module bins-bread-and-butter racket/base
-  (#%require (binned bread-and-butter (expose 'bread-and-butter-and-jam-module jam))
-             (for-meta 5 (binned bread-and-butter 'bread-and-butter-and-jam-module)))
+  (#%require (glue bread-and-butter any (expose 'bread-and-butter-and-jam-module jam))
+             (for-meta 5 (glue bread-and-butter any 'bread-and-butter-and-jam-module)))
   (provide result result5 result-j bread-and-butter)
   (define bread (quote bound))
-  (define result (identifier-binding-binned-syntax
+  (define result (identifier-binding-glue-syntax
                   (quote-syntax bread-and-butter)))
-  (define result5 (identifier-binding-binned-syntax
+  (define result5 (identifier-binding-glue-syntax
                    (quote-syntax bread-and-butter)
                    5))
   (define result-j jam))
 
 (define bread-and-butter1 (dynamic-require ''bins-bread-and-butter 'result))
-(test 'bread-and-butter syntax-e (car (syntax-e bread-and-butter1)))
-(test #t list? (identifier-binding (car (syntax-e bread-and-butter1))))
-(test #f identifier-binding (datum->syntax (car (syntax-e bread-and-butter1)) 'butter))
-(test #t list? (identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter1)) 'bread)))
+(test 'bread-and-butter syntax-e (cadr (syntax-e bread-and-butter1)))
+(test #t list? (identifier-binding (cadr (syntax-e bread-and-butter1))))
+(test #f identifier-binding (datum->syntax (cadr (syntax-e bread-and-butter1)) 'butter))
+(test #t list? (identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter1)) 'bread)))
 (test (module-path-index-join ''bread-and-butter-and-jam-module #f)
-      car (identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter1)) 'bread)))
+      car (identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter1)) 'bread)))
 (test (module-path-index-join ''bins-bread-and-butter #f)
-      car (identifier-binding (datum->syntax (car (syntax-e bread-and-butter1)) 'bread)))
+      car (identifier-binding (datum->syntax (cadr (syntax-e bread-and-butter1)) 'bread)))
 (test 'Jam dynamic-require ''bins-bread-and-butter 'result-j)
 
 (define bread-and-butter5 (dynamic-require ''bins-bread-and-butter 'result5))
-(test 'bread-and-butter syntax-e (car (syntax-e bread-and-butter5)))
+(test 'any syntax-e (car (syntax-e bread-and-butter5)))
+(test 'bread-and-butter syntax-e (cadr (syntax-e bread-and-butter5)))
 
 (module imports-constant-syntax racket/base
   (require 'bins-bread-and-butter)
   (provide result)
-  (define result (identifier-binding-binned-syntax
+  (define result (identifier-binding-glue-syntax
                   (quote-syntax bread-and-butter))))
 
 (define bread-and-butter2 (dynamic-require ''imports-constant-syntax 'result))
-(test 'bread-and-butter syntax-e (car (syntax-e bread-and-butter2)))
-(test #t list? (identifier-binding (car (syntax-e bread-and-butter2))))
-(test #t list? (identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter2)) 'bread)))
+(test 'bread-and-butter syntax-e (cadr (syntax-e bread-and-butter2)))
+(test #t list? (identifier-binding (cadr (syntax-e bread-and-butter2))))
+(test #t list? (identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'bread)))
 (test (module-path-index-join ''bread-and-butter-and-jam-module #f)
-      car (identifier-binding (datum->syntax (cdr (syntax-e bread-and-butter2)) 'bread)))
+      car (identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'bread)))
 
 (module uses-syntax-local-constant-syntax racket/base
   (require (for-syntax racket/base))
-  (#%require (binned bread-and-butter 'bread-and-butter-and-jam-module))
+  (#%require (glue bread-and-butter any 'bread-and-butter-and-jam-module))
   (provide macro result bread-and-butter)
   (define-syntax (macro stx)
-    (define stx (cdr (syntax-e (identifier-binding-binned-syntax (quote-syntax bread-and-butter)))))
+    (define stx (caddr (syntax-e (glue-syntax-target (syntax-local-value (quote-syntax bread-and-butter))))))
     #`(list #,(datum->syntax stx 'bread) #,(datum->syntax stx 'butter)))
   (define result macro))
 
@@ -788,7 +793,7 @@
            'uses-syntax-local-constant-syntax)
   (provide macro result)
   (define-syntax (macro stx)
-    (define stx (cdr (syntax-e (identifier-binding-binned-syntax (quote-syntax bread-and-butter)))))
+    (define stx (caddr (syntax-e (glue-syntax-target (syntax-local-value (quote-syntax bread-and-butter))))))
     #`(list #,(datum->syntax stx 'bread) #,(datum->syntax stx 'butter)))
   (define result macro))
 

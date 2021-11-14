@@ -49,8 +49,7 @@
                                             #:self self ; the providing module's view of itself
                                             #:mpi mpi   ; the requiring module's view
                                             #:provide-phase+space provide-phase+space
-                                            #:phase+space-shift phase+space-shift
-                                            #:constant-syntax-lookup [constant-syntax-lookup #f])
+                                            #:phase+space-shift phase+space-shift)
   (define binding (provided-as-binding binding/p))
   (define from-mod (module-binding-module binding))
   (module-binding-update binding

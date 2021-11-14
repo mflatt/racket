@@ -34,7 +34,7 @@
                   get-current-expand-context
                   expand-context-namespace)
          (only-in "../namespace/module.rkt"
-                  namespace-module-get-binned-syntax-lookup)
+                  namespace-module-get-glue-syntax-lookup)
          (only-in "../namespace/namespace.rkt"
                   current-namespace)
          "../expand/log.rkt")
@@ -70,7 +70,7 @@
          identifier-label-binding
          identifier-binding-symbol
          identifier-distinct-binding
-         identifier-binding-binned-syntax
+         identifier-binding-glue-syntax
          identifier-prune-lexical-context
          syntax-shift-phase-level
          syntax-track-origin
@@ -219,7 +219,7 @@
   (check who phase? #:contract phase?-string phase)
   (raw:identifier-distinct-binding id other-id phase))
 
-(define/who (identifier-binding-binned-syntax id [phase (syntax-local-phase-level)])
+(define/who (identifier-binding-glue-syntax id [phase (syntax-local-phase-level)])
   (check who identifier? id)
   (check who phase? #:contract phase?-string phase)
   (define b (resolve+shift id phase #:unbound-sym? #t))
@@ -227,13 +227,13 @@
     [(module-binding? b)
      (define ctx (get-current-expand-context #:fail-ok? #t))
      (define phase-shift (phase- phase (module-binding-phase b)))
-     (define binned-syntax-lookup
-       (namespace-module-get-binned-syntax-lookup (if ctx
-                                                      (expand-context-namespace ctx)
-                                                      (current-namespace))
-                                                  (module-binding-module b)
-                                                  phase-shift))
-     (binned-syntax-lookup (module-binding-phase b) (module-binding-sym b))]
+     (define glue-syntax-lookup
+       (namespace-module-get-glue-syntax-lookup (if ctx
+                                                    (expand-context-namespace ctx)
+                                                    (current-namespace))
+                                                (module-binding-module b)
+                                                phase-shift))
+     (glue-syntax-lookup (module-binding-phase b) (module-binding-sym b))]
     [else #f]))
 
 (define/who (identifier-prune-lexical-context id [syms null])

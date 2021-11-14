@@ -33,7 +33,7 @@
          "prepare.rkt"
          "log.rkt"
          "syntax-id-error.rkt"
-         "binned-syntax.rkt"
+         "glue-syntax.rkt"
          "../compile/main.rkt"
          "../eval/top.rkt"
          "../eval/module.rkt"
@@ -147,9 +147,8 @@
    ;; A frame-id is used to determine when use-site scopes are needed
    (define frame-id (root-expand-context-frame-id root-ctx))
 
-   ;; Record binned-require syntax (so the bin description can be extracted
-   ;; without running the module)
-   (define binned-syntaxes (make-hasheqv))
+   ;; Record glue syntax to be extracted without running the module
+   (define glue-syntaxes (make-hasheqv))
 
    ;; Make a namespace for module expansion
    (define (make-m-ns ns #:for-submodule? [for-submodule? (and enclosing-self #t)])
@@ -157,7 +156,7 @@
                             #:mpi self
                             #:root-expand-context root-ctx
                             #:for-submodule? for-submodule?
-                            #:binned-syntaxes binned-syntaxes))
+                            #:glue-syntaxes glue-syntaxes))
    (define m-ns (make-m-ns (expand-context-namespace init-ctx)))
    
    ;; Initial context for all body expansions:
@@ -175,7 +174,7 @@
                    (m 'body)))
    
    ;; To keep track of all requires and provides
-   (define requires+provides (make-requires+provides self #:binned-syntaxes binned-syntaxes))
+   (define requires+provides (make-requires+provides self #:glue-syntaxes glue-syntaxes))
 
    ;; Table of symbols picked for each binding in this module:
    (define defined-syms (root-expand-context-defined-syms root-ctx)) ; phase -> sym -> id
@@ -358,7 +357,7 @@
                                    #:compiled-submodules compiled-submodules
                                    #:modules-being-compiled modules-being-compiled
                                    #:mpis-to-reset mpis-to-reset
-                                   #:binned-syntaxes binned-syntaxes
+                                   #:glue-syntaxes glue-syntaxes
                                    #:loop pass-1-and-2-loop))
 
          ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -439,7 +438,7 @@
                                             #:root-ctx root-ctx
                                             #:ctx submod-ctx
                                             #:modules-being-compiled modules-being-compiled
-                                            #:binned-syntaxes binned-syntaxes
+                                            #:glue-syntaxes glue-syntaxes
                                             #:fill compiled-module-box)))
      
      (define fully-expanded-bodys
@@ -547,7 +546,7 @@
                           (if (expanded+parsed? expanded-mb)
                               (expanded+parsed-parsed expanded-mb)
                               expanded-mb))
-                         binned-syntaxes
+                         glue-syntaxes
                          (unbox compiled-module-box)
                          compiled-submodules)))
    
@@ -723,7 +722,7 @@
                                 #:compiled-submodules compiled-submodules
                                 #:modules-being-compiled modules-being-compiled
                                 #:mpis-to-reset mpis-to-reset
-                                #:binned-syntaxes binned-syntaxes
+                                #:glue-syntaxes glue-syntaxes
                                 #:loop pass-1-and-2-loop)
   (namespace-visit-available-modules! m-ns phase)
   (let loop ([tail? #t] [bodys bodys])
@@ -840,6 +839,7 @@
                   [val (in-list vals)]
                   [id (in-list ids)])
               (maybe-install-free=id-in-context! val id phase partial-body-ctx)
+              (maybe-install-glue-syntax! val sym phase glue-syntaxes)
               (namespace-set-transformer! m-ns phase sym val)))
           ;; Expand and evaluate RHS:
           (define-values (exp-rhs parsed-rhs vals)
@@ -878,7 +878,7 @@
                                        #:declared-submodule-names declared-submodule-names
                                        #:who 'module
                                        #:add-defined-bin
-                                       (lambda (id phase binned-stx orig-s)
+                                       (lambda (id phase glue-stx orig-s)
                                          (check-ids-unbound (list id) phase requires+provides #:in orig-s)
                                          (define syms (select-defined-syms-and-bind! (list id) defined-syms
                                                                                      self phase all-scopes-stx
@@ -888,9 +888,9 @@
                                                                                      #:as-transformer? #t))
                                          (add-defined-syms! requires+provides syms phase #:as-transformer? #t)
                                          (define sym (car syms))
-                                         (define t (binned-syntax binned-stx))
+                                         (define t (glue-syntax glue-stx))
                                          (namespace-set-transformer! m-ns phase sym t)
-                                         (add-binned-stx! binned-syntaxes t sym phase)
+                                         (add-glue-stx! glue-syntaxes t sym phase)
                                          sym))
           (log-expand partial-body-ctx 'exit-case ready-body)
           (cons ready-body
@@ -1191,7 +1191,7 @@
                                       #:root-ctx root-ctx
                                       #:ctx ctx
                                       #:modules-being-compiled modules-being-compiled
-                                      #:binned-syntaxes binned-syntaxes
+                                      #:glue-syntaxes glue-syntaxes
                                       #:fill compiled-module-box)
   
   (define-values (requires provides) (extract-requires-and-provides requires+provides self self))
@@ -1206,7 +1206,7 @@
                    (requires+provides-all-bindings-simple? requires+provides)
                    (root-expand-context-encode-for-module root-ctx self self)
                    (parsed-only fully-expanded-bodys-except-post-submodules)
-                   binned-syntaxes
+                   glue-syntaxes
                    #f
                    (hasheq)))
 
@@ -1514,8 +1514,12 @@
 
 ;; ----------------------------------------
 
-(define (add-binned-stx! binned-syntaxes val sym phase)
-  (define ht (hash-ref binned-syntaxes phase #hasheq()))
-  (hash-set! binned-syntaxes
+(define (maybe-install-glue-syntax! val sym phase glue-syntaxes)
+  (when (glue-syntax? val)
+    (add-glue-stx! glue-syntaxes val sym phase)))
+
+(define (add-glue-stx! glue-syntaxes val sym phase)
+  (define ht (hash-ref glue-syntaxes phase #hasheq()))
+  (hash-set! glue-syntaxes
              phase
-             (hash-set ht sym (binned-syntax-stx val))))
+             (hash-set ht sym (glue-syntax-target val))))

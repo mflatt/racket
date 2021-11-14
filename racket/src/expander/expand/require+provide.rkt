@@ -57,7 +57,7 @@
                            phase-to-defined-syms ; phase -> sym -> (or/c 'variable 'transformer)
                            also-required ; sym -> binding
                            spaces     ; sym -> #t to track all relevant spaces from requires
-                           binned-syntaxes ; phase -> sym -> syntax
+                           glue-syntaxes ; phase -> sym -> syntax
                            [can-cross-phase-persistent? #:mutable]
                            [all-bindings-simple? #:mutable]) ; tracks whether bindings are easily reconstructed
   #:authentic)
@@ -76,9 +76,9 @@
 
 (define (make-requires+provides self
                                 #:copy-requires [copy-r+p #f]
-                                #:binned-syntaxes [binned-syntaxes
-                                                   (and copy-r+p
-                                                        (hash-copy (requires+provides-binned-syntaxes copy-r+p)))])
+                                #:glue-syntaxes [glue-syntaxes
+                                                 (and copy-r+p
+                                                      (hash-copy (requires+provides-glue-syntaxes copy-r+p)))])
   (requires+provides self
                      ;; require-mpis:
                      (if copy-r+p
@@ -93,7 +93,7 @@
                      (make-hasheqv) ; phase-to-defined-syms
                      (make-hasheq)  ; also-required
                      (make-hasheq)  ; spaces
-                     binned-syntaxes
+                     glue-syntaxes
                      #t
                      #t))
 

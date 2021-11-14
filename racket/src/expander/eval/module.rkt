@@ -16,7 +16,7 @@
          "../compile/compiled-in-memory.rkt"
          "../compile/correlated-linklet.rkt"
          "../expand/context.rkt"
-         "../expand/binned-syntax.rkt"
+         "../expand/glue-syntax.rkt"
          "../expand/root-expand-context.rkt"
          "root-context.rkt"
          "protect.rkt"
@@ -100,7 +100,7 @@
    (define provides (decl 'provides))
    (define original-self (decl 'self-mpi))
    (define phase-to-link-modules (decl 'phase-to-link-modules))
-   (define binned-stxes (decl 'binned-stxes))
+   (define glue-stxes (decl 'glue-stxes))
 
    (define create-root-expand-context-from-module ; might be used to create root-expand-context
      (make-create-root-expand-context-from-module requires phases-h))
@@ -165,9 +165,9 @@
                                                        syntax-literals-linklet data-instance syntax-literals-data-instance
                                                        phase-shift original-self self bulk-binding-registry insp
                                                        create-root-expand-context-from-module)))
-                              #:get-binned-syntax-callback
+                              #:get-glue-syntax-callback
                               (lambda (data-box phase sym)
-                                (define ht (hash-ref binned-stxes phase #hasheq()))
+                                (define ht (hash-ref glue-stxes phase #hasheq()))
                                 (define pos (hash-ref ht sym #f))
                                 (cond
                                   [pos
@@ -182,14 +182,14 @@
                                  (define syntax-literals-instance (instance-data-syntax-literals-instance
                                                                    (unbox data-box)))
 
-                                 ;; create binned-syntax bindings
-                                 (define phase-binned-stxes (hash-ref binned-stxes (sub1 phase-level) #hasheq()))
-                                 (unless (zero? (hash-count phase-binned-stxes))
+                                 ;; create glue-syntax bindings
+                                 (define phase-glue-stxes (hash-ref glue-stxes (sub1 phase-level) #hasheq()))
+                                 (unless (zero? (hash-count phase-glue-stxes))
                                    (define get-syntax-literal! (instance-variable-value syntax-literals-instance get-syntax-literal!-id))
-                                   (for ([(key pos) (in-hash phase-binned-stxes)])
+                                   (for ([(key pos) (in-hash phase-glue-stxes)])
                                      (when (symbol? key)
-                                       (define binned-stx (get-syntax-literal! pos))
-                                       (namespace-set-transformer! ns (sub1 phase-level) key (binned-syntax binned-stx)))))
+                                       (define glue-stx (get-syntax-literal! pos))
+                                       (namespace-set-transformer! ns (sub1 phase-level) key (glue-syntax glue-stx)))))
                                  
                                  (define phase-linklet (hash-ref phases-h phase-level #f))                                 
                                  (when phase-linklet
@@ -418,7 +418,7 @@
                  'requires (compiled-in-memory-requires cim)
                  'provides (compiled-in-memory-provides cim)
                  'phase-to-link-modules (compiled-in-memory-phase-to-link-module-uses cim)
-                 'binned-stxes (compiled-in-memory-binned-stxes cim)))
+                 'glue-stxes (compiled-in-memory-glue-stxes cim)))
 
 (define (make-syntax-literal-data-instance-from-compiled-in-memory cim)
   (make-instance 'syntax-literal-data #f #f
