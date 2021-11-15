@@ -230,7 +230,7 @@
 
 (define (generate-module-declaration-linklet mpis self requires provides
                                              phase-to-link-module-uses-expr
-                                             glue-stxes)
+                                             portal-stxes)
   `(linklet
     ;; imports
     (,deserialize-imports
@@ -240,14 +240,14 @@
      requires
      provides
      phase-to-link-modules
-     glue-stxes)
+     portal-stxes)
     ;; body
     (define-values (self-mpi) ,(add-module-path-index! mpis self))
     (define-values (requires) ,(generate-deserialize requires #:mpis mpis #:syntax-support? #f))
     (define-values (provides) ,(generate-deserialize provides #:mpis mpis #:syntax-support? #f
                                                      #:phase+space-hasheqv provides))
     (define-values (phase-to-link-modules) ,phase-to-link-module-uses-expr)
-    (define-values (glue-stxes) (quote ,glue-stxes))))
+    (define-values (portal-stxes) (quote ,portal-stxes))))
 
 ;; ----------------------------------------
 ;; Module-use serialization --- as an expression, like module path

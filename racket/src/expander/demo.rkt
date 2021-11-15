@@ -1686,7 +1686,7 @@
  '(module bread-and-butter '#%kernel
     (#%require (for-syntax '#%kernel))
     (#%provide bread butter jam has-jam)
-    (define-syntaxes (has-jam) (make-glue-syntax (quote-syntax jam)))
+    (define-syntaxes (has-jam) (make-portal-syntax (quote-syntax jam)))
     (define-values (bread) 'Bread)
     (define-values (butter) 'Butter)
     (define-values (jam) 'Jam)))
@@ -1694,16 +1694,16 @@
 (eval-module-declaration
  '(module constant-syntax '#%kernel
     (#%require 'bread-and-butter
-               (glue bread-and-butter (bread butter))
-               (for-meta 5 (glue bread-and-butter (bread butter))))
+               (portal bread-and-butter (bread butter))
+               (for-meta 5 (portal bread-and-butter (bread butter))))
     (#%provide result result5 result-j0 result-j bread-and-butter)
-    (define-values (result) (identifier-binding-glue-syntax
+    (define-values (result) (identifier-binding-portal-syntax
                              (quote-syntax bread-and-butter)))
-    (define-values (result5) (identifier-binding-glue-syntax
+    (define-values (result5) (identifier-binding-portal-syntax
                               (quote-syntax bread-and-butter)
                               5))
     (define-values (result-j) jam)
-    (define-values (result-j0) (identifier-binding-glue-syntax
+    (define-values (result-j0) (identifier-binding-portal-syntax
                                 (quote-syntax has-jam)))))
 
 (define bread-and-butter1 (parameterize ([current-namespace demo-ns])
@@ -1728,7 +1728,7 @@ bread-and-butter5
  '(module import-constant-syntax '#%kernel
     (#%require 'constant-syntax)
     (#%provide result)
-    (define-values (result) (identifier-binding-glue-syntax
+    (define-values (result) (identifier-binding-portal-syntax
                              (quote-syntax bread-and-butter)))))
 
 (define bread-and-butter2 (parameterize ([current-namespace demo-ns])

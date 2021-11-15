@@ -57,7 +57,7 @@
                            phase-to-defined-syms ; phase -> sym -> (or/c 'variable 'transformer)
                            also-required ; sym -> binding
                            spaces     ; sym -> #t to track all relevant spaces from requires
-                           glue-syntaxes ; phase -> sym -> syntax
+                           portal-syntaxes ; phase -> sym -> syntax
                            [can-cross-phase-persistent? #:mutable]
                            [all-bindings-simple? #:mutable]) ; tracks whether bindings are easily reconstructed
   #:authentic)
@@ -76,9 +76,9 @@
 
 (define (make-requires+provides self
                                 #:copy-requires [copy-r+p #f]
-                                #:glue-syntaxes [glue-syntaxes
-                                                 (and copy-r+p
-                                                      (hash-copy (requires+provides-glue-syntaxes copy-r+p)))])
+                                #:portal-syntaxes [portal-syntaxes
+                                                   (and copy-r+p
+                                                        (hash-copy (requires+provides-portal-syntaxes copy-r+p)))])
   (requires+provides self
                      ;; require-mpis:
                      (if copy-r+p
@@ -93,7 +93,7 @@
                      (make-hasheqv) ; phase-to-defined-syms
                      (make-hasheq)  ; also-required
                      (make-hasheq)  ; spaces
-                     glue-syntaxes
+                     portal-syntaxes
                      #t
                      #t))
 

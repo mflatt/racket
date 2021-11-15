@@ -299,16 +299,16 @@ element of that list is the result that
 @racket[identifier-binding-symbol] produces.}
 
 
-@defproc[(identifier-binding-glue-syntax [id-stx identifier?]
-                                         [phase-level (or/c exact-integer? #f)
-                                                      (syntax-local-phase-level)])
+@defproc[(identifier-binding-portal-syntax [id-stx identifier?]
+                                           [phase-level (or/c exact-integer? #f)
+                                                        (syntax-local-phase-level)])
          (or/c #f syntax?)]{
 
-If @racket[id-stx] is bound at @racket[phase-level] to @tech{glue
+If @racket[id-stx] is bound at @racket[phase-level] to @tech{portal
 syntax}, either via @racket[define-syntax] or @racket[#%require], then
-the glue syntax target is returned. The module that binds
+the portal syntax content is returned. The module that binds
 @racket[id-stx] must be declared, but it need not be instantiated at
-the relevant phase, and @racket[identifier-binding-glue-syntax] does
+the relevant phase, and @racket[identifier-binding-portal-syntax] does
 not instantiate the module.
 
 @history[#:added "8.3.0.8"]}

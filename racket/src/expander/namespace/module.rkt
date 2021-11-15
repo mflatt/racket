@@ -51,7 +51,7 @@
          namespace-visit-available-modules!
          namespace-run-available-modules!
 
-         namespace-module-get-glue-syntax-lookup
+         namespace-module-get-portal-syntax-lookup
 
          namespace-module-use->module+linklet-instances)
 
@@ -80,7 +80,7 @@
                 submodule-names ; associated submodules (i.e, when declared together)
                 supermodule-name ; associated supermodule (i.e, when declared together)
                 get-all-variables ; for `module->indirect-exports`
-                get-glue-syntax-callback) ; for `identifier-binding-glue-syntax`
+                get-portal-syntax-callback) ; for `identifier-binding-portal-syntax`
   #:authentic)
 
 ;; [*] Beware that tables in `provides` may map non-interned symbols
@@ -119,7 +119,7 @@
                      #:submodule-names [submodule-names null]
                      #:supermodule-name [supermodule-name #f]
                      #:get-all-variables [get-all-variables (lambda () null)] ; ok to omit exported
-                     #:get-glue-syntax-callback [get-glue-syntax-callback (lambda (data-box phase sym) #f)])
+                     #:get-portal-syntax-callback [get-portal-syntax-callback (lambda (data-box phase sym) #f)])
   (module source-name
           self
           (fresh-requires requires)
@@ -139,7 +139,7 @@
           submodule-names
           supermodule-name
           get-all-variables
-          get-glue-syntax-callback))
+          get-portal-syntax-callback))
 
 (struct module-instance (namespace
                          module                        ; can be #f for the module being expanded
@@ -148,10 +148,10 @@
                          [made-available? #:mutable]   ; no #f in `phase-level-to-state`?
                          [attached? #:mutable]         ; whether the instance has been attached elsewhere
                          data-box                      ; for use by module implementation
-                         glue-syntaxes)                ; for a module being expanded 
+                         portal-syntaxes)              ; for a module being expanded 
   #:authentic)
 
-(define (make-module-instance m-ns m glue-syntaxes)
+(define (make-module-instance m-ns m portal-syntaxes)
   (module-instance m-ns           ; namespace
                    m              ; module
                    #f             ; shifted-requires (not yet computed)
@@ -159,7 +159,7 @@
                    #f             ; made-available?
                    #f             ; attached?
                    (box #f)       ; data-box
-                   glue-syntaxes))
+                   portal-syntaxes))
 
 ;; ----------------------------------------
 
@@ -168,7 +168,7 @@
                                #:mpi name-mpi
                                #:root-expand-context root-expand-ctx
                                #:for-submodule? for-submodule?
-                               #:glue-syntaxes glue-syntaxes)
+                               #:portal-syntaxes portal-syntaxes)
   (define phase 0) ; always start at 0 when compiling a module
   (define name (module-path-index-resolve name-mpi))
   (define m-ns
@@ -191,7 +191,7 @@
   (small-hash-set! (namespace-phase-to-namespace m-ns) phase m-ns)
   (define at-phase (make-hasheq))
   (hash-set! (namespace-module-instances m-ns) phase at-phase)
-  (hash-set! at-phase name (make-module-instance m-ns #f glue-syntaxes))
+  (hash-set! at-phase name (make-module-instance m-ns #f portal-syntaxes))
   m-ns)
 
 ;; ----------------------------------------
@@ -422,19 +422,19 @@
 (define (namespace-module-make-available! ns mpi instance-phase #:visit-phase [visit-phase (namespace-phase ns)])
   (namespace-module-instantiate! ns mpi instance-phase #:run-phase (add1 visit-phase) #:skip-run? #t))
 
-(define (namespace-module-get-glue-syntax-lookup ns mpi phase-shift)
+(define (namespace-module-get-portal-syntax-lookup ns mpi phase-shift)
   (define name (module-path-index-resolve mpi #t))
   ;; Get or create a namespace for the module+phase combination:
   (define ready-mi (namespace->module-instance ns name phase-shift))
   (cond
-    [(and ready-mi (module-instance-glue-syntaxes ready-mi))
-     => (lambda (glue-syntaxes)
+    [(and ready-mi (module-instance-portal-syntaxes ready-mi))
+     => (lambda (portal-syntaxes)
           (lambda (phase sym)
-            (hash-ref (hash-ref glue-syntaxes phase #hasheqv()) sym #f)))]
+            (hash-ref (hash-ref portal-syntaxes phase #hasheqv()) sym #f)))]
     [else
      (define mi (or ready-mi
                     (let ([m (namespace->module ns name)])
-                      (unless m (raise-unknown-module-error 'identifier-binding-glue-syntax name))
+                      (unless m (raise-unknown-module-error 'identifier-binding-portal-syntax name))
                       (namespace-create-module-instance! ns name phase-shift m mpi))))
      (define m-ns (module-instance-namespace mi))
      (define bulk-binding-registry (namespace-bulk-binding-registry m-ns))
@@ -443,7 +443,7 @@
      (define data-box (module-instance-data-box mi))
      (define prep (module-prepare-instance m))
      (prep data-box m-ns phase-shift mpi bulk-binding-registry insp)
-     (define get (module-get-glue-syntax-callback m))
+     (define get (module-get-portal-syntax-callback m))
      (lambda (phase sym)
        (get data-box phase sym))]))
 

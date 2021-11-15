@@ -1738,39 +1738,39 @@ the value a pair of such values, and so on.}
 
 @; ----------------------------------------------------------------------
 
-@section[#:tag "glue-syntax"]{Glue Syntax Bindings}
+@section[#:tag "portal-syntax"]{Portal Syntax Bindings}
 
-An identifier bound to @deftech{glue syntax} value created by
-@racket[make-glue-syntax] does not act as a transformer, but it
+An identifier bound to @deftech{portal syntax} value created by
+@racket[make-portal-syntax] does not act as a transformer, but it
 encapsulates a syntax object that can be accessed in inspected even
-without instantiating the enclosing module. Glue syntax is also bound
-using the @racketidfont{glue} form of @racket[#%require].
+without instantiating the enclosing module. Portal syntax is also bound
+using the @racketidfont{portal} form of @racket[#%require].
 
-@defproc[(glue-syntax? [v any/c]) boolean?]{
+@defproc[(portal-syntax? [v any/c]) boolean?]{
 
 Returns @racket[#t] if @racket[v] is a value created by
-@racket[make-glue-syntax], @racket[#f] otherwise.
+@racket[make-portal-syntax], @racket[#f] otherwise.
 
 @history[#:added "8.3.0.8"]}
 
-@defproc[(make-glue-syntax [stx syntax?])
-         glue-syntax?]{
+@defproc[(make-portal-syntax [stx syntax?])
+         portal-syntax?]{
 
-Creates @tech{glue syntax} with the target @racket[stx].
+Creates @tech{portal syntax} with the content @racket[stx].
 
 When @racket[define-syntax] or @racket[define-syntaxes] binds an
-identifier to glue syntax immediately in a module body, then in
+identifier to portal syntax immediately in a module body, then in
 addition to being accessible via @racket[syntax-local-value] while
-expanding, the glue syntax target is accessible via
-@racket[identifier-binding-glue-syntax].
+expanding, the portal syntax content is accessible via
+@racket[identifier-binding-portal-syntax].
 
 @history[#:added "8.3.0.8"]}
 
-@defproc[(glue-syntax-target [glue glue-syntax?])
+@defproc[(portal-syntax-content [portal portal-syntax?])
          syntax?]{
 
-Returns the target of @tech{glue syntax} created with
-@racket[make-glue-syntax].
+Returns the content of @tech{portal syntax} created with
+@racket[make-portal-syntax].
 
 @history[#:added "8.3.0.8"]}
 

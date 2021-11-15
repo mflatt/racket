@@ -15,7 +15,7 @@
          "../namespace/core.rkt"
          "../expand/set-bang-trans.rkt"
          "../expand/rename-trans.rkt"
-         "../expand/glue-syntax.rkt"
+         "../expand/portal-syntax.rkt"
          "../expand/liberal-def-ctx.rkt"
          "../expand/syntax-local.rkt"
          "../expand/definition-context.rkt"
@@ -70,7 +70,7 @@
                       identifier-label-binding
                       identifier-binding-symbol
                       identifier-distinct-binding
-                      (protect identifier-binding-glue-syntax)
+                      (protect identifier-binding-portal-syntax)
                       identifier-prune-lexical-context
                       syntax-debug-info
                       syntax-track-origin
@@ -196,9 +196,9 @@
                       make-rename-transformer
                       rename-transformer-target
 
-                      glue-syntax?
-                      make-glue-syntax
-                      glue-syntax-target
+                      portal-syntax?
+                      make-portal-syntax
+                      portal-syntax-content
 
                       prop:liberal-define-context
                       liberal-define-context?

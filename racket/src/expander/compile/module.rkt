@@ -103,7 +103,7 @@
    (define body-context-simple? (parsed-module-root-ctx-simple? p))
    (define language-info (filter-language-info (syntax-property (parsed-s p) 'module-language)))
    (define bodys (parsed-module-body p))
-   (define glue-syntaxes (parsed-module-glue-syntaxes p))
+   (define portal-syntaxes (parsed-module-portal-syntaxes p))
    
    (define empty-result-for-module->namespace? #f)
 
@@ -179,11 +179,11 @@
                     #:to-correlated-linklet? to-correlated-linklet?
                     #:unsafe?-box unsafe?-box))
 
-   ;; register any glue syntax objects:
-   (define-values (glue-stxes max-phase min-phase)
-     (add-glue-syntaxes syntax-literals glue-syntaxes
-                        body-max-phase body-min-phase))
-   
+   ;; register any portal syntax objects:
+   (define-values (portal-stxes max-phase min-phase)
+     (add-portal-syntaxes syntax-literals portal-syntaxes
+                          body-max-phase body-min-phase))
+
    (when modules-being-compiled
      ;; Record this module's linklets for cross-module inlining among (sub)modules
      ;; that are compiled together
@@ -212,7 +212,7 @@
                   (compile-linklet s 'decl))))
            (generate-module-declaration-linklet mpis self requires provides
                                                 phase-to-link-module-uses-expr
-                                                glue-stxes))))
+                                                portal-stxes))))
    
    ;; Assemble a linklet that shifts syntax objects on demand.
    ;; Include an encoding of the root expand context, if any, so that
@@ -372,7 +372,7 @@
                       phase-to-link-module-uses
                       (current-code-inspector)
                       phase-to-link-extra-inspectorsss
-                      glue-stxes
+                      portal-stxes
                       (mpis-as-vector mpis)
                       (syntax-literals-as-vector syntax-literals)
                       (map cdr pre-submodules)
@@ -415,18 +415,18 @@
 
 ;; ----------------------------------------
 
-(define (add-glue-syntaxes syntax-literals glue-syntaxes
-                           body-max-phase body-min-phase)
-  (for/fold ([glue-stxes #hasheq()] [max-phase body-max-phase] [min-phase body-min-phase])
-            ([(phase ht) (in-hash glue-syntaxes)])
-    (define new-glue-stxes
-      (hash-set glue-stxes
+(define (add-portal-syntaxes syntax-literals portal-syntaxes
+                             body-max-phase body-min-phase)
+  (for/fold ([portal-stxes #hasheq()] [max-phase body-max-phase] [min-phase body-min-phase])
+            ([(phase ht) (in-hash portal-syntaxes)])
+    (define new-portal-stxes
+      (hash-set portal-stxes
                 phase
                 (for/hasheq ([(sym stx) (in-hash ht)])
                   (values sym (add-syntax-literal! syntax-literals stx)))))
     (if (integer? phase)
-        (values new-glue-stxes (max (add1 phase) max-phase) (min (add1 phase) min-phase))
-        (values new-glue-stxes max-phase min-phase))))
+        (values new-portal-stxes (max (add1 phase) max-phase) (min (add1 phase) min-phase))
+        (values new-portal-stxes max-phase min-phase))))
 
 ;; ----------------------------------------
 

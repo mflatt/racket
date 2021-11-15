@@ -206,7 +206,7 @@
    '22
    kw2967
    '12))
-(define hash2689
+(define hash2804
   (hasheq
    'all-except
    '11
@@ -220,14 +220,14 @@
    '2
    'for-template
    '3
-   'glue
-   '6
    'just-meta
    '5
    'just-space
    '8
    'only
    '9
+   'portal
+   '6
    'prefix
    '10
    'prefix-all-except
@@ -16733,9 +16733,9 @@
   (|#%name| module-supermodule-name (record-accessor struct:module 18)))
 (define module-get-all-variables
   (|#%name| module-get-all-variables (record-accessor struct:module 19)))
-(define module-get-glue-syntax-callback
+(define module-get-portal-syntax-callback
   (|#%name|
-   module-get-glue-syntax-callback
+   module-get-portal-syntax-callback
    (record-accessor struct:module 20)))
 (define set-module-access!
   (|#%name| set-module-access! (record-mutator struct:module 4)))
@@ -16800,7 +16800,7 @@
    (lambda (cross-phase-persistent?16_0
             force-bulk-binding-callback10_0
             get-all-variables20_0
-            get-glue-syntax-callback21_0
+            get-portal-syntax-callback21_0
             instantiate-phase-callback9_0
             language-info13_0
             max-phase-level8_0
@@ -16831,12 +16831,12 @@
                   (if (eq? get-all-variables20_0 unsafe-undefined)
                     (|#%name| get-all-variables (lambda () (begin null)))
                     get-all-variables20_0)))
-             (let ((get-glue-syntax-callback_0
-                    (if (eq? get-glue-syntax-callback21_0 unsafe-undefined)
+             (let ((get-portal-syntax-callback_0
+                    (if (eq? get-portal-syntax-callback21_0 unsafe-undefined)
                       (|#%name|
-                       get-glue-syntax-callback
+                       get-portal-syntax-callback
                        (lambda (data-box_0 phase_0 sym_0) (begin #f)))
-                      get-glue-syntax-callback21_0)))
+                      get-portal-syntax-callback21_0)))
                (let ((app_0 (fresh-requires requires5_0)))
                  (module1.1
                   source-name3_0
@@ -16859,7 +16859,7 @@
                   submodule-names18_0
                   supermodule-name19_0
                   get-all-variables_0
-                  get-glue-syntax-callback_0))))))))))
+                  get-portal-syntax-callback_0))))))))))
 (define finish_2793
   (make-struct-type-install-properties
    '(module-instance)
@@ -16915,9 +16915,9 @@
   (|#%name|
    module-instance-data-box
    (record-accessor struct:module-instance 6)))
-(define module-instance-glue-syntaxes
+(define module-instance-portal-syntaxes
   (|#%name|
-   module-instance-glue-syntaxes
+   module-instance-portal-syntaxes
    (record-accessor struct:module-instance 7)))
 (define set-module-instance-shifted-requires!
   (|#%name|
@@ -16932,7 +16932,7 @@
    set-module-instance-attached?!
    (record-mutator struct:module-instance 5)))
 (define make-module-instance
-  (lambda (m-ns_0 m_0 glue-syntaxes_0)
+  (lambda (m-ns_0 m_0 portal-syntaxes_0)
     (let ((app_0 (make-small-hasheqv)))
       (module-instance42.1
        m-ns_0
@@ -16942,13 +16942,13 @@
        #f
        #f
        (box #f)
-       glue-syntaxes_0))))
+       portal-syntaxes_0))))
 (define make-module-namespace.1
   (|#%name|
    make-module-namespace
    (lambda (for-submodule?45_0
-            glue-syntaxes46_0
             mpi43_0
+            portal-syntaxes46_0
             root-expand-context44_0
             ns51_0)
      (begin
@@ -17005,7 +17005,7 @@
                  (hash-set!
                   at-phase_0
                   name_0
-                  (make-module-instance m-ns_0 #f glue-syntaxes46_0))
+                  (make-module-instance m-ns_0 #f portal-syntaxes46_0))
                  m-ns_0)))))))))
 (define declare-module!.1
   (|#%name|
@@ -17568,7 +17568,7 @@
             ns103_0
             mpi104_0
             instance-phase105_0)))))))
-(define namespace-module-get-glue-syntax-lookup
+(define namespace-module-get-portal-syntax-lookup
   (lambda (ns_0 mpi_0 phase-shift_0)
     (let ((name_0 (1/module-path-index-resolve mpi_0 #t)))
       (let ((ready-mi_0
@@ -17580,7 +17580,9 @@
               name_0
               phase-shift_0)))
         (let ((c1_0
-               (if ready-mi_0 (module-instance-glue-syntaxes ready-mi_0) #f)))
+               (if ready-mi_0
+                 (module-instance-portal-syntaxes ready-mi_0)
+                 #f)))
           (if c1_0
             (lambda (phase_0 sym_0)
               (hash-ref (hash-ref c1_0 phase_0 hash2589) sym_0 #f))
@@ -17593,7 +17595,7 @@
                            (void)
                            (begin-unsafe
                             (raise-arguments-error
-                             'identifier-binding-glue-syntax
+                             'identifier-binding-portal-syntax
                              "unknown module"
                              "module name"
                              (module-name->error-string name_0))))
@@ -17620,7 +17622,7 @@
                              bulk-binding-registry_0
                              insp_0)
                             (let ((get_0
-                                   (module-get-glue-syntax-callback m_0)))
+                                   (module-get-portal-syntax-callback m_0)))
                               (lambda (phase_0 sym_0)
                                 (|#%app|
                                  get_0
@@ -24253,7 +24255,7 @@
            requires_0
            provides_0
            phase-to-link-module-uses-expr_0
-           glue-stxes_0)
+           portal-stxes_0)
     (let ((app_0 (list deserialize-imports (list mpi-vector-id))))
       (let ((app_1
              (list
@@ -24287,7 +24289,7 @@
             (list
              'linklet
              app_0
-             '(self-mpi requires provides phase-to-link-modules glue-stxes)
+             '(self-mpi requires provides phase-to-link-modules portal-stxes)
              app_1
              app_2
              app_3
@@ -24297,8 +24299,8 @@
               phase-to-link-module-uses-expr_0)
              (list
               'define-values
-              '(glue-stxes)
-              (list 'quote glue-stxes_0)))))))))
+              '(portal-stxes)
+              (list 'quote portal-stxes_0)))))))))
 (define serialize-module-uses
   (lambda (mus_0 mpis_0)
     (reverse$1
@@ -28730,9 +28732,9 @@
    (record-accessor struct:parsed-module 6)))
 (define parsed-module-body
   (|#%name| parsed-module-body (record-accessor struct:parsed-module 7)))
-(define parsed-module-glue-syntaxes
+(define parsed-module-portal-syntaxes
   (|#%name|
-   parsed-module-glue-syntaxes
+   parsed-module-portal-syntaxes
    (record-accessor struct:parsed-module 8)))
 (define parsed-module-compiled-module
   (|#%name|
@@ -28889,9 +28891,9 @@
   (|#%name|
    requires+provides-spaces
    (record-accessor struct:requires+provides 7)))
-(define requires+provides-glue-syntaxes
+(define requires+provides-portal-syntaxes
   (|#%name|
-   requires+provides-glue-syntaxes
+   requires+provides-portal-syntaxes
    (record-accessor struct:requires+provides 8)))
 (define requires+provides-can-cross-phase-persistent?
   (|#%name|
@@ -28990,15 +28992,15 @@
 (define make-requires+provides.1
   (|#%name|
    make-requires+provides
-   (lambda (copy-requires4_0 glue-syntaxes5_0 self8_0)
+   (lambda (copy-requires4_0 portal-syntaxes5_0 self8_0)
      (begin
-       (let ((glue-syntaxes_0
-              (if (eq? glue-syntaxes5_0 unsafe-undefined)
+       (let ((portal-syntaxes_0
+              (if (eq? portal-syntaxes5_0 unsafe-undefined)
                 (if copy-requires4_0
                   (hash-copy
-                   (requires+provides-glue-syntaxes copy-requires4_0))
+                   (requires+provides-portal-syntaxes copy-requires4_0))
                   #f)
-                glue-syntaxes5_0)))
+                portal-syntaxes5_0)))
          (let ((app_0
                 (if copy-requires4_0
                   (requires+provides-require-mpis copy-requires4_0)
@@ -29022,7 +29024,7 @@
                       app_4
                       app_5
                       (make-hasheq)
-                      glue-syntaxes_0
+                      portal-syntaxes_0
                       #t
                       #t))))))))))))
 (define requires+provides-reset!
@@ -31027,7 +31029,7 @@
                                                               (if (symbol?
                                                                    fm_0)
                                                                 (hash-ref
-                                                                 hash2689
+                                                                 hash2804
                                                                  fm_0
                                                                  (lambda () 0))
                                                                 0)))
@@ -31671,7 +31673,7 @@
                                                                                 req_0)))
                                                                          (if (pair?
                                                                               s_0)
-                                                                           (let ((glue184_0
+                                                                           (let ((portal184_0
                                                                                   (let ((s_1
                                                                                          (car
                                                                                           s_0)))
@@ -31771,10 +31773,10 @@
                                                                               (case-lambda
                                                                                ((id:name185_0
                                                                                  stx186_0)
-                                                                                (let ((glue184_1
-                                                                                       glue184_0))
+                                                                                (let ((portal184_1
+                                                                                       portal184_0))
                                                                                   (values
-                                                                                   glue184_1
+                                                                                   portal184_1
                                                                                    id:name185_0
                                                                                    stx186_0)))
                                                                                (args
@@ -31786,12 +31788,12 @@
                                                                             "bad syntax"
                                                                             req_0))))
                                                                      (case-lambda
-                                                                      ((glue181_0
+                                                                      ((portal181_0
                                                                         id:name182_0
                                                                         stx183_0)
                                                                        (values
                                                                         #t
-                                                                        glue181_0
+                                                                        portal181_0
                                                                         id:name182_0
                                                                         stx183_0))
                                                                       (args
@@ -31800,10 +31802,10 @@
                                                                         args)))))
                                                                   (case-lambda
                                                                    ((ok?_0
-                                                                     glue181_0
+                                                                     portal181_0
                                                                      id:name182_0
                                                                      stx183_0)
-                                                                    (perform-glue-syntax-bind!.1
+                                                                    (perform-portal-syntax-bind!.1
                                                                      add-defined-bin14_0
                                                                      orig-s28_0
                                                                      phase-shift_0
@@ -34265,16 +34267,16 @@
          adjusted-sym_0
          val_0
          as-constant?_0)))))
-(define perform-glue-syntax-bind!.1
+(define perform-portal-syntax-bind!.1
   (|#%name|
-   perform-glue-syntax-bind!
+   perform-portal-syntax-bind!
    (lambda (add-defined-bin116_0
             orig-s112_0
             phase-shift113_0
             requires+provides115_0
             self114_0
             id122_0
-            glue-stx123_0)
+            portal-stx123_0)
      (begin
        (let ((sym_0
               (if add-defined-bin116_0
@@ -34282,7 +34284,7 @@
                  add-defined-bin116_0
                  id122_0
                  phase-shift113_0
-                 glue-stx123_0
+                 portal-stx123_0
                  orig-s112_0)
                 (syntax-e$1 id122_0))))
          (let ((binding_0
@@ -34531,24 +34533,24 @@
          s
          'compiled-in-memory
          'phase-to-link-extra-inspectorsss))))))
-(define compiled-in-memory-glue-stxes_2702
+(define compiled-in-memory-portal-stxes_2702
   (|#%name|
-   compiled-in-memory-glue-stxes
+   compiled-in-memory-portal-stxes
    (record-accessor struct:compiled-in-memory 7)))
-(define compiled-in-memory-glue-stxes
+(define compiled-in-memory-portal-stxes
   (|#%name|
-   compiled-in-memory-glue-stxes
+   compiled-in-memory-portal-stxes
    (lambda (s)
      (if (compiled-in-memory?_2116 s)
-       (compiled-in-memory-glue-stxes_2702 s)
+       (compiled-in-memory-portal-stxes_2702 s)
        ($value
         (impersonate-ref
-         compiled-in-memory-glue-stxes_2702
+         compiled-in-memory-portal-stxes_2702
          struct:compiled-in-memory
          7
          s
          'compiled-in-memory
-         'glue-stxes))))))
+         'portal-stxes))))))
 (define compiled-in-memory-mpis_2316
   (|#%name|
    compiled-in-memory-mpis
@@ -44778,9 +44780,9 @@
              #f))
          #f))
       (args (raise-binding-result-arity-error 3 args))))))
-(define finish_2833
+(define finish_2633
   (make-struct-type-install-properties
-   '(import-bin)
+   '(portal-syntax)
    1
    0
    #f
@@ -44789,55 +44791,57 @@
    #f
    '(0)
    #f
-   'glue-syntax))
-(define struct:glue-syntax
+   'portal-syntax))
+(define struct:portal-syntax
   (make-record-type-descriptor*
-   'import-bin
+   'portal-syntax
    #f
-   (|#%nongenerative-uid| import-bin)
+   (|#%nongenerative-uid| portal-syntax)
    #f
    #f
    1
    0))
-(define effect_2686 (finish_2833 struct:glue-syntax))
-(define glue-syntax1.1
+(define effect_2071 (finish_2633 struct:portal-syntax))
+(define portal-syntax1.1
   (|#%name|
-   glue-syntax
+   portal-syntax
    (record-constructor
-    (make-record-constructor-descriptor struct:glue-syntax #f #f))))
-(define glue-syntax?_2750
-  (|#%name| import-bin? (record-predicate struct:glue-syntax)))
-(define glue-syntax?
+    (make-record-constructor-descriptor struct:portal-syntax #f #f))))
+(define portal-syntax?_2790
+  (|#%name| portal-syntax? (record-predicate struct:portal-syntax)))
+(define portal-syntax?
   (|#%name|
-   import-bin?
+   portal-syntax?
    (lambda (v)
-     (if (glue-syntax?_2750 v)
+     (if (portal-syntax?_2790 v)
        #t
        ($value
-        (if (impersonator? v) (glue-syntax?_2750 (impersonator-val v)) #f))))))
-(define glue-syntax-target_2310
-  (|#%name| import-bin-target (record-accessor struct:glue-syntax 0)))
-(define glue-syntax-target
+        (if (impersonator? v)
+          (portal-syntax?_2790 (impersonator-val v))
+          #f))))))
+(define portal-syntax-content_2264
+  (|#%name| portal-syntax-content (record-accessor struct:portal-syntax 0)))
+(define portal-syntax-content
   (|#%name|
-   import-bin-target
+   portal-syntax-content
    (lambda (s)
-     (if (glue-syntax?_2750 s)
-       (glue-syntax-target_2310 s)
+     (if (portal-syntax?_2790 s)
+       (portal-syntax-content_2264 s)
        ($value
         (impersonate-ref
-         glue-syntax-target_2310
-         struct:glue-syntax
+         portal-syntax-content_2264
+         struct:portal-syntax
          0
          s
-         'import-bin
-         'target))))))
-(define make-glue-syntax
+         'portal-syntax
+         'content))))))
+(define make-portal-syntax
   (lambda (stx_0)
     (begin
       (if (syntax?$1 stx_0)
         (void)
-        (raise-argument-error 'make-glue-syntax "syntax?" stx_0))
-      (glue-syntax1.1 stx_0))))
+        (raise-argument-error 'make-portal-syntax "syntax?" stx_0))
+      (portal-syntax1.1 stx_0))))
 (define select-defined-syms-and-bind!.1
   (|#%name|
    select-defined-syms-and-bind!
@@ -45623,12 +45627,12 @@
                                                             (instance-variable-value
                                                              declaration-instance_0
                                                              'phase-to-link-modules)))))
-                                                    (let ((glue-stxes_0
+                                                    (let ((portal-stxes_0
                                                            (begin-unsafe
                                                             (begin
                                                               (instance-variable-value
                                                                declaration-instance_0
-                                                               'glue-stxes)))))
+                                                               'portal-stxes)))))
                                                       (let ((create-root-expand-context-from-module_0
                                                              (make-create-root-expand-context-from-module
                                                               requires_0
@@ -45794,7 +45798,7 @@
                                                                                                            sym_0)
                                                                                                     (let ((ht_0
                                                                                                            (hash-ref
-                                                                                                            glue-stxes_0
+                                                                                                            portal-stxes_0
                                                                                                             phase_0
                                                                                                             hash2610)))
                                                                                                       (let ((pos_0
@@ -45832,16 +45836,16 @@
                                                                                                                  (instance-data-syntax-literals-instance
                                                                                                                   (unbox
                                                                                                                    data-box_0))))
-                                                                                                            (let ((phase-glue-stxes_0
+                                                                                                            (let ((phase-portal-stxes_0
                                                                                                                    (hash-ref
-                                                                                                                    glue-stxes_0
+                                                                                                                    portal-stxes_0
                                                                                                                     (sub1
                                                                                                                      phase-level_0)
                                                                                                                     hash2610)))
                                                                                                               (begin
                                                                                                                 (if (zero?
                                                                                                                      (hash-count
-                                                                                                                      phase-glue-stxes_0))
+                                                                                                                      phase-portal-stxes_0))
                                                                                                                   (void)
                                                                                                                   (let ((get-syntax-literal!_0
                                                                                                                          (instance-variable-value
@@ -45859,7 +45863,7 @@
                                                                                                                                   (call-with-values
                                                                                                                                    (lambda ()
                                                                                                                                      (hash-iterate-key+value
-                                                                                                                                      phase-glue-stxes_0
+                                                                                                                                      phase-portal-stxes_0
                                                                                                                                       i_0))
                                                                                                                                    (case-lambda
                                                                                                                                     ((key_0
@@ -45867,7 +45871,7 @@
                                                                                                                                      (begin
                                                                                                                                        (if (symbol?
                                                                                                                                             key_0)
-                                                                                                                                         (let ((glue-stx_0
+                                                                                                                                         (let ((portal-stx_0
                                                                                                                                                 (|#%app|
                                                                                                                                                  get-syntax-literal!_0
                                                                                                                                                  pos_0)))
@@ -45878,12 +45882,12 @@
                                                                                                                                               ns_2
                                                                                                                                               app_0
                                                                                                                                               key_0
-                                                                                                                                              (glue-syntax1.1
-                                                                                                                                               glue-stx_0))))
+                                                                                                                                              (portal-syntax1.1
+                                                                                                                                               portal-stx_0))))
                                                                                                                                          (void))
                                                                                                                                        (for-loop_0
                                                                                                                                         (hash-iterate-next
-                                                                                                                                         phase-glue-stxes_0
+                                                                                                                                         phase-portal-stxes_0
                                                                                                                                          i_0))))
                                                                                                                                     (args
                                                                                                                                      (raise-binding-result-arity-error
@@ -45892,7 +45896,7 @@
                                                                                                                                   (values)))))))
                                                                                                                          (for-loop_0
                                                                                                                           (hash-iterate-first
-                                                                                                                           phase-glue-stxes_0))))
+                                                                                                                           phase-portal-stxes_0))))
                                                                                                                       (void))))
                                                                                                                 (let ((phase-linklet_0
                                                                                                                        (hash-ref
@@ -46464,8 +46468,8 @@
              app_2
              'phase-to-link-modules
              app_3
-             'glue-stxes
-             (compiled-in-memory-glue-stxes cim_0))))))))
+             'portal-stxes
+             (compiled-in-memory-portal-stxes cim_0))))))))
 (define make-syntax-literal-data-instance-from-compiled-in-memory
   (lambda (cim_0)
     (make-instance
@@ -46864,7 +46868,7 @@
                       (let ((app_5
                              (compiled-in-memory-phase-to-link-extra-inspectorsss
                               c_0)))
-                        (let ((app_6 (compiled-in-memory-glue-stxes c_0)))
+                        (let ((app_6 (compiled-in-memory-portal-stxes c_0)))
                           (let ((app_7 (compiled-in-memory-mpis c_0)))
                             (let ((app_8
                                    (compiled-in-memory-syntax-literals c_0)))
@@ -47017,7 +47021,8 @@
                                        (compiled-in-memory-phase-to-link-extra-inspectorsss
                                         c_0)))
                                   (let ((app_6
-                                         (compiled-in-memory-glue-stxes c_0)))
+                                         (compiled-in-memory-portal-stxes
+                                          c_0)))
                                     (let ((app_7
                                            (compiled-in-memory-mpis c_0)))
                                       (let ((app_8
@@ -47258,7 +47263,7 @@
                                        (compiled-in-memory-phase-to-link-extra-inspectorsss
                                         n-c_0)))
                                   (let ((app_6
-                                         (compiled-in-memory-glue-stxes
+                                         (compiled-in-memory-portal-stxes
                                           n-c_0)))
                                     (let ((app_7
                                            (compiled-in-memory-mpis n-c_0)))
@@ -47617,8 +47622,8 @@
                                 (parsed-s p30_0)
                                 'module-language))))
                          (let ((bodys_0 (parsed-module-body p30_0)))
-                           (let ((glue-syntaxes_0
-                                  (parsed-module-glue-syntaxes p30_0)))
+                           (let ((portal-syntaxes_0
+                                  (parsed-module-portal-syntaxes p30_0)))
                              (let ((empty-result-for-module->namespace?_0 #f))
                                (let ((mpis_0 (make-module-path-index-table)))
                                  (let ((body-cctx_0
@@ -47862,13 +47867,13 @@
                                                  root-ctx-pos_0)
                                                 (call-with-values
                                                  (lambda ()
-                                                   (add-glue-syntaxes
+                                                   (add-portal-syntaxes
                                                     syntax-literals_0
-                                                    glue-syntaxes_0
+                                                    portal-syntaxes_0
                                                     body-max-phase_0
                                                     body-min-phase_0))
                                                  (case-lambda
-                                                  ((glue-stxes_0
+                                                  ((portal-stxes_0
                                                     max-phase_0
                                                     min-phase_0)
                                                    (begin
@@ -47956,7 +47961,7 @@
                                                                       requires_0
                                                                       provides_0
                                                                       phase-to-link-module-uses-expr_0
-                                                                      glue-stxes_0)))
+                                                                      portal-stxes_0)))
                                                                 (if to-correlated-linklet?17_0
                                                                   (begin-unsafe
                                                                    (correlated-linklet1.1
@@ -48368,7 +48373,7 @@
                                                                           phase-to-link-module-uses_0
                                                                           app_0
                                                                           phase-to-link-extra-inspectorsss_0
-                                                                          glue-stxes_0
+                                                                          portal-stxes_0
                                                                           app_1
                                                                           app_2
                                                                           app_3
@@ -48515,27 +48520,30 @@
                   (values)))))))
          (for-loop_0 pre-submodules_0)))
       (void))))
-(define add-glue-syntaxes
-  (lambda (syntax-literals_0 glue-syntaxes_0 body-max-phase_0 body-min-phase_0)
+(define add-portal-syntaxes
+  (lambda (syntax-literals_0
+           portal-syntaxes_0
+           body-max-phase_0
+           body-min-phase_0)
     (begin
       (letrec*
        ((for-loop_0
          (|#%name|
           for-loop
-          (lambda (glue-stxes_0 max-phase_0 min-phase_0 i_0)
+          (lambda (portal-stxes_0 max-phase_0 min-phase_0 i_0)
             (begin
               (if i_0
                 (call-with-values
-                 (lambda () (hash-iterate-key+value glue-syntaxes_0 i_0))
+                 (lambda () (hash-iterate-key+value portal-syntaxes_0 i_0))
                  (case-lambda
                   ((phase_0 ht_0)
                    (call-with-values
                     (lambda ()
                       (call-with-values
                        (lambda ()
-                         (let ((new-glue-stxes_0
+                         (let ((new-portal-stxes_0
                                 (hash-set
-                                 glue-stxes_0
+                                 portal-stxes_0
                                  phase_0
                                  (begin
                                    (letrec*
@@ -48588,32 +48596,32 @@
                            (if (integer? phase_0)
                              (let ((app_0 (max (add1 phase_0) max-phase_0)))
                                (values
-                                new-glue-stxes_0
+                                new-portal-stxes_0
                                 app_0
                                 (min (add1 phase_0) min-phase_0)))
                              (values
-                              new-glue-stxes_0
+                              new-portal-stxes_0
                               max-phase_0
                               min-phase_0))))
                        (case-lambda
-                        ((glue-stxes_1 max-phase_1 min-phase_1)
-                         (values glue-stxes_1 max-phase_1 min-phase_1))
+                        ((portal-stxes_1 max-phase_1 min-phase_1)
+                         (values portal-stxes_1 max-phase_1 min-phase_1))
                         (args (raise-binding-result-arity-error 3 args)))))
                     (case-lambda
-                     ((glue-stxes_1 max-phase_1 min-phase_1)
+                     ((portal-stxes_1 max-phase_1 min-phase_1)
                       (for-loop_0
-                       glue-stxes_1
+                       portal-stxes_1
                        max-phase_1
                        min-phase_1
-                       (hash-iterate-next glue-syntaxes_0 i_0)))
+                       (hash-iterate-next portal-syntaxes_0 i_0)))
                      (args (raise-binding-result-arity-error 3 args)))))
                   (args (raise-binding-result-arity-error 2 args))))
-                (values glue-stxes_0 max-phase_0 min-phase_0)))))))
+                (values portal-stxes_0 max-phase_0 min-phase_0)))))))
        (for-loop_0
         hash2610
         body-max-phase_0
         body-min-phase_0
-        (hash-iterate-first glue-syntaxes_0))))))
+        (hash-iterate-first portal-syntaxes_0))))))
 (define filter-language-info
   (lambda (li_0)
     (if (vector? li_0)
@@ -48927,12 +48935,12 @@
                                   (instance-variable-value
                                    declaration-instance_0
                                    'phase-to-link-modules)))))
-                          (let ((glue-stxes_0
+                          (let ((portal-stxes_0
                                  (begin-unsafe
                                   (begin
                                     (instance-variable-value
                                      declaration-instance_0
-                                     'glue-stxes)))))
+                                     'portal-stxes)))))
                             (let ((unsafe?_0 (hash-ref orig-h_0 'unsafe? #f)))
                               (let ((find-submodule_0
                                      (|#%name|
@@ -49233,7 +49241,7 @@
                                                          declaration-instance_0
                                                          'provides)))
                                                      phase-to-link-module-uses-expr_0
-                                                     glue-stxes_0))
+                                                     portal-stxes_0))
                                                   'decl)))
                                             (let ((new-bundle_0
                                                    (1/hash->linklet-bundle
@@ -57070,10 +57078,10 @@
          (identifier-distinct-binding_0 id_0 other-id_0 unsafe-undefined)))
       ((id_0 other-id_0 phase31_0)
        (identifier-distinct-binding_0 id_0 other-id_0 phase31_0))))))
-(define 1/identifier-binding-glue-syntax
-  (let ((identifier-binding-glue-syntax_0
+(define identifier-binding-portal-syntax
+  (let ((identifier-binding-portal-syntax_0
          (|#%name|
-          identifier-binding-glue-syntax
+          identifier-binding-portal-syntax
           (lambda (id35_0 phase34_0)
             (begin
               (let ((phase_0
@@ -57084,14 +57092,14 @@
                   (if (identifier? id35_0)
                     (void)
                     (raise-argument-error
-                     'identifier-binding-glue-syntax
+                     'identifier-binding-portal-syntax
                      "identifier?"
                      id35_0))
                   (begin
                     (if (phase? phase_0)
                       (void)
                       (raise-argument-error
-                       'identifier-binding-glue-syntax
+                       'identifier-binding-portal-syntax
                        phase?-string
                        phase_0))
                     (let ((b_0
@@ -57108,7 +57116,7 @@
                                (get-current-expand-context.1 #t 'unexpected)))
                           (let ((phase-shift_0
                                  (phase- phase_0 (module-binding-phase b_0))))
-                            (let ((glue-syntax-lookup_0
+                            (let ((portal-syntax-lookup_0
                                    (let ((app_0
                                           (if ctx_0
                                             (begin-unsafe
@@ -57116,21 +57124,19 @@
                                               (root-expand-context/outer-inner
                                                ctx_0)))
                                             (1/current-namespace))))
-                                     (namespace-module-get-glue-syntax-lookup
+                                     (namespace-module-get-portal-syntax-lookup
                                       app_0
                                       (module-binding-module b_0)
                                       phase-shift_0))))
                               (let ((app_0 (module-binding-phase b_0)))
                                 (|#%app|
-                                 glue-syntax-lookup_0
+                                 portal-syntax-lookup_0
                                  app_0
                                  (module-binding-sym b_0))))))
                         #f))))))))))
-    (|#%name|
-     identifier-binding-glue-syntax
-     (case-lambda
-      ((id_0) (begin (identifier-binding-glue-syntax_0 id_0 unsafe-undefined)))
-      ((id_0 phase34_0) (identifier-binding-glue-syntax_0 id_0 phase34_0))))))
+    (case-lambda
+     ((id_0) (identifier-binding-portal-syntax_0 id_0 unsafe-undefined))
+     ((id_0 phase34_0) (identifier-binding-portal-syntax_0 id_0 phase34_0)))))
 (define 1/identifier-prune-lexical-context
   (let ((identifier-prune-lexical-context_0
          (|#%name|
@@ -75123,7 +75129,7 @@
    'identifier-label-binding
    'identifier-binding-symbol
    'identifier-distinct-binding
-   'identifier-binding-glue-syntax
+   'identifier-binding-portal-syntax
    'identifier-prune-lexical-context
    'syntax-debug-info
    'syntax-track-origin
@@ -75228,9 +75234,9 @@
    'prop:rename-transformer
    'make-rename-transformer
    'rename-transformer-target
-   'glue-syntax?
-   'make-glue-syntax
-   'glue-syntax-target
+   'portal-syntax?
+   'make-portal-syntax
+   'portal-syntax-content
    'prop:liberal-define-context
    'liberal-define-context?
    'prop:expansion-contexts
@@ -75259,7 +75265,7 @@
    'variable-reference->module-declaration-inspector
    'read-syntax
    'read-syntax/recursive))
-(define effect_3085
+(define effect_2914
   (begin
     (void
      (begin
@@ -75304,8 +75310,8 @@
         1/identifier-distinct-binding)
        (add-core-primitive!.1
         #t
-        'identifier-binding-glue-syntax
-        1/identifier-binding-glue-syntax)
+        'identifier-binding-portal-syntax
+        identifier-binding-portal-syntax)
        (add-core-primitive!.1
         #f
         'identifier-prune-lexical-context
@@ -75635,9 +75641,9 @@
         #f
         'rename-transformer-target
         1/rename-transformer-target)
-       (add-core-primitive!.1 #f 'glue-syntax? glue-syntax?)
-       (add-core-primitive!.1 #f 'make-glue-syntax make-glue-syntax)
-       (add-core-primitive!.1 #f 'glue-syntax-target glue-syntax-target)
+       (add-core-primitive!.1 #f 'portal-syntax? portal-syntax?)
+       (add-core-primitive!.1 #f 'make-portal-syntax make-portal-syntax)
+       (add-core-primitive!.1 #f 'portal-syntax-content portal-syntax-content)
        (add-core-primitive!.1
         #f
         'prop:liberal-define-context
@@ -89952,7 +89958,7 @@
                                                (begin-unsafe
                                                 (root-expand-context/outer-frame-id
                                                  root-ctx_0))))
-                                          (let ((glue-syntaxes_0
+                                          (let ((portal-syntaxes_0
                                                  (make-hasheqv)))
                                             (let ((make-m-ns_0
                                                    (|#%name|
@@ -89970,8 +89976,8 @@
                                                                  for-submodule?217_0)))
                                                           (make-module-namespace.1
                                                            for-submodule?_0
-                                                           glue-syntaxes_0
                                                            self_0
+                                                           portal-syntaxes_0
                                                            root-ctx_0
                                                            ns219_0)))))))
                                               (let ((temp239_0
@@ -90250,7 +90256,7 @@
                                                       (let ((requires+provides_0
                                                              (make-requires+provides.1
                                                               #f
-                                                              glue-syntaxes_0
+                                                              portal-syntaxes_0
                                                               self_0)))
                                                         (let ((defined-syms_0
                                                                (begin-unsafe
@@ -90817,13 +90823,13 @@
                                                                                                                                                 declared-submodule-names_0
                                                                                                                                                 defined-syms333_1
                                                                                                                                                 frame-id_0
-                                                                                                                                                glue-syntaxes_0
                                                                                                                                                 pass-1-and-2-loop_0
                                                                                                                                                 modules-being-compiled_0
                                                                                                                                                 mpis-to-reset_0
                                                                                                                                                 m-ns_0
                                                                                                                                                 need-eventually-defined_0
                                                                                                                                                 phase_0
+                                                                                                                                                portal-syntaxes_0
                                                                                                                                                 requires+provides330_1
                                                                                                                                                 self_0
                                                                                                                                                 bodys_1)))))))
@@ -91167,10 +91173,10 @@
                                                                                                                                                   submod-ctx_0
                                                                                                                                                   enclosing-self15_0
                                                                                                                                                   compiled-module-box373_0
-                                                                                                                                                  glue-syntaxes_0
                                                                                                                                                   id:module-name205_0
                                                                                                                                                   modules-being-compiled_0
                                                                                                                                                   submod-m-ns_0
+                                                                                                                                                  portal-syntaxes_0
                                                                                                                                                   rebuild-s_0
                                                                                                                                                   requires+provides365_1
                                                                                                                                                   root-ctx_0
@@ -91482,7 +91488,7 @@
                                                                                                             app_0
                                                                                                             app_1
                                                                                                             app_2
-                                                                                                            glue-syntaxes_0
+                                                                                                            portal-syntaxes_0
                                                                                                             app_3
                                                                                                             compiled-submodules_0)))))
                                                                                                    #f)))
@@ -91844,13 +91850,13 @@
             declared-submodule-names52_0
             defined-syms50_0
             frame-id46_0
-            glue-syntaxes56_0
             loop57_0
             modules-being-compiled54_0
             mpis-to-reset55_0
             namespace44_0
             need-eventually-defined48_0
             phase42_0
+            portal-syntaxes56_0
             requires-and-provides47_0
             self45_0
             bodys74_0)
@@ -92925,11 +92931,11 @@
                                                                                                                                    id_0
                                                                                                                                    phase42_0
                                                                                                                                    ctx43_0)
-                                                                                                                                  (maybe-install-glue-syntax!
+                                                                                                                                  (maybe-install-portal-syntax!
                                                                                                                                    val_0
                                                                                                                                    sym_0
                                                                                                                                    phase42_0
-                                                                                                                                   glue-syntaxes56_0)
+                                                                                                                                   portal-syntaxes56_0)
                                                                                                                                   (namespace-set-transformer!
                                                                                                                                    namespace44_0
                                                                                                                                    phase42_0
@@ -93205,7 +93211,7 @@
                                                                               (let ((temp541_0
                                                                                      (lambda (id_0
                                                                                               phase_0
-                                                                                              glue-stx_0
+                                                                                              portal-stx_0
                                                                                               orig-s_0)
                                                                                        (begin
                                                                                          (let ((temp542_0
@@ -93241,16 +93247,16 @@
                                                                                                       (car
                                                                                                        syms_0)))
                                                                                                  (let ((t_0
-                                                                                                        (glue-syntax1.1
-                                                                                                         glue-stx_0)))
+                                                                                                        (portal-syntax1.1
+                                                                                                         portal-stx_0)))
                                                                                                    (begin
                                                                                                      (namespace-set-transformer!
                                                                                                       namespace44_0
                                                                                                       phase_0
                                                                                                       sym_0
                                                                                                       t_0)
-                                                                                                     (add-glue-stx!
-                                                                                                      glue-syntaxes56_0
+                                                                                                     (add-portal-stx!
+                                                                                                      portal-syntaxes56_0
                                                                                                       t_0
                                                                                                       sym_0
                                                                                                       phase_0)
@@ -94538,10 +94544,10 @@
    (lambda (ctx113_0
             enclosing111_0
             fill116_0
-            glue-syntaxes115_0
             module-name-id106_0
             modules-being-compiled114_0
             namespace109_0
+            portal-syntaxes115_0
             rebuild-s107_0
             requires-and-provides108_0
             root-ctx112_0
@@ -94578,7 +94584,7 @@
                         app_0
                         app_1
                         app_2
-                        glue-syntaxes115_0
+                        portal-syntaxes115_0
                         #f
                         (hasheq)))))))
             (let ((module-name_0
@@ -95504,7 +95510,7 @@
                                                      the-struct_0)
                                                     (parsed-module-body
                                                      the-struct_0)
-                                                    (parsed-module-glue-syntaxes
+                                                    (parsed-module-portal-syntaxes
                                                      the-struct_0)
                                                     (parsed-module-compiled-module
                                                      the-struct_0)
@@ -95534,7 +95540,8 @@
                                          (parsed-module-encoded-root-ctx
                                           submod_0)
                                          (parsed-module-body submod_0)
-                                         (parsed-module-glue-syntaxes submod_0)
+                                         (parsed-module-portal-syntaxes
+                                          submod_0)
                                          (parsed-module-compiled-module
                                           submod_0)
                                          (parsed-module-compiled-submodules
@@ -95710,18 +95717,18 @@
                        (for-loop_0 fold-var_1 rest_0))))
                  fold-var_0))))))
         (for-loop_0 null lifted-defns_0))))))
-(define maybe-install-glue-syntax!
-  (lambda (val_0 sym_0 phase_0 glue-syntaxes_0)
-    (if (glue-syntax? val_0)
-      (add-glue-stx! glue-syntaxes_0 val_0 sym_0 phase_0)
+(define maybe-install-portal-syntax!
+  (lambda (val_0 sym_0 phase_0 portal-syntaxes_0)
+    (if (portal-syntax? val_0)
+      (add-portal-stx! portal-syntaxes_0 val_0 sym_0 phase_0)
       (void))))
-(define add-glue-stx!
-  (lambda (glue-syntaxes_0 val_0 sym_0 phase_0)
-    (let ((ht_0 (hash-ref glue-syntaxes_0 phase_0 hash2610)))
+(define add-portal-stx!
+  (lambda (portal-syntaxes_0 val_0 sym_0 phase_0)
+    (let ((ht_0 (hash-ref portal-syntaxes_0 phase_0 hash2610)))
       (hash-set!
-       glue-syntaxes_0
+       portal-syntaxes_0
        phase_0
-       (hash-set ht_0 sym_0 (glue-syntax-target val_0))))))
+       (hash-set ht_0 sym_0 (portal-syntax-content val_0))))))
 (define as-expand-time-top-level-bindings
   (lambda (ids_0 s_0 ctx_0)
     (let ((top-level-bind-scope_0

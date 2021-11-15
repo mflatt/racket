@@ -46,7 +46,7 @@
                               root-ctx-simple?
                               encoded-root-ctx
                               body
-                              glue-syntaxes         ; phase -> symbol -> syntax-object
+                              portal-syntaxes       ; phase -> symbol -> syntax-object
                               compiled-module       ; #f or already-compiled module
                               compiled-submodules)  ; already-compiled submodules
   #:authentic)

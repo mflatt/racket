@@ -123,15 +123,15 @@
                just-space
                adjust
                for-meta-ok? #f 'raw)]
-        [(glue)
+        [(portal)
          (check-nested 'raw (eq? just-meta 'all))
-         (define-match m req '(glue id:name stx))
-         (perform-glue-syntax-bind! (m 'id:name) (m 'stx)
-                                    #:phase-shift phase-shift
-                                    #:orig-s orig-s
-                                    #:self self
-                                    #:requires+provides requires+provides
-                                    #:add-defined-bin add-defined-bin)]
+         (define-match m req '(portal id:name stx))
+         (perform-portal-syntax-bind! (m 'id:name) (m 'stx)
+                                      #:phase-shift phase-shift
+                                      #:orig-s orig-s
+                                      #:self self
+                                      #:requires+provides requires+provides
+                                      #:add-defined-bin add-defined-bin)]
         [(for-space)
          (check-nested 'phaseless)
          (define-match m req '(for-space space spec ...))
@@ -573,15 +573,15 @@
 
 ;; ----------------------------------------
 
-(define (perform-glue-syntax-bind! id glue-stx
-                                   #:orig-s orig-s
-                                   #:phase-shift phase-shift
-                                   #:self self
-                                   #:requires+provides requires+provides
-                                   #:add-defined-bin add-defined-bin)
+(define (perform-portal-syntax-bind! id portal-stx
+                                     #:orig-s orig-s
+                                     #:phase-shift phase-shift
+                                     #:self self
+                                     #:requires+provides requires+provides
+                                     #:add-defined-bin add-defined-bin)
   (define sym
     (if add-defined-bin
-        (add-defined-bin id phase-shift glue-stx orig-s)
+        (add-defined-bin id phase-shift portal-stx orig-s)
         (syntax-e id)))
   (define binding (make-module-binding self phase-shift sym))
   (add-binding! id binding phase-shift))

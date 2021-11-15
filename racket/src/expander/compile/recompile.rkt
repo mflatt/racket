@@ -139,7 +139,7 @@
 
   (define self (decl 'self-mpi))
   (define phase-to-link-modules (decl 'phase-to-link-modules))
-  (define glue-stxes (decl 'glue-stxes))
+  (define portal-stxes (decl 'portal-stxes))
 
   (define unsafe? (hash-ref orig-h 'unsafe? #f))
 
@@ -216,7 +216,7 @@
                                                           (decl 'requires)
                                                           (decl 'provides)
                                                           phase-to-link-module-uses-expr
-                                                          glue-stxes)
+                                                          portal-stxes)
                      'decl))
 
   (define new-bundle

@@ -1278,7 +1278,8 @@ multiple symbolic names.}
                                  (#,(racketidfont "for-syntax") raw-require-spec ...)
                                  (#,(racketidfont "for-template") raw-require-spec ...)
                                  (#,(racketidfont "for-label") raw-require-spec ...)
-                                 (#,(racketidfont "just-meta") phase-level raw-require-spec ...)]
+                                 (#,(racketidfont "just-meta") phase-level raw-require-spec ...)
+                                 (#,(racketidfont "portal") portal-id content)]
                [phase-level exact-integer
                             #f]
                [phaseless-spec spaceless-spec
@@ -1292,9 +1293,7 @@ multiple symbolic names.}
                                (#,(racketidfont "all-except") raw-module-path id ...)
                                (#,(racketidfont "prefix-all-except") prefix-id 
                                                                      raw-module-path id ...)
-                               (#,(racketidfont "rename") raw-module-path local-id exported-id)
-                               (#,(racketidfont "glue") glue-id tag spaceless-spec)
-                               (#,(racketidfont "expose") spaceless-spec local-id ...)]
+                               (#,(racketidfont "rename") raw-module-path local-id exported-id)]
                [raw-module-path raw-root-module-path
                                 (#,(racketidfont "submod") raw-root-module-path id ...+)
                                 (#,(racketidfont "submod") "." id ...+)]
@@ -1329,9 +1328,12 @@ formalized in the grammar above:
  @item{a @racketidfont{for-space} form cannot appear within a
        @racketidfont{for-space} form.}
 
+ @item{a @racketidfont{portal} form cannot appear within a
+       @racketidfont{just-meta} form.}
+
 ]
 
-Except for @racketidfont{glue} and @racketidfont{expose}, each
+Except for the @racketidfont{portal} form, each
 @racket[raw-require-spec] corresponds to the obvious
 @racket[_require-spec], but the @racketidfont{rename} sub-form has the
 identifiers in reverse order compared to @racket[rename-in].
@@ -1348,26 +1350,14 @@ constructed expressions. They also appear naturally as arguments to
 functions such as @racket[namespace-require], with otherwise take a
 quoted @racket[raw-module-spec].
 
-The @racketidfont{glue} and @racketidfont{expose} forms provide a kind
-of reflection support that is useful for hierarchical naming. They
-have no corresponding forms @racket[require]. A
-@racket[(#,(racketidfont "glue") glue-id tag spaceless-spec)] form
-defines @racket[glue-id] to @tech{glue-syntax}. The glue syntax object
-wraps a list of three syntax objects: @racket[tag], @racket[glue-id]
-as-is, and @racket[glue-id] with an extra scope applied; the same
-extra scope is also applied to every binding imported by the
-@racket[spaceless-spec], at least by default. Inside that
-@racket[spaceless-spec], a @racket[(#,(racketidfont "expose")
-spaceless-spec local-id ...)] form causes each @racket[local-id] to be
-bound without the extra scope. Overall, non-exposed identifiers
-imported with a @racketidfont["glue"] form are not directly
-accessible, and must instead be accessed via the glue syntax bound to
-@racket[glue-id].
+The @racketidfont{portal} form provides a way to define @tech{portal
+syntax} at any phase level. A @racket[(#,(racketidfont "portal")
+portal-id content)], defines @racket[portal-id] to portal syntax with
+@racket[content] effectively quoted to serve as its content.
 
 @history[#:changed "8.2.0.3" @elem{Added @racketidfont{for-space}
                                    and @racketidfont{just-space}.}
-         #:changed "8.3.0.8" @elem{Added @racketidfont{glue}
-                                   and @racketidfont{explose}.}]}
+         #:changed "8.3.0.8" @elem{Added @racketidfont{portal}.}]}
 
 
 @defform/subs[(#%provide raw-provide-spec ...)
