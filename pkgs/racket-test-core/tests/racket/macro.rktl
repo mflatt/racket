@@ -696,13 +696,17 @@
 
 (module constant-transformer-tests racket/base
   (require (for-syntax racket/base))
-  (#%require (glue foo any 'root-constant-transformer-tests))
+  (define-syntax-rule (glue foo)
+    (begin
+      (require 'root-constant-transformer-tests)
+      (#%require (glue foo any))))
+  (glue foo)
 
   (provide foo))
 
 (define (namespace-identifier-constant-syntax id [phase 0])
   (define stx (identifier-binding-glue-syntax id phase))
-  (and stx (datum->syntax (caddr (syntax->list stx)) 'x)))
+  (and stx (datum->syntax stx 'x)))
 
 (require (only-in 'constant-transformer-tests
                   [foo constant-transformer-tests:foo]))
@@ -737,8 +741,13 @@
   (define jam 'Jam))
 
 (module bins-bread-and-butter racket/base
-  (#%require (glue bread-and-butter any (expose 'bread-and-butter-and-jam-module jam))
-             (for-meta 5 (glue bread-and-butter any 'bread-and-butter-and-jam-module)))
+  (define-syntax-rule (glue id meta)
+    (begin
+      (require (for-meta meta 'bread-and-butter-and-jam-module))
+      (#%require (for-meta meta (glue id [any id intro])))))
+  (glue bread-and-butter 0)
+  (glue bread-and-butter 5)
+  (require (only-in 'bread-and-butter-and-jam-module jam))
   (provide result result5 result-j bread-and-butter)
   (define bread (quote bound))
   (define result (identifier-binding-glue-syntax
@@ -777,11 +786,12 @@
       car (identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'bread)))
 
 (module uses-syntax-local-constant-syntax racket/base
-  (require (for-syntax racket/base))
-  (#%require (glue bread-and-butter any 'bread-and-butter-and-jam-module))
+  (require (for-syntax racket/base)
+           'bread-and-butter-and-jam-module)
+  (#%require (glue bread-and-butter any))
   (provide macro result bread-and-butter)
   (define-syntax (macro stx)
-    (define stx (caddr (syntax-e (glue-syntax-target (syntax-local-value (quote-syntax bread-and-butter))))))
+    (define stx (glue-syntax-target (syntax-local-value (quote-syntax bread-and-butter))))
     #`(list #,(datum->syntax stx 'bread) #,(datum->syntax stx 'butter)))
   (define result macro))
 
@@ -793,7 +803,7 @@
            'uses-syntax-local-constant-syntax)
   (provide macro result)
   (define-syntax (macro stx)
-    (define stx (caddr (syntax-e (glue-syntax-target (syntax-local-value (quote-syntax bread-and-butter))))))
+    (define stx (glue-syntax-target (syntax-local-value (quote-syntax bread-and-butter))))
     #`(list #,(datum->syntax stx 'bread) #,(datum->syntax stx 'butter)))
   (define result macro))
 

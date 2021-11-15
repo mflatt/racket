@@ -206,36 +206,34 @@
    '22
    kw2967
    '12))
-(define hash2496
+(define hash2689
   (hasheq
    'all-except
-   '10
-   'expose
-   '14
+   '11
    'for-label
    '4
    'for-meta
    '1
    'for-space
-   '6
+   '7
    'for-syntax
    '2
    'for-template
    '3
    'glue
-   '13
+   '6
    'just-meta
    '5
    'just-space
-   '7
-   'only
    '8
-   'prefix
+   'only
    '9
+   'prefix
+   '10
    'prefix-all-except
-   '11
+   '12
    'rename
-   '12))
+   '13))
 (define kw2162 (string->keyword "not-recorded"))
 (define hash2430
   (hasheq
@@ -30926,117 +30924,32 @@
          s
          'adjust-rename
          'from-sym))))))
-(define finish_2908
-  (make-struct-type-install-properties
-   '(gluing-mode)
-   3
-   0
-   #f
-   null
-   (current-inspector)
-   #f
-   '(0 1 2)
-   #f
-   'gluing-mode))
-(define struct:gluing-mode
-  (make-record-type-descriptor*
-   'gluing-mode
-   #f
-   (|#%nongenerative-uid| gluing-mode)
-   #f
-   #f
-   3
-   0))
-(define effect_2188 (finish_2908 struct:gluing-mode))
-(define gluing-mode5.1
-  (|#%name|
-   gluing-mode
-   (record-constructor
-    (make-record-constructor-descriptor struct:gluing-mode #f #f))))
-(define gluing-mode?_2969
-  (|#%name| gluing-mode? (record-predicate struct:gluing-mode)))
-(define gluing-mode?
-  (|#%name|
-   gluing-mode?
-   (lambda (v)
-     (if (gluing-mode?_2969 v)
-       #t
-       ($value
-        (if (impersonator? v) (gluing-mode?_2969 (impersonator-val v)) #f))))))
-(define gluing-mode-introducer_2531
-  (|#%name| gluing-mode-introducer (record-accessor struct:gluing-mode 0)))
-(define gluing-mode-introducer
-  (|#%name|
-   gluing-mode-introducer
-   (lambda (s)
-     (if (gluing-mode?_2969 s)
-       (gluing-mode-introducer_2531 s)
-       ($value
-        (impersonate-ref
-         gluing-mode-introducer_2531
-         struct:gluing-mode
-         0
-         s
-         'gluing-mode
-         'introducer))))))
-(define gluing-mode-definer_2399
-  (|#%name| gluing-mode-definer (record-accessor struct:gluing-mode 1)))
-(define gluing-mode-definer
-  (|#%name|
-   gluing-mode-definer
-   (lambda (s)
-     (if (gluing-mode?_2969 s)
-       (gluing-mode-definer_2399 s)
-       ($value
-        (impersonate-ref
-         gluing-mode-definer_2399
-         struct:gluing-mode
-         1
-         s
-         'gluing-mode
-         'definer))))))
-(define gluing-mode-exposes_2677
-  (|#%name| gluing-mode-exposes (record-accessor struct:gluing-mode 2)))
-(define gluing-mode-exposes
-  (|#%name|
-   gluing-mode-exposes
-   (lambda (s)
-     (if (gluing-mode?_2969 s)
-       (gluing-mode-exposes_2677 s)
-       ($value
-        (impersonate-ref
-         gluing-mode-exposes_2677
-         struct:gluing-mode
-         2
-         s
-         'gluing-mode
-         'exposes))))))
 (define layers$1 '(raw phaseless spaceless justspaceless path))
 (define parse-and-perform-requires!.1
   (|#%name|
    parse-and-perform-requires!
-   (lambda (add-defined-bin15_0
-            copy-variable-as-constant?12_0
-            copy-variable-phase-level11_0
-            declared-submodule-names10_0
-            initial-require?14_0
-            run-phase7_0
-            run?8_0
-            self6_0
-            skip-variable-phase-level13_0
-            visit?9_0
-            who16_0
-            reqs28_0
-            orig-s29_0
-            m-ns30_0
-            phase-shift31_0
-            requires+provides32_0)
+   (lambda (add-defined-bin14_0
+            copy-variable-as-constant?11_0
+            copy-variable-phase-level10_0
+            declared-submodule-names9_0
+            initial-require?13_0
+            run-phase6_0
+            run?7_0
+            self5_0
+            skip-variable-phase-level12_0
+            visit?8_0
+            who15_0
+            reqs27_0
+            orig-s28_0
+            m-ns29_0
+            phase-shift30_0
+            requires+provides31_0)
      (begin
        (let ((run-phase_0
-              (if (eq? run-phase7_0 unsafe-undefined)
-                (namespace-phase m-ns30_0)
-                run-phase7_0)))
-         (let ((initial-require?_0 initial-require?14_0))
+              (if (eq? run-phase6_0 unsafe-undefined)
+                (namespace-phase m-ns29_0)
+                run-phase6_0)))
+         (let ((initial-require?_0 initial-require?13_0))
            (letrec*
             ((loop_0
               (|#%name|
@@ -31048,7 +30961,6 @@
                         just-meta_0
                         just-space_0
                         adjust_0
-                        gluing_0
                         for-meta-ok?_0
                         just-meta-ok?_0
                         layer_0)
@@ -31066,11 +30978,11 @@
                                    (let ((check-nested_0
                                           (|#%name|
                                            check-nested
-                                           (lambda (want-layer135_0 ok?134_0)
+                                           (lambda (want-layer130_0 ok?129_0)
                                              (begin
-                                               (if (if ok?134_0
+                                               (if (if ok?129_0
                                                      (member
-                                                      want-layer135_0
+                                                      want-layer130_0
                                                       (member
                                                        layer_0
                                                        layers$1))
@@ -31079,7 +30991,7 @@
                                                  (raise-syntax-error$1
                                                   #f
                                                   "invalid nesting"
-                                                  orig-s29_0
+                                                  orig-s28_0
                                                   req_0)))))))
                                      (let ((result_1
                                             (let ((result_1
@@ -31093,10 +31005,10 @@
                                                                 want-layer_0
                                                                 #t)))
                                                             ((want-layer_0
-                                                              ok?134_0)
+                                                              ok?129_0)
                                                              (check-nested_0
                                                               want-layer_0
-                                                              ok?134_0))))))
+                                                              ok?129_0))))))
                                                      (let ((fm_0
                                                             (if (pair?
                                                                  (syntax-e$1
@@ -31115,16 +31027,16 @@
                                                               (if (symbol?
                                                                    fm_0)
                                                                 (hash-ref
-                                                                 hash2496
+                                                                 hash2689
                                                                  fm_0
                                                                  (lambda () 0))
                                                                 0)))
                                                          (if (unsafe-fx<
                                                               index_0
-                                                              7)
+                                                              6)
                                                            (if (unsafe-fx<
                                                                 index_0
-                                                                3)
+                                                                2)
                                                              (if (unsafe-fx<
                                                                   index_0
                                                                   1)
@@ -31143,7 +31055,7 @@
                                                                      (raise-syntax-error$1
                                                                       #f
                                                                       "bad require spec"
-                                                                      orig-s29_0
+                                                                      orig-s28_0
                                                                       req_0))
                                                                    (begin
                                                                      (if (if adjust_0
@@ -31153,7 +31065,7 @@
                                                                              just-meta_0
                                                                              'all)))
                                                                        (set-requires+provides-all-bindings-simple?!
-                                                                        requires+provides32_0
+                                                                        requires+provides31_0
                                                                         #f)
                                                                        (void))
                                                                      (let ((mp_0
@@ -31164,273 +31076,42 @@
                                                                               maybe-mp_0)))
                                                                        (let ((mpi_0
                                                                               (module-path->mpi.1
-                                                                               declared-submodule-names10_0
+                                                                               declared-submodule-names9_0
                                                                                mp_0
-                                                                               self6_0)))
+                                                                               self5_0)))
                                                                          (begin
-                                                                           (let ((temp139_0
+                                                                           (let ((temp134_0
                                                                                   (if req_0
                                                                                     req_0
                                                                                     top-req_0)))
-                                                                             (let ((initial-require?154_0
+                                                                             (let ((initial-require?148_0
                                                                                     initial-require?_0))
-                                                                               (let ((temp139_1
-                                                                                      temp139_0))
+                                                                               (let ((temp134_1
+                                                                                      temp134_0))
                                                                                  (perform-require!.1
                                                                                   adjust_0
                                                                                   #t
                                                                                   #f
-                                                                                  copy-variable-as-constant?12_0
-                                                                                  copy-variable-phase-level11_0
-                                                                                  gluing_0
-                                                                                  initial-require?154_0
+                                                                                  copy-variable-as-constant?11_0
+                                                                                  copy-variable-phase-level10_0
+                                                                                  initial-require?148_0
                                                                                   just-meta_0
                                                                                   just-space_0
                                                                                   phase-shift_0
-                                                                                  requires+provides32_0
+                                                                                  requires+provides31_0
                                                                                   run-phase_0
-                                                                                  run?8_0
-                                                                                  skip-variable-phase-level13_0
+                                                                                  run?7_0
+                                                                                  skip-variable-phase-level12_0
                                                                                   space-level_0
-                                                                                  visit?9_0
-                                                                                  who16_0
+                                                                                  visit?8_0
+                                                                                  who15_0
                                                                                   mpi_0
                                                                                   req_0
-                                                                                  self6_0
-                                                                                  temp139_1
-                                                                                  m-ns30_0))))
+                                                                                  self5_0
+                                                                                  temp134_1
+                                                                                  m-ns29_0))))
                                                                            (set! initial-require?_0
                                                                              #f)))))))
-                                                               (if (unsafe-fx<
-                                                                    index_0
-                                                                    2)
-                                                                 (begin
-                                                                   (check-nested_1
-                                                                    'raw
-                                                                    for-meta-ok?_0)
-                                                                   (call-with-values
-                                                                    (lambda ()
-                                                                      (call-with-values
-                                                                       (lambda ()
-                                                                         (let ((s_0
-                                                                                (if (syntax?$1
-                                                                                     req_0)
-                                                                                  (syntax-e$1
-                                                                                   req_0)
-                                                                                  req_0)))
-                                                                           (if (pair?
-                                                                                s_0)
-                                                                             (let ((for-meta162_0
-                                                                                    (let ((s_1
-                                                                                           (car
-                                                                                            s_0)))
-                                                                                      s_1)))
-                                                                               (call-with-values
-                                                                                (lambda ()
-                                                                                  (let ((s_1
-                                                                                         (cdr
-                                                                                          s_0)))
-                                                                                    (let ((s_2
-                                                                                           (if (syntax?$1
-                                                                                                s_1)
-                                                                                             (syntax-e$1
-                                                                                              s_1)
-                                                                                             s_1)))
-                                                                                      (if (pair?
-                                                                                           s_2)
-                                                                                        (let ((phase-level165_0
-                                                                                               (let ((s_3
-                                                                                                      (car
-                                                                                                       s_2)))
-                                                                                                 s_3)))
-                                                                                          (let ((spec166_0
-                                                                                                 (let ((s_3
-                                                                                                        (cdr
-                                                                                                         s_2)))
-                                                                                                   (let ((s_4
-                                                                                                          (if (syntax?$1
-                                                                                                               s_3)
-                                                                                                            (syntax-e$1
-                                                                                                             s_3)
-                                                                                                            s_3)))
-                                                                                                     (let ((flat-s_0
-                                                                                                            (to-syntax-list.1
-                                                                                                             s_4)))
-                                                                                                       (if (not
-                                                                                                            flat-s_0)
-                                                                                                         (raise-syntax-error$1
-                                                                                                          #f
-                                                                                                          "bad syntax"
-                                                                                                          req_0)
-                                                                                                         flat-s_0))))))
-                                                                                            (let ((phase-level165_1
-                                                                                                   phase-level165_0))
-                                                                                              (values
-                                                                                               phase-level165_1
-                                                                                               spec166_0))))
-                                                                                        (raise-syntax-error$1
-                                                                                         #f
-                                                                                         "bad syntax"
-                                                                                         req_0)))))
-                                                                                (case-lambda
-                                                                                 ((phase-level163_0
-                                                                                   spec164_0)
-                                                                                  (let ((for-meta162_1
-                                                                                         for-meta162_0))
-                                                                                    (values
-                                                                                     for-meta162_1
-                                                                                     phase-level163_0
-                                                                                     spec164_0)))
-                                                                                 (args
-                                                                                  (raise-binding-result-arity-error
-                                                                                   2
-                                                                                   args)))))
-                                                                             (raise-syntax-error$1
-                                                                              #f
-                                                                              "bad syntax"
-                                                                              req_0))))
-                                                                       (case-lambda
-                                                                        ((for-meta159_0
-                                                                          phase-level160_0
-                                                                          spec161_0)
-                                                                         (values
-                                                                          #t
-                                                                          for-meta159_0
-                                                                          phase-level160_0
-                                                                          spec161_0))
-                                                                        (args
-                                                                         (raise-binding-result-arity-error
-                                                                          3
-                                                                          args)))))
-                                                                    (case-lambda
-                                                                     ((ok?_0
-                                                                       for-meta159_0
-                                                                       phase-level160_0
-                                                                       spec161_0)
-                                                                      (let ((p_0
-                                                                             (syntax-e$1
-                                                                              phase-level160_0)))
-                                                                        (begin
-                                                                          (if (phase?
-                                                                               p_0)
-                                                                            (void)
-                                                                            (raise-syntax-error$1
-                                                                             #f
-                                                                             "bad phase"
-                                                                             orig-s29_0
-                                                                             req_0))
-                                                                          (let ((app_0
-                                                                                 (if top-req_0
-                                                                                   top-req_0
-                                                                                   req_0)))
-                                                                            (loop_0
-                                                                             spec161_0
-                                                                             app_0
-                                                                             (phase+
-                                                                              phase-shift_0
-                                                                              p_0)
-                                                                             space-level_0
-                                                                             just-meta_0
-                                                                             just-space_0
-                                                                             adjust_0
-                                                                             gluing_0
-                                                                             #f
-                                                                             just-meta-ok?_0
-                                                                             'raw)))))
-                                                                     (args
-                                                                      (raise-binding-result-arity-error
-                                                                       4
-                                                                       args)))))
-                                                                 (begin
-                                                                   (check-nested_1
-                                                                    'raw
-                                                                    for-meta-ok?_0)
-                                                                   (call-with-values
-                                                                    (lambda ()
-                                                                      (call-with-values
-                                                                       (lambda ()
-                                                                         (let ((s_0
-                                                                                (if (syntax?$1
-                                                                                     req_0)
-                                                                                  (syntax-e$1
-                                                                                   req_0)
-                                                                                  req_0)))
-                                                                           (if (pair?
-                                                                                s_0)
-                                                                             (let ((for-syntax169_0
-                                                                                    (let ((s_1
-                                                                                           (car
-                                                                                            s_0)))
-                                                                                      s_1)))
-                                                                               (let ((spec170_0
-                                                                                      (let ((s_1
-                                                                                             (cdr
-                                                                                              s_0)))
-                                                                                        (let ((s_2
-                                                                                               (if (syntax?$1
-                                                                                                    s_1)
-                                                                                                 (syntax-e$1
-                                                                                                  s_1)
-                                                                                                 s_1)))
-                                                                                          (let ((flat-s_0
-                                                                                                 (to-syntax-list.1
-                                                                                                  s_2)))
-                                                                                            (if (not
-                                                                                                 flat-s_0)
-                                                                                              (raise-syntax-error$1
-                                                                                               #f
-                                                                                               "bad syntax"
-                                                                                               req_0)
-                                                                                              flat-s_0))))))
-                                                                                 (let ((for-syntax169_1
-                                                                                        for-syntax169_0))
-                                                                                   (values
-                                                                                    for-syntax169_1
-                                                                                    spec170_0))))
-                                                                             (raise-syntax-error$1
-                                                                              #f
-                                                                              "bad syntax"
-                                                                              req_0))))
-                                                                       (case-lambda
-                                                                        ((for-syntax167_0
-                                                                          spec168_0)
-                                                                         (values
-                                                                          #t
-                                                                          for-syntax167_0
-                                                                          spec168_0))
-                                                                        (args
-                                                                         (raise-binding-result-arity-error
-                                                                          2
-                                                                          args)))))
-                                                                    (case-lambda
-                                                                     ((ok?_0
-                                                                       for-syntax167_0
-                                                                       spec168_0)
-                                                                      (let ((app_0
-                                                                             (if top-req_0
-                                                                               top-req_0
-                                                                               req_0)))
-                                                                        (loop_0
-                                                                         spec168_0
-                                                                         app_0
-                                                                         (phase+
-                                                                          phase-shift_0
-                                                                          1)
-                                                                         space-level_0
-                                                                         just-meta_0
-                                                                         just-space_0
-                                                                         adjust_0
-                                                                         gluing_0
-                                                                         #f
-                                                                         just-meta-ok?_0
-                                                                         'raw)))
-                                                                     (args
-                                                                      (raise-binding-result-arity-error
-                                                                       3
-                                                                       args)))))))
-                                                             (if (unsafe-fx<
-                                                                  index_0
-                                                                  4)
                                                                (begin
                                                                  (check-nested_1
                                                                   'raw
@@ -31447,457 +31128,7 @@
                                                                                 req_0)))
                                                                          (if (pair?
                                                                               s_0)
-                                                                           (let ((for-template173_0
-                                                                                  (let ((s_1
-                                                                                         (car
-                                                                                          s_0)))
-                                                                                    s_1)))
-                                                                             (let ((spec174_0
-                                                                                    (let ((s_1
-                                                                                           (cdr
-                                                                                            s_0)))
-                                                                                      (let ((s_2
-                                                                                             (if (syntax?$1
-                                                                                                  s_1)
-                                                                                               (syntax-e$1
-                                                                                                s_1)
-                                                                                               s_1)))
-                                                                                        (let ((flat-s_0
-                                                                                               (to-syntax-list.1
-                                                                                                s_2)))
-                                                                                          (if (not
-                                                                                               flat-s_0)
-                                                                                            (raise-syntax-error$1
-                                                                                             #f
-                                                                                             "bad syntax"
-                                                                                             req_0)
-                                                                                            flat-s_0))))))
-                                                                               (let ((for-template173_1
-                                                                                      for-template173_0))
-                                                                                 (values
-                                                                                  for-template173_1
-                                                                                  spec174_0))))
-                                                                           (raise-syntax-error$1
-                                                                            #f
-                                                                            "bad syntax"
-                                                                            req_0))))
-                                                                     (case-lambda
-                                                                      ((for-template171_0
-                                                                        spec172_0)
-                                                                       (values
-                                                                        #t
-                                                                        for-template171_0
-                                                                        spec172_0))
-                                                                      (args
-                                                                       (raise-binding-result-arity-error
-                                                                        2
-                                                                        args)))))
-                                                                  (case-lambda
-                                                                   ((ok?_0
-                                                                     for-template171_0
-                                                                     spec172_0)
-                                                                    (let ((app_0
-                                                                           (if top-req_0
-                                                                             top-req_0
-                                                                             req_0)))
-                                                                      (loop_0
-                                                                       spec172_0
-                                                                       app_0
-                                                                       (phase+
-                                                                        phase-shift_0
-                                                                        -1)
-                                                                       space-level_0
-                                                                       just-meta_0
-                                                                       just-space_0
-                                                                       adjust_0
-                                                                       gluing_0
-                                                                       #f
-                                                                       just-meta-ok?_0
-                                                                       'raw)))
-                                                                   (args
-                                                                    (raise-binding-result-arity-error
-                                                                     3
-                                                                     args)))))
-                                                               (if (unsafe-fx<
-                                                                    index_0
-                                                                    5)
-                                                                 (begin
-                                                                   (check-nested_1
-                                                                    'raw
-                                                                    for-meta-ok?_0)
-                                                                   (call-with-values
-                                                                    (lambda ()
-                                                                      (call-with-values
-                                                                       (lambda ()
-                                                                         (let ((s_0
-                                                                                (if (syntax?$1
-                                                                                     req_0)
-                                                                                  (syntax-e$1
-                                                                                   req_0)
-                                                                                  req_0)))
-                                                                           (if (pair?
-                                                                                s_0)
-                                                                             (let ((for-label177_0
-                                                                                    (let ((s_1
-                                                                                           (car
-                                                                                            s_0)))
-                                                                                      s_1)))
-                                                                               (let ((spec178_0
-                                                                                      (let ((s_1
-                                                                                             (cdr
-                                                                                              s_0)))
-                                                                                        (let ((s_2
-                                                                                               (if (syntax?$1
-                                                                                                    s_1)
-                                                                                                 (syntax-e$1
-                                                                                                  s_1)
-                                                                                                 s_1)))
-                                                                                          (let ((flat-s_0
-                                                                                                 (to-syntax-list.1
-                                                                                                  s_2)))
-                                                                                            (if (not
-                                                                                                 flat-s_0)
-                                                                                              (raise-syntax-error$1
-                                                                                               #f
-                                                                                               "bad syntax"
-                                                                                               req_0)
-                                                                                              flat-s_0))))))
-                                                                                 (let ((for-label177_1
-                                                                                        for-label177_0))
-                                                                                   (values
-                                                                                    for-label177_1
-                                                                                    spec178_0))))
-                                                                             (raise-syntax-error$1
-                                                                              #f
-                                                                              "bad syntax"
-                                                                              req_0))))
-                                                                       (case-lambda
-                                                                        ((for-label175_0
-                                                                          spec176_0)
-                                                                         (values
-                                                                          #t
-                                                                          for-label175_0
-                                                                          spec176_0))
-                                                                        (args
-                                                                         (raise-binding-result-arity-error
-                                                                          2
-                                                                          args)))))
-                                                                    (case-lambda
-                                                                     ((ok?_0
-                                                                       for-label175_0
-                                                                       spec176_0)
-                                                                      (let ((app_0
-                                                                             (if top-req_0
-                                                                               top-req_0
-                                                                               req_0)))
-                                                                        (loop_0
-                                                                         spec176_0
-                                                                         app_0
-                                                                         (phase+
-                                                                          phase-shift_0
-                                                                          #f)
-                                                                         space-level_0
-                                                                         just-meta_0
-                                                                         just-space_0
-                                                                         adjust_0
-                                                                         gluing_0
-                                                                         #f
-                                                                         just-meta-ok?_0
-                                                                         'raw)))
-                                                                     (args
-                                                                      (raise-binding-result-arity-error
-                                                                       3
-                                                                       args)))))
-                                                                 (if (unsafe-fx<
-                                                                      index_0
-                                                                      6)
-                                                                   (begin
-                                                                     (check-nested_1
-                                                                      'raw
-                                                                      just-meta-ok?_0)
-                                                                     (call-with-values
-                                                                      (lambda ()
-                                                                        (call-with-values
-                                                                         (lambda ()
-                                                                           (let ((s_0
-                                                                                  (if (syntax?$1
-                                                                                       req_0)
-                                                                                    (syntax-e$1
-                                                                                     req_0)
-                                                                                    req_0)))
-                                                                             (if (pair?
-                                                                                  s_0)
-                                                                               (let ((just-meta182_0
-                                                                                      (let ((s_1
-                                                                                             (car
-                                                                                              s_0)))
-                                                                                        s_1)))
-                                                                                 (call-with-values
-                                                                                  (lambda ()
-                                                                                    (let ((s_1
-                                                                                           (cdr
-                                                                                            s_0)))
-                                                                                      (let ((s_2
-                                                                                             (if (syntax?$1
-                                                                                                  s_1)
-                                                                                               (syntax-e$1
-                                                                                                s_1)
-                                                                                               s_1)))
-                                                                                        (if (pair?
-                                                                                             s_2)
-                                                                                          (let ((phase-level185_0
-                                                                                                 (let ((s_3
-                                                                                                        (car
-                                                                                                         s_2)))
-                                                                                                   s_3)))
-                                                                                            (let ((spec186_0
-                                                                                                   (let ((s_3
-                                                                                                          (cdr
-                                                                                                           s_2)))
-                                                                                                     (let ((s_4
-                                                                                                            (if (syntax?$1
-                                                                                                                 s_3)
-                                                                                                              (syntax-e$1
-                                                                                                               s_3)
-                                                                                                              s_3)))
-                                                                                                       (let ((flat-s_0
-                                                                                                              (to-syntax-list.1
-                                                                                                               s_4)))
-                                                                                                         (if (not
-                                                                                                              flat-s_0)
-                                                                                                           (raise-syntax-error$1
-                                                                                                            #f
-                                                                                                            "bad syntax"
-                                                                                                            req_0)
-                                                                                                           flat-s_0))))))
-                                                                                              (let ((phase-level185_1
-                                                                                                     phase-level185_0))
-                                                                                                (values
-                                                                                                 phase-level185_1
-                                                                                                 spec186_0))))
-                                                                                          (raise-syntax-error$1
-                                                                                           #f
-                                                                                           "bad syntax"
-                                                                                           req_0)))))
-                                                                                  (case-lambda
-                                                                                   ((phase-level183_0
-                                                                                     spec184_0)
-                                                                                    (let ((just-meta182_1
-                                                                                           just-meta182_0))
-                                                                                      (values
-                                                                                       just-meta182_1
-                                                                                       phase-level183_0
-                                                                                       spec184_0)))
-                                                                                   (args
-                                                                                    (raise-binding-result-arity-error
-                                                                                     2
-                                                                                     args)))))
-                                                                               (raise-syntax-error$1
-                                                                                #f
-                                                                                "bad syntax"
-                                                                                req_0))))
-                                                                         (case-lambda
-                                                                          ((just-meta179_0
-                                                                            phase-level180_0
-                                                                            spec181_0)
-                                                                           (values
-                                                                            #t
-                                                                            just-meta179_0
-                                                                            phase-level180_0
-                                                                            spec181_0))
-                                                                          (args
-                                                                           (raise-binding-result-arity-error
-                                                                            3
-                                                                            args)))))
-                                                                      (case-lambda
-                                                                       ((ok?_0
-                                                                         just-meta179_0
-                                                                         phase-level180_0
-                                                                         spec181_0)
-                                                                        (let ((p_0
-                                                                               (syntax-e$1
-                                                                                phase-level180_0)))
-                                                                          (begin
-                                                                            (if (phase?
-                                                                                 p_0)
-                                                                              (void)
-                                                                              (raise-syntax-error$1
-                                                                               #f
-                                                                               "bad phase"
-                                                                               orig-s29_0
-                                                                               req_0))
-                                                                            (loop_0
-                                                                             spec181_0
-                                                                             (if top-req_0
-                                                                               top-req_0
-                                                                               req_0)
-                                                                             phase-shift_0
-                                                                             space-level_0
-                                                                             p_0
-                                                                             just-space_0
-                                                                             adjust_0
-                                                                             gluing_0
-                                                                             for-meta-ok?_0
-                                                                             #f
-                                                                             'raw))))
-                                                                       (args
-                                                                        (raise-binding-result-arity-error
-                                                                         4
-                                                                         args)))))
-                                                                   (begin
-                                                                     (check-nested_1
-                                                                      'phaseless)
-                                                                     (call-with-values
-                                                                      (lambda ()
-                                                                        (call-with-values
-                                                                         (lambda ()
-                                                                           (let ((s_0
-                                                                                  (if (syntax?$1
-                                                                                       req_0)
-                                                                                    (syntax-e$1
-                                                                                     req_0)
-                                                                                    req_0)))
-                                                                             (if (pair?
-                                                                                  s_0)
-                                                                               (let ((for-space190_0
-                                                                                      (let ((s_1
-                                                                                             (car
-                                                                                              s_0)))
-                                                                                        s_1)))
-                                                                                 (call-with-values
-                                                                                  (lambda ()
-                                                                                    (let ((s_1
-                                                                                           (cdr
-                                                                                            s_0)))
-                                                                                      (let ((s_2
-                                                                                             (if (syntax?$1
-                                                                                                  s_1)
-                                                                                               (syntax-e$1
-                                                                                                s_1)
-                                                                                               s_1)))
-                                                                                        (if (pair?
-                                                                                             s_2)
-                                                                                          (let ((space193_0
-                                                                                                 (let ((s_3
-                                                                                                        (car
-                                                                                                         s_2)))
-                                                                                                   s_3)))
-                                                                                            (let ((spec194_0
-                                                                                                   (let ((s_3
-                                                                                                          (cdr
-                                                                                                           s_2)))
-                                                                                                     (let ((s_4
-                                                                                                            (if (syntax?$1
-                                                                                                                 s_3)
-                                                                                                              (syntax-e$1
-                                                                                                               s_3)
-                                                                                                              s_3)))
-                                                                                                       (let ((flat-s_0
-                                                                                                              (to-syntax-list.1
-                                                                                                               s_4)))
-                                                                                                         (if (not
-                                                                                                              flat-s_0)
-                                                                                                           (raise-syntax-error$1
-                                                                                                            #f
-                                                                                                            "bad syntax"
-                                                                                                            req_0)
-                                                                                                           flat-s_0))))))
-                                                                                              (let ((space193_1
-                                                                                                     space193_0))
-                                                                                                (values
-                                                                                                 space193_1
-                                                                                                 spec194_0))))
-                                                                                          (raise-syntax-error$1
-                                                                                           #f
-                                                                                           "bad syntax"
-                                                                                           req_0)))))
-                                                                                  (case-lambda
-                                                                                   ((space191_0
-                                                                                     spec192_0)
-                                                                                    (let ((for-space190_1
-                                                                                           for-space190_0))
-                                                                                      (values
-                                                                                       for-space190_1
-                                                                                       space191_0
-                                                                                       spec192_0)))
-                                                                                   (args
-                                                                                    (raise-binding-result-arity-error
-                                                                                     2
-                                                                                     args)))))
-                                                                               (raise-syntax-error$1
-                                                                                #f
-                                                                                "bad syntax"
-                                                                                req_0))))
-                                                                         (case-lambda
-                                                                          ((for-space187_0
-                                                                            space188_0
-                                                                            spec189_0)
-                                                                           (values
-                                                                            #t
-                                                                            for-space187_0
-                                                                            space188_0
-                                                                            spec189_0))
-                                                                          (args
-                                                                           (raise-binding-result-arity-error
-                                                                            3
-                                                                            args)))))
-                                                                      (case-lambda
-                                                                       ((ok?_0
-                                                                         for-space187_0
-                                                                         space188_0
-                                                                         spec189_0)
-                                                                        (let ((space_0
-                                                                               (syntax-e$1
-                                                                                space188_0)))
-                                                                          (begin
-                                                                            (if (space?
-                                                                                 space_0)
-                                                                              (void)
-                                                                              (raise-syntax-error$1
-                                                                               #f
-                                                                               "bad space"
-                                                                               orig-s29_0
-                                                                               req_0))
-                                                                            (loop_0
-                                                                             spec189_0
-                                                                             (if top-req_0
-                                                                               top-req_0
-                                                                               req_0)
-                                                                             phase-shift_0
-                                                                             space_0
-                                                                             just-meta_0
-                                                                             just-space_0
-                                                                             adjust_0
-                                                                             gluing_0
-                                                                             #f
-                                                                             #f
-                                                                             'spaceless))))
-                                                                       (args
-                                                                        (raise-binding-result-arity-error
-                                                                         4
-                                                                         args)))))))))
-                                                           (if (unsafe-fx<
-                                                                index_0
-                                                                10)
-                                                             (if (unsafe-fx<
-                                                                  index_0
-                                                                  8)
-                                                               (begin
-                                                                 (check-nested_1
-                                                                  'spaceless)
-                                                                 (call-with-values
-                                                                  (lambda ()
-                                                                    (call-with-values
-                                                                     (lambda ()
-                                                                       (let ((s_0
-                                                                              (if (syntax?$1
-                                                                                   req_0)
-                                                                                (syntax-e$1
-                                                                                 req_0)
-                                                                                req_0)))
-                                                                         (if (pair?
-                                                                              s_0)
-                                                                           (let ((just-space198_0
+                                                                           (let ((for-meta156_0
                                                                                   (let ((s_1
                                                                                          (car
                                                                                           s_0)))
@@ -31915,12 +31146,12 @@
                                                                                            s_1)))
                                                                                     (if (pair?
                                                                                          s_2)
-                                                                                      (let ((space201_0
+                                                                                      (let ((phase-level159_0
                                                                                              (let ((s_3
                                                                                                     (car
                                                                                                      s_2)))
                                                                                                s_3)))
-                                                                                        (let ((spec202_0
+                                                                                        (let ((spec160_0
                                                                                                (let ((s_3
                                                                                                       (cdr
                                                                                                        s_2)))
@@ -31940,24 +31171,24 @@
                                                                                                         "bad syntax"
                                                                                                         req_0)
                                                                                                        flat-s_0))))))
-                                                                                          (let ((space201_1
-                                                                                                 space201_0))
+                                                                                          (let ((phase-level159_1
+                                                                                                 phase-level159_0))
                                                                                             (values
-                                                                                             space201_1
-                                                                                             spec202_0))))
+                                                                                             phase-level159_1
+                                                                                             spec160_0))))
                                                                                       (raise-syntax-error$1
                                                                                        #f
                                                                                        "bad syntax"
                                                                                        req_0)))))
                                                                               (case-lambda
-                                                                               ((space199_0
-                                                                                 spec200_0)
-                                                                                (let ((just-space198_1
-                                                                                       just-space198_0))
+                                                                               ((phase-level157_0
+                                                                                 spec158_0)
+                                                                                (let ((for-meta156_1
+                                                                                       for-meta156_0))
                                                                                   (values
-                                                                                   just-space198_1
-                                                                                   space199_0
-                                                                                   spec200_0)))
+                                                                                   for-meta156_1
+                                                                                   phase-level157_0
+                                                                                   spec158_0)))
                                                                                (args
                                                                                 (raise-binding-result-arity-error
                                                                                  2
@@ -31967,59 +31198,152 @@
                                                                             "bad syntax"
                                                                             req_0))))
                                                                      (case-lambda
-                                                                      ((just-space195_0
-                                                                        space196_0
-                                                                        spec197_0)
+                                                                      ((for-meta153_0
+                                                                        phase-level154_0
+                                                                        spec155_0)
                                                                        (values
                                                                         #t
-                                                                        just-space195_0
-                                                                        space196_0
-                                                                        spec197_0))
+                                                                        for-meta153_0
+                                                                        phase-level154_0
+                                                                        spec155_0))
                                                                       (args
                                                                        (raise-binding-result-arity-error
                                                                         3
                                                                         args)))))
                                                                   (case-lambda
                                                                    ((ok?_0
-                                                                     just-space195_0
-                                                                     space196_0
-                                                                     spec197_0)
-                                                                    (let ((space_0
+                                                                     for-meta153_0
+                                                                     phase-level154_0
+                                                                     spec155_0)
+                                                                    (let ((p_0
                                                                            (syntax-e$1
-                                                                            space196_0)))
+                                                                            phase-level154_0)))
                                                                       (begin
-                                                                        (if (space?
-                                                                             space_0)
+                                                                        (if (phase?
+                                                                             p_0)
                                                                           (void)
                                                                           (raise-syntax-error$1
                                                                            #f
-                                                                           "bad space"
-                                                                           orig-s29_0
+                                                                           "bad phase"
+                                                                           orig-s28_0
                                                                            req_0))
-                                                                        (loop_0
-                                                                         spec197_0
-                                                                         (if top-req_0
-                                                                           top-req_0
-                                                                           req_0)
-                                                                         phase-shift_0
-                                                                         space-level_0
-                                                                         just-meta_0
-                                                                         space_0
-                                                                         adjust_0
-                                                                         gluing_0
-                                                                         #f
-                                                                         #f
-                                                                         'justspaceless))))
+                                                                        (let ((app_0
+                                                                               (if top-req_0
+                                                                                 top-req_0
+                                                                                 req_0)))
+                                                                          (loop_0
+                                                                           spec155_0
+                                                                           app_0
+                                                                           (phase+
+                                                                            phase-shift_0
+                                                                            p_0)
+                                                                           space-level_0
+                                                                           just-meta_0
+                                                                           just-space_0
+                                                                           adjust_0
+                                                                           #f
+                                                                           just-meta-ok?_0
+                                                                           'raw)))))
                                                                    (args
                                                                     (raise-binding-result-arity-error
                                                                      4
+                                                                     args))))))
+                                                             (if (unsafe-fx<
+                                                                  index_0
+                                                                  3)
+                                                               (begin
+                                                                 (check-nested_1
+                                                                  'raw
+                                                                  for-meta-ok?_0)
+                                                                 (call-with-values
+                                                                  (lambda ()
+                                                                    (call-with-values
+                                                                     (lambda ()
+                                                                       (let ((s_0
+                                                                              (if (syntax?$1
+                                                                                   req_0)
+                                                                                (syntax-e$1
+                                                                                 req_0)
+                                                                                req_0)))
+                                                                         (if (pair?
+                                                                              s_0)
+                                                                           (let ((for-syntax163_0
+                                                                                  (let ((s_1
+                                                                                         (car
+                                                                                          s_0)))
+                                                                                    s_1)))
+                                                                             (let ((spec164_0
+                                                                                    (let ((s_1
+                                                                                           (cdr
+                                                                                            s_0)))
+                                                                                      (let ((s_2
+                                                                                             (if (syntax?$1
+                                                                                                  s_1)
+                                                                                               (syntax-e$1
+                                                                                                s_1)
+                                                                                               s_1)))
+                                                                                        (let ((flat-s_0
+                                                                                               (to-syntax-list.1
+                                                                                                s_2)))
+                                                                                          (if (not
+                                                                                               flat-s_0)
+                                                                                            (raise-syntax-error$1
+                                                                                             #f
+                                                                                             "bad syntax"
+                                                                                             req_0)
+                                                                                            flat-s_0))))))
+                                                                               (let ((for-syntax163_1
+                                                                                      for-syntax163_0))
+                                                                                 (values
+                                                                                  for-syntax163_1
+                                                                                  spec164_0))))
+                                                                           (raise-syntax-error$1
+                                                                            #f
+                                                                            "bad syntax"
+                                                                            req_0))))
+                                                                     (case-lambda
+                                                                      ((for-syntax161_0
+                                                                        spec162_0)
+                                                                       (values
+                                                                        #t
+                                                                        for-syntax161_0
+                                                                        spec162_0))
+                                                                      (args
+                                                                       (raise-binding-result-arity-error
+                                                                        2
+                                                                        args)))))
+                                                                  (case-lambda
+                                                                   ((ok?_0
+                                                                     for-syntax161_0
+                                                                     spec162_0)
+                                                                    (let ((app_0
+                                                                           (if top-req_0
+                                                                             top-req_0
+                                                                             req_0)))
+                                                                      (loop_0
+                                                                       spec162_0
+                                                                       app_0
+                                                                       (phase+
+                                                                        phase-shift_0
+                                                                        1)
+                                                                       space-level_0
+                                                                       just-meta_0
+                                                                       just-space_0
+                                                                       adjust_0
+                                                                       #f
+                                                                       just-meta-ok?_0
+                                                                       'raw)))
+                                                                   (args
+                                                                    (raise-binding-result-arity-error
+                                                                     3
                                                                      args)))))
                                                                (if (unsafe-fx<
                                                                     index_0
-                                                                    9)
+                                                                    4)
                                                                  (begin
                                                                    (check-nested_1
-                                                                    'justspaceless)
+                                                                    'raw
+                                                                    for-meta-ok?_0)
                                                                    (call-with-values
                                                                     (lambda ()
                                                                       (call-with-values
@@ -32032,7 +31356,484 @@
                                                                                   req_0)))
                                                                            (if (pair?
                                                                                 s_0)
-                                                                             (let ((only206_0
+                                                                             (let ((for-template167_0
+                                                                                    (let ((s_1
+                                                                                           (car
+                                                                                            s_0)))
+                                                                                      s_1)))
+                                                                               (let ((spec168_0
+                                                                                      (let ((s_1
+                                                                                             (cdr
+                                                                                              s_0)))
+                                                                                        (let ((s_2
+                                                                                               (if (syntax?$1
+                                                                                                    s_1)
+                                                                                                 (syntax-e$1
+                                                                                                  s_1)
+                                                                                                 s_1)))
+                                                                                          (let ((flat-s_0
+                                                                                                 (to-syntax-list.1
+                                                                                                  s_2)))
+                                                                                            (if (not
+                                                                                                 flat-s_0)
+                                                                                              (raise-syntax-error$1
+                                                                                               #f
+                                                                                               "bad syntax"
+                                                                                               req_0)
+                                                                                              flat-s_0))))))
+                                                                                 (let ((for-template167_1
+                                                                                        for-template167_0))
+                                                                                   (values
+                                                                                    for-template167_1
+                                                                                    spec168_0))))
+                                                                             (raise-syntax-error$1
+                                                                              #f
+                                                                              "bad syntax"
+                                                                              req_0))))
+                                                                       (case-lambda
+                                                                        ((for-template165_0
+                                                                          spec166_0)
+                                                                         (values
+                                                                          #t
+                                                                          for-template165_0
+                                                                          spec166_0))
+                                                                        (args
+                                                                         (raise-binding-result-arity-error
+                                                                          2
+                                                                          args)))))
+                                                                    (case-lambda
+                                                                     ((ok?_0
+                                                                       for-template165_0
+                                                                       spec166_0)
+                                                                      (let ((app_0
+                                                                             (if top-req_0
+                                                                               top-req_0
+                                                                               req_0)))
+                                                                        (loop_0
+                                                                         spec166_0
+                                                                         app_0
+                                                                         (phase+
+                                                                          phase-shift_0
+                                                                          -1)
+                                                                         space-level_0
+                                                                         just-meta_0
+                                                                         just-space_0
+                                                                         adjust_0
+                                                                         #f
+                                                                         just-meta-ok?_0
+                                                                         'raw)))
+                                                                     (args
+                                                                      (raise-binding-result-arity-error
+                                                                       3
+                                                                       args)))))
+                                                                 (if (unsafe-fx<
+                                                                      index_0
+                                                                      5)
+                                                                   (begin
+                                                                     (check-nested_1
+                                                                      'raw
+                                                                      for-meta-ok?_0)
+                                                                     (call-with-values
+                                                                      (lambda ()
+                                                                        (call-with-values
+                                                                         (lambda ()
+                                                                           (let ((s_0
+                                                                                  (if (syntax?$1
+                                                                                       req_0)
+                                                                                    (syntax-e$1
+                                                                                     req_0)
+                                                                                    req_0)))
+                                                                             (if (pair?
+                                                                                  s_0)
+                                                                               (let ((for-label171_0
+                                                                                      (let ((s_1
+                                                                                             (car
+                                                                                              s_0)))
+                                                                                        s_1)))
+                                                                                 (let ((spec172_0
+                                                                                        (let ((s_1
+                                                                                               (cdr
+                                                                                                s_0)))
+                                                                                          (let ((s_2
+                                                                                                 (if (syntax?$1
+                                                                                                      s_1)
+                                                                                                   (syntax-e$1
+                                                                                                    s_1)
+                                                                                                   s_1)))
+                                                                                            (let ((flat-s_0
+                                                                                                   (to-syntax-list.1
+                                                                                                    s_2)))
+                                                                                              (if (not
+                                                                                                   flat-s_0)
+                                                                                                (raise-syntax-error$1
+                                                                                                 #f
+                                                                                                 "bad syntax"
+                                                                                                 req_0)
+                                                                                                flat-s_0))))))
+                                                                                   (let ((for-label171_1
+                                                                                          for-label171_0))
+                                                                                     (values
+                                                                                      for-label171_1
+                                                                                      spec172_0))))
+                                                                               (raise-syntax-error$1
+                                                                                #f
+                                                                                "bad syntax"
+                                                                                req_0))))
+                                                                         (case-lambda
+                                                                          ((for-label169_0
+                                                                            spec170_0)
+                                                                           (values
+                                                                            #t
+                                                                            for-label169_0
+                                                                            spec170_0))
+                                                                          (args
+                                                                           (raise-binding-result-arity-error
+                                                                            2
+                                                                            args)))))
+                                                                      (case-lambda
+                                                                       ((ok?_0
+                                                                         for-label169_0
+                                                                         spec170_0)
+                                                                        (let ((app_0
+                                                                               (if top-req_0
+                                                                                 top-req_0
+                                                                                 req_0)))
+                                                                          (loop_0
+                                                                           spec170_0
+                                                                           app_0
+                                                                           (phase+
+                                                                            phase-shift_0
+                                                                            #f)
+                                                                           space-level_0
+                                                                           just-meta_0
+                                                                           just-space_0
+                                                                           adjust_0
+                                                                           #f
+                                                                           just-meta-ok?_0
+                                                                           'raw)))
+                                                                       (args
+                                                                        (raise-binding-result-arity-error
+                                                                         3
+                                                                         args)))))
+                                                                   (begin
+                                                                     (check-nested_1
+                                                                      'raw
+                                                                      just-meta-ok?_0)
+                                                                     (call-with-values
+                                                                      (lambda ()
+                                                                        (call-with-values
+                                                                         (lambda ()
+                                                                           (let ((s_0
+                                                                                  (if (syntax?$1
+                                                                                       req_0)
+                                                                                    (syntax-e$1
+                                                                                     req_0)
+                                                                                    req_0)))
+                                                                             (if (pair?
+                                                                                  s_0)
+                                                                               (let ((just-meta176_0
+                                                                                      (let ((s_1
+                                                                                             (car
+                                                                                              s_0)))
+                                                                                        s_1)))
+                                                                                 (call-with-values
+                                                                                  (lambda ()
+                                                                                    (let ((s_1
+                                                                                           (cdr
+                                                                                            s_0)))
+                                                                                      (let ((s_2
+                                                                                             (if (syntax?$1
+                                                                                                  s_1)
+                                                                                               (syntax-e$1
+                                                                                                s_1)
+                                                                                               s_1)))
+                                                                                        (if (pair?
+                                                                                             s_2)
+                                                                                          (let ((phase-level179_0
+                                                                                                 (let ((s_3
+                                                                                                        (car
+                                                                                                         s_2)))
+                                                                                                   s_3)))
+                                                                                            (let ((spec180_0
+                                                                                                   (let ((s_3
+                                                                                                          (cdr
+                                                                                                           s_2)))
+                                                                                                     (let ((s_4
+                                                                                                            (if (syntax?$1
+                                                                                                                 s_3)
+                                                                                                              (syntax-e$1
+                                                                                                               s_3)
+                                                                                                              s_3)))
+                                                                                                       (let ((flat-s_0
+                                                                                                              (to-syntax-list.1
+                                                                                                               s_4)))
+                                                                                                         (if (not
+                                                                                                              flat-s_0)
+                                                                                                           (raise-syntax-error$1
+                                                                                                            #f
+                                                                                                            "bad syntax"
+                                                                                                            req_0)
+                                                                                                           flat-s_0))))))
+                                                                                              (let ((phase-level179_1
+                                                                                                     phase-level179_0))
+                                                                                                (values
+                                                                                                 phase-level179_1
+                                                                                                 spec180_0))))
+                                                                                          (raise-syntax-error$1
+                                                                                           #f
+                                                                                           "bad syntax"
+                                                                                           req_0)))))
+                                                                                  (case-lambda
+                                                                                   ((phase-level177_0
+                                                                                     spec178_0)
+                                                                                    (let ((just-meta176_1
+                                                                                           just-meta176_0))
+                                                                                      (values
+                                                                                       just-meta176_1
+                                                                                       phase-level177_0
+                                                                                       spec178_0)))
+                                                                                   (args
+                                                                                    (raise-binding-result-arity-error
+                                                                                     2
+                                                                                     args)))))
+                                                                               (raise-syntax-error$1
+                                                                                #f
+                                                                                "bad syntax"
+                                                                                req_0))))
+                                                                         (case-lambda
+                                                                          ((just-meta173_0
+                                                                            phase-level174_0
+                                                                            spec175_0)
+                                                                           (values
+                                                                            #t
+                                                                            just-meta173_0
+                                                                            phase-level174_0
+                                                                            spec175_0))
+                                                                          (args
+                                                                           (raise-binding-result-arity-error
+                                                                            3
+                                                                            args)))))
+                                                                      (case-lambda
+                                                                       ((ok?_0
+                                                                         just-meta173_0
+                                                                         phase-level174_0
+                                                                         spec175_0)
+                                                                        (let ((p_0
+                                                                               (syntax-e$1
+                                                                                phase-level174_0)))
+                                                                          (begin
+                                                                            (if (phase?
+                                                                                 p_0)
+                                                                              (void)
+                                                                              (raise-syntax-error$1
+                                                                               #f
+                                                                               "bad phase"
+                                                                               orig-s28_0
+                                                                               req_0))
+                                                                            (loop_0
+                                                                             spec175_0
+                                                                             (if top-req_0
+                                                                               top-req_0
+                                                                               req_0)
+                                                                             phase-shift_0
+                                                                             space-level_0
+                                                                             p_0
+                                                                             just-space_0
+                                                                             adjust_0
+                                                                             for-meta-ok?_0
+                                                                             #f
+                                                                             'raw))))
+                                                                       (args
+                                                                        (raise-binding-result-arity-error
+                                                                         4
+                                                                         args)))))))))
+                                                           (if (unsafe-fx<
+                                                                index_0
+                                                                9)
+                                                             (if (unsafe-fx<
+                                                                  index_0
+                                                                  7)
+                                                               (begin
+                                                                 (check-nested_1
+                                                                  'raw
+                                                                  (eq?
+                                                                   just-meta_0
+                                                                   'all))
+                                                                 (call-with-values
+                                                                  (lambda ()
+                                                                    (call-with-values
+                                                                     (lambda ()
+                                                                       (let ((s_0
+                                                                              (if (syntax?$1
+                                                                                   req_0)
+                                                                                (syntax-e$1
+                                                                                 req_0)
+                                                                                req_0)))
+                                                                         (if (pair?
+                                                                              s_0)
+                                                                           (let ((glue184_0
+                                                                                  (let ((s_1
+                                                                                         (car
+                                                                                          s_0)))
+                                                                                    s_1)))
+                                                                             (call-with-values
+                                                                              (lambda ()
+                                                                                (let ((s_1
+                                                                                       (cdr
+                                                                                        s_0)))
+                                                                                  (let ((s_2
+                                                                                         (if (syntax?$1
+                                                                                              s_1)
+                                                                                           (syntax-e$1
+                                                                                            s_1)
+                                                                                           s_1)))
+                                                                                    (if (pair?
+                                                                                         s_2)
+                                                                                      (let ((id:name187_0
+                                                                                             (let ((s_3
+                                                                                                    (car
+                                                                                                     s_2)))
+                                                                                               (if (let ((or-part_0
+                                                                                                          (if (syntax?$1
+                                                                                                               s_3)
+                                                                                                            (symbol?
+                                                                                                             (syntax-e$1
+                                                                                                              s_3))
+                                                                                                            #f)))
+                                                                                                     (if or-part_0
+                                                                                                       or-part_0
+                                                                                                       (symbol?
+                                                                                                        s_3)))
+                                                                                                 s_3
+                                                                                                 (raise-syntax-error$1
+                                                                                                  #f
+                                                                                                  "not an identifier"
+                                                                                                  req_0
+                                                                                                  s_3)))))
+                                                                                        (let ((stx188_0
+                                                                                               (let ((s_3
+                                                                                                      (cdr
+                                                                                                       s_2)))
+                                                                                                 (let ((s_4
+                                                                                                        (if (syntax?$1
+                                                                                                             s_3)
+                                                                                                          (syntax-e$1
+                                                                                                           s_3)
+                                                                                                          s_3)))
+                                                                                                   (if (pair?
+                                                                                                        s_4)
+                                                                                                     (let ((stx189_0
+                                                                                                            (let ((s_5
+                                                                                                                   (car
+                                                                                                                    s_4)))
+                                                                                                              s_5)))
+                                                                                                       (call-with-values
+                                                                                                        (lambda ()
+                                                                                                          (let ((s_5
+                                                                                                                 (cdr
+                                                                                                                  s_4)))
+                                                                                                            (let ((s_6
+                                                                                                                   (if (syntax?$1
+                                                                                                                        s_5)
+                                                                                                                     (syntax-e$1
+                                                                                                                      s_5)
+                                                                                                                     s_5)))
+                                                                                                              (if (null?
+                                                                                                                   s_6)
+                                                                                                                (values)
+                                                                                                                (raise-syntax-error$1
+                                                                                                                 #f
+                                                                                                                 "bad syntax"
+                                                                                                                 req_0)))))
+                                                                                                        (case-lambda
+                                                                                                         (()
+                                                                                                          (let ((stx189_1
+                                                                                                                 stx189_0))
+                                                                                                            (values
+                                                                                                             stx189_1)))
+                                                                                                         (args
+                                                                                                          (raise-binding-result-arity-error
+                                                                                                           0
+                                                                                                           args)))))
+                                                                                                     (raise-syntax-error$1
+                                                                                                      #f
+                                                                                                      "bad syntax"
+                                                                                                      req_0))))))
+                                                                                          (let ((id:name187_1
+                                                                                                 id:name187_0))
+                                                                                            (values
+                                                                                             id:name187_1
+                                                                                             stx188_0))))
+                                                                                      (raise-syntax-error$1
+                                                                                       #f
+                                                                                       "bad syntax"
+                                                                                       req_0)))))
+                                                                              (case-lambda
+                                                                               ((id:name185_0
+                                                                                 stx186_0)
+                                                                                (let ((glue184_1
+                                                                                       glue184_0))
+                                                                                  (values
+                                                                                   glue184_1
+                                                                                   id:name185_0
+                                                                                   stx186_0)))
+                                                                               (args
+                                                                                (raise-binding-result-arity-error
+                                                                                 2
+                                                                                 args)))))
+                                                                           (raise-syntax-error$1
+                                                                            #f
+                                                                            "bad syntax"
+                                                                            req_0))))
+                                                                     (case-lambda
+                                                                      ((glue181_0
+                                                                        id:name182_0
+                                                                        stx183_0)
+                                                                       (values
+                                                                        #t
+                                                                        glue181_0
+                                                                        id:name182_0
+                                                                        stx183_0))
+                                                                      (args
+                                                                       (raise-binding-result-arity-error
+                                                                        3
+                                                                        args)))))
+                                                                  (case-lambda
+                                                                   ((ok?_0
+                                                                     glue181_0
+                                                                     id:name182_0
+                                                                     stx183_0)
+                                                                    (perform-glue-syntax-bind!.1
+                                                                     add-defined-bin14_0
+                                                                     orig-s28_0
+                                                                     phase-shift_0
+                                                                     requires+provides31_0
+                                                                     self5_0
+                                                                     id:name182_0
+                                                                     stx183_0))
+                                                                   (args
+                                                                    (raise-binding-result-arity-error
+                                                                     4
+                                                                     args)))))
+                                                               (if (unsafe-fx<
+                                                                    index_0
+                                                                    8)
+                                                                 (begin
+                                                                   (check-nested_1
+                                                                    'phaseless)
+                                                                   (call-with-values
+                                                                    (lambda ()
+                                                                      (call-with-values
+                                                                       (lambda ()
+                                                                         (let ((s_0
+                                                                                (if (syntax?$1
+                                                                                     req_0)
+                                                                                  (syntax-e$1
+                                                                                   req_0)
+                                                                                  req_0)))
+                                                                           (if (pair?
+                                                                                s_0)
+                                                                             (let ((for-space200_0
                                                                                     (let ((s_1
                                                                                            (car
                                                                                             s_0)))
@@ -32050,12 +31851,280 @@
                                                                                              s_1)))
                                                                                       (if (pair?
                                                                                            s_2)
-                                                                                        (let ((spec209_0
+                                                                                        (let ((space203_0
                                                                                                (let ((s_3
                                                                                                       (car
                                                                                                        s_2)))
                                                                                                  s_3)))
-                                                                                          (let ((id210_0
+                                                                                          (let ((spec204_0
+                                                                                                 (let ((s_3
+                                                                                                        (cdr
+                                                                                                         s_2)))
+                                                                                                   (let ((s_4
+                                                                                                          (if (syntax?$1
+                                                                                                               s_3)
+                                                                                                            (syntax-e$1
+                                                                                                             s_3)
+                                                                                                            s_3)))
+                                                                                                     (let ((flat-s_0
+                                                                                                            (to-syntax-list.1
+                                                                                                             s_4)))
+                                                                                                       (if (not
+                                                                                                            flat-s_0)
+                                                                                                         (raise-syntax-error$1
+                                                                                                          #f
+                                                                                                          "bad syntax"
+                                                                                                          req_0)
+                                                                                                         flat-s_0))))))
+                                                                                            (let ((space203_1
+                                                                                                   space203_0))
+                                                                                              (values
+                                                                                               space203_1
+                                                                                               spec204_0))))
+                                                                                        (raise-syntax-error$1
+                                                                                         #f
+                                                                                         "bad syntax"
+                                                                                         req_0)))))
+                                                                                (case-lambda
+                                                                                 ((space201_0
+                                                                                   spec202_0)
+                                                                                  (let ((for-space200_1
+                                                                                         for-space200_0))
+                                                                                    (values
+                                                                                     for-space200_1
+                                                                                     space201_0
+                                                                                     spec202_0)))
+                                                                                 (args
+                                                                                  (raise-binding-result-arity-error
+                                                                                   2
+                                                                                   args)))))
+                                                                             (raise-syntax-error$1
+                                                                              #f
+                                                                              "bad syntax"
+                                                                              req_0))))
+                                                                       (case-lambda
+                                                                        ((for-space197_0
+                                                                          space198_0
+                                                                          spec199_0)
+                                                                         (values
+                                                                          #t
+                                                                          for-space197_0
+                                                                          space198_0
+                                                                          spec199_0))
+                                                                        (args
+                                                                         (raise-binding-result-arity-error
+                                                                          3
+                                                                          args)))))
+                                                                    (case-lambda
+                                                                     ((ok?_0
+                                                                       for-space197_0
+                                                                       space198_0
+                                                                       spec199_0)
+                                                                      (let ((space_0
+                                                                             (syntax-e$1
+                                                                              space198_0)))
+                                                                        (begin
+                                                                          (if (space?
+                                                                               space_0)
+                                                                            (void)
+                                                                            (raise-syntax-error$1
+                                                                             #f
+                                                                             "bad space"
+                                                                             orig-s28_0
+                                                                             req_0))
+                                                                          (loop_0
+                                                                           spec199_0
+                                                                           (if top-req_0
+                                                                             top-req_0
+                                                                             req_0)
+                                                                           phase-shift_0
+                                                                           space_0
+                                                                           just-meta_0
+                                                                           just-space_0
+                                                                           adjust_0
+                                                                           #f
+                                                                           #f
+                                                                           'spaceless))))
+                                                                     (args
+                                                                      (raise-binding-result-arity-error
+                                                                       4
+                                                                       args)))))
+                                                                 (begin
+                                                                   (check-nested_1
+                                                                    'spaceless)
+                                                                   (call-with-values
+                                                                    (lambda ()
+                                                                      (call-with-values
+                                                                       (lambda ()
+                                                                         (let ((s_0
+                                                                                (if (syntax?$1
+                                                                                     req_0)
+                                                                                  (syntax-e$1
+                                                                                   req_0)
+                                                                                  req_0)))
+                                                                           (if (pair?
+                                                                                s_0)
+                                                                             (let ((just-space208_0
+                                                                                    (let ((s_1
+                                                                                           (car
+                                                                                            s_0)))
+                                                                                      s_1)))
+                                                                               (call-with-values
+                                                                                (lambda ()
+                                                                                  (let ((s_1
+                                                                                         (cdr
+                                                                                          s_0)))
+                                                                                    (let ((s_2
+                                                                                           (if (syntax?$1
+                                                                                                s_1)
+                                                                                             (syntax-e$1
+                                                                                              s_1)
+                                                                                             s_1)))
+                                                                                      (if (pair?
+                                                                                           s_2)
+                                                                                        (let ((space211_0
+                                                                                               (let ((s_3
+                                                                                                      (car
+                                                                                                       s_2)))
+                                                                                                 s_3)))
+                                                                                          (let ((spec212_0
+                                                                                                 (let ((s_3
+                                                                                                        (cdr
+                                                                                                         s_2)))
+                                                                                                   (let ((s_4
+                                                                                                          (if (syntax?$1
+                                                                                                               s_3)
+                                                                                                            (syntax-e$1
+                                                                                                             s_3)
+                                                                                                            s_3)))
+                                                                                                     (let ((flat-s_0
+                                                                                                            (to-syntax-list.1
+                                                                                                             s_4)))
+                                                                                                       (if (not
+                                                                                                            flat-s_0)
+                                                                                                         (raise-syntax-error$1
+                                                                                                          #f
+                                                                                                          "bad syntax"
+                                                                                                          req_0)
+                                                                                                         flat-s_0))))))
+                                                                                            (let ((space211_1
+                                                                                                   space211_0))
+                                                                                              (values
+                                                                                               space211_1
+                                                                                               spec212_0))))
+                                                                                        (raise-syntax-error$1
+                                                                                         #f
+                                                                                         "bad syntax"
+                                                                                         req_0)))))
+                                                                                (case-lambda
+                                                                                 ((space209_0
+                                                                                   spec210_0)
+                                                                                  (let ((just-space208_1
+                                                                                         just-space208_0))
+                                                                                    (values
+                                                                                     just-space208_1
+                                                                                     space209_0
+                                                                                     spec210_0)))
+                                                                                 (args
+                                                                                  (raise-binding-result-arity-error
+                                                                                   2
+                                                                                   args)))))
+                                                                             (raise-syntax-error$1
+                                                                              #f
+                                                                              "bad syntax"
+                                                                              req_0))))
+                                                                       (case-lambda
+                                                                        ((just-space205_0
+                                                                          space206_0
+                                                                          spec207_0)
+                                                                         (values
+                                                                          #t
+                                                                          just-space205_0
+                                                                          space206_0
+                                                                          spec207_0))
+                                                                        (args
+                                                                         (raise-binding-result-arity-error
+                                                                          3
+                                                                          args)))))
+                                                                    (case-lambda
+                                                                     ((ok?_0
+                                                                       just-space205_0
+                                                                       space206_0
+                                                                       spec207_0)
+                                                                      (let ((space_0
+                                                                             (syntax-e$1
+                                                                              space206_0)))
+                                                                        (begin
+                                                                          (if (space?
+                                                                               space_0)
+                                                                            (void)
+                                                                            (raise-syntax-error$1
+                                                                             #f
+                                                                             "bad space"
+                                                                             orig-s28_0
+                                                                             req_0))
+                                                                          (loop_0
+                                                                           spec207_0
+                                                                           (if top-req_0
+                                                                             top-req_0
+                                                                             req_0)
+                                                                           phase-shift_0
+                                                                           space-level_0
+                                                                           just-meta_0
+                                                                           space_0
+                                                                           adjust_0
+                                                                           #f
+                                                                           #f
+                                                                           'justspaceless))))
+                                                                     (args
+                                                                      (raise-binding-result-arity-error
+                                                                       4
+                                                                       args)))))))
+                                                             (if (unsafe-fx<
+                                                                  index_0
+                                                                  11)
+                                                               (if (unsafe-fx<
+                                                                    index_0
+                                                                    10)
+                                                                 (begin
+                                                                   (check-nested_1
+                                                                    'justspaceless)
+                                                                   (call-with-values
+                                                                    (lambda ()
+                                                                      (call-with-values
+                                                                       (lambda ()
+                                                                         (let ((s_0
+                                                                                (if (syntax?$1
+                                                                                     req_0)
+                                                                                  (syntax-e$1
+                                                                                   req_0)
+                                                                                  req_0)))
+                                                                           (if (pair?
+                                                                                s_0)
+                                                                             (let ((only216_0
+                                                                                    (let ((s_1
+                                                                                           (car
+                                                                                            s_0)))
+                                                                                      s_1)))
+                                                                               (call-with-values
+                                                                                (lambda ()
+                                                                                  (let ((s_1
+                                                                                         (cdr
+                                                                                          s_0)))
+                                                                                    (let ((s_2
+                                                                                           (if (syntax?$1
+                                                                                                s_1)
+                                                                                             (syntax-e$1
+                                                                                              s_1)
+                                                                                             s_1)))
+                                                                                      (if (pair?
+                                                                                           s_2)
+                                                                                        (let ((spec219_0
+                                                                                               (let ((s_3
+                                                                                                      (car
+                                                                                                       s_2)))
+                                                                                                 s_3)))
+                                                                                          (let ((id220_0
                                                                                                  (let ((s_3
                                                                                                         (cdr
                                                                                                          s_2)))
@@ -32093,7 +32162,7 @@
                                                                                                                                       lst_1)))
                                                                                                                                 (let ((id_1
                                                                                                                                        (let ((id_1
-                                                                                                                                              (let ((id211_0
+                                                                                                                                              (let ((id221_0
                                                                                                                                                      (if (let ((or-part_0
                                                                                                                                                                 (if (syntax?$1
                                                                                                                                                                      s_5)
@@ -32112,7 +32181,7 @@
                                                                                                                                                         req_0
                                                                                                                                                         s_5))))
                                                                                                                                                 (cons
-                                                                                                                                                 id211_0
+                                                                                                                                                 id221_0
                                                                                                                                                  id_0))))
                                                                                                                                          (values
                                                                                                                                           id_1))))
@@ -32125,24 +32194,24 @@
                                                                                                                     flat-s_0)))))
                                                                                                            (reverse$1
                                                                                                             id_0))))))))
-                                                                                            (let ((spec209_1
-                                                                                                   spec209_0))
+                                                                                            (let ((spec219_1
+                                                                                                   spec219_0))
                                                                                               (values
-                                                                                               spec209_1
-                                                                                               id210_0))))
+                                                                                               spec219_1
+                                                                                               id220_0))))
                                                                                         (raise-syntax-error$1
                                                                                          #f
                                                                                          "bad syntax"
                                                                                          req_0)))))
                                                                                 (case-lambda
-                                                                                 ((spec207_0
-                                                                                   id208_0)
-                                                                                  (let ((only206_1
-                                                                                         only206_0))
+                                                                                 ((spec217_0
+                                                                                   id218_0)
+                                                                                  (let ((only216_1
+                                                                                         only216_0))
                                                                                     (values
-                                                                                     only206_1
-                                                                                     spec207_0
-                                                                                     id208_0)))
+                                                                                     only216_1
+                                                                                     spec217_0
+                                                                                     id218_0)))
                                                                                  (args
                                                                                   (raise-binding-result-arity-error
                                                                                    2
@@ -32152,26 +32221,26 @@
                                                                               "bad syntax"
                                                                               req_0))))
                                                                        (case-lambda
-                                                                        ((only203_0
-                                                                          spec204_0
-                                                                          id205_0)
+                                                                        ((only213_0
+                                                                          spec214_0
+                                                                          id215_0)
                                                                          (values
                                                                           #t
-                                                                          only203_0
-                                                                          spec204_0
-                                                                          id205_0))
+                                                                          only213_0
+                                                                          spec214_0
+                                                                          id215_0))
                                                                         (args
                                                                          (raise-binding-result-arity-error
                                                                           3
                                                                           args)))))
                                                                     (case-lambda
                                                                      ((ok?_0
-                                                                       only203_0
-                                                                       spec204_0
-                                                                       id205_0)
+                                                                       only213_0
+                                                                       spec214_0
+                                                                       id215_0)
                                                                       (let ((app_0
                                                                              (list
-                                                                              spec204_0)))
+                                                                              spec214_0)))
                                                                         (let ((app_1
                                                                                (if top-req_0
                                                                                  top-req_0
@@ -32185,8 +32254,7 @@
                                                                            just-space_0
                                                                            (adjust-only1.1
                                                                             (ids->sym-set
-                                                                             id205_0))
-                                                                           gluing_0
+                                                                             id215_0))
                                                                            #f
                                                                            #f
                                                                            'path))))
@@ -32209,7 +32277,7 @@
                                                                                   req_0)))
                                                                            (if (pair?
                                                                                 s_0)
-                                                                             (let ((prefix215_0
+                                                                             (let ((prefix225_0
                                                                                     (let ((s_1
                                                                                            (car
                                                                                             s_0)))
@@ -32227,7 +32295,7 @@
                                                                                              s_1)))
                                                                                       (if (pair?
                                                                                            s_2)
-                                                                                        (let ((id:prefix218_0
+                                                                                        (let ((id:prefix228_0
                                                                                                (let ((s_3
                                                                                                       (car
                                                                                                        s_2)))
@@ -32248,7 +32316,7 @@
                                                                                                     "not an identifier"
                                                                                                     req_0
                                                                                                     s_3)))))
-                                                                                          (let ((spec219_0
+                                                                                          (let ((spec229_0
                                                                                                  (let ((s_3
                                                                                                         (cdr
                                                                                                          s_2)))
@@ -32260,7 +32328,7 @@
                                                                                                             s_3)))
                                                                                                      (if (pair?
                                                                                                           s_4)
-                                                                                                       (let ((spec220_0
+                                                                                                       (let ((spec230_0
                                                                                                               (let ((s_5
                                                                                                                      (car
                                                                                                                       s_4)))
@@ -32285,10 +32353,10 @@
                                                                                                                    req_0)))))
                                                                                                           (case-lambda
                                                                                                            (()
-                                                                                                            (let ((spec220_1
-                                                                                                                   spec220_0))
+                                                                                                            (let ((spec230_1
+                                                                                                                   spec230_0))
                                                                                                               (values
-                                                                                                               spec220_1)))
+                                                                                                               spec230_1)))
                                                                                                            (args
                                                                                                             (raise-binding-result-arity-error
                                                                                                              0
@@ -32297,24 +32365,24 @@
                                                                                                         #f
                                                                                                         "bad syntax"
                                                                                                         req_0))))))
-                                                                                            (let ((id:prefix218_1
-                                                                                                   id:prefix218_0))
+                                                                                            (let ((id:prefix228_1
+                                                                                                   id:prefix228_0))
                                                                                               (values
-                                                                                               id:prefix218_1
-                                                                                               spec219_0))))
+                                                                                               id:prefix228_1
+                                                                                               spec229_0))))
                                                                                         (raise-syntax-error$1
                                                                                          #f
                                                                                          "bad syntax"
                                                                                          req_0)))))
                                                                                 (case-lambda
-                                                                                 ((id:prefix216_0
-                                                                                   spec217_0)
-                                                                                  (let ((prefix215_1
-                                                                                         prefix215_0))
+                                                                                 ((id:prefix226_0
+                                                                                   spec227_0)
+                                                                                  (let ((prefix225_1
+                                                                                         prefix225_0))
                                                                                     (values
-                                                                                     prefix215_1
-                                                                                     id:prefix216_0
-                                                                                     spec217_0)))
+                                                                                     prefix225_1
+                                                                                     id:prefix226_0
+                                                                                     spec227_0)))
                                                                                  (args
                                                                                   (raise-binding-result-arity-error
                                                                                    2
@@ -32324,26 +32392,26 @@
                                                                               "bad syntax"
                                                                               req_0))))
                                                                        (case-lambda
-                                                                        ((prefix212_0
-                                                                          id:prefix213_0
-                                                                          spec214_0)
+                                                                        ((prefix222_0
+                                                                          id:prefix223_0
+                                                                          spec224_0)
                                                                          (values
                                                                           #t
-                                                                          prefix212_0
-                                                                          id:prefix213_0
-                                                                          spec214_0))
+                                                                          prefix222_0
+                                                                          id:prefix223_0
+                                                                          spec224_0))
                                                                         (args
                                                                          (raise-binding-result-arity-error
                                                                           3
                                                                           args)))))
                                                                     (case-lambda
                                                                      ((ok?_0
-                                                                       prefix212_0
-                                                                       id:prefix213_0
-                                                                       spec214_0)
+                                                                       prefix222_0
+                                                                       id:prefix223_0
+                                                                       spec224_0)
                                                                       (let ((app_0
                                                                              (list
-                                                                              spec214_0)))
+                                                                              spec224_0)))
                                                                         (let ((app_1
                                                                                (if top-req_0
                                                                                  top-req_0
@@ -32357,21 +32425,17 @@
                                                                            just-space_0
                                                                            (adjust-prefix2.1
                                                                             (syntax-e$1
-                                                                             id:prefix213_0))
-                                                                           gluing_0
+                                                                             id:prefix223_0))
                                                                            #f
                                                                            #f
                                                                            'path))))
                                                                      (args
                                                                       (raise-binding-result-arity-error
                                                                        4
-                                                                       args)))))))
-                                                             (if (unsafe-fx<
-                                                                  index_0
-                                                                  12)
+                                                                       args))))))
                                                                (if (unsafe-fx<
                                                                     index_0
-                                                                    11)
+                                                                    12)
                                                                  (begin
                                                                    (check-nested_1
                                                                     'justspaceless)
@@ -32387,7 +32451,7 @@
                                                                                   req_0)))
                                                                            (if (pair?
                                                                                 s_0)
-                                                                             (let ((all-except224_0
+                                                                             (let ((all-except234_0
                                                                                     (let ((s_1
                                                                                            (car
                                                                                             s_0)))
@@ -32405,12 +32469,12 @@
                                                                                              s_1)))
                                                                                       (if (pair?
                                                                                            s_2)
-                                                                                        (let ((spec227_0
+                                                                                        (let ((spec237_0
                                                                                                (let ((s_3
                                                                                                       (car
                                                                                                        s_2)))
                                                                                                  s_3)))
-                                                                                          (let ((id228_0
+                                                                                          (let ((id238_0
                                                                                                  (let ((s_3
                                                                                                         (cdr
                                                                                                          s_2)))
@@ -32448,7 +32512,7 @@
                                                                                                                                       lst_1)))
                                                                                                                                 (let ((id_1
                                                                                                                                        (let ((id_1
-                                                                                                                                              (let ((id229_0
+                                                                                                                                              (let ((id239_0
                                                                                                                                                      (if (let ((or-part_0
                                                                                                                                                                 (if (syntax?$1
                                                                                                                                                                      s_5)
@@ -32467,7 +32531,7 @@
                                                                                                                                                         req_0
                                                                                                                                                         s_5))))
                                                                                                                                                 (cons
-                                                                                                                                                 id229_0
+                                                                                                                                                 id239_0
                                                                                                                                                  id_0))))
                                                                                                                                          (values
                                                                                                                                           id_1))))
@@ -32480,24 +32544,24 @@
                                                                                                                     flat-s_0)))))
                                                                                                            (reverse$1
                                                                                                             id_0))))))))
-                                                                                            (let ((spec227_1
-                                                                                                   spec227_0))
+                                                                                            (let ((spec237_1
+                                                                                                   spec237_0))
                                                                                               (values
-                                                                                               spec227_1
-                                                                                               id228_0))))
+                                                                                               spec237_1
+                                                                                               id238_0))))
                                                                                         (raise-syntax-error$1
                                                                                          #f
                                                                                          "bad syntax"
                                                                                          req_0)))))
                                                                                 (case-lambda
-                                                                                 ((spec225_0
-                                                                                   id226_0)
-                                                                                  (let ((all-except224_1
-                                                                                         all-except224_0))
+                                                                                 ((spec235_0
+                                                                                   id236_0)
+                                                                                  (let ((all-except234_1
+                                                                                         all-except234_0))
                                                                                     (values
-                                                                                     all-except224_1
-                                                                                     spec225_0
-                                                                                     id226_0)))
+                                                                                     all-except234_1
+                                                                                     spec235_0
+                                                                                     id236_0)))
                                                                                  (args
                                                                                   (raise-binding-result-arity-error
                                                                                    2
@@ -32507,255 +32571,21 @@
                                                                               "bad syntax"
                                                                               req_0))))
                                                                        (case-lambda
-                                                                        ((all-except221_0
-                                                                          spec222_0
-                                                                          id223_0)
+                                                                        ((all-except231_0
+                                                                          spec232_0
+                                                                          id233_0)
                                                                          (values
                                                                           #t
-                                                                          all-except221_0
-                                                                          spec222_0
-                                                                          id223_0))
+                                                                          all-except231_0
+                                                                          spec232_0
+                                                                          id233_0))
                                                                         (args
                                                                          (raise-binding-result-arity-error
                                                                           3
                                                                           args)))))
                                                                     (case-lambda
                                                                      ((ok?_0
-                                                                       all-except221_0
-                                                                       spec222_0
-                                                                       id223_0)
-                                                                      (let ((app_0
-                                                                             (list
-                                                                              spec222_0)))
-                                                                        (let ((app_1
-                                                                               (if top-req_0
-                                                                                 top-req_0
-                                                                                 req_0)))
-                                                                          (loop_0
-                                                                           app_0
-                                                                           app_1
-                                                                           phase-shift_0
-                                                                           space-level_0
-                                                                           just-meta_0
-                                                                           just-space_0
-                                                                           (adjust-all-except3.1
-                                                                            '||
-                                                                            (ids->sym-set
-                                                                             id223_0))
-                                                                           gluing_0
-                                                                           #f
-                                                                           #f
-                                                                           'path))))
-                                                                     (args
-                                                                      (raise-binding-result-arity-error
-                                                                       4
-                                                                       args)))))
-                                                                 (begin
-                                                                   (check-nested_1
-                                                                    'justspaceless)
-                                                                   (call-with-values
-                                                                    (lambda ()
-                                                                      (call-with-values
-                                                                       (lambda ()
-                                                                         (let ((s_0
-                                                                                (if (syntax?$1
-                                                                                     req_0)
-                                                                                  (syntax-e$1
-                                                                                   req_0)
-                                                                                  req_0)))
-                                                                           (if (pair?
-                                                                                s_0)
-                                                                             (let ((prefix-all-except234_0
-                                                                                    (let ((s_1
-                                                                                           (car
-                                                                                            s_0)))
-                                                                                      s_1)))
-                                                                               (call-with-values
-                                                                                (lambda ()
-                                                                                  (let ((s_1
-                                                                                         (cdr
-                                                                                          s_0)))
-                                                                                    (let ((s_2
-                                                                                           (if (syntax?$1
-                                                                                                s_1)
-                                                                                             (syntax-e$1
-                                                                                              s_1)
-                                                                                             s_1)))
-                                                                                      (if (pair?
-                                                                                           s_2)
-                                                                                        (let ((id:prefix238_0
-                                                                                               (let ((s_3
-                                                                                                      (car
-                                                                                                       s_2)))
-                                                                                                 (if (let ((or-part_0
-                                                                                                            (if (syntax?$1
-                                                                                                                 s_3)
-                                                                                                              (symbol?
-                                                                                                               (syntax-e$1
-                                                                                                                s_3))
-                                                                                                              #f)))
-                                                                                                       (if or-part_0
-                                                                                                         or-part_0
-                                                                                                         (symbol?
-                                                                                                          s_3)))
-                                                                                                   s_3
-                                                                                                   (raise-syntax-error$1
-                                                                                                    #f
-                                                                                                    "not an identifier"
-                                                                                                    req_0
-                                                                                                    s_3)))))
-                                                                                          (call-with-values
-                                                                                           (lambda ()
-                                                                                             (let ((s_3
-                                                                                                    (cdr
-                                                                                                     s_2)))
-                                                                                               (let ((s_4
-                                                                                                      (if (syntax?$1
-                                                                                                           s_3)
-                                                                                                        (syntax-e$1
-                                                                                                         s_3)
-                                                                                                        s_3)))
-                                                                                                 (if (pair?
-                                                                                                      s_4)
-                                                                                                   (let ((spec241_0
-                                                                                                          (let ((s_5
-                                                                                                                 (car
-                                                                                                                  s_4)))
-                                                                                                            s_5)))
-                                                                                                     (let ((id242_0
-                                                                                                            (let ((s_5
-                                                                                                                   (cdr
-                                                                                                                    s_4)))
-                                                                                                              (let ((s_6
-                                                                                                                     (if (syntax?$1
-                                                                                                                          s_5)
-                                                                                                                       (syntax-e$1
-                                                                                                                        s_5)
-                                                                                                                       s_5)))
-                                                                                                                (let ((flat-s_0
-                                                                                                                       (to-syntax-list.1
-                                                                                                                        s_6)))
-                                                                                                                  (if (not
-                                                                                                                       flat-s_0)
-                                                                                                                    (raise-syntax-error$1
-                                                                                                                     #f
-                                                                                                                     "bad syntax"
-                                                                                                                     req_0)
-                                                                                                                    (let ((id_0
-                                                                                                                           (begin
-                                                                                                                             (letrec*
-                                                                                                                              ((for-loop_1
-                                                                                                                                (|#%name|
-                                                                                                                                 for-loop
-                                                                                                                                 (lambda (id_0
-                                                                                                                                          lst_1)
-                                                                                                                                   (begin
-                                                                                                                                     (if (pair?
-                                                                                                                                          lst_1)
-                                                                                                                                       (let ((s_7
-                                                                                                                                              (unsafe-car
-                                                                                                                                               lst_1)))
-                                                                                                                                         (let ((rest_1
-                                                                                                                                                (unsafe-cdr
-                                                                                                                                                 lst_1)))
-                                                                                                                                           (let ((id_1
-                                                                                                                                                  (let ((id_1
-                                                                                                                                                         (let ((id243_0
-                                                                                                                                                                (if (let ((or-part_0
-                                                                                                                                                                           (if (syntax?$1
-                                                                                                                                                                                s_7)
-                                                                                                                                                                             (symbol?
-                                                                                                                                                                              (syntax-e$1
-                                                                                                                                                                               s_7))
-                                                                                                                                                                             #f)))
-                                                                                                                                                                      (if or-part_0
-                                                                                                                                                                        or-part_0
-                                                                                                                                                                        (symbol?
-                                                                                                                                                                         s_7)))
-                                                                                                                                                                  s_7
-                                                                                                                                                                  (raise-syntax-error$1
-                                                                                                                                                                   #f
-                                                                                                                                                                   "not an identifier"
-                                                                                                                                                                   req_0
-                                                                                                                                                                   s_7))))
-                                                                                                                                                           (cons
-                                                                                                                                                            id243_0
-                                                                                                                                                            id_0))))
-                                                                                                                                                    (values
-                                                                                                                                                     id_1))))
-                                                                                                                                             (for-loop_1
-                                                                                                                                              id_1
-                                                                                                                                              rest_1))))
-                                                                                                                                       id_0))))))
-                                                                                                                              (for-loop_1
-                                                                                                                               null
-                                                                                                                               flat-s_0)))))
-                                                                                                                      (reverse$1
-                                                                                                                       id_0))))))))
-                                                                                                       (let ((spec241_1
-                                                                                                              spec241_0))
-                                                                                                         (values
-                                                                                                          spec241_1
-                                                                                                          id242_0))))
-                                                                                                   (raise-syntax-error$1
-                                                                                                    #f
-                                                                                                    "bad syntax"
-                                                                                                    req_0)))))
-                                                                                           (case-lambda
-                                                                                            ((spec239_0
-                                                                                              id240_0)
-                                                                                             (let ((id:prefix238_1
-                                                                                                    id:prefix238_0))
-                                                                                               (values
-                                                                                                id:prefix238_1
-                                                                                                spec239_0
-                                                                                                id240_0)))
-                                                                                            (args
-                                                                                             (raise-binding-result-arity-error
-                                                                                              2
-                                                                                              args)))))
-                                                                                        (raise-syntax-error$1
-                                                                                         #f
-                                                                                         "bad syntax"
-                                                                                         req_0)))))
-                                                                                (case-lambda
-                                                                                 ((id:prefix235_0
-                                                                                   spec236_0
-                                                                                   id237_0)
-                                                                                  (let ((prefix-all-except234_1
-                                                                                         prefix-all-except234_0))
-                                                                                    (values
-                                                                                     prefix-all-except234_1
-                                                                                     id:prefix235_0
-                                                                                     spec236_0
-                                                                                     id237_0)))
-                                                                                 (args
-                                                                                  (raise-binding-result-arity-error
-                                                                                   3
-                                                                                   args)))))
-                                                                             (raise-syntax-error$1
-                                                                              #f
-                                                                              "bad syntax"
-                                                                              req_0))))
-                                                                       (case-lambda
-                                                                        ((prefix-all-except230_0
-                                                                          id:prefix231_0
-                                                                          spec232_0
-                                                                          id233_0)
-                                                                         (values
-                                                                          #t
-                                                                          prefix-all-except230_0
-                                                                          id:prefix231_0
-                                                                          spec232_0
-                                                                          id233_0))
-                                                                        (args
-                                                                         (raise-binding-result-arity-error
-                                                                          4
-                                                                          args)))))
-                                                                    (case-lambda
-                                                                     ((ok?_0
-                                                                       prefix-all-except230_0
-                                                                       id:prefix231_0
+                                                                       all-except231_0
                                                                        spec232_0
                                                                        id233_0)
                                                                       (let ((app_0
@@ -32772,256 +32602,20 @@
                                                                            space-level_0
                                                                            just-meta_0
                                                                            just-space_0
-                                                                           (let ((app_2
-                                                                                  (syntax-e$1
-                                                                                   id:prefix231_0)))
-                                                                             (adjust-all-except3.1
-                                                                              app_2
-                                                                              (ids->sym-set
-                                                                               id233_0)))
-                                                                           gluing_0
+                                                                           (adjust-all-except3.1
+                                                                            '||
+                                                                            (ids->sym-set
+                                                                             id233_0))
                                                                            #f
                                                                            #f
                                                                            'path))))
                                                                      (args
                                                                       (raise-binding-result-arity-error
-                                                                       5
-                                                                       args))))))
-                                                               (if (unsafe-fx<
-                                                                    index_0
-                                                                    13)
-                                                                 (begin
-                                                                   (check-nested_1
-                                                                    'justspaceless)
-                                                                   (call-with-values
-                                                                    (lambda ()
-                                                                      (call-with-values
-                                                                       (lambda ()
-                                                                         (let ((s_0
-                                                                                (if (syntax?$1
-                                                                                     req_0)
-                                                                                  (syntax-e$1
-                                                                                   req_0)
-                                                                                  req_0)))
-                                                                           (if (pair?
-                                                                                s_0)
-                                                                             (let ((rename248_0
-                                                                                    (let ((s_1
-                                                                                           (car
-                                                                                            s_0)))
-                                                                                      s_1)))
-                                                                               (call-with-values
-                                                                                (lambda ()
-                                                                                  (let ((s_1
-                                                                                         (cdr
-                                                                                          s_0)))
-                                                                                    (let ((s_2
-                                                                                           (if (syntax?$1
-                                                                                                s_1)
-                                                                                             (syntax-e$1
-                                                                                              s_1)
-                                                                                             s_1)))
-                                                                                      (if (pair?
-                                                                                           s_2)
-                                                                                        (let ((spec252_0
-                                                                                               (let ((s_3
-                                                                                                      (car
-                                                                                                       s_2)))
-                                                                                                 s_3)))
-                                                                                          (call-with-values
-                                                                                           (lambda ()
-                                                                                             (let ((s_3
-                                                                                                    (cdr
-                                                                                                     s_2)))
-                                                                                               (let ((s_4
-                                                                                                      (if (syntax?$1
-                                                                                                           s_3)
-                                                                                                        (syntax-e$1
-                                                                                                         s_3)
-                                                                                                        s_3)))
-                                                                                                 (if (pair?
-                                                                                                      s_4)
-                                                                                                   (let ((id:to255_0
-                                                                                                          (let ((s_5
-                                                                                                                 (car
-                                                                                                                  s_4)))
-                                                                                                            (if (let ((or-part_0
-                                                                                                                       (if (syntax?$1
-                                                                                                                            s_5)
-                                                                                                                         (symbol?
-                                                                                                                          (syntax-e$1
-                                                                                                                           s_5))
-                                                                                                                         #f)))
-                                                                                                                  (if or-part_0
-                                                                                                                    or-part_0
-                                                                                                                    (symbol?
-                                                                                                                     s_5)))
-                                                                                                              s_5
-                                                                                                              (raise-syntax-error$1
-                                                                                                               #f
-                                                                                                               "not an identifier"
-                                                                                                               req_0
-                                                                                                               s_5)))))
-                                                                                                     (let ((id:from256_0
-                                                                                                            (let ((s_5
-                                                                                                                   (cdr
-                                                                                                                    s_4)))
-                                                                                                              (let ((s_6
-                                                                                                                     (if (syntax?$1
-                                                                                                                          s_5)
-                                                                                                                       (syntax-e$1
-                                                                                                                        s_5)
-                                                                                                                       s_5)))
-                                                                                                                (if (pair?
-                                                                                                                     s_6)
-                                                                                                                  (let ((id:from257_0
-                                                                                                                         (let ((s_7
-                                                                                                                                (car
-                                                                                                                                 s_6)))
-                                                                                                                           (if (let ((or-part_0
-                                                                                                                                      (if (syntax?$1
-                                                                                                                                           s_7)
-                                                                                                                                        (symbol?
-                                                                                                                                         (syntax-e$1
-                                                                                                                                          s_7))
-                                                                                                                                        #f)))
-                                                                                                                                 (if or-part_0
-                                                                                                                                   or-part_0
-                                                                                                                                   (symbol?
-                                                                                                                                    s_7)))
-                                                                                                                             s_7
-                                                                                                                             (raise-syntax-error$1
-                                                                                                                              #f
-                                                                                                                              "not an identifier"
-                                                                                                                              req_0
-                                                                                                                              s_7)))))
-                                                                                                                    (call-with-values
-                                                                                                                     (lambda ()
-                                                                                                                       (let ((s_7
-                                                                                                                              (cdr
-                                                                                                                               s_6)))
-                                                                                                                         (let ((s_8
-                                                                                                                                (if (syntax?$1
-                                                                                                                                     s_7)
-                                                                                                                                  (syntax-e$1
-                                                                                                                                   s_7)
-                                                                                                                                  s_7)))
-                                                                                                                           (if (null?
-                                                                                                                                s_8)
-                                                                                                                             (values)
-                                                                                                                             (raise-syntax-error$1
-                                                                                                                              #f
-                                                                                                                              "bad syntax"
-                                                                                                                              req_0)))))
-                                                                                                                     (case-lambda
-                                                                                                                      (()
-                                                                                                                       (let ((id:from257_1
-                                                                                                                              id:from257_0))
-                                                                                                                         (values
-                                                                                                                          id:from257_1)))
-                                                                                                                      (args
-                                                                                                                       (raise-binding-result-arity-error
-                                                                                                                        0
-                                                                                                                        args)))))
-                                                                                                                  (raise-syntax-error$1
-                                                                                                                   #f
-                                                                                                                   "bad syntax"
-                                                                                                                   req_0))))))
-                                                                                                       (let ((id:to255_1
-                                                                                                              id:to255_0))
-                                                                                                         (values
-                                                                                                          id:to255_1
-                                                                                                          id:from256_0))))
-                                                                                                   (raise-syntax-error$1
-                                                                                                    #f
-                                                                                                    "bad syntax"
-                                                                                                    req_0)))))
-                                                                                           (case-lambda
-                                                                                            ((id:to253_0
-                                                                                              id:from254_0)
-                                                                                             (let ((spec252_1
-                                                                                                    spec252_0))
-                                                                                               (values
-                                                                                                spec252_1
-                                                                                                id:to253_0
-                                                                                                id:from254_0)))
-                                                                                            (args
-                                                                                             (raise-binding-result-arity-error
-                                                                                              2
-                                                                                              args)))))
-                                                                                        (raise-syntax-error$1
-                                                                                         #f
-                                                                                         "bad syntax"
-                                                                                         req_0)))))
-                                                                                (case-lambda
-                                                                                 ((spec249_0
-                                                                                   id:to250_0
-                                                                                   id:from251_0)
-                                                                                  (let ((rename248_1
-                                                                                         rename248_0))
-                                                                                    (values
-                                                                                     rename248_1
-                                                                                     spec249_0
-                                                                                     id:to250_0
-                                                                                     id:from251_0)))
-                                                                                 (args
-                                                                                  (raise-binding-result-arity-error
-                                                                                   3
-                                                                                   args)))))
-                                                                             (raise-syntax-error$1
-                                                                              #f
-                                                                              "bad syntax"
-                                                                              req_0))))
-                                                                       (case-lambda
-                                                                        ((rename244_0
-                                                                          spec245_0
-                                                                          id:to246_0
-                                                                          id:from247_0)
-                                                                         (values
-                                                                          #t
-                                                                          rename244_0
-                                                                          spec245_0
-                                                                          id:to246_0
-                                                                          id:from247_0))
-                                                                        (args
-                                                                         (raise-binding-result-arity-error
-                                                                          4
-                                                                          args)))))
-                                                                    (case-lambda
-                                                                     ((ok?_0
-                                                                       rename244_0
-                                                                       spec245_0
-                                                                       id:to246_0
-                                                                       id:from247_0)
-                                                                      (let ((app_0
-                                                                             (list
-                                                                              spec245_0)))
-                                                                        (let ((app_1
-                                                                               (if top-req_0
-                                                                                 top-req_0
-                                                                                 req_0)))
-                                                                          (loop_0
-                                                                           app_0
-                                                                           app_1
-                                                                           phase-shift_0
-                                                                           space-level_0
-                                                                           just-meta_0
-                                                                           just-space_0
-                                                                           (adjust-rename4.1
-                                                                            id:to246_0
-                                                                            (syntax-e$1
-                                                                             id:from247_0))
-                                                                           gluing_0
-                                                                           #f
-                                                                           #f
-                                                                           'path))))
-                                                                     (args
-                                                                      (raise-binding-result-arity-error
-                                                                       5
+                                                                       4
                                                                        args)))))
                                                                  (if (unsafe-fx<
                                                                       index_0
-                                                                      14)
+                                                                      13)
                                                                    (begin
                                                                      (check-nested_1
                                                                       'justspaceless)
@@ -33037,7 +32631,7 @@
                                                                                     req_0)))
                                                                              (if (pair?
                                                                                   s_0)
-                                                                               (let ((glue262_0
+                                                                               (let ((prefix-all-except244_0
                                                                                       (let ((s_1
                                                                                              (car
                                                                                               s_0)))
@@ -33055,7 +32649,7 @@
                                                                                                s_1)))
                                                                                         (if (pair?
                                                                                              s_2)
-                                                                                          (let ((id:name266_0
+                                                                                          (let ((id:prefix248_0
                                                                                                  (let ((s_3
                                                                                                         (car
                                                                                                          s_2)))
@@ -33089,12 +32683,12 @@
                                                                                                           s_3)))
                                                                                                    (if (pair?
                                                                                                         s_4)
-                                                                                                     (let ((key269_0
+                                                                                                     (let ((spec251_0
                                                                                                             (let ((s_5
                                                                                                                    (car
                                                                                                                     s_4)))
                                                                                                               s_5)))
-                                                                                                       (let ((spec270_0
+                                                                                                       (let ((id252_0
                                                                                                               (let ((s_5
                                                                                                                      (cdr
                                                                                                                       s_4)))
@@ -33113,25 +32707,75 @@
                                                                                                                        #f
                                                                                                                        "bad syntax"
                                                                                                                        req_0)
-                                                                                                                      flat-s_0))))))
-                                                                                                         (let ((key269_1
-                                                                                                                key269_0))
+                                                                                                                      (let ((id_0
+                                                                                                                             (begin
+                                                                                                                               (letrec*
+                                                                                                                                ((for-loop_1
+                                                                                                                                  (|#%name|
+                                                                                                                                   for-loop
+                                                                                                                                   (lambda (id_0
+                                                                                                                                            lst_1)
+                                                                                                                                     (begin
+                                                                                                                                       (if (pair?
+                                                                                                                                            lst_1)
+                                                                                                                                         (let ((s_7
+                                                                                                                                                (unsafe-car
+                                                                                                                                                 lst_1)))
+                                                                                                                                           (let ((rest_1
+                                                                                                                                                  (unsafe-cdr
+                                                                                                                                                   lst_1)))
+                                                                                                                                             (let ((id_1
+                                                                                                                                                    (let ((id_1
+                                                                                                                                                           (let ((id253_0
+                                                                                                                                                                  (if (let ((or-part_0
+                                                                                                                                                                             (if (syntax?$1
+                                                                                                                                                                                  s_7)
+                                                                                                                                                                               (symbol?
+                                                                                                                                                                                (syntax-e$1
+                                                                                                                                                                                 s_7))
+                                                                                                                                                                               #f)))
+                                                                                                                                                                        (if or-part_0
+                                                                                                                                                                          or-part_0
+                                                                                                                                                                          (symbol?
+                                                                                                                                                                           s_7)))
+                                                                                                                                                                    s_7
+                                                                                                                                                                    (raise-syntax-error$1
+                                                                                                                                                                     #f
+                                                                                                                                                                     "not an identifier"
+                                                                                                                                                                     req_0
+                                                                                                                                                                     s_7))))
+                                                                                                                                                             (cons
+                                                                                                                                                              id253_0
+                                                                                                                                                              id_0))))
+                                                                                                                                                      (values
+                                                                                                                                                       id_1))))
+                                                                                                                                               (for-loop_1
+                                                                                                                                                id_1
+                                                                                                                                                rest_1))))
+                                                                                                                                         id_0))))))
+                                                                                                                                (for-loop_1
+                                                                                                                                 null
+                                                                                                                                 flat-s_0)))))
+                                                                                                                        (reverse$1
+                                                                                                                         id_0))))))))
+                                                                                                         (let ((spec251_1
+                                                                                                                spec251_0))
                                                                                                            (values
-                                                                                                            key269_1
-                                                                                                            spec270_0))))
+                                                                                                            spec251_1
+                                                                                                            id252_0))))
                                                                                                      (raise-syntax-error$1
                                                                                                       #f
                                                                                                       "bad syntax"
                                                                                                       req_0)))))
                                                                                              (case-lambda
-                                                                                              ((key267_0
-                                                                                                spec268_0)
-                                                                                               (let ((id:name266_1
-                                                                                                      id:name266_0))
+                                                                                              ((spec249_0
+                                                                                                id250_0)
+                                                                                               (let ((id:prefix248_1
+                                                                                                      id:prefix248_0))
                                                                                                  (values
-                                                                                                  id:name266_1
-                                                                                                  key267_0
-                                                                                                  spec268_0)))
+                                                                                                  id:prefix248_1
+                                                                                                  spec249_0
+                                                                                                  id250_0)))
                                                                                               (args
                                                                                                (raise-binding-result-arity-error
                                                                                                 2
@@ -33141,16 +32785,16 @@
                                                                                            "bad syntax"
                                                                                            req_0)))))
                                                                                   (case-lambda
-                                                                                   ((id:name263_0
-                                                                                     key264_0
-                                                                                     spec265_0)
-                                                                                    (let ((glue262_1
-                                                                                           glue262_0))
+                                                                                   ((id:prefix245_0
+                                                                                     spec246_0
+                                                                                     id247_0)
+                                                                                    (let ((prefix-all-except244_1
+                                                                                           prefix-all-except244_0))
                                                                                       (values
-                                                                                       glue262_1
-                                                                                       id:name263_0
-                                                                                       key264_0
-                                                                                       spec265_0)))
+                                                                                       prefix-all-except244_1
+                                                                                       id:prefix245_0
+                                                                                       spec246_0
+                                                                                       id247_0)))
                                                                                    (args
                                                                                     (raise-binding-result-arity-error
                                                                                      3
@@ -33160,80 +32804,50 @@
                                                                                 "bad syntax"
                                                                                 req_0))))
                                                                          (case-lambda
-                                                                          ((glue258_0
-                                                                            id:name259_0
-                                                                            key260_0
-                                                                            spec261_0)
+                                                                          ((prefix-all-except240_0
+                                                                            id:prefix241_0
+                                                                            spec242_0
+                                                                            id243_0)
                                                                            (values
                                                                             #t
-                                                                            glue258_0
-                                                                            id:name259_0
-                                                                            key260_0
-                                                                            spec261_0))
+                                                                            prefix-all-except240_0
+                                                                            id:prefix241_0
+                                                                            spec242_0
+                                                                            id243_0))
                                                                           (args
                                                                            (raise-binding-result-arity-error
                                                                             4
                                                                             args)))))
                                                                       (case-lambda
                                                                        ((ok?_0
-                                                                         glue258_0
-                                                                         id:name259_0
-                                                                         key260_0
-                                                                         spec261_0)
-                                                                        (begin
-                                                                          (if gluing_0
-                                                                            (raise-syntax-error$1
+                                                                         prefix-all-except240_0
+                                                                         id:prefix241_0
+                                                                         spec242_0
+                                                                         id243_0)
+                                                                        (let ((app_0
+                                                                               (list
+                                                                                spec242_0)))
+                                                                          (let ((app_1
+                                                                                 (if top-req_0
+                                                                                   top-req_0
+                                                                                   req_0)))
+                                                                            (loop_0
+                                                                             app_0
+                                                                             app_1
+                                                                             phase-shift_0
+                                                                             space-level_0
+                                                                             just-meta_0
+                                                                             just-space_0
+                                                                             (let ((app_2
+                                                                                    (syntax-e$1
+                                                                                     id:prefix241_0)))
+                                                                               (adjust-all-except3.1
+                                                                                app_2
+                                                                                (ids->sym-set
+                                                                                 id243_0)))
                                                                              #f
-                                                                             "nested glue layers not allowed"
-                                                                             orig-s29_0
-                                                                             req_0)
-                                                                            (void))
-                                                                          (let ((glue-introducer_0
-                                                                                 (let ((sc_0
-                                                                                        (new-scope
-                                                                                         'glue)))
-                                                                                   (|#%name|
-                                                                                    glue-introducer
-                                                                                    (lambda (stx_0)
-                                                                                      (begin
-                                                                                        (add-scope
-                                                                                         stx_0
-                                                                                         sc_0)))))))
-                                                                            (let ((new-gluing_0
-                                                                                   (let ((app_0
-                                                                                          (let ((temp272_0
-                                                                                                 (datum->syntax$1
-                                                                                                  id:name259_0
-                                                                                                  (list
-                                                                                                   key260_0
-                                                                                                   id:name259_0
-                                                                                                   (glue-introducer_0
-                                                                                                    id:name259_0)))))
-                                                                                            (make-glue-syntax-definer.1
-                                                                                             add-defined-bin15_0
-                                                                                             requires+provides32_0
-                                                                                             self6_0
-                                                                                             id:name259_0
-                                                                                             temp272_0
-                                                                                             orig-s29_0))))
-                                                                                     (gluing-mode5.1
-                                                                                      glue-introducer_0
-                                                                                      app_0
-                                                                                      (seteq)))))
-                                                                              (loop_0
-                                                                               spec261_0
-                                                                               (if top-req_0
-                                                                                 top-req_0
-                                                                                 req_0)
-                                                                               phase-shift_0
-                                                                               space-level_0
-                                                                               just-meta_0
-                                                                               just-space_0
-                                                                               adjust_0
-                                                                               new-gluing_0
-                                                                               #f
-                                                                               #f
-                                                                               'justspaceless)))))
+                                                                             #f
+                                                                             'path))))
                                                                        (args
                                                                         (raise-binding-result-arity-error
                                                                          5
@@ -33253,7 +32867,7 @@
                                                                                     req_0)))
                                                                              (if (pair?
                                                                                   s_0)
-                                                                               (let ((expose280_0
+                                                                               (let ((rename258_0
                                                                                       (let ((s_1
                                                                                              (car
                                                                                               s_0)))
@@ -33271,205 +32885,200 @@
                                                                                                s_1)))
                                                                                         (if (pair?
                                                                                              s_2)
-                                                                                          (let ((spec283_0
+                                                                                          (let ((spec262_0
                                                                                                  (let ((s_3
                                                                                                         (car
                                                                                                          s_2)))
                                                                                                    s_3)))
-                                                                                            (let ((id:name284_0
-                                                                                                   (let ((s_3
-                                                                                                          (cdr
-                                                                                                           s_2)))
-                                                                                                     (let ((s_4
-                                                                                                            (if (syntax?$1
-                                                                                                                 s_3)
-                                                                                                              (syntax-e$1
-                                                                                                               s_3)
-                                                                                                              s_3)))
-                                                                                                       (let ((flat-s_0
-                                                                                                              (to-syntax-list.1
-                                                                                                               s_4)))
-                                                                                                         (if (not
-                                                                                                              flat-s_0)
-                                                                                                           (raise-syntax-error$1
-                                                                                                            #f
-                                                                                                            "bad syntax"
-                                                                                                            req_0)
-                                                                                                           (let ((id:name_0
-                                                                                                                  (begin
-                                                                                                                    (letrec*
-                                                                                                                     ((for-loop_1
-                                                                                                                       (|#%name|
-                                                                                                                        for-loop
-                                                                                                                        (lambda (id:name_0
-                                                                                                                                 lst_1)
-                                                                                                                          (begin
-                                                                                                                            (if (pair?
-                                                                                                                                 lst_1)
-                                                                                                                              (let ((s_5
-                                                                                                                                     (unsafe-car
-                                                                                                                                      lst_1)))
-                                                                                                                                (let ((rest_1
-                                                                                                                                       (unsafe-cdr
-                                                                                                                                        lst_1)))
-                                                                                                                                  (let ((id:name_1
-                                                                                                                                         (let ((id:name_1
-                                                                                                                                                (let ((id:name285_0
-                                                                                                                                                       (if (let ((or-part_0
-                                                                                                                                                                  (if (syntax?$1
-                                                                                                                                                                       s_5)
-                                                                                                                                                                    (symbol?
-                                                                                                                                                                     (syntax-e$1
-                                                                                                                                                                      s_5))
-                                                                                                                                                                    #f)))
-                                                                                                                                                             (if or-part_0
-                                                                                                                                                               or-part_0
-                                                                                                                                                               (symbol?
-                                                                                                                                                                s_5)))
-                                                                                                                                                         s_5
-                                                                                                                                                         (raise-syntax-error$1
-                                                                                                                                                          #f
-                                                                                                                                                          "not an identifier"
-                                                                                                                                                          req_0
-                                                                                                                                                          s_5))))
-                                                                                                                                                  (cons
-                                                                                                                                                   id:name285_0
-                                                                                                                                                   id:name_0))))
-                                                                                                                                           (values
-                                                                                                                                            id:name_1))))
-                                                                                                                                    (for-loop_1
-                                                                                                                                     id:name_1
-                                                                                                                                     rest_1))))
-                                                                                                                              id:name_0))))))
-                                                                                                                     (for-loop_1
-                                                                                                                      null
-                                                                                                                      flat-s_0)))))
-                                                                                                             (reverse$1
-                                                                                                              id:name_0))))))))
-                                                                                              (let ((spec283_1
-                                                                                                     spec283_0))
-                                                                                                (values
-                                                                                                 spec283_1
-                                                                                                 id:name284_0))))
+                                                                                            (call-with-values
+                                                                                             (lambda ()
+                                                                                               (let ((s_3
+                                                                                                      (cdr
+                                                                                                       s_2)))
+                                                                                                 (let ((s_4
+                                                                                                        (if (syntax?$1
+                                                                                                             s_3)
+                                                                                                          (syntax-e$1
+                                                                                                           s_3)
+                                                                                                          s_3)))
+                                                                                                   (if (pair?
+                                                                                                        s_4)
+                                                                                                     (let ((id:to265_0
+                                                                                                            (let ((s_5
+                                                                                                                   (car
+                                                                                                                    s_4)))
+                                                                                                              (if (let ((or-part_0
+                                                                                                                         (if (syntax?$1
+                                                                                                                              s_5)
+                                                                                                                           (symbol?
+                                                                                                                            (syntax-e$1
+                                                                                                                             s_5))
+                                                                                                                           #f)))
+                                                                                                                    (if or-part_0
+                                                                                                                      or-part_0
+                                                                                                                      (symbol?
+                                                                                                                       s_5)))
+                                                                                                                s_5
+                                                                                                                (raise-syntax-error$1
+                                                                                                                 #f
+                                                                                                                 "not an identifier"
+                                                                                                                 req_0
+                                                                                                                 s_5)))))
+                                                                                                       (let ((id:from266_0
+                                                                                                              (let ((s_5
+                                                                                                                     (cdr
+                                                                                                                      s_4)))
+                                                                                                                (let ((s_6
+                                                                                                                       (if (syntax?$1
+                                                                                                                            s_5)
+                                                                                                                         (syntax-e$1
+                                                                                                                          s_5)
+                                                                                                                         s_5)))
+                                                                                                                  (if (pair?
+                                                                                                                       s_6)
+                                                                                                                    (let ((id:from267_0
+                                                                                                                           (let ((s_7
+                                                                                                                                  (car
+                                                                                                                                   s_6)))
+                                                                                                                             (if (let ((or-part_0
+                                                                                                                                        (if (syntax?$1
+                                                                                                                                             s_7)
+                                                                                                                                          (symbol?
+                                                                                                                                           (syntax-e$1
+                                                                                                                                            s_7))
+                                                                                                                                          #f)))
+                                                                                                                                   (if or-part_0
+                                                                                                                                     or-part_0
+                                                                                                                                     (symbol?
+                                                                                                                                      s_7)))
+                                                                                                                               s_7
+                                                                                                                               (raise-syntax-error$1
+                                                                                                                                #f
+                                                                                                                                "not an identifier"
+                                                                                                                                req_0
+                                                                                                                                s_7)))))
+                                                                                                                      (call-with-values
+                                                                                                                       (lambda ()
+                                                                                                                         (let ((s_7
+                                                                                                                                (cdr
+                                                                                                                                 s_6)))
+                                                                                                                           (let ((s_8
+                                                                                                                                  (if (syntax?$1
+                                                                                                                                       s_7)
+                                                                                                                                    (syntax-e$1
+                                                                                                                                     s_7)
+                                                                                                                                    s_7)))
+                                                                                                                             (if (null?
+                                                                                                                                  s_8)
+                                                                                                                               (values)
+                                                                                                                               (raise-syntax-error$1
+                                                                                                                                #f
+                                                                                                                                "bad syntax"
+                                                                                                                                req_0)))))
+                                                                                                                       (case-lambda
+                                                                                                                        (()
+                                                                                                                         (let ((id:from267_1
+                                                                                                                                id:from267_0))
+                                                                                                                           (values
+                                                                                                                            id:from267_1)))
+                                                                                                                        (args
+                                                                                                                         (raise-binding-result-arity-error
+                                                                                                                          0
+                                                                                                                          args)))))
+                                                                                                                    (raise-syntax-error$1
+                                                                                                                     #f
+                                                                                                                     "bad syntax"
+                                                                                                                     req_0))))))
+                                                                                                         (let ((id:to265_1
+                                                                                                                id:to265_0))
+                                                                                                           (values
+                                                                                                            id:to265_1
+                                                                                                            id:from266_0))))
+                                                                                                     (raise-syntax-error$1
+                                                                                                      #f
+                                                                                                      "bad syntax"
+                                                                                                      req_0)))))
+                                                                                             (case-lambda
+                                                                                              ((id:to263_0
+                                                                                                id:from264_0)
+                                                                                               (let ((spec262_1
+                                                                                                      spec262_0))
+                                                                                                 (values
+                                                                                                  spec262_1
+                                                                                                  id:to263_0
+                                                                                                  id:from264_0)))
+                                                                                              (args
+                                                                                               (raise-binding-result-arity-error
+                                                                                                2
+                                                                                                args)))))
                                                                                           (raise-syntax-error$1
                                                                                            #f
                                                                                            "bad syntax"
                                                                                            req_0)))))
                                                                                   (case-lambda
-                                                                                   ((spec281_0
-                                                                                     id:name282_0)
-                                                                                    (let ((expose280_1
-                                                                                           expose280_0))
+                                                                                   ((spec259_0
+                                                                                     id:to260_0
+                                                                                     id:from261_0)
+                                                                                    (let ((rename258_1
+                                                                                           rename258_0))
                                                                                       (values
-                                                                                       expose280_1
-                                                                                       spec281_0
-                                                                                       id:name282_0)))
+                                                                                       rename258_1
+                                                                                       spec259_0
+                                                                                       id:to260_0
+                                                                                       id:from261_0)))
                                                                                    (args
                                                                                     (raise-binding-result-arity-error
-                                                                                     2
+                                                                                     3
                                                                                      args)))))
                                                                                (raise-syntax-error$1
                                                                                 #f
                                                                                 "bad syntax"
                                                                                 req_0))))
                                                                          (case-lambda
-                                                                          ((expose277_0
-                                                                            spec278_0
-                                                                            id:name279_0)
+                                                                          ((rename254_0
+                                                                            spec255_0
+                                                                            id:to256_0
+                                                                            id:from257_0)
                                                                            (values
                                                                             #t
-                                                                            expose277_0
-                                                                            spec278_0
-                                                                            id:name279_0))
+                                                                            rename254_0
+                                                                            spec255_0
+                                                                            id:to256_0
+                                                                            id:from257_0))
                                                                           (args
                                                                            (raise-binding-result-arity-error
-                                                                            3
+                                                                            4
                                                                             args)))))
                                                                       (case-lambda
                                                                        ((ok?_0
-                                                                         expose277_0
-                                                                         spec278_0
-                                                                         id:name279_0)
-                                                                        (begin
-                                                                          (if gluing_0
-                                                                            (void)
-                                                                            (raise-syntax-error$1
+                                                                         rename254_0
+                                                                         spec255_0
+                                                                         id:to256_0
+                                                                         id:from257_0)
+                                                                        (let ((app_0
+                                                                               (list
+                                                                                spec255_0)))
+                                                                          (let ((app_1
+                                                                                 (if top-req_0
+                                                                                   top-req_0
+                                                                                   req_0)))
+                                                                            (loop_0
+                                                                             app_0
+                                                                             app_1
+                                                                             phase-shift_0
+                                                                             space-level_0
+                                                                             just-meta_0
+                                                                             just-space_0
+                                                                             (adjust-rename4.1
+                                                                              id:to256_0
+                                                                              (syntax-e$1
+                                                                               id:from257_0))
                                                                              #f
-                                                                             "not within glue"
-                                                                             orig-s29_0
-                                                                             req_0))
-                                                                          (let ((app_0
-                                                                                 (list
-                                                                                  spec278_0)))
-                                                                            (let ((app_1
-                                                                                   (if top-req_0
-                                                                                     top-req_0
-                                                                                     req_0)))
-                                                                              (loop_0
-                                                                               app_0
-                                                                               app_1
-                                                                               phase-shift_0
-                                                                               space-level_0
-                                                                               just-meta_0
-                                                                               just-space_0
-                                                                               adjust_0
-                                                                               (if (gluing-mode?
-                                                                                    gluing_0)
-                                                                                 (let ((exposes286_0
-                                                                                        (begin
-                                                                                          (letrec*
-                                                                                           ((for-loop_1
-                                                                                             (|#%name|
-                                                                                              for-loop
-                                                                                              (lambda (exposes_0
-                                                                                                       lst_1)
-                                                                                                (begin
-                                                                                                  (if (pair?
-                                                                                                       lst_1)
-                                                                                                    (let ((id_0
-                                                                                                           (unsafe-car
-                                                                                                            lst_1)))
-                                                                                                      (let ((rest_1
-                                                                                                             (unsafe-cdr
-                                                                                                              lst_1)))
-                                                                                                        (let ((exposes_1
-                                                                                                               (let ((exposes_1
-                                                                                                                      (let ((e_0
-                                                                                                                             (syntax-e$1
-                                                                                                                              id_0)))
-                                                                                                                        (begin-unsafe
-                                                                                                                         (hash-set
-                                                                                                                          exposes_0
-                                                                                                                          e_0
-                                                                                                                          #t)))))
-                                                                                                                 (values
-                                                                                                                  exposes_1))))
-                                                                                                          (for-loop_1
-                                                                                                           exposes_1
-                                                                                                           rest_1))))
-                                                                                                    exposes_0))))))
-                                                                                           (for-loop_1
-                                                                                            (gluing-mode-exposes
-                                                                                             gluing_0)
-                                                                                            id:name279_0)))))
-                                                                                   (let ((app_2
-                                                                                          (gluing-mode-introducer
-                                                                                           gluing_0)))
-                                                                                     (gluing-mode5.1
-                                                                                      app_2
-                                                                                      (gluing-mode-definer
-                                                                                       gluing_0)
-                                                                                      exposes286_0)))
-                                                                                 (raise-argument-error
-                                                                                  'struct-copy
-                                                                                  "gluing-mode?"
-                                                                                  gluing_0))
-                                                                               #f
-                                                                               #f
-                                                                               'justspaceless)))))
+                                                                             #f
+                                                                             'path))))
                                                                        (args
                                                                         (raise-binding-result-arity-error
-                                                                         4
+                                                                         5
                                                                          args)))))))))))))))
                                               (values result_1))))
                                        (if (if (not
@@ -33482,13 +33091,12 @@
                                result_0))))))
                       (for-loop_0 #t reqs_0))))))))
             (loop_0
-             reqs28_0
+             reqs27_0
              #f
-             phase-shift31_0
+             phase-shift30_0
              kw2450
              'all
              #t
-             #f
              #f
              #t
              #t
@@ -33523,597 +33131,545 @@
 (define perform-initial-require!.1
   (|#%name|
    perform-initial-require!
-   (lambda (bind?34_0
-            who35_0
-            mod-path38_0
-            self39_0
-            in-stx40_0
-            m-ns41_0
-            requires+provides42_0)
+   (lambda (bind?33_0
+            who34_0
+            mod-path37_0
+            self38_0
+            in-stx39_0
+            m-ns40_0
+            requires+provides41_0)
      (begin
-       (let ((temp287_0 (module-path->mpi.1 hash2610 mod-path38_0 self39_0)))
+       (let ((temp268_0 (module-path->mpi.1 hash2610 mod-path37_0 self38_0)))
          (perform-require!.1
           #f
-          bind?34_0
+          bind?33_0
           #t
-          #f
           #f
           #f
           #t
           'all
           #t
           0
-          requires+provides42_0
+          requires+provides41_0
           0
           #f
           #f
           unsafe-undefined
           #t
-          who35_0
-          temp287_0
+          who34_0
+          temp268_0
           #f
-          self39_0
-          in-stx40_0
-          m-ns41_0))))))
+          self38_0
+          in-stx39_0
+          m-ns40_0))))))
 (define perform-require!.1
   (|#%name|
    perform-require!
-   (lambda (adjust49_0
-            bind?59_0
-            can-be-shadowed?54_0
-            copy-variable-as-constant?57_0
-            copy-variable-phase-level56_0
-            gluing50_0
-            initial-require?55_0
-            just-meta47_0
-            just-space48_0
-            phase-shift44_0
-            requires+provides51_0
-            run-phase46_0
-            run?53_0
-            skip-variable-phase-level58_0
-            space-level45_0
-            visit?52_0
-            who60_0
-            mpi78_0
-            orig-s79_0
-            self80_0
-            in-stx81_0
-            m-ns82_0)
+   (lambda (adjust48_0
+            bind?57_0
+            can-be-shadowed?52_0
+            copy-variable-as-constant?55_0
+            copy-variable-phase-level54_0
+            initial-require?53_0
+            just-meta46_0
+            just-space47_0
+            phase-shift43_0
+            requires+provides49_0
+            run-phase45_0
+            run?51_0
+            skip-variable-phase-level56_0
+            space-level44_0
+            visit?50_0
+            who58_0
+            mpi75_0
+            orig-s76_0
+            self77_0
+            in-stx78_0
+            m-ns79_0)
      (begin
        (let ((space-level_0
-              (if (eq? space-level45_0 unsafe-undefined)
+              (if (eq? space-level44_0 unsafe-undefined)
                 kw2450
-                space-level45_0)))
+                space-level44_0)))
          (begin
            (if log-performance?
              (start-performance-region 'expand 'require)
              (void))
            (begin0
              (let ((module-name_0
-                    (1/module-path-index-resolve mpi78_0 #t orig-s79_0)))
+                    (1/module-path-index-resolve mpi75_0 #t orig-s76_0)))
                (let ((bind-in-stx_0
-                      (if (adjust-rename? adjust49_0)
-                        (adjust-rename-to-id adjust49_0)
-                        in-stx81_0)))
-                 (let ((done-syms_0 (if adjust49_0 (make-hasheq) #f)))
-                   (let ((unexposed-syms_0
-                          (if gluing50_0
-                            (if (not
-                                 (let ((s_0 (gluing-mode-exposes gluing50_0)))
-                                   (begin-unsafe (zero? (hash-count s_0)))))
-                              (hash-copy (gluing-mode-exposes gluing50_0))
-                              #f)
-                            #f)))
-                     (let ((m_0 (namespace->module m-ns82_0 module-name_0)))
-                       (begin
-                         (if m_0
-                           (void)
-                           (begin-unsafe
-                            (raise-arguments-error
-                             'require
-                             "unknown module"
-                             "module name"
-                             (module-name->error-string module-name_0))))
-                         (let ((interned-mpi_0
-                                (if requires+provides51_0
-                                  (add-required-module!
-                                   requires+provides51_0
-                                   mpi78_0
-                                   (intern-phase+space-shift
-                                    phase-shift44_0
-                                    space-level_0)
-                                   (module-cross-phase-persistent? m_0))
-                                  mpi78_0)))
+                      (if (adjust-rename? adjust48_0)
+                        (adjust-rename-to-id adjust48_0)
+                        in-stx78_0)))
+                 (let ((done-syms_0 (if adjust48_0 (make-hasheq) #f)))
+                   (let ((m_0 (namespace->module m-ns79_0 module-name_0)))
+                     (begin
+                       (if m_0
+                         (void)
+                         (begin-unsafe
+                          (raise-arguments-error
+                           'require
+                           "unknown module"
+                           "module name"
+                           (module-name->error-string module-name_0))))
+                       (let ((interned-mpi_0
+                              (if requires+provides49_0
+                                (add-required-module!
+                                 requires+provides49_0
+                                 mpi75_0
+                                 (intern-phase+space-shift
+                                  phase-shift43_0
+                                  space-level_0)
+                                 (module-cross-phase-persistent? m_0))
+                                mpi75_0)))
+                         (begin
+                           (if visit?50_0
+                             (namespace-module-visit!.1
+                              run-phase45_0
+                              m-ns79_0
+                              interned-mpi_0
+                              phase-shift43_0)
+                             (void))
                            (begin
-                             (if visit?52_0
-                               (namespace-module-visit!.1
-                                run-phase46_0
-                                m-ns82_0
+                             (if run?51_0
+                               (namespace-module-instantiate!.1
+                                #f
+                                #t
+                                run-phase45_0
+                                hash2610
+                                null
+                                #f
+                                m-ns79_0
                                 interned-mpi_0
-                                phase-shift44_0)
+                                phase-shift43_0)
                                (void))
                              (begin
-                               (if run?53_0
-                                 (namespace-module-instantiate!.1
-                                  #f
-                                  #t
-                                  run-phase46_0
-                                  hash2610
-                                  null
-                                  #f
-                                  m-ns82_0
+                               (if (not (if visit?50_0 visit?50_0 run?51_0))
+                                 (namespace-module-make-available!.1
+                                  run-phase45_0
+                                  m-ns79_0
                                   interned-mpi_0
-                                  phase-shift44_0)
+                                  phase-shift43_0)
                                  (void))
-                               (begin
-                                 (if (not (if visit?52_0 visit?52_0 run?53_0))
-                                   (namespace-module-make-available!.1
-                                    run-phase46_0
-                                    m-ns82_0
-                                    interned-mpi_0
-                                    phase-shift44_0)
-                                   (void))
-                                 (let ((can-bulk-bind?_0
-                                        (if (eq? space-level_0 kw2450)
-                                          (if (let ((or-part_0
-                                                     (not adjust49_0)))
-                                                (if or-part_0
-                                                  or-part_0
-                                                  (let ((or-part_1
-                                                         (adjust-prefix?
-                                                          adjust49_0)))
-                                                    (if or-part_1
-                                                      or-part_1
-                                                      (adjust-all-except?
-                                                       adjust49_0)))))
-                                            (if (not
-                                                 skip-variable-phase-level58_0)
-                                              (let ((or-part_0
-                                                     (not gluing50_0)))
-                                                (if or-part_0
-                                                  or-part_0
-                                                  (let ((s_0
-                                                         (gluing-mode-exposes
-                                                          gluing50_0)))
-                                                    (begin-unsafe
-                                                     (zero?
-                                                      (hash-count s_0))))))
-                                              #f)
-                                            #f)
-                                          #f)))
-                                   (let ((bulk-prefix_0
-                                          (if (adjust-prefix? adjust49_0)
-                                            (adjust-prefix-sym adjust49_0)
-                                            (if (adjust-all-except? adjust49_0)
-                                              (adjust-all-except-prefix-sym
-                                               adjust49_0)
-                                              #f))))
-                                     (let ((bulk-excepts_0
-                                            (if (adjust-all-except? adjust49_0)
-                                              (adjust-all-except-syms
-                                               adjust49_0)
-                                              hash2610)))
-                                       (let ((update-nominals-box_0
-                                              (if can-bulk-bind?_0
-                                                (box null)
-                                                #f)))
-                                         (begin
-                                           (let ((temp310_0
-                                                  (if requires+provides51_0
-                                                    (requires+provides-self
-                                                     requires+provides51_0)
-                                                    #f)))
-                                             (let ((temp311_0
-                                                    (if (adjust-only?
-                                                         adjust49_0)
-                                                      (set->list
-                                                       (adjust-only-syms
-                                                        adjust49_0))
-                                                      (if (adjust-rename?
-                                                           adjust49_0)
-                                                        (list
-                                                         (adjust-rename-from-sym
-                                                          adjust49_0))
-                                                        #f))))
-                                               (let ((temp320_0
-                                                      (if requires+provides51_0
-                                                        (if can-bulk-bind?_0
-                                                          (|#%name|
-                                                           temp320
-                                                           (lambda (provides_0
-                                                                    provide-phase+space_0)
-                                                             (begin
-                                                               (let ((temp336_0
-                                                                      (module-self
-                                                                       m_0)))
-                                                                 (let ((temp343_0
-                                                                        (if (positive?
-                                                                             (hash-count
-                                                                              bulk-excepts_0))
-                                                                          done-syms_0
-                                                                          #f)))
-                                                                   (let ((temp345_0
-                                                                          (not
-                                                                           initial-require?55_0)))
-                                                                     (let ((temp343_1
-                                                                            temp343_0)
-                                                                           (temp336_1
-                                                                            temp336_0))
-                                                                       (add-bulk-required-ids!.1
-                                                                        update-nominals-box_0
-                                                                        can-be-shadowed?54_0
-                                                                        temp345_0
-                                                                        bulk-excepts_0
-                                                                        orig-s79_0
-                                                                        bulk-prefix_0
-                                                                        temp343_1
-                                                                        who60_0
-                                                                        requires+provides51_0
-                                                                        bind-in-stx_0
-                                                                        temp336_1
-                                                                        mpi78_0
-                                                                        phase-shift44_0
-                                                                        provides_0
-                                                                        provide-phase+space_0))))))))
-                                                          #f)
-                                                        #f)))
-                                                 (let ((temp321_0
-                                                        (if (let ((or-part_0
-                                                                   (not
-                                                                    can-bulk-bind?_0)))
-                                                              (if or-part_0
-                                                                or-part_0
-                                                                copy-variable-phase-level56_0))
-                                                          (|#%name|
-                                                           temp321
-                                                           (lambda (binding_0
-                                                                    as-transformer?_0)
-                                                             (begin
-                                                               (let ((sym_0
-                                                                      (module-binding-nominal-sym
-                                                                       binding_0)))
-                                                                 (let ((provide-phase+space_0
-                                                                        (module-binding-nominal-phase+space
-                                                                         binding_0)))
-                                                                   (let ((provide-phase_0
-                                                                          (phase+space-phase
-                                                                           provide-phase+space_0)))
-                                                                     (let ((provide-space_0
-                                                                            (phase+space-space
-                                                                             provide-phase+space_0)))
-                                                                       (let ((adjusted-sym_0
-                                                                              (if (not
-                                                                                   (symbol-interned?
-                                                                                    sym_0))
-                                                                                #f
-                                                                                (if (if skip-variable-phase-level58_0
-                                                                                      (if (not
-                                                                                           as-transformer?_0)
-                                                                                        (equal?
-                                                                                         provide-phase_0
-                                                                                         skip-variable-phase-level58_0)
-                                                                                        #f)
-                                                                                      #f)
-                                                                                  #f
-                                                                                  (if (not
-                                                                                       adjust49_0)
-                                                                                    sym_0
-                                                                                    (if (adjust-only?
-                                                                                         adjust49_0)
-                                                                                      (if (let ((s_0
-                                                                                                 (adjust-only-syms
-                                                                                                  adjust49_0)))
-                                                                                            (begin-unsafe
-                                                                                             (hash-ref
-                                                                                              s_0
-                                                                                              sym_0
-                                                                                              #f)))
-                                                                                        (if (hash-set!
-                                                                                             done-syms_0
-                                                                                             sym_0
-                                                                                             #t)
-                                                                                          sym_0
-                                                                                          #f)
-                                                                                        #f)
-                                                                                      (if (adjust-prefix?
-                                                                                           adjust49_0)
-                                                                                        (string->symbol
-                                                                                         (let ((app_0
-                                                                                                (symbol->string
-                                                                                                 (adjust-prefix-sym
-                                                                                                  adjust49_0))))
-                                                                                           (string-append
-                                                                                            app_0
-                                                                                            (symbol->string
-                                                                                             sym_0))))
-                                                                                        (if (adjust-all-except?
-                                                                                             adjust49_0)
-                                                                                          (if (not
-                                                                                               (if (let ((s_0
-                                                                                                          (adjust-all-except-syms
-                                                                                                           adjust49_0)))
-                                                                                                     (begin-unsafe
-                                                                                                      (hash-ref
-                                                                                                       s_0
-                                                                                                       sym_0
-                                                                                                       #f)))
-                                                                                                 (hash-set!
-                                                                                                  done-syms_0
-                                                                                                  sym_0
-                                                                                                  #t)
-                                                                                                 #f))
-                                                                                            (string->symbol
-                                                                                             (let ((app_0
-                                                                                                    (symbol->string
-                                                                                                     (adjust-all-except-prefix-sym
-                                                                                                      adjust49_0))))
-                                                                                               (string-append
-                                                                                                app_0
-                                                                                                (symbol->string
-                                                                                                 sym_0))))
-                                                                                            #f)
-                                                                                          (if (adjust-rename?
-                                                                                               adjust49_0)
-                                                                                            (if (eq?
-                                                                                                 sym_0
-                                                                                                 (adjust-rename-from-sym
-                                                                                                  adjust49_0))
-                                                                                              (if (hash-set!
-                                                                                                   done-syms_0
-                                                                                                   sym_0
-                                                                                                   #t)
-                                                                                                (adjust-rename-to-id
-                                                                                                 adjust49_0)
-                                                                                                #f)
-                                                                                              #f)
-                                                                                            (void))))))))))
-                                                                         (let ((skip-bind?_0
-                                                                                (if (if adjusted-sym_0
-                                                                                      requires+provides51_0
-                                                                                      #f)
-                                                                                  (let ((bind-phase_0
-                                                                                         (phase+
-                                                                                          phase-shift44_0
-                                                                                          provide-phase_0)))
-                                                                                    (let ((bind-space_0
-                                                                                           (space+
-                                                                                            provide-space_0
-                                                                                            space-level_0)))
-                                                                                      (let ((unglue-s_0
-                                                                                             (add-space-scope
-                                                                                              (datum->syntax$1
-                                                                                               bind-in-stx_0
-                                                                                               adjusted-sym_0)
-                                                                                              bind-space_0)))
-                                                                                        (let ((s_0
-                                                                                               (glue-introduce
-                                                                                                gluing50_0
-                                                                                                unglue-s_0
-                                                                                                unexposed-syms_0)))
-                                                                                          (let ((bound-status_0
-                                                                                                 (if initial-require?55_0
-                                                                                                   #f
-                                                                                                   (begin
-                                                                                                     (adjust-shadow-requires!
-                                                                                                      requires+provides51_0
-                                                                                                      s_0
-                                                                                                      bind-phase_0
-                                                                                                      bind-space_0)
-                                                                                                     (check-not-defined.1
-                                                                                                      #f
-                                                                                                      #t
-                                                                                                      #t
-                                                                                                      orig-s79_0
-                                                                                                      #t
-                                                                                                      binding_0
-                                                                                                      who60_0
-                                                                                                      requires+provides51_0
-                                                                                                      s_0
-                                                                                                      bind-phase_0
-                                                                                                      bind-space_0)))))
-                                                                                            (begin
-                                                                                              (if (eq?
-                                                                                                   bound-status_0
-                                                                                                   'defined)
-                                                                                                (void)
-                                                                                                (let ((temp361_0
-                                                                                                       (intern-phase+space
-                                                                                                        bind-phase_0
-                                                                                                        bind-space_0)))
-                                                                                                  (add-defined-or-required-id!.1
-                                                                                                   as-transformer?_0
-                                                                                                   can-be-shadowed?54_0
-                                                                                                   requires+provides51_0
-                                                                                                   s_0
-                                                                                                   temp361_0
-                                                                                                   binding_0)))
-                                                                                              bound-status_0))))))
-                                                                                  #f)))
-                                                                           (begin
-                                                                             (if (if copy-variable-phase-level56_0
-                                                                                   (if (not
-                                                                                        as-transformer?_0)
-                                                                                     (equal?
-                                                                                      provide-phase_0
-                                                                                      copy-variable-phase-level56_0)
-                                                                                     #f)
-                                                                                   #f)
-                                                                               (copy-namespace-value
-                                                                                m-ns82_0
-                                                                                sym_0
-                                                                                binding_0
-                                                                                copy-variable-phase-level56_0
-                                                                                phase-shift44_0
-                                                                                copy-variable-as-constant?57_0)
-                                                                               (void))
-                                                                             (if (not
-                                                                                  skip-bind?_0)
-                                                                               adjusted-sym_0
-                                                                               #f)))))))))))
-                                                          #f)))
-                                                   (let ((temp320_1 temp320_0)
-                                                         (temp311_1 temp311_0)
-                                                         (temp310_1 temp310_0))
-                                                     (bind-all-provides!.1
-                                                      bind?59_0
-                                                      temp320_1
-                                                      bulk-excepts_0
-                                                      bulk-prefix_0
-                                                      can-bulk-bind?_0
-                                                      temp310_1
-                                                      temp321_0
-                                                      gluing50_0
-                                                      orig-s79_0
-                                                      just-meta47_0
-                                                      just-space48_0
-                                                      temp311_1
-                                                      unexposed-syms_0
-                                                      m_0
-                                                      bind-in-stx_0
-                                                      phase-shift44_0
-                                                      space-level_0
-                                                      m-ns82_0
-                                                      interned-mpi_0
-                                                      module-name_0
-                                                      requires+provides51_0))))))
-                                           (begin
-                                             (if update-nominals-box_0
-                                               (begin
-                                                 (let ((lst_0
-                                                        (unbox
-                                                         update-nominals-box_0)))
-                                                   (begin
-                                                     (letrec*
-                                                      ((for-loop_0
+                               (let ((can-bulk-bind?_0
+                                      (if (eq? space-level_0 kw2450)
+                                        (if (let ((or-part_0 (not adjust48_0)))
+                                              (if or-part_0
+                                                or-part_0
+                                                (let ((or-part_1
+                                                       (adjust-prefix?
+                                                        adjust48_0)))
+                                                  (if or-part_1
+                                                    or-part_1
+                                                    (adjust-all-except?
+                                                     adjust48_0)))))
+                                          (not skip-variable-phase-level56_0)
+                                          #f)
+                                        #f)))
+                                 (let ((bulk-prefix_0
+                                        (if (adjust-prefix? adjust48_0)
+                                          (adjust-prefix-sym adjust48_0)
+                                          (if (adjust-all-except? adjust48_0)
+                                            (adjust-all-except-prefix-sym
+                                             adjust48_0)
+                                            #f))))
+                                   (let ((bulk-excepts_0
+                                          (if (adjust-all-except? adjust48_0)
+                                            (adjust-all-except-syms adjust48_0)
+                                            hash2610)))
+                                     (let ((update-nominals-box_0
+                                            (if can-bulk-bind?_0
+                                              (box null)
+                                              #f)))
+                                       (begin
+                                         (let ((temp291_0
+                                                (if requires+provides49_0
+                                                  (requires+provides-self
+                                                   requires+provides49_0)
+                                                  #f)))
+                                           (let ((temp292_0
+                                                  (if (adjust-only? adjust48_0)
+                                                    (set->list
+                                                     (adjust-only-syms
+                                                      adjust48_0))
+                                                    (if (adjust-rename?
+                                                         adjust48_0)
+                                                      (list
+                                                       (adjust-rename-from-sym
+                                                        adjust48_0))
+                                                      #f))))
+                                             (let ((temp299_0
+                                                    (if requires+provides49_0
+                                                      (if can-bulk-bind?_0
                                                         (|#%name|
-                                                         for-loop
-                                                         (lambda (lst_1)
+                                                         temp299
+                                                         (lambda (provides_0
+                                                                  provide-phase+space_0)
                                                            (begin
-                                                             (if (pair? lst_1)
-                                                               (let ((update!_0
-                                                                      (unsafe-car
+                                                             (let ((temp315_0
+                                                                    (module-self
+                                                                     m_0)))
+                                                               (let ((temp322_0
+                                                                      (if (positive?
+                                                                           (hash-count
+                                                                            bulk-excepts_0))
+                                                                        done-syms_0
+                                                                        #f)))
+                                                                 (let ((temp324_0
+                                                                        (not
+                                                                         initial-require?53_0)))
+                                                                   (let ((temp322_1
+                                                                          temp322_0)
+                                                                         (temp315_1
+                                                                          temp315_0))
+                                                                     (add-bulk-required-ids!.1
+                                                                      update-nominals-box_0
+                                                                      can-be-shadowed?52_0
+                                                                      temp324_0
+                                                                      bulk-excepts_0
+                                                                      orig-s76_0
+                                                                      bulk-prefix_0
+                                                                      temp322_1
+                                                                      who58_0
+                                                                      requires+provides49_0
+                                                                      bind-in-stx_0
+                                                                      temp315_1
+                                                                      mpi75_0
+                                                                      phase-shift43_0
+                                                                      provides_0
+                                                                      provide-phase+space_0))))))))
+                                                        #f)
+                                                      #f)))
+                                               (let ((temp300_0
+                                                      (if (let ((or-part_0
+                                                                 (not
+                                                                  can-bulk-bind?_0)))
+                                                            (if or-part_0
+                                                              or-part_0
+                                                              copy-variable-phase-level54_0))
+                                                        (|#%name|
+                                                         temp300
+                                                         (lambda (binding_0
+                                                                  as-transformer?_0)
+                                                           (begin
+                                                             (let ((sym_0
+                                                                    (module-binding-nominal-sym
+                                                                     binding_0)))
+                                                               (let ((provide-phase+space_0
+                                                                      (module-binding-nominal-phase+space
+                                                                       binding_0)))
+                                                                 (let ((provide-phase_0
+                                                                        (phase+space-phase
+                                                                         provide-phase+space_0)))
+                                                                   (let ((provide-space_0
+                                                                          (phase+space-space
+                                                                           provide-phase+space_0)))
+                                                                     (let ((adjusted-sym_0
+                                                                            (if (not
+                                                                                 (symbol-interned?
+                                                                                  sym_0))
+                                                                              #f
+                                                                              (if (if skip-variable-phase-level56_0
+                                                                                    (if (not
+                                                                                         as-transformer?_0)
+                                                                                      (equal?
+                                                                                       provide-phase_0
+                                                                                       skip-variable-phase-level56_0)
+                                                                                      #f)
+                                                                                    #f)
+                                                                                #f
+                                                                                (if (not
+                                                                                     adjust48_0)
+                                                                                  sym_0
+                                                                                  (if (adjust-only?
+                                                                                       adjust48_0)
+                                                                                    (if (let ((s_0
+                                                                                               (adjust-only-syms
+                                                                                                adjust48_0)))
+                                                                                          (begin-unsafe
+                                                                                           (hash-ref
+                                                                                            s_0
+                                                                                            sym_0
+                                                                                            #f)))
+                                                                                      (if (hash-set!
+                                                                                           done-syms_0
+                                                                                           sym_0
+                                                                                           #t)
+                                                                                        sym_0
+                                                                                        #f)
+                                                                                      #f)
+                                                                                    (if (adjust-prefix?
+                                                                                         adjust48_0)
+                                                                                      (string->symbol
+                                                                                       (let ((app_0
+                                                                                              (symbol->string
+                                                                                               (adjust-prefix-sym
+                                                                                                adjust48_0))))
+                                                                                         (string-append
+                                                                                          app_0
+                                                                                          (symbol->string
+                                                                                           sym_0))))
+                                                                                      (if (adjust-all-except?
+                                                                                           adjust48_0)
+                                                                                        (if (not
+                                                                                             (if (let ((s_0
+                                                                                                        (adjust-all-except-syms
+                                                                                                         adjust48_0)))
+                                                                                                   (begin-unsafe
+                                                                                                    (hash-ref
+                                                                                                     s_0
+                                                                                                     sym_0
+                                                                                                     #f)))
+                                                                                               (hash-set!
+                                                                                                done-syms_0
+                                                                                                sym_0
+                                                                                                #t)
+                                                                                               #f))
+                                                                                          (string->symbol
+                                                                                           (let ((app_0
+                                                                                                  (symbol->string
+                                                                                                   (adjust-all-except-prefix-sym
+                                                                                                    adjust48_0))))
+                                                                                             (string-append
+                                                                                              app_0
+                                                                                              (symbol->string
+                                                                                               sym_0))))
+                                                                                          #f)
+                                                                                        (if (adjust-rename?
+                                                                                             adjust48_0)
+                                                                                          (if (eq?
+                                                                                               sym_0
+                                                                                               (adjust-rename-from-sym
+                                                                                                adjust48_0))
+                                                                                            (if (hash-set!
+                                                                                                 done-syms_0
+                                                                                                 sym_0
+                                                                                                 #t)
+                                                                                              (adjust-rename-to-id
+                                                                                               adjust48_0)
+                                                                                              #f)
+                                                                                            #f)
+                                                                                          (void))))))))))
+                                                                       (let ((skip-bind?_0
+                                                                              (if (if adjusted-sym_0
+                                                                                    requires+provides49_0
+                                                                                    #f)
+                                                                                (let ((bind-phase_0
+                                                                                       (phase+
+                                                                                        phase-shift43_0
+                                                                                        provide-phase_0)))
+                                                                                  (let ((bind-space_0
+                                                                                         (space+
+                                                                                          provide-space_0
+                                                                                          space-level_0)))
+                                                                                    (let ((s_0
+                                                                                           (add-space-scope
+                                                                                            (datum->syntax$1
+                                                                                             bind-in-stx_0
+                                                                                             adjusted-sym_0)
+                                                                                            bind-space_0)))
+                                                                                      (let ((bound-status_0
+                                                                                             (if initial-require?53_0
+                                                                                               #f
+                                                                                               (begin
+                                                                                                 (adjust-shadow-requires!
+                                                                                                  requires+provides49_0
+                                                                                                  s_0
+                                                                                                  bind-phase_0
+                                                                                                  bind-space_0)
+                                                                                                 (check-not-defined.1
+                                                                                                  #f
+                                                                                                  #t
+                                                                                                  #t
+                                                                                                  orig-s76_0
+                                                                                                  #t
+                                                                                                  binding_0
+                                                                                                  who58_0
+                                                                                                  requires+provides49_0
+                                                                                                  s_0
+                                                                                                  bind-phase_0
+                                                                                                  bind-space_0)))))
+                                                                                        (begin
+                                                                                          (if (eq?
+                                                                                               bound-status_0
+                                                                                               'defined)
+                                                                                            (void)
+                                                                                            (let ((temp340_0
+                                                                                                   (intern-phase+space
+                                                                                                    bind-phase_0
+                                                                                                    bind-space_0)))
+                                                                                              (add-defined-or-required-id!.1
+                                                                                               as-transformer?_0
+                                                                                               can-be-shadowed?52_0
+                                                                                               requires+provides49_0
+                                                                                               s_0
+                                                                                               temp340_0
+                                                                                               binding_0)))
+                                                                                          bound-status_0)))))
+                                                                                #f)))
+                                                                         (begin
+                                                                           (if (if copy-variable-phase-level54_0
+                                                                                 (if (not
+                                                                                      as-transformer?_0)
+                                                                                   (equal?
+                                                                                    provide-phase_0
+                                                                                    copy-variable-phase-level54_0)
+                                                                                   #f)
+                                                                                 #f)
+                                                                             (copy-namespace-value
+                                                                              m-ns79_0
+                                                                              sym_0
+                                                                              binding_0
+                                                                              copy-variable-phase-level54_0
+                                                                              phase-shift43_0
+                                                                              copy-variable-as-constant?55_0)
+                                                                             (void))
+                                                                           (if (not
+                                                                                skip-bind?_0)
+                                                                             adjusted-sym_0
+                                                                             #f)))))))))))
+                                                        #f)))
+                                                 (let ((temp299_1 temp299_0)
+                                                       (temp292_1 temp292_0)
+                                                       (temp291_1 temp291_0))
+                                                   (bind-all-provides!.1
+                                                    bind?57_0
+                                                    temp299_1
+                                                    bulk-excepts_0
+                                                    bulk-prefix_0
+                                                    can-bulk-bind?_0
+                                                    temp291_1
+                                                    temp300_0
+                                                    orig-s76_0
+                                                    just-meta46_0
+                                                    just-space47_0
+                                                    temp292_1
+                                                    m_0
+                                                    bind-in-stx_0
+                                                    phase-shift43_0
+                                                    space-level_0
+                                                    m-ns79_0
+                                                    interned-mpi_0
+                                                    module-name_0
+                                                    requires+provides49_0))))))
+                                         (begin
+                                           (if update-nominals-box_0
+                                             (begin
+                                               (let ((lst_0
+                                                      (unbox
+                                                       update-nominals-box_0)))
+                                                 (begin
+                                                   (letrec*
+                                                    ((for-loop_0
+                                                      (|#%name|
+                                                       for-loop
+                                                       (lambda (lst_1)
+                                                         (begin
+                                                           (if (pair? lst_1)
+                                                             (let ((update!_0
+                                                                    (unsafe-car
+                                                                     lst_1)))
+                                                               (let ((rest_0
+                                                                      (unsafe-cdr
                                                                        lst_1)))
-                                                                 (let ((rest_0
-                                                                        (unsafe-cdr
-                                                                         lst_1)))
-                                                                   (begin
-                                                                     (|#%app|
-                                                                      update!_0)
-                                                                     (for-loop_0
-                                                                      rest_0))))
-                                                               (values)))))))
-                                                      (for-loop_0 lst_0))))
-                                                 (void))
+                                                                 (begin
+                                                                   (|#%app|
+                                                                    update!_0)
+                                                                   (for-loop_0
+                                                                    rest_0))))
+                                                             (values)))))))
+                                                    (for-loop_0 lst_0))))
                                                (void))
-                                             (let ((need-syms_0
-                                                    (if (adjust-only?
-                                                         adjust49_0)
-                                                      (adjust-only-syms
-                                                       adjust49_0)
-                                                      (if (adjust-all-except?
-                                                           adjust49_0)
-                                                        (adjust-all-except-syms
-                                                         adjust49_0)
-                                                        (if (adjust-rename?
-                                                             adjust49_0)
-                                                          (set
-                                                           (adjust-rename-from-sym
-                                                            adjust49_0))
-                                                          #f)))))
+                                             (void))
+                                           (let ((need-syms_0
+                                                  (if (adjust-only? adjust48_0)
+                                                    (adjust-only-syms
+                                                     adjust48_0)
+                                                    (if (adjust-all-except?
+                                                         adjust48_0)
+                                                      (adjust-all-except-syms
+                                                       adjust48_0)
+                                                      (if (adjust-rename?
+                                                           adjust48_0)
+                                                        (set
+                                                         (adjust-rename-from-sym
+                                                          adjust48_0))
+                                                        #f)))))
+                                             (if (if need-syms_0
+                                                   (not
+                                                    (let ((app_0
+                                                           (begin-unsafe
+                                                            (hash-count
+                                                             need-syms_0))))
+                                                      (=
+                                                       app_0
+                                                       (hash-count
+                                                        done-syms_0))))
+                                                   #f)
                                                (begin
-                                                 (if (if need-syms_0
-                                                       (not
-                                                        (let ((app_0
-                                                               (begin-unsafe
-                                                                (hash-count
-                                                                 need-syms_0))))
-                                                          (=
-                                                           app_0
-                                                           (hash-count
-                                                            done-syms_0))))
-                                                       #f)
-                                                   (begin
-                                                     (begin
-                                                       (letrec*
-                                                        ((for-loop_0
-                                                          (|#%name|
-                                                           for-loop
-                                                           (lambda (i_0)
-                                                             (begin
-                                                               (if i_0
-                                                                 (let ((sym_0
-                                                                        (unsafe-immutable-hash-iterate-key
-                                                                         need-syms_0
-                                                                         i_0)))
-                                                                   (begin
-                                                                     (if (hash-ref
-                                                                          done-syms_0
-                                                                          sym_0
-                                                                          #f)
-                                                                       (void)
-                                                                       (raise-syntax-error$1
-                                                                        who60_0
-                                                                        "not in nested spec"
-                                                                        orig-s79_0
-                                                                        sym_0))
-                                                                     (for-loop_0
-                                                                      (unsafe-immutable-hash-iterate-next
-                                                                       need-syms_0
-                                                                       i_0))))
-                                                                 (values)))))))
-                                                        (for-loop_0
-                                                         (unsafe-immutable-hash-iterate-first
-                                                          need-syms_0))))
-                                                     (void))
-                                                   (void))
-                                                 (if (if unexposed-syms_0
-                                                       (not
-                                                        (eqv?
-                                                         0
-                                                         (hash-count
-                                                          unexposed-syms_0)))
-                                                       #f)
-                                                   (raise-syntax-error$1
-                                                    who60_0
-                                                    "name to expose is not within import"
-                                                    orig-s79_0
-                                                    (hash-iterate-key
-                                                     unexposed-syms_0
-                                                     (hash-iterate-first
-                                                      unexposed-syms_0)))
-                                                   (void))))))))))))))))))))
+                                                 (begin
+                                                   (letrec*
+                                                    ((for-loop_0
+                                                      (|#%name|
+                                                       for-loop
+                                                       (lambda (i_0)
+                                                         (begin
+                                                           (if i_0
+                                                             (let ((sym_0
+                                                                    (unsafe-immutable-hash-iterate-key
+                                                                     need-syms_0
+                                                                     i_0)))
+                                                               (begin
+                                                                 (if (hash-ref
+                                                                      done-syms_0
+                                                                      sym_0
+                                                                      #f)
+                                                                   (void)
+                                                                   (raise-syntax-error$1
+                                                                    who58_0
+                                                                    "not in nested spec"
+                                                                    orig-s76_0
+                                                                    sym_0))
+                                                                 (for-loop_0
+                                                                  (unsafe-immutable-hash-iterate-next
+                                                                   need-syms_0
+                                                                   i_0))))
+                                                             (values)))))))
+                                                    (for-loop_0
+                                                     (unsafe-immutable-hash-iterate-first
+                                                      need-syms_0))))
+                                                 (void))
+                                               (void))))))))))))))))))
              (if log-performance? (end-performance-region) (void)))))))))
 (define bind-all-provides!.1
   (|#%name|
    bind-all-provides!
-   (lambda (bind?91_0
-            bulk-callback96_0
-            bulk-excepts94_0
-            bulk-prefix93_0
-            can-bulk?92_0
-            defines-mpi85_0
-            filter95_0
-            gluing89_0
-            in84_0
-            just-meta87_0
-            just-space88_0
-            only86_0
-            unexposed-syms90_0
-            m110_0
-            in-stx111_0
-            phase-shift112_0
-            space-level113_0
-            ns114_0
-            mpi115_0
-            module-name116_0
-            requires+provides117_0)
+   (lambda (bind?86_0
+            bulk-callback91_0
+            bulk-excepts89_0
+            bulk-prefix88_0
+            can-bulk?87_0
+            defines-mpi82_0
+            filter90_0
+            in81_0
+            just-meta84_0
+            just-space85_0
+            only83_0
+            m103_0
+            in-stx104_0
+            phase-shift105_0
+            space-level106_0
+            ns107_0
+            mpi108_0
+            module-name109_0
+            requires+provides110_0)
      (begin
-       (let ((self_0 (module-self m110_0)))
+       (let ((self_0 (module-self m103_0)))
          (let ((phase+space-shift_0
-                (intern-phase+space-shift phase-shift112_0 space-level113_0)))
+                (intern-phase+space-shift phase-shift105_0 space-level106_0)))
            (begin
-             (let ((ht_0 (module-provides m110_0)))
+             (let ((ht_0 (module-provides m103_0)))
                (begin
                  (letrec*
                   ((for-loop_0
@@ -34129,19 +33685,19 @@
                               (call-with-values
                                (lambda ()
                                  (if (if (let ((or-part_0
-                                                (eq? just-meta87_0 'all)))
+                                                (eq? just-meta84_0 'all)))
                                            (if or-part_0
                                              or-part_0
                                              (eqv?
-                                              just-meta87_0
+                                              just-meta84_0
                                               (phase+space-phase
                                                provide-phase+space_0))))
                                        (let ((or-part_0
-                                              (eq? just-space88_0 #t)))
+                                              (eq? just-space85_0 #t)))
                                          (if or-part_0
                                            or-part_0
                                            (eqv?
-                                            just-space88_0
+                                            just-space85_0
                                             (phase+space-space
                                              provide-phase+space_0))))
                                        #f)
@@ -34159,155 +33715,141 @@
                                                 (phase+space-space
                                                  phase+space_0)))
                                            (begin
-                                             (if gluing89_0
-                                               (|#%app|
-                                                (gluing-mode-definer
-                                                 gluing89_0)
-                                                phase_0
+                                             (if requires+provides110_0
+                                               (add-required-space!
+                                                requires+provides110_0
                                                 space_0)
                                                (void))
-                                             (begin
-                                               (if requires+provides117_0
-                                                 (add-required-space!
-                                                  requires+provides117_0
-                                                  space_0)
-                                                 (void))
-                                               (let ((need-except?_0
-                                                      (if bulk-callback96_0
-                                                        (|#%app|
-                                                         bulk-callback96_0
-                                                         provides_0
-                                                         provide-phase+space_0)
-                                                        #f)))
-                                                 (if bind?91_0
-                                                   (begin
-                                                     (if filter95_0
-                                                       (begin
-                                                         (let ((lst_0
-                                                                (if only86_0
-                                                                  only86_0
-                                                                  (hash-keys
-                                                                   provides_0))))
-                                                           (begin
-                                                             (letrec*
-                                                              ((for-loop_1
-                                                                (|#%name|
-                                                                 for-loop
-                                                                 (lambda (lst_1)
-                                                                   (begin
-                                                                     (if (pair?
-                                                                          lst_1)
-                                                                       (let ((sym_0
-                                                                              (unsafe-car
+                                             (let ((need-except?_0
+                                                    (if bulk-callback91_0
+                                                      (|#%app|
+                                                       bulk-callback91_0
+                                                       provides_0
+                                                       provide-phase+space_0)
+                                                      #f)))
+                                               (if bind?86_0
+                                                 (begin
+                                                   (if filter90_0
+                                                     (begin
+                                                       (let ((lst_0
+                                                              (if only83_0
+                                                                only83_0
+                                                                (hash-keys
+                                                                 provides_0))))
+                                                         (begin
+                                                           (letrec*
+                                                            ((for-loop_1
+                                                              (|#%name|
+                                                               for-loop
+                                                               (lambda (lst_1)
+                                                                 (begin
+                                                                   (if (pair?
+                                                                        lst_1)
+                                                                     (let ((sym_0
+                                                                            (unsafe-car
+                                                                             lst_1)))
+                                                                       (let ((rest_0
+                                                                              (unsafe-cdr
                                                                                lst_1)))
-                                                                         (let ((rest_0
-                                                                                (unsafe-cdr
-                                                                                 lst_1)))
-                                                                           (begin
-                                                                             (let ((binding/p_0
-                                                                                    (hash-ref
-                                                                                     provides_0
-                                                                                     sym_0
-                                                                                     #f)))
-                                                                               (if binding/p_0
-                                                                                 (let ((b_0
-                                                                                        (provide-binding-to-require-binding.1
-                                                                                         mpi115_0
-                                                                                         phase+space-shift_0
-                                                                                         provide-phase+space_0
-                                                                                         self_0
-                                                                                         binding/p_0
-                                                                                         sym_0)))
-                                                                                   (let ((sym_1
-                                                                                          (|#%app|
-                                                                                           filter95_0
-                                                                                           b_0
-                                                                                           (provided-as-transformer?
-                                                                                            binding/p_0))))
-                                                                                     (if (if sym_1
-                                                                                           (not
-                                                                                            can-bulk?92_0)
-                                                                                           #f)
-                                                                                       (let ((s_0
-                                                                                              (glue-introduce
-                                                                                               gluing89_0
-                                                                                               (add-space-scope
-                                                                                                (datum->syntax$1
-                                                                                                 in-stx111_0
-                                                                                                 sym_1)
-                                                                                                space_0)
-                                                                                               unexposed-syms90_0)))
-                                                                                         (add-binding!.1
-                                                                                          #f
-                                                                                          #f
-                                                                                          s_0
-                                                                                          b_0
-                                                                                          phase_0))
-                                                                                       (void))))
-                                                                                 (void)))
-                                                                             (for-loop_1
-                                                                              rest_0))))
-                                                                       (values)))))))
-                                                              (for-loop_1
-                                                               lst_0))))
-                                                         (void))
+                                                                         (begin
+                                                                           (let ((binding/p_0
+                                                                                  (hash-ref
+                                                                                   provides_0
+                                                                                   sym_0
+                                                                                   #f)))
+                                                                             (if binding/p_0
+                                                                               (let ((b_0
+                                                                                      (provide-binding-to-require-binding.1
+                                                                                       mpi108_0
+                                                                                       phase+space-shift_0
+                                                                                       provide-phase+space_0
+                                                                                       self_0
+                                                                                       binding/p_0
+                                                                                       sym_0)))
+                                                                                 (let ((sym_1
+                                                                                        (|#%app|
+                                                                                         filter90_0
+                                                                                         b_0
+                                                                                         (provided-as-transformer?
+                                                                                          binding/p_0))))
+                                                                                   (if (if sym_1
+                                                                                         (not
+                                                                                          can-bulk?87_0)
+                                                                                         #f)
+                                                                                     (let ((temp350_0
+                                                                                            (add-space-scope
+                                                                                             (datum->syntax$1
+                                                                                              in-stx104_0
+                                                                                              sym_1)
+                                                                                             space_0)))
+                                                                                       (add-binding!.1
+                                                                                        #f
+                                                                                        #f
+                                                                                        temp350_0
+                                                                                        b_0
+                                                                                        phase_0))
+                                                                                     (void))))
+                                                                               (void)))
+                                                                           (for-loop_1
+                                                                            rest_0))))
+                                                                     (values)))))))
+                                                            (for-loop_1
+                                                             lst_0))))
                                                        (void))
-                                                     (if can-bulk?92_0
-                                                       (let ((bulk-binding-registry_0
-                                                              (namespace-bulk-binding-registry
-                                                               ns114_0)))
-                                                         (let ((temp374_0
-                                                                (glue-introduce
-                                                                 gluing89_0
-                                                                 (add-space-scope
-                                                                  in-stx111_0
-                                                                  space_0)
-                                                                 #f)))
-                                                           (let ((temp375_0
-                                                                  (bulk-binding12.1
-                                                                   (let ((or-part_0
-                                                                          (if (not
-                                                                               bulk-prefix93_0)
-                                                                            (if (zero?
-                                                                                 (hash-count
-                                                                                  bulk-excepts94_0))
-                                                                              provides_0
-                                                                              #f)
-                                                                            #f)))
-                                                                     (if or-part_0
-                                                                       or-part_0
-                                                                       (if (not
-                                                                            (registered-bulk-provide?
-                                                                             bulk-binding-registry_0
-                                                                             module-name116_0))
-                                                                         (bulk-provides-add-prefix-remove-exceptions
-                                                                          provides_0
-                                                                          bulk-prefix93_0
-                                                                          bulk-excepts94_0)
-                                                                         #f)))
-                                                                   bulk-prefix93_0
-                                                                   bulk-excepts94_0
-                                                                   self_0
-                                                                   mpi115_0
-                                                                   provide-phase+space_0
-                                                                   phase-shift112_0
-                                                                   bulk-binding-registry_0)))
-                                                             (let ((temp378_0
-                                                                    (if need-except?_0
-                                                                      defines-mpi85_0
-                                                                      #f)))
-                                                               (let ((temp375_1
-                                                                      temp375_0)
-                                                                     (temp374_1
-                                                                      temp374_0))
-                                                                 (add-bulk-binding!.1
-                                                                  in84_0
-                                                                  temp378_0
-                                                                  temp374_1
-                                                                  temp375_1
-                                                                  phase_0))))))
-                                                       (void)))
-                                                   (void))))))))
+                                                     (void))
+                                                   (if can-bulk?87_0
+                                                     (let ((bulk-binding-registry_0
+                                                            (namespace-bulk-binding-registry
+                                                             ns107_0)))
+                                                       (let ((temp353_0
+                                                              (add-space-scope
+                                                               in-stx104_0
+                                                               space_0)))
+                                                         (let ((temp354_0
+                                                                (bulk-binding12.1
+                                                                 (let ((or-part_0
+                                                                        (if (not
+                                                                             bulk-prefix88_0)
+                                                                          (if (zero?
+                                                                               (hash-count
+                                                                                bulk-excepts89_0))
+                                                                            provides_0
+                                                                            #f)
+                                                                          #f)))
+                                                                   (if or-part_0
+                                                                     or-part_0
+                                                                     (if (not
+                                                                          (registered-bulk-provide?
+                                                                           bulk-binding-registry_0
+                                                                           module-name109_0))
+                                                                       (bulk-provides-add-prefix-remove-exceptions
+                                                                        provides_0
+                                                                        bulk-prefix88_0
+                                                                        bulk-excepts89_0)
+                                                                       #f)))
+                                                                 bulk-prefix88_0
+                                                                 bulk-excepts89_0
+                                                                 self_0
+                                                                 mpi108_0
+                                                                 provide-phase+space_0
+                                                                 phase-shift105_0
+                                                                 bulk-binding-registry_0)))
+                                                           (let ((temp357_0
+                                                                  (if need-except?_0
+                                                                    defines-mpi82_0
+                                                                    #f)))
+                                                             (let ((temp354_1
+                                                                    temp354_0)
+                                                                   (temp353_1
+                                                                    temp353_0))
+                                                               (add-bulk-binding!.1
+                                                                in81_0
+                                                                temp357_0
+                                                                temp353_1
+                                                                temp354_1
+                                                                phase_0))))))
+                                                     (void)))
+                                                 (void)))))))
                                      (values))
                                    (values)))
                                (case-lambda
@@ -34348,7 +33890,7 @@
                                    (syntax-e$1 req_1)
                                    req_1)))
                             (if (pair? s_0)
-                              (let ((for-meta382_0
+                              (let ((for-meta361_0
                                      (let ((s_1 (car s_0))) s_1)))
                                 (call-with-values
                                  (lambda ()
@@ -34358,9 +33900,9 @@
                                               (syntax-e$1 s_1)
                                               s_1)))
                                        (if (pair? s_2)
-                                         (let ((phase-level385_0
+                                         (let ((phase-level364_0
                                                 (let ((s_3 (car s_2))) s_3)))
-                                           (let ((spec386_0
+                                           (let ((spec365_0
                                                   (let ((s_3 (cdr s_2)))
                                                     (let ((s_4
                                                            (if (syntax?$1 s_3)
@@ -34375,34 +33917,34 @@
                                                            "bad syntax"
                                                            req_1)
                                                           flat-s_0))))))
-                                             (let ((phase-level385_1
-                                                    phase-level385_0))
+                                             (let ((phase-level364_1
+                                                    phase-level364_0))
                                                (values
-                                                phase-level385_1
-                                                spec386_0))))
+                                                phase-level364_1
+                                                spec365_0))))
                                          (raise-syntax-error$1
                                           #f
                                           "bad syntax"
                                           req_1)))))
                                  (case-lambda
-                                  ((phase-level383_0 spec384_0)
-                                   (let ((for-meta382_1 for-meta382_0))
+                                  ((phase-level362_0 spec363_0)
+                                   (let ((for-meta361_1 for-meta361_0))
                                      (values
-                                      for-meta382_1
-                                      phase-level383_0
-                                      spec384_0)))
+                                      for-meta361_1
+                                      phase-level362_0
+                                      spec363_0)))
                                   (args
                                    (raise-binding-result-arity-error
                                     2
                                     args)))))
                               (raise-syntax-error$1 #f "bad syntax" req_1))))
                         (case-lambda
-                         ((for-meta379_0 phase-level380_0 spec381_0)
-                          (values #t for-meta379_0 phase-level380_0 spec381_0))
+                         ((for-meta358_0 phase-level359_0 spec360_0)
+                          (values #t for-meta358_0 phase-level359_0 spec360_0))
                          (args (raise-binding-result-arity-error 3 args)))))
                      (case-lambda
-                      ((ok?_0 for-meta379_0 phase-level380_0 spec381_0)
-                       (let ((p_0 (syntax-e$1 phase-level380_0)))
+                      ((ok?_0 for-meta358_0 phase-level359_0 spec360_0)
+                       (let ((p_0 (syntax-e$1 phase-level359_0)))
                          (begin
                            (if (phase? p_0)
                              (void)
@@ -34410,9 +33952,9 @@
                            (let ((new-req_0
                                   (let ((app_0 (phase+ p_0 1)))
                                     (list*
-                                     for-meta379_0
+                                     for-meta358_0
                                      app_0
-                                     (map_1346 (loop_0 #t) spec381_0)))))
+                                     (map_1346 (loop_0 #t) spec360_0)))))
                              (begin-unsafe
                               (begin
                                 (datum->syntax$1
@@ -34431,9 +33973,9 @@
                                      (syntax-e$1 req_1)
                                      req_1)))
                               (if (pair? s_0)
-                                (let ((for-syntax389_0
+                                (let ((for-syntax368_0
                                        (let ((s_1 (car s_0))) s_1)))
-                                  (let ((spec390_0
+                                  (let ((spec369_0
                                          (let ((s_1 (cdr s_0)))
                                            (let ((s_2
                                                   (if (syntax?$1 s_1)
@@ -34447,20 +33989,20 @@
                                                   "bad syntax"
                                                   req_1)
                                                  flat-s_0))))))
-                                    (let ((for-syntax389_1 for-syntax389_0))
-                                      (values for-syntax389_1 spec390_0))))
+                                    (let ((for-syntax368_1 for-syntax368_0))
+                                      (values for-syntax368_1 spec369_0))))
                                 (raise-syntax-error$1 #f "bad syntax" req_1))))
                           (case-lambda
-                           ((for-syntax387_0 spec388_0)
-                            (values #t for-syntax387_0 spec388_0))
+                           ((for-syntax366_0 spec367_0)
+                            (values #t for-syntax366_0 spec367_0))
                            (args (raise-binding-result-arity-error 2 args)))))
                        (case-lambda
-                        ((ok?_0 for-syntax387_0 spec388_0)
+                        ((ok?_0 for-syntax366_0 spec367_0)
                          (let ((new-req_0
                                 (list*
                                  'for-meta
                                  2
-                                 (map_1346 (loop_0 #t) spec388_0))))
+                                 (map_1346 (loop_0 #t) spec367_0))))
                            (begin-unsafe
                             (begin
                               (datum->syntax$1 req_1 new-req_0 req_1 req_1)))))
@@ -34475,9 +34017,9 @@
                                        (syntax-e$1 req_1)
                                        req_1)))
                                 (if (pair? s_0)
-                                  (let ((for-template393_0
+                                  (let ((for-template372_0
                                          (let ((s_1 (car s_0))) s_1)))
-                                    (let ((spec394_0
+                                    (let ((spec373_0
                                            (let ((s_1 (cdr s_0)))
                                              (let ((s_2
                                                     (if (syntax?$1 s_1)
@@ -34491,25 +34033,25 @@
                                                     "bad syntax"
                                                     req_1)
                                                    flat-s_0))))))
-                                      (let ((for-template393_1
-                                             for-template393_0))
-                                        (values for-template393_1 spec394_0))))
+                                      (let ((for-template372_1
+                                             for-template372_0))
+                                        (values for-template372_1 spec373_0))))
                                   (raise-syntax-error$1
                                    #f
                                    "bad syntax"
                                    req_1))))
                             (case-lambda
-                             ((for-template391_0 spec392_0)
-                              (values #t for-template391_0 spec392_0))
+                             ((for-template370_0 spec371_0)
+                              (values #t for-template370_0 spec371_0))
                              (args
                               (raise-binding-result-arity-error 2 args)))))
                          (case-lambda
-                          ((ok?_0 for-template391_0 spec392_0)
+                          ((ok?_0 for-template370_0 spec371_0)
                            (let ((new-req_0
                                   (list*
                                    'for-meta
                                    0
-                                   (map_1346 (loop_0 #t) spec392_0))))
+                                   (map_1346 (loop_0 #t) spec371_0))))
                              (begin-unsafe
                               (begin
                                 (datum->syntax$1
@@ -34528,9 +34070,9 @@
                                          (syntax-e$1 req_1)
                                          req_1)))
                                   (if (pair? s_0)
-                                    (let ((for-label397_0
+                                    (let ((for-label376_0
                                            (let ((s_1 (car s_0))) s_1)))
-                                      (let ((spec398_0
+                                      (let ((spec377_0
                                              (let ((s_1 (cdr s_0)))
                                                (let ((s_2
                                                       (if (syntax?$1 s_1)
@@ -34545,23 +34087,23 @@
                                                       "bad syntax"
                                                       req_1)
                                                      flat-s_0))))))
-                                        (let ((for-label397_1 for-label397_0))
-                                          (values for-label397_1 spec398_0))))
+                                        (let ((for-label376_1 for-label376_0))
+                                          (values for-label376_1 spec377_0))))
                                     (raise-syntax-error$1
                                      #f
                                      "bad syntax"
                                      req_1))))
                               (case-lambda
-                               ((for-label395_0 spec396_0)
-                                (values #t for-label395_0 spec396_0))
+                               ((for-label374_0 spec375_0)
+                                (values #t for-label374_0 spec375_0))
                                (args
                                 (raise-binding-result-arity-error 2 args)))))
                            (case-lambda
-                            ((ok?_0 for-label395_0 spec396_0)
+                            ((ok?_0 for-label374_0 spec375_0)
                              (let ((new-req_0
                                     (list*
-                                     for-label395_0
-                                     (map_1346 (loop_0 #t) spec396_0))))
+                                     for-label374_0
+                                     (map_1346 (loop_0 #t) spec375_0))))
                                (begin-unsafe
                                 (begin
                                   (datum->syntax$1
@@ -34580,7 +34122,7 @@
                                            (syntax-e$1 req_1)
                                            req_1)))
                                     (if (pair? s_0)
-                                      (let ((just-meta402_0
+                                      (let ((just-meta381_0
                                              (let ((s_1 (car s_0))) s_1)))
                                         (call-with-values
                                          (lambda ()
@@ -34590,10 +34132,10 @@
                                                       (syntax-e$1 s_1)
                                                       s_1)))
                                                (if (pair? s_2)
-                                                 (let ((phase-level405_0
+                                                 (let ((phase-level384_0
                                                         (let ((s_3 (car s_2)))
                                                           s_3)))
-                                                   (let ((spec406_0
+                                                   (let ((spec385_0
                                                           (let ((s_3
                                                                  (cdr s_2)))
                                                             (let ((s_4
@@ -34612,23 +34154,23 @@
                                                                    "bad syntax"
                                                                    req_1)
                                                                   flat-s_0))))))
-                                                     (let ((phase-level405_1
-                                                            phase-level405_0))
+                                                     (let ((phase-level384_1
+                                                            phase-level384_0))
                                                        (values
-                                                        phase-level405_1
-                                                        spec406_0))))
+                                                        phase-level384_1
+                                                        spec385_0))))
                                                  (raise-syntax-error$1
                                                   #f
                                                   "bad syntax"
                                                   req_1)))))
                                          (case-lambda
-                                          ((phase-level403_0 spec404_0)
-                                           (let ((just-meta402_1
-                                                  just-meta402_0))
+                                          ((phase-level382_0 spec383_0)
+                                           (let ((just-meta381_1
+                                                  just-meta381_0))
                                              (values
-                                              just-meta402_1
-                                              phase-level403_0
-                                              spec404_0)))
+                                              just-meta381_1
+                                              phase-level382_0
+                                              spec383_0)))
                                           (args
                                            (raise-binding-result-arity-error
                                             2
@@ -34638,24 +34180,24 @@
                                        "bad syntax"
                                        req_1))))
                                 (case-lambda
-                                 ((just-meta399_0 phase-level400_0 spec401_0)
+                                 ((just-meta378_0 phase-level379_0 spec380_0)
                                   (values
                                    #t
-                                   just-meta399_0
-                                   phase-level400_0
-                                   spec401_0))
+                                   just-meta378_0
+                                   phase-level379_0
+                                   spec380_0))
                                  (args
                                   (raise-binding-result-arity-error 3 args)))))
                              (case-lambda
                               ((ok?_0
-                                just-meta399_0
-                                phase-level400_0
-                                spec401_0)
+                                just-meta378_0
+                                phase-level379_0
+                                spec380_0)
                                (let ((new-req_0
                                       (list*
-                                       just-meta399_0
-                                       phase-level400_0
-                                       (map_1346 (loop_0 #f) spec401_0))))
+                                       just-meta378_0
+                                       phase-level379_0
+                                       (map_1346 (loop_0 #f) spec380_0))))
                                  (begin-unsafe
                                   (begin
                                     (datum->syntax$1
@@ -34679,21 +34221,21 @@
            phase-shift_0
            as-constant?_0)
     (let ((i-ns_0
-           (let ((temp408_0
+           (let ((temp387_0
                   (1/module-path-index-resolve
                    (module-binding-module binding_0))))
-             (let ((temp409_0
+             (let ((temp388_0
                     (phase+
                      (phase- (module-binding-phase binding_0) phase-level_0)
                      (namespace-phase m-ns_0))))
-               (let ((temp408_1 temp408_0))
+               (let ((temp387_1 temp387_0))
                  (namespace->module-namespace.1
                   #f
                   #t
                   void
                   m-ns_0
-                  temp408_1
-                  temp409_0))))))
+                  temp387_1
+                  temp388_0))))))
       (let ((val_0
              (let ((app_0 (module-binding-phase binding_0)))
                (namespace-get-variable
@@ -34723,62 +34265,40 @@
          adjusted-sym_0
          val_0
          as-constant?_0)))))
-(define make-glue-syntax-definer.1
+(define perform-glue-syntax-bind!.1
   (|#%name|
-   make-glue-syntax-definer
-   (lambda (add-defined-bin121_0
-            requires+provides120_0
-            self119_0
-            id125_0
-            glue-stx126_0
-            orig-s127_0)
+   perform-glue-syntax-bind!
+   (lambda (add-defined-bin116_0
+            orig-s112_0
+            phase-shift113_0
+            requires+provides115_0
+            self114_0
+            id122_0
+            glue-stx123_0)
      (begin
-       (let ((done_0 (make-hasheqv)))
-         (lambda (phase-shift_0 space-level_0)
-           (let ((key_0
-                  (intern-phase+space-shift phase-shift_0 space-level_0)))
-             (if (hash-ref done_0 key_0 #f)
-               (void)
-               (let ((bind-space_0 (space+ #f space-level_0)))
-                 (let ((s_0 (add-space-scope id125_0 bind-space_0)))
-                   (let ((sym_0
-                          (if add-defined-bin121_0
-                            (|#%app|
-                             add-defined-bin121_0
-                             s_0
-                             phase-shift_0
-                             (add-space-scope glue-stx126_0 bind-space_0)
-                             orig-s127_0)
-                            (syntax-e$1 s_0))))
-                     (let ((binding_0
-                            (make-module-binding.1
-                             #f
-                             null
-                             #f
-                             #f
-                             unsafe-undefined
-                             unsafe-undefined
-                             0
-                             unsafe-undefined
-                             self119_0
-                             phase-shift_0
-                             sym_0)))
-                       (begin
-                         (add-binding!.1 #f #f s_0 binding_0 phase-shift_0)
-                         (hash-set! done_0 key_0 #t))))))))))))))
-(define glue-introduce
-  (lambda (gluing_0 unglue-s_0 unexposed-syms_0)
-    (if (not gluing_0)
-      unglue-s_0
-      (if (if unexposed-syms_0
-            (let ((s_0 (gluing-mode-exposes gluing_0)))
-              (let ((e_0 (syntax-e$1 unglue-s_0)))
-                (let ((s_1 s_0)) (begin-unsafe (hash-ref s_1 e_0 #f)))))
-            #f)
-        (begin
-          (hash-remove! unexposed-syms_0 (syntax-e$1 unglue-s_0))
-          unglue-s_0)
-        (|#%app| (gluing-mode-introducer gluing_0) unglue-s_0)))))
+       (let ((sym_0
+              (if add-defined-bin116_0
+                (|#%app|
+                 add-defined-bin116_0
+                 id122_0
+                 phase-shift113_0
+                 glue-stx123_0
+                 orig-s112_0)
+                (syntax-e$1 id122_0))))
+         (let ((binding_0
+                (make-module-binding.1
+                 #f
+                 null
+                 #f
+                 #f
+                 unsafe-undefined
+                 unsafe-undefined
+                 0
+                 unsafe-undefined
+                 self114_0
+                 phase-shift113_0
+                 sym_0)))
+           (add-binding!.1 #f #f id122_0 binding_0 phase-shift113_0)))))))
 (define top-level-instance
   (make-instance
    'top-level
@@ -45577,7 +45097,6 @@
                                                             (perform-require!.1
                                                              #f
                                                              #t
-                                                             #f
                                                              #f
                                                              #f
                                                              #f
@@ -58506,7 +58025,6 @@
                       #f
                       copy-variable-as-constant?7_0
                       copy-variable-phase-level6_0
-                      #f
                       #f
                       'all
                       #t

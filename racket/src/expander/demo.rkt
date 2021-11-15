@@ -1693,9 +1693,9 @@
 
 (eval-module-declaration
  '(module constant-syntax '#%kernel
-    (#%require (glue bread-and-butter import
-                     (expose 'bread-and-butter jam has-jam))
-               (for-meta 5 (glue bread-and-butter import 'bread-and-butter)))
+    (#%require 'bread-and-butter
+               (glue bread-and-butter (bread butter))
+               (for-meta 5 (glue bread-and-butter (bread butter))))
     (#%provide result result5 result-j0 result-j bread-and-butter)
     (define-values (result) (identifier-binding-glue-syntax
                              (quote-syntax bread-and-butter)))
@@ -1709,13 +1709,14 @@
 (define bread-and-butter1 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''constant-syntax 'result)))
 bread-and-butter1
-(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter1)) 'bread))
-(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter1)) 'butter))
+(identifier-binding (car (syntax-e bread-and-butter1)))
+(identifier-binding (cadr (syntax-e bread-and-butter1)))
 
 (define bread-and-butter5 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''constant-syntax 'result5)))
 bread-and-butter5
-(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter5)) 'bread) 5)
+(identifier-binding (car (syntax-e bread-and-butter5)))
+(identifier-binding (cadr (syntax-e bread-and-butter5)))
 
 (parameterize ([current-namespace demo-ns])
   (dynamic-require ''constant-syntax 'result-j))
@@ -1733,5 +1734,5 @@ bread-and-butter5
 (define bread-and-butter2 (parameterize ([current-namespace demo-ns])
                             (dynamic-require ''import-constant-syntax 'result)))
 bread-and-butter2
-(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'bread))
-(identifier-binding (datum->syntax (caddr (syntax-e bread-and-butter2)) 'butter))
+(identifier-binding (car (syntax-e bread-and-butter2)))
+(identifier-binding (cadr (syntax-e bread-and-butter2)))

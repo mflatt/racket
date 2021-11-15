@@ -28,8 +28,6 @@
 (struct adjust-all-except (prefix-sym syms))
 (struct adjust-rename (to-id from-sym))
 
-(struct gluing-mode (introducer definer exposes))
-
 (define layers '(raw phaseless spaceless justspaceless path))
 
 (define (parse-and-perform-requires! reqs orig-s m-ns phase-shift
@@ -53,7 +51,6 @@
              [just-meta 'all]
              [just-space #t]  ; #t means "all"
              [adjust #f]
-             [gluing #f]
              [for-meta-ok? #t]
              [just-meta-ok? #t]
              [layer 'raw])
@@ -78,7 +75,6 @@
                just-meta
                just-space
                adjust
-               gluing
                #f just-meta-ok? 'raw)]
         [(for-syntax)
          (check-nested 'raw for-meta-ok?)
@@ -90,7 +86,6 @@
                just-meta
                just-space
                adjust
-               gluing
                #f just-meta-ok? 'raw)]
         [(for-template)
          (check-nested 'raw for-meta-ok?)
@@ -102,7 +97,6 @@
                just-meta
                just-space
                adjust
-               gluing
                #f just-meta-ok? 'raw)]
         [(for-label)
          (check-nested 'raw for-meta-ok?)
@@ -114,7 +108,6 @@
                just-meta
                just-space
                adjust
-               gluing
                #f just-meta-ok? 'raw)]
         [(just-meta)
          (check-nested 'raw just-meta-ok?)
@@ -129,8 +122,16 @@
                p
                just-space
                adjust
-               gluing
                for-meta-ok? #f 'raw)]
+        [(glue)
+         (check-nested 'raw (eq? just-meta 'all))
+         (define-match m req '(glue id:name stx))
+         (perform-glue-syntax-bind! (m 'id:name) (m 'stx)
+                                    #:phase-shift phase-shift
+                                    #:orig-s orig-s
+                                    #:self self
+                                    #:requires+provides requires+provides
+                                    #:add-defined-bin add-defined-bin)]
         [(for-space)
          (check-nested 'phaseless)
          (define-match m req '(for-space space spec ...))
@@ -144,7 +145,6 @@
                just-meta
                just-space
                adjust
-               gluing
                #f #f 'spaceless)]
         [(just-space)
          (check-nested 'spaceless)
@@ -159,7 +159,6 @@
                just-meta
                space
                adjust
-               gluing
                #f #f 'justspaceless)]
         [(only)
          (check-nested 'justspaceless)
@@ -171,7 +170,6 @@
                just-meta
                just-space
                (adjust-only (ids->sym-set (m 'id)))
-               gluing
                #f #f 'path)]
         [(prefix)
          (check-nested 'justspaceless)
@@ -183,7 +181,6 @@
                just-meta
                just-space
                (adjust-prefix (syntax-e (m 'id:prefix)))
-               gluing
                #f #f 'path)]
         [(all-except)
          (check-nested 'justspaceless)
@@ -195,7 +192,6 @@
                just-meta
                just-space
                (adjust-all-except '|| (ids->sym-set (m 'id)))
-               gluing
                #f #f 'path)]
         [(prefix-all-except)
          (check-nested 'justspaceless)
@@ -207,7 +203,6 @@
                just-meta
                just-space
                (adjust-all-except (syntax-e (m 'id:prefix)) (ids->sym-set (m 'id)))
-               gluing
                #f #f 'path)]
         [(rename)
          (check-nested 'justspaceless)
@@ -219,55 +214,7 @@
                just-meta
                just-space
                (adjust-rename (m 'id:to) (syntax-e (m 'id:from)))
-               gluing
                #f #f 'path)]
-        [(glue)
-         (check-nested 'justspaceless)
-         (define-match m req '(glue id:name key spec ...))
-         (when gluing
-           (raise-syntax-error #f "nested glue layers not allowed" orig-s req))
-         (define glue-id (m 'id:name))
-         (define glue-introducer (let ([sc (new-scope 'glue)])
-                                   (lambda (stx) (add-scope stx sc))))
-         (define new-gluing
-           (gluing-mode glue-introducer
-                        (make-glue-syntax-definer glue-id
-                                                  (datum->syntax glue-id
-                                                                 (list (m 'key)
-                                                                       glue-id
-                                                                       (glue-introducer glue-id)))
-                                                  orig-s
-                                                  #:self self
-                                                  #:requires+provides requires+provides
-                                                  #:add-defined-bin add-defined-bin)
-                        (seteq)))
-         (loop (m 'spec)
-               (or top-req req)
-               phase-shift
-               space-level
-               just-meta
-               just-space
-               adjust
-               new-gluing
-               #f #f 'justspaceless)]
-        [(expose)
-         (check-nested 'justspaceless)
-         (define-match m req '(expose spec id:name ...))
-         (unless gluing
-           (raise-syntax-error #f "not within glue" orig-s req))
-         (define ids (m 'id:name))
-         (loop (list (m 'spec))
-               (or top-req req)
-               phase-shift
-               space-level
-               just-meta
-               just-space
-               adjust
-               (struct-copy gluing-mode gluing
-                            [exposes
-                             (for/fold ([exposes (gluing-mode-exposes gluing)]) ([id (in-list (m 'id:name))])
-                               (set-add exposes (syntax-e id)))])
-               #f #f 'justspaceless)]
         [else
          (define maybe-mp (syntax->datum req))
          (unless (or (module-path? maybe-mp)
@@ -288,7 +235,6 @@
                            #:just-meta just-meta
                            #:just-space just-space
                            #:adjust adjust
-                           #:gluing gluing
                            #:requires+provides requires+provides
                            #:run? run?
                            #:visit? visit?
@@ -330,7 +276,6 @@
                           #:just-meta [just-meta 'all]
                           #:just-space [just-space #t]
                           #:adjust [adjust #f]
-                          #:gluing [gluing #f]
                           #:requires+provides [requires+provides #f]
                           #:visit? [visit? #t]
                           #:run? [run? #f]
@@ -349,9 +294,6 @@
                            (adjust-rename-to-id adjust)
                            in-stx))
    (define done-syms (and adjust (make-hasheq)))
-   (define unexposed-syms (and gluing
-                               (not (set-empty? (gluing-mode-exposes gluing)))
-                               (hash-copy (gluing-mode-exposes gluing))))
    (define m (namespace->module m-ns module-name))
    (unless m (raise-unknown-module-error 'require module-name))
    (define interned-mpi
@@ -370,9 +312,7 @@
                                (or (not adjust)
                                    (adjust-prefix? adjust)
                                    (adjust-all-except? adjust))
-                               (not skip-variable-phase-level)
-                               (or (not gluing)
-                                   (set-empty? (gluing-mode-exposes gluing)))))
+                               (not skip-variable-phase-level)))
    (define bulk-prefix (cond
                         [(adjust-prefix? adjust) (adjust-prefix-sym adjust)]
                         [(adjust-all-except? adjust) (adjust-all-except-prefix-sym adjust)]
@@ -393,8 +333,6 @@
             [else #f])
     #:just-meta just-meta
     #:just-space just-space
-    #:gluing gluing
-    #:unexposed-syms unexposed-syms
     #:bind? bind?
     #:can-bulk? can-bulk-bind?
     #:bulk-prefix bulk-prefix
@@ -459,8 +397,7 @@
                     [(and adjusted-sym requires+provides)
                      (define bind-phase (phase+ phase-shift provide-phase))
                      (define bind-space (space+ provide-space space-level))
-                     (define unglue-s (add-space-scope (datum->syntax bind-in-stx adjusted-sym) bind-space))
-                     (define s (glue-introduce gluing unglue-s unexposed-syms))
+                     (define s (add-space-scope (datum->syntax bind-in-stx adjusted-sym) bind-space))
                      (define bound-status
                        (cond
                          [initial-require? #f]
@@ -506,11 +443,7 @@
               (not (= (set-count need-syms) (hash-count done-syms))))
      (for ([sym (in-set need-syms)])
        (unless (hash-ref done-syms sym #f)
-         (raise-syntax-error who "not in nested spec" orig-s sym))))
-   (when (and unexposed-syms
-              (not (eqv? 0 (hash-count unexposed-syms))))
-     (raise-syntax-error who "name to expose is not within import" orig-s
-                         (hash-iterate-key unexposed-syms (hash-iterate-first unexposed-syms))))))
+         (raise-syntax-error who "not in nested spec" orig-s sym))))))
 
 ;; ----------------------------------------
 
@@ -521,8 +454,6 @@
                             #:only only-syms
                             #:just-meta just-meta
                             #:just-space just-space
-                            #:gluing gluing
-                            #:unexposed-syms unexposed-syms
                             #:bind? bind?
                             #:can-bulk? can-bulk?
                             #:bulk-prefix bulk-prefix
@@ -539,8 +470,6 @@
     (define phase+space (phase+space+ provide-phase+space phase+space-shift))
     (define phase (phase+space-phase phase+space))
     (define space (phase+space-space phase+space))
-    (when gluing
-      ((gluing-mode-definer gluing) phase space))
     (when requires+provides
       (add-required-space! requires+provides space))
     (define need-except?
@@ -560,14 +489,11 @@
               (when (and sym
                          (not can-bulk?)) ;; bulk binding added later
                 ;; Add a non-bulk binding, since `filter` has checked/adjusted it
-                (define s (glue-introduce gluing
-                                          (add-space-scope (datum->syntax in-stx sym) space)
-                                          unexposed-syms))
-                (add-binding! s b phase))))))
+                (add-binding! (add-space-scope (datum->syntax in-stx sym) space) b phase))))))
       ;; Add bulk binding after all filtering
       (when can-bulk?
         (define bulk-binding-registry (namespace-bulk-binding-registry ns))
-        (add-bulk-binding! (glue-introduce gluing (add-space-scope in-stx space) #f)
+        (add-bulk-binding! (add-space-scope in-stx space)
                            (bulk-binding (or (and (not bulk-prefix)
                                                   (zero? (hash-count bulk-excepts))
                                                   provides)
@@ -647,30 +573,15 @@
 
 ;; ----------------------------------------
 
-(define (make-glue-syntax-definer id glue-stx orig-s
-                                  #:self self
-                                  #:requires+provides requires+provides
-                                  #:add-defined-bin add-defined-bin)
-  (define done (make-hasheqv))
-  (lambda (phase-shift space-level)
-    (define key (intern-phase+space-shift phase-shift space-level))
-    (unless (hash-ref done key #f)
-      (define bind-phase phase-shift)
-      (define bind-space (space+ #f space-level))
-      (define s (add-space-scope id bind-space))
-      (define sym
-        (if add-defined-bin
-            (add-defined-bin s bind-phase (add-space-scope glue-stx bind-space) orig-s)
-            (syntax-e s)))
-      (define binding (make-module-binding self bind-phase sym))
-      (add-binding! s binding bind-phase)
-      (hash-set! done key #t))))
-
-(define (glue-introduce gluing unglue-s unexposed-syms)
-  (cond
-    [(not gluing) unglue-s]
-    [(and unexposed-syms
-          (set-member? (gluing-mode-exposes gluing) (syntax-e unglue-s)))
-     (hash-remove! unexposed-syms (syntax-e unglue-s))
-     unglue-s]
-    [else ((gluing-mode-introducer gluing) unglue-s)]))
+(define (perform-glue-syntax-bind! id glue-stx
+                                   #:orig-s orig-s
+                                   #:phase-shift phase-shift
+                                   #:self self
+                                   #:requires+provides requires+provides
+                                   #:add-defined-bin add-defined-bin)
+  (define sym
+    (if add-defined-bin
+        (add-defined-bin id phase-shift glue-stx orig-s)
+        (syntax-e id)))
+  (define binding (make-module-binding self phase-shift sym))
+  (add-binding! id binding phase-shift))
