@@ -246,7 +246,19 @@ void S_call_help(tc_in, singlep, lock_ts) ptr tc_in; IBOOL singlep; IBOOL lock_t
             S_error_abort("S_generic_invoke return");
             break;
         case 1: { /* normal return */
-            ptr yp = CCHAIN(tc);
+            ptr yp = FRAME(tc, 1);
+            CCHAIN(tc) = yp;
+            {
+              /* unlock code objects that we're escaping past */
+              ptr xp;
+              for (xp = CCHAIN(tc); ; xp = Scdr(xp)) {
+                ptr p = CDAR(xp);
+                S_mobilize_object(Scar(p));
+                if (Scdr(p) != Sfalse) S_mobilize_object(Scdr(p));
+                if (xp == yp) break;
+                FREEJMPBUF(TO_VOIDP(CAAR(xp)));
+              }
+            }
             FREEJMPBUF(TO_VOIDP(CAAR(yp)));
             CCHAIN(tc) = Scdr(yp);
             break;
@@ -292,16 +304,171 @@ void S_return() {
         if (xp == Snil)
             S_error("", "attempt to return to stale foreign context");
 
-  /* error checks are done; now unlock affected code objects */
-    for (xp = CCHAIN(tc); ; xp = Scdr(xp)) {
-        ptr p = CDAR(xp);
-        S_mobilize_object(Scar(p));
-        if (Scdr(p) != Sfalse) S_mobilize_object(Scdr(p));
-        if (xp == yp) break;
-        FREEJMPBUF(TO_VOIDP(CAAR(xp)));
-    }
+  /* return handling at setjmp will release frames not in the `yp` sublist;
+     we don't do that here, because Windows might need the full chain for
+     unwind handling */
 
-  /* reset cchain and return via longjmp */
-    CCHAIN(tc) = yp;
+  /* return via longjmp */
     LONGJMP(TO_VOIDP(CAAR(yp)), 1);
 }
+
+#ifdef PROVIDE_WINDOWS_UNWIND_INFO
+
+/* Code from
+      https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64
+   but with `S_` added as a prefix */
+
+typedef unsigned char S_UBYTE;
+
+typedef enum S_UNWIND_OP_CODES {
+  S_UWOP_PUSH_NONVOL = 0, /* info == register number */
+  S_UWOP_ALLOC_LARGE,     /* no info, alloc size in next 2 slots */
+  S_UWOP_ALLOC_SMALL,     /* info == size of allocation / 8 - 1 */
+  S_UWOP_SET_FPREG,       /* no info, FP = RSP + UNWIND_INFO.FPRegOffset*16 */
+  S_UWOP_SAVE_NONVOL,     /* info == register number, offset in next slot */
+  S_UWOP_SAVE_NONVOL_FAR, /* info == register number, offset in next 2 slots */
+  S_UWOP_SAVE_XMM128 = 8, /* info == XMM reg number, offset in next slot */
+  S_UWOP_SAVE_XMM128_FAR, /* info == XMM reg number, offset in next 2 slots */
+  S_UWOP_PUSH_MACHFRAME   /* info == 0: no error-code, 1: error-code */
+} UNWIND_CODE_OPS;
+
+typedef union S_UNWIND_CODE {
+  struct {
+    S_UBYTE CodeOffset;
+    S_UBYTE UnwindOp : 4;
+    S_UBYTE OpInfo   : 4;
+  };
+  USHORT FrameOffset;
+} S_UNWIND_CODE;
+
+#define S_UNW_FLAG_EHANDLER  0x01
+#define S_UNW_FLAG_UHANDLER  0x02
+#define S_UNW_FLAG_CHAININFO 0x04
+
+typedef struct S_UNWIND_INFO {
+  S_UBYTE Version       : 3;
+  S_UBYTE Flags         : 5;
+  S_UBYTE SizeOfProlog;
+  S_UBYTE CountOfCodes;
+  S_UBYTE FrameRegister : 4;
+  S_UBYTE FrameOffset   : 4;
+  S_UNWIND_CODE UnwindCode[1];
+  /*  UNWIND_CODE MoreUnwindCode[((CountOfCodes + 1) & ~1) - 1];
+   *   union {
+   *       OPTIONAL ULONG ExceptionHandler;
+   *       OPTIONAL ULONG FunctionEntry;
+   *   };
+   *   OPTIONAL ULONG ExceptionData[]; */
+} S_UNWIND_INFO;
+
+#define STEP_UNWIND_NODE(ui, c, off, instr_size, op, arg) do {   \
+    ui->UnwindCode[c].CodeOffset = c;                            \
+    ui->UnwindCode[c].UnwindOp = op;                             \
+    ui->UnwindCode[c].OpInfo = arg;                              \
+    c++;                                                         \
+    off += instr_size;                                           \
+  } while (1)
+
+#define S_INVOKE_RUNTIME_FUNCTION 0
+#define S_CALLABLE_RUNTIME_FUNCTION 1
+
+/* Probably nothing cares about the actual size, especially since
+   we're claiming a range that is well away from the actual code: */
+#define FAKE_INSTRUCTION_SIZE 4
+
+
+
+static PRUNTIME_FUNCTION S_unwind_callback(DWORD64 ControlPc, PVOID base_addr)
+{
+  /* If `ControlPc` is in a code object in the chain, then assume the
+     callable protocol. Otherwise, assume `invoke` */
+  ptr tc = get_thread_context(), xp;
+
+  for (xp = CCHAIN(tc); xp != Snil; xp = Scdr(xp)) {
+    ptr code = Scar(CDAR(xp));
+    if (((DWORD64)CODEENTRYPOINT(code) <= ControlPc)
+        && ((DWORD64)((iptr)CODEENTRYPOINT(code) + CODELEN(code)) > ControlPc)) {
+      /* generate info for a callable wrapper */
+      return &(((RUNTIME_FUNCTION *)base_addr)[S_CALLABLE_RUNTIME_FUNCTION]);
+    }
+  }
+
+  return &(((RUNTIME_FUNCTION *)base_addr)[S_INVOKE_RUNTIME_FUNCTION]);
+}
+
+void S_register_unwind(void* addr, iptr num_bytes) {
+  S_UNWIND_INFO *ui;
+  int c, off;
+  uptr delta;
+  
+  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].BeginAddress = 0;
+  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].EndAddress = num_bytes;
+
+  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].BeginAddress = 0;
+  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].EndAddress = num_bytes;
+
+  ui = (S_UNWIND_INFO *)(((RUNTIME_FUNCTION *)addr) + 2);
+
+  /* invoke */
+  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].UnwindData = (uptr)TO_PTR(ui) - (uptr)TO_PTR(addr);
+  ui->Version = 1;
+  ui->Flags = 0;
+  ui->FrameRegister = 0;
+  ui->FrameOffset = 0;
+
+  c = 0;
+  off = 0;
+
+  /* This sequence corersponds to `invoke-prelude` in "x86_64.ss" */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 6); /* RSI */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 12); /* R12 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 0); /* 0*8 + 8 = 8 */
+  
+  ui->SizeOfProlog = off;
+  ui->CountOfCodes = c;
+
+  /* next ui location: */
+  delta = (uptr)TO_PTR(ui) - (uptr)TO_PTR(addr);
+  delta = (delta + 31) & (~31);
+  ui = TO_VOIDP((uptr)TO_PTR(addr) + delta);
+
+  /* callable */
+  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].UnwindData = (uptr)TO_PTR(ui) - (uptr)TO_PTR(addr);
+  ui->Version = 1;
+  ui->Flags = 0;
+  ui->FrameRegister = 0;
+  ui->FrameOffset = 0;
+
+  c = 0;
+  off = 0;
+
+  /* This sequence corersponds to `asm-foreign-callable` in "x86_64.ss" */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 1); /* 1*8 + 8 = 16 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 6); /* RSI */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 12); /* R12 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 5); /* 5*8 + 8 = 48 bytes */
+  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 12); /* 12*8 + 8 = 13 words (6 doubles + align) */
+  
+  ui->SizeOfProlog = off;
+  ui->CountOfCodes = c;
+  
+  RtlInstallFunctionTableCallback(((DWORD64)addr)|3, (DWORD64)addr, (DWORD)num_bytes, S_unwind_callback, addr, NULL);
+}
+
+void S_unregister_unwind(void* addr, UNUSED iptr num_bytes) {
+  RtlDeleteFunctionTable(TO_VOIDP(((DWORD64)addr)|3));
+}
+
+#endif

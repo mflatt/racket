@@ -209,6 +209,9 @@ struct timespec;
 #define time_t __time64_t
 #define GET_TIME _time64
 #endif
+#ifdef _WIN64
+# define PROVIDE_WINDOWS_UNWIND_INFO
+#endif
 #endif
 
 #if defined(__OpenBSD__) && !defined(__Bitrig__)
