@@ -361,12 +361,12 @@ typedef struct S_UNWIND_INFO {
    *   OPTIONAL ULONG ExceptionData[]; */
 } S_UNWIND_INFO;
 
-#define STEP_UNWIND_NODE(ui, c, off, instr_size, op, arg) do {   \
-    ui->UnwindCode[c].CodeOffset = off;                          \
-    ui->UnwindCode[c].UnwindOp = op;                             \
-    ui->UnwindCode[c].OpInfo = arg;                              \
-    c++;                                                         \
-    off += instr_size;                                           \
+#define STEP_UNWIND_NODE(ui, c, off, count, instr_size, op, arg) do {	\
+    ui->UnwindCode[count-c-1].CodeOffset = off;				\
+    ui->UnwindCode[count-c-1].UnwindOp = op;				\
+    ui->UnwindCode[count-c-1].OpInfo = arg;				\
+    c++;								\
+    off += instr_size;							\
   } while (0)
 
 #define S_INVOKE_RUNTIME_FUNCTION 0
@@ -376,8 +376,6 @@ typedef struct S_UNWIND_INFO {
    we're claiming a range that is well away from the actual code: */
 #define FAKE_INSTRUCTION_SIZE 4
 
-
-
 static PRUNTIME_FUNCTION S_unwind_callback(DWORD64 ControlPc, PVOID base_addr)
 {
   /* If `ControlPc` is in a code object in the chain, then assume the
@@ -385,8 +383,9 @@ static PRUNTIME_FUNCTION S_unwind_callback(DWORD64 ControlPc, PVOID base_addr)
   ptr tc = get_thread_context(), xp;
 
   for (xp = CCHAIN(tc); xp != Snil; xp = Scdr(xp)) {
-    ptr code = Scar(CDAR(xp));
-    if (((DWORD64)CODEENTRYPOINT(code) <= ControlPc)
+    ptr code = Scdr(CDAR(xp));
+    if (!FIXMEDIATE(code)
+	&& ((DWORD64)CODEENTRYPOINT(code) <= ControlPc)
         && ((DWORD64)((iptr)CODEENTRYPOINT(code) + CODELEN(code)) > ControlPc)) {
       /* generate info for a callable wrapper */
       return &(((RUNTIME_FUNCTION *)base_addr)[S_CALLABLE_RUNTIME_FUNCTION]);
@@ -398,7 +397,7 @@ static PRUNTIME_FUNCTION S_unwind_callback(DWORD64 ControlPc, PVOID base_addr)
 
 void S_register_unwind(void* addr, iptr num_bytes) {
   S_UNWIND_INFO *ui;
-  int c, off;
+  int c, off, count;
   uptr delta;
   
   ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].BeginAddress = 0;
@@ -419,20 +418,24 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   c = 0;
   off = 0;
 
-  /* This sequence corresponds to `invoke-prelude` in "x86_64.ss" */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 6); /* RSI */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 12); /* R12 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 0); /* 0*8 + 8 = 8 */
+  /* This sequence corresponds to `invoke-prelude` in "x86_64.ss" plus the call in `foreign-call` */
+  count = 10;
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 6); /* RSI */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 12); /* R12 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 0); /* 0*8 + 8 = 8 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 3); /* 3*8 + 8 = 32  for `foreign call` */
+  if (c != count) 
+    S_error_abort("inconsistent unwind");
   
   ui->SizeOfProlog = off;
   ui->CountOfCodes = c;
-
+  
   /* next ui location: */
   delta = (uptr)TO_PTR(&(ui->UnwindCode[c])) - (uptr)TO_PTR(addr);
   delta = (delta + 31) & (~31);
@@ -448,19 +451,22 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   c = 0;
   off = 0;
 
-  /* This sequence corresponds to `asm-foreign-callable` in "x86_64.ss" */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 1); /* 1*8 + 8 = 16 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 6); /* RSI */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 12); /* R12 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 5); /* 5*8 + 8 = 48 bytes */
-  STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 12); /* 12*8 + 8 = 13 words (6 doubles + align) */
-  
+  /* This sequence corresponds to `asm-foreign-callable` in "x86_64.ss" plus `c-simple-call` */
+  count = 11;
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 6); /* RSI */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 12); /* R12 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 1); /* 1*8 + 8 = 16 bytes for active state */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 6); /* 6*8 + 8 = 48 bytes (6 doubles) + 8 align */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 3); /* 3*8 + 8 = 32 bytes from c-simple-call */
+  if (c != count) 
+    S_error_abort("inconsistent unwind");
+
   ui->SizeOfProlog = off;
   ui->CountOfCodes = c;
   

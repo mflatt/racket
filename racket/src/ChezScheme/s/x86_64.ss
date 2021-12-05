@@ -3038,13 +3038,13 @@
                    |  space for register args  | four quads
                    |                           | 
            sp+144: +---------------------------+ <- 16-byte boundary
-                   |   incoming return address | one quad
-      incoming sp: +---------------------------+
-                   |        active state       | two quads
-           sp+120: +---------------------------+
+incoming           |   incoming return address | one quad
+      sp-> sp+120: +---------------------------+
                    |                           |
                    |   callee-save registers   | RBX, RBP, RDI, RSI, R12, R13, R14, R15 (8 quads)
                    |                           |                            and XMM6-11 (6 quads)
+            sp+24: +---------------------------+
+                   |        active state       | two quads
                    +---------------------------+
                    | pad word / indirect space | one quad
              sp+0: +---------------------------+<- 16-byte boundary
@@ -3076,7 +3076,7 @@
       (with-output-language (L13 Effect)
         (let ()
           (define saved-register-arg-offset (if-feature windows 144 48))
-          (define active-state-offset (if-feature windows 120 176))
+          (define active-state-offset (if-feature windows 24 176))
           (define stack-args-offset (if-feature windows 176 192))
           (define load-double-stack
             (lambda (offset)
@@ -3381,9 +3381,6 @@
                      (%seq
                       ,(if-feature windows
                          (%seq
-                           ;; this space is needed needed only for `adjust-active?`, but
-                           ;; always add the space so that unwind info can be consistent
-                           (set! ,%sp ,(%inline - ,%sp (immediate 16)))
                            ,(%inline push ,%rbx)
                            ,(%inline push ,%rbp)
                            ,(%inline push ,%rdi)
@@ -3392,7 +3389,9 @@
                            ,(%inline push ,%r13)
                            ,(%inline push ,%r14)
                            ,(%inline push ,%r15)
-                           (set! ,%sp ,(%inline - ,%sp (immediate 48)))
+                           ;; 16 bytes of this space is needed needed only for `adjust-active?`, but
+                           ;; always add the space so that unwind info can be consistent:
+                           (set! ,%sp ,(%inline - ,%sp (immediate 64)))
                            (set! ,(%mref ,%sp ,%zero 0 fp) ,%fp3)
                            (set! ,(%mref ,%sp ,%zero 8 fp) ,%fp4)
                            (set! ,(%mref ,%sp ,%zero 16 fp) ,%fp5)
@@ -3451,7 +3450,7 @@
                              (set! ,%fp6 ,(%mref ,%sp ,%zero 24 fp))
                              (set! ,%fp7 ,(%mref ,%sp ,%zero 32 fp))
                              (set! ,%fp8 ,(%mref ,%sp ,%zero 40 fp))
-                             (set! ,%sp ,(%inline + ,%sp (immediate 48)))
+                             (set! ,%sp ,(%inline + ,%sp (immediate 64)))
                              (set! ,%r15 ,(%inline pop))
                              (set! ,%r14 ,(%inline pop))
                              (set! ,%r13 ,(%inline pop))
@@ -3459,8 +3458,7 @@
                              (set! ,%rsi ,(%inline pop))
                              (set! ,%rdi ,(%inline pop))
                              (set! ,%rbp ,(%inline pop))
-                             (set! ,%rbx ,(%inline pop))
-                             (set! ,%sp ,(%inline + ,%sp (immediate 16)))) ; space for `adjust-active?` mode
+                             (set! ,%rbx ,(%inline pop)))
                            (%seq
                              (set! ,%r15 ,(%inline pop))
                              (set! ,%r14 ,(%inline pop))
