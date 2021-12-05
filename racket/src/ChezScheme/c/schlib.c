@@ -362,12 +362,12 @@ typedef struct S_UNWIND_INFO {
 } S_UNWIND_INFO;
 
 #define STEP_UNWIND_NODE(ui, c, off, instr_size, op, arg) do {   \
-    ui->UnwindCode[c].CodeOffset = c;                            \
+    ui->UnwindCode[c].CodeOffset = off;                          \
     ui->UnwindCode[c].UnwindOp = op;                             \
     ui->UnwindCode[c].OpInfo = arg;                              \
     c++;                                                         \
     off += instr_size;                                           \
-  } while (1)
+  } while (0)
 
 #define S_INVOKE_RUNTIME_FUNCTION 0
 #define S_CALLABLE_RUNTIME_FUNCTION 1
@@ -402,15 +402,15 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   uptr delta;
   
   ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].BeginAddress = 0;
-  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].EndAddress = num_bytes;
+  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].EndAddress = (DWORD)num_bytes;
 
   ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].BeginAddress = 0;
-  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].EndAddress = num_bytes;
+  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].EndAddress = (DWORD)num_bytes;
 
   ui = (S_UNWIND_INFO *)(((RUNTIME_FUNCTION *)addr) + 2);
 
   /* invoke */
-  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].UnwindData = (uptr)TO_PTR(ui) - (uptr)TO_PTR(addr);
+  ((RUNTIME_FUNCTION *)addr)[S_INVOKE_RUNTIME_FUNCTION].UnwindData = (DWORD)((uptr)TO_PTR(ui) - (uptr)TO_PTR(addr));
   ui->Version = 1;
   ui->Flags = 0;
   ui->FrameRegister = 0;
@@ -419,7 +419,7 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   c = 0;
   off = 0;
 
-  /* This sequence corersponds to `invoke-prelude` in "x86_64.ss" */
+  /* This sequence corresponds to `invoke-prelude` in "x86_64.ss" */
   STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
   STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
   STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
@@ -434,12 +434,12 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   ui->CountOfCodes = c;
 
   /* next ui location: */
-  delta = (uptr)TO_PTR(ui) - (uptr)TO_PTR(addr);
+  delta = (uptr)TO_PTR(&(ui->UnwindCode[c])) - (uptr)TO_PTR(addr);
   delta = (delta + 31) & (~31);
   ui = TO_VOIDP((uptr)TO_PTR(addr) + delta);
 
   /* callable */
-  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].UnwindData = (uptr)TO_PTR(ui) - (uptr)TO_PTR(addr);
+  ((RUNTIME_FUNCTION *)addr)[S_CALLABLE_RUNTIME_FUNCTION].UnwindData = (DWORD)((uptr)TO_PTR(ui) - (uptr)TO_PTR(addr));
   ui->Version = 1;
   ui->Flags = 0;
   ui->FrameRegister = 0;
@@ -448,7 +448,7 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   c = 0;
   off = 0;
 
-  /* This sequence corersponds to `asm-foreign-callable` in "x86_64.ss" */
+  /* This sequence corresponds to `asm-foreign-callable` in "x86_64.ss" */
   STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 1); /* 1*8 + 8 = 16 */
   STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
   STEP_UNWIND_NODE(ui, c, off, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
