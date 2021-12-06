@@ -2065,7 +2065,7 @@
 
   (define asm-return
     (lambda ()
-      (emit addi '(imm 8) (cons 'reg %sp)
+      (emit addi `(imm ,(if-feature windows 40 8)) (cons 'reg %sp)
         (emit ret '()))))
 
   (define asm-c-return
@@ -2471,7 +2471,7 @@
          (with-implicit (k %seq %inline)
            #'(%seq
                ; adjust to 16-byte boundary, accounting for 8-byte return address pushed by call
-               (set! ,%sp ,(%inline - ,%sp (immediate 8)))
+               (set! ,%sp ,(%inline - ,%sp (immediate ,(if-feature windows 40 8))))
                ,e))])))
 
   (module (asm-foreign-call asm-foreign-callable)
