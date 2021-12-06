@@ -869,8 +869,10 @@
     [(op) `(asm ,info ,asm-restore-flrv)])
 
   (define-instruction effect invoke-prelude
-   ; align sp on 16-byte boundary, taking into account 8-byte
-   ; return address already pushed by caller
+    ;; align sp on 16-byte boundary, taking into account 8-byte
+    ;; return address already pushed by caller; for Windows, also
+    ;; push 4 words of shadow space for register arguments, needed
+    ;; in case of a call back to C
     [(op)
      ((lambda (e)
         (if-feature windows
@@ -891,7 +893,7 @@
            e)
           e))
       (seq
-       `(set! ,(make-live-info) ,%sp (asm ,info ,asm-sub ,%sp (immediate 8)))
+       `(set! ,(make-live-info) ,%sp (asm ,info ,asm-sub ,%sp (immediate ,(if-feature windows 40 8))))
        `(set! ,(make-live-info) ,%tc ,%Carg1)))])
   )
 
@@ -2286,15 +2288,10 @@
             (if (fx= entry (lookup-c-entry Sreturn))
                 ; pretend S_generic_invoke called Sreturn directly by wiping out
                 ; stack space added by invoke-prelude and jumping rather than calling
-                (emit addi (if-feature windows '(imm 72) '(imm 8)) sp-opnd
+                (emit addi (if-feature windows '(imm 104) '(imm 8)) sp-opnd
                   (asm-helper-jump code* `(x86_64-jump 0 (entry ,entry))))
                 (let ([target `(x86_64-call 0 (entry ,entry))])
-                  (if-feature windows
-                    ; must leave room for callee to store argument registers,
-                    ; even if there are no arguments
-                    (emit subi '(imm 32) sp-opnd
-                      (asm-helper-call (emit addi '(imm 32) sp-opnd code*) target jmp-reg))
-                    (asm-helper-call code* target jmp-reg)))))))))
+                  (asm-helper-call code* target jmp-reg))))))))
 
   (define asm-get-tc
     (let ([target `(x86_64-call 0 (entry ,(lookup-c-entry get-thread-context)))])
@@ -2603,15 +2600,6 @@
             ,(move-registers regs #t)
             (set! ,%sp ,(%inline + ,%sp (immediate ,(push-registers-size regs))))))))
 
-    (define (as-c-call e)
-      (if-feature windows
-        (with-output-language (L13 Effect)
-          (%seq
-           (set! ,%sp ,(%inline - ,%sp (immediate 32)))
-           ,e
-           (set! ,%sp ,(%inline + ,%sp (immediate 32)))))
-        e))
-
     (define asm-foreign-call
       (with-output-language (L13 Effect)
         (letrec ([load-double-stack
@@ -2862,9 +2850,9 @@
                         [else (%seq ,(push-registers regs) ,e ,(pop-registers regs))]))])
                 (%seq
                  (set! ,%deact ,t0)
-                 ,(save-and-restore (cons %deact live*) (as-c-call (%inline deactivate-thread)))
+                 ,(save-and-restore (cons %deact live*) (%inline deactivate-thread))
                  ,e
-                 ,(save-and-restore result-live* (as-c-call `(set! ,%rax ,(%inline activate-thread))))))]
+                 ,(save-and-restore result-live* `(set! ,%rax ,(%inline activate-thread)))))]
              [else e]))
           (define (add-save-fill-target fill-result-here? frame-size locs)
             (cond
@@ -2982,10 +2970,7 @@
                                   (add-deactivate adjust-active? t0 (append fp-live* live*)
                                    result-reg*
                                    (if-feature windows
-                                     (%seq
-                                       (set! ,%sp ,(%inline - ,%sp (immediate 32)))
-                                       (inline ,(make-info-kill*-live* kill* (append fp-live* live*)) ,%c-call ,t)
-                                       (set! ,%sp ,(%inline + ,%sp (immediate 32))))
+                                     `(inline ,(make-info-kill*-live* kill* (append fp-live* live*)) ,%c-call ,t)
                                      (%seq
                                       ,(if not-varargs?
                                            `(nop)
@@ -3033,21 +3018,25 @@
                    |                           |
                    |    incoming stack args    |
                    |                           |
-           sp+176: +---------------------------+ <- 16-byte boundary
+           sp+208: +---------------------------+ <- 16-byte boundary
                    |                           | 
                    |  space for register args  | four quads
                    |                           | 
-           sp+144: +---------------------------+ <- 16-byte boundary
+           sp+176: +---------------------------+ <- 16-byte boundary
 incoming           |   incoming return address | one quad
-      sp-> sp+120: +---------------------------+
+      sp-> sp+152: +---------------------------+
                    |                           |
                    |   callee-save registers   | RBX, RBP, RDI, RSI, R12, R13, R14, R15 (8 quads)
                    |                           |                            and XMM6-11 (6 quads)
-            sp+24: +---------------------------+
+            sp+56: +---------------------------+
                    |        active state       | two quads
                    +---------------------------+
                    | pad word / indirect space | one quad
-             sp+0: +---------------------------+<- 16-byte boundary
+            sp+32: +---------------------------+<- 16-byte boundary
+                   |                           | 
+                   |  space for register args  | four quads
+                   |      for next C call      | 
+             sp+0: +---------------------------+ <- 16-byte boundary
       
       
       Standard:
@@ -3075,9 +3064,9 @@ incoming           |   incoming return address | one quad
       |#
       (with-output-language (L13 Effect)
         (let ()
-          (define saved-register-arg-offset (if-feature windows 144 48))
-          (define active-state-offset (if-feature windows 24 176))
-          (define stack-args-offset (if-feature windows 176 192))
+          (define saved-register-arg-offset (if-feature windows 176 48))
+          (define active-state-offset (if-feature windows 40 176))
+          (define stack-args-offset (if-feature windows 208 192))
           (define load-double-stack
             (lambda (offset)
               (lambda (x) ; boxed (always a var)
@@ -3359,7 +3348,7 @@ incoming           |   incoming return address | one quad
           (define (unactivate result-regs)
             (let ([e `(seq
                        (set! ,%Carg1 ,(%mref ,%sp ,(+ (push-registers-size result-regs) active-state-offset)))
-                       ,(as-c-call (%inline unactivate-thread ,%Carg1)))])
+                       ,(%inline unactivate-thread ,%Carg1))])
               (if (null? result-regs)
                   e
                   (%seq
@@ -3398,7 +3387,7 @@ incoming           |   incoming return address | one quad
                            (set! ,(%mref ,%sp ,%zero 24 fp) ,%fp6)
                            (set! ,(%mref ,%sp ,%zero 32 fp) ,%fp7)
                            (set! ,(%mref ,%sp ,%zero 40 fp) ,%fp8)
-                           (set! ,%sp ,(%inline - ,%sp (immediate 8)))
+                           (set! ,%sp ,(%inline - ,%sp (immediate 40)))
                            ,(save-arg-regs arg-type*))
                          (%seq
                            (set! ,%sp ,(%inline - ,%sp (immediate 136)))
@@ -3413,7 +3402,7 @@ incoming           |   incoming return address | one quad
                          ((lambda (e)
                             (if adjust-active?
                                 (%seq
-                                 ,(as-c-call `(set! ,%rax ,(%inline activate-thread)))
+                                 (set! ,%rax ,(%inline activate-thread))
                                  (set! ,(%mref ,%sp ,active-state-offset) ,%rax)
                                  ,e)
                                 e))
@@ -3443,7 +3432,7 @@ incoming           |   incoming return address | one quad
                        (%seq
                         ,(if-feature windows
                            (%seq
-                             (set! ,%sp ,(%inline + ,%sp (immediate 8)))
+                             (set! ,%sp ,(%inline + ,%sp (immediate 40)))
                              (set! ,%fp3 ,(%mref ,%sp ,%zero 0 fp))
                              (set! ,%fp4 ,(%mref ,%sp ,%zero 8 fp))
                              (set! ,%fp5 ,(%mref ,%sp ,%zero 16 fp))

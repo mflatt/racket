@@ -447,8 +447,8 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   c = 0;
   off = 0;
 
-  /* This sequence corresponds to `invoke-prelude` in "x86_64.ss" plus the call in `foreign-call` */
-  count = 10;
+  /* This sequence corresponds to `invoke-prelude` in "x86_64.ss" */
+  count = 9;
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
@@ -457,8 +457,7 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
-  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 0); /* 0*8 + 8 = 8 */
-  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 3); /* 3*8 + 8 = 32  for `foreign call` */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 4); /* 4*8 + 8 = 48 */
   if (c != count) 
     S_error_abort("inconsistent unwind");
   
@@ -480,8 +479,8 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   c = 0;
   off = 0;
 
-  /* This sequence corresponds to `asm-foreign-callable` in "x86_64.ss" plus `c-simple-call` */
-  count = 11;
+  /* This sequence corresponds to `asm-foreign-callable` in "x86_64.ss" */
+  count = 9;
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 3); /* RBX */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 5); /* RBP */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 7); /* RDI */
@@ -490,9 +489,11 @@ void S_register_unwind(void* addr, iptr num_bytes) {
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 13); /* R13 */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 14); /* R14 */
   STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_PUSH_NONVOL, 15); /* R15 */
-  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 1); /* 1*8 + 8 = 16 bytes for active state */
-  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 6); /* 6*8 + 8 = 48 bytes (6 doubles) + 8 align */
-  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 3); /* 3*8 + 8 = 32 bytes from c-simple-call */
+  STEP_UNWIND_NODE(ui, c, off, count, FAKE_INSTRUCTION_SIZE, S_UWOP_ALLOC_SMALL, 12); /* 12*8 + 8 = 13 words = 104 bytes:
+                                                                                         16 bytes for active state
+                                                                                         48 bytes  for 6 doubles
+                                                                                          8 bytes align
+                                                                                         32 bytes for shadow area */
   if (c != count) 
     S_error_abort("inconsistent unwind");
 
