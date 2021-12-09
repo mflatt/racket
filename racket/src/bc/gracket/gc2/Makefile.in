@@ -118,7 +118,7 @@ MACLIBRKT_LINK_static = ../../libracket3m.@LIBSFX@ $(LIBRKTIO) $(LDLIBS)
 
 ../GRacket@MMM@.app/Contents/MacOS/GRacket@MMM@: $(MRAPPSKEL) $(MZFW) grmain.@LTO@
 	$(GRACKETLINKER) $(LDFLAGS) -o ../GRacket@MMM@.app/Contents/MacOS/GRacket@MMM@ grmain.@LTO@ -Wl,-headerpad_max_install_names $(MACLIBRKT_LINK_@MACLIBRKT_LINK_MODE@) -framework CoreFoundation
-	/usr/bin/install_name_tool -change "Racket.framework/Versions/$(FWVERSION)_3m/Racket" "@executable_path/../../../../Racket.framework/Versions/$(FWVERSION)_3m/Racket" "../GRacket@MMM@.app/Contents/MacOS/GRacket@MMM@"
+	install_name_tool -change "Racket.framework/Versions/$(FWVERSION)_3m/Racket" "@executable_path/../../../../Racket.framework/Versions/$(FWVERSION)_3m/Racket" "../GRacket@MMM@.app/Contents/MacOS/GRacket@MMM@"
 
 $(MRFW) : $(XOBJS) $(@WXVARIANT@_PLAIN_OBJS) ../../libracket3m.@LIBSFX@ wx_font.o wx_file_dialog.o $(MRFWRES)
 	$(GRACKETLINKER) $(LDFLAGS) -dynamiclib -o $(MRFW) -Wl,-headerpad_max_install_names $(XOBJS) $(@WXVARIANT@_PLAIN_OBJS) ../../libracket3m.@LIBSFX@ $(@WXVARIANT@_LIBS) @X_EXTRA_LIBS@ wx_font.o wx_file_dialog.o

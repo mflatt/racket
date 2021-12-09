@@ -1496,6 +1496,7 @@ Optional Features:
   --enable-sdk5=<path>    use Mac OS 10.5 SDK directory
   --enable-sdk6=<path>    use Mac OS 10.6 SDK directory
   --enable-sdk9=<path>    use Mac OS 10.9 SDK directory
+  --enable-sdk11=<path>   use Mac OS 11.0 SDK directory
   --enable-ios=<path>     use iOS SDK directory
   --enable-sysroot=<path> use sysroot directory (e.g., for Android)
   --enable-xonx           use Unix style (e.g., use Gtk) for Mac OS
@@ -2781,6 +2782,11 @@ if test "${enable_curseslib+set}" = set; then :
 fi
 
 
+
+# Check whether --enable-sdk was given.
+if test "${enable_sdk+set}" = set; then :
+  enableval=$enable_sdk;
+fi
 
 # Check whether --enable-sdk was given.
 if test "${enable_sdk+set}" = set; then :
@@ -5148,6 +5154,16 @@ $as_echo "#define HAVE_STDINT_H 1" >>confdefs.h
     if test "${enable_sdk9}" != "" ; then
       PREFLAGS="$PREFLAGS -isysroot ${enable_sdk9} -mmacosx-version-min=10.9"
       LDFLAGS="$LDFLAGS -isysroot ${enable_sdk9} -mmacosx-version-min=10.9"
+      if test "$PROPAGATE_SUB_CONFIGURE" != "no" ; then
+        SUB_CONFIGURE_EXTRAS="${SUB_CONFIGURE_EXTRAS} CFLAGS="'"'"${CFLAGS}"'"'
+        SUB_CONFIGURE_EXTRAS="${SUB_CONFIGURE_EXTRAS} CPPFLAGS="'"'"${PREFLAGS}"'"'
+        SUB_CONFIGURE_EXTRAS="${SUB_CONFIGURE_EXTRAS} LDFLAGS="'"'"${LDFLAGS}"'"'
+      fi
+    fi
+
+    if test "${enable_sdk11}" != "" ; then
+      PREFLAGS="$PREFLAGS -isysroot ${enable_sdk11} -mmacosx-version-min=11.0"
+      LDFLAGS="$LDFLAGS -isysroot ${enable_sdk11} -mmacosx-version-min=11.0"
       if test "$PROPAGATE_SUB_CONFIGURE" != "no" ; then
         SUB_CONFIGURE_EXTRAS="${SUB_CONFIGURE_EXTRAS} CFLAGS="'"'"${CFLAGS}"'"'
         SUB_CONFIGURE_EXTRAS="${SUB_CONFIGURE_EXTRAS} CPPFLAGS="'"'"${PREFLAGS}"'"'

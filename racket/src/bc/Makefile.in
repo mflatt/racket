@@ -256,7 +256,7 @@ MACLIBRKT_LINK_static = $(MACLIBRKT_LIBS)
 
 racket@CGC@@OSX@: $(MZFW) main.@LTO@
 	@MZLINKER@ -o racket@CGC@ @PROFFLAGS@ @LDFLAGS@ main.@LTO@ -Wl,-headerpad_max_install_names $(MACLIBRKT_LINK_@MACLIBRKT_LINK_MODE@) @LIBS@
-	/usr/bin/install_name_tool -change "Racket.framework/Versions/$(FWVERSION)/Racket" "@executable_path/Racket.framework/Versions/$(FWVERSION)/Racket" "racket@CGC@"
+	install_name_tool -change "Racket.framework/Versions/$(FWVERSION)/Racket" "@executable_path/Racket.framework/Versions/$(FWVERSION)/Racket" "racket@CGC@"
 
 # mingw ----------------------------------------
 
@@ -612,7 +612,7 @@ osx-install-cgc:
 	mkdir -p $(DESTDIR)$(MZFWDIR)/Versions/$(FWVERSION)
 	cp $(MZFW) $(DESTDIR)$(MZFWDIR)/Versions/$(FWVERSION)/
 	$(STRIP_SIGNATURE) $(DESTDIR)"$(bindir)/racket@CGC_INSTALLED@"
-	/usr/bin/install_name_tool -change "@executable_path/Racket.framework/Versions/$(FWVERSION)/Racket" "@FRAMEWORK_PREFIX@Racket.framework/Versions/$(FWVERSION)/Racket" $(DESTDIR)"$(bindir)/racket@CGC_INSTALLED@"
+	install_name_tool -change "@executable_path/Racket.framework/Versions/$(FWVERSION)/Racket" "@FRAMEWORK_PREFIX@Racket.framework/Versions/$(FWVERSION)/Racket" $(DESTDIR)"$(bindir)/racket@CGC_INSTALLED@"
 	$(RESTORE_SIGNATURE) $(DESTDIR)"$(bindir)/racket@CGC_INSTALLED@"
 
 osx-install-cgc-final:
@@ -624,7 +624,7 @@ osx-install-3m:
 	mkdir -p $(DESTDIR)"$(MZFWDIR)/Versions/$(FWVERSION)_3m"
 	cp $(MZFWMMM) $(DESTDIR)$(MZFWDIR)/Versions/$(FWVERSION)_3m/
 	$(STRIP_SIGNATURE) $(DESTDIR)"$(bindir)/racket@MMM_INSTALLED@"
-	/usr/bin/install_name_tool -change "@executable_path/Racket.framework/Versions/$(FWVERSION)_3m/Racket" "@FRAMEWORK_PREFIX@Racket.framework/Versions/$(FWVERSION)_3m/Racket" $(DESTDIR)"$(bindir)/racket@MMM_INSTALLED@"
+	install_name_tool -change "@executable_path/Racket.framework/Versions/$(FWVERSION)_3m/Racket" "@FRAMEWORK_PREFIX@Racket.framework/Versions/$(FWVERSION)_3m/Racket" $(DESTDIR)"$(bindir)/racket@MMM_INSTALLED@"
 	$(RESTORE_SIGNATURE) $(DESTDIR)"$(bindir)/racket@MMM_INSTALLED@"
 
 osx-install-3m-final:
