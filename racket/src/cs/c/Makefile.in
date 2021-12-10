@@ -314,7 +314,7 @@ mac-embed-boot-static:
 	rm -f $(EMBED_DEST)
 	cp $(EMBED_SRC) $(EMBED_DEST)
 	$(STRIP_SIGNATURE) $(EMBED_DEST)
-	$(BOOTSTRAP_RACKET) $(srcdir)/embed-boot.rkt @BOOT_COMPRESS_COMP@ $(EMBED_DEST) $(EMBED_DEST) $(FW_BOOT_DESTS)
+	$(BOOTSTRAP_RACKET) $(srcdir)/embed-boot.rkt @BOOT_COMPRESS_COMP@ "" $(EMBED_DEST) $(FW_BOOT_DESTS)
 
 link-fw-bootfiles-fw:
 	$(NOOP)
