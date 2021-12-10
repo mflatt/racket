@@ -622,6 +622,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+INSTALL_NAME_TOOL
 PLT_CS_SLSP_SUFFIX
 INSTALL_LIBS_ENABLE
 INSTALL_SETUP_RACKET_FLAGS
@@ -4360,6 +4361,14 @@ fi
 
 WINDRES=windres
 
+
+if test "${enable_racket}" != "" ; then
+  INSTALL_NAME_TOOL='$(INSTALL_NAME_TOOL_VIA_RACKET)'
+else
+  INSTALL_NAME_TOOL=install_name_tool
+fi
+
+
 ############## platform tests ################
 
 # At first, `MACH` means the target that we're building for. In
@@ -5940,6 +5949,7 @@ done
 
 SCHEME_CONFIG_ARGS="--machine=${MACH} --disable-x11 ${disable_curses_arg} ${cs_auto_flags} ${extra_scheme_config_args}"
 SCHEME_CROSS_CONFIG_ARGS="--machine=${TARGET_MACH} --disable-x11 ${cs_auto_flags} ${disable_curses_arg} ${extra_scheme_config_args}"
+
 
 
 

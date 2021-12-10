@@ -624,6 +624,7 @@ enable_option_checking=no
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 subdirs
+INSTALL_NAME_TOOL
 CROSS_COMPILE_TARGET_KIND
 STARTUP_AS_AUTO
 STARTUP_AS_C
@@ -4946,6 +4947,14 @@ if test "${enable_jit}" = "yes" ; then
   check_for_mprotect=yes
 fi
 
+
+if test "${enable_racket}" != "" ; then
+  INSTALL_NAME_TOOL='$(INSTALL_NAME_TOOL_VIA_RACKET)'
+else
+  INSTALL_NAME_TOOL=install_name_tool
+fi
+
+
 ############## platform tests ################
 
 # for flags we don't want to use in config tests:
@@ -7347,6 +7356,8 @@ fi
 ############## final output ################
 
 LIBS="$LIBS $EXTRALIBS"
+
+
 
 
 
