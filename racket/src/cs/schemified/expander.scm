@@ -3479,15 +3479,19 @@
          (if (if kind1_0 (eq? 'immutable kind1_0) (immutable? table3_0))
            (if (hash-equal? table3_0)
              (hash)
-             (if (hash-eqv? table3_0)
-               (hasheqv)
-               (if (hash-eq? table3_0) (hasheq) (void))))
+             (if (hash-equal-always? table3_0)
+               (hashequalw)
+               (if (hash-eqv? table3_0)
+                 (hasheqv)
+                 (if (hash-eq? table3_0) (hasheq) (void)))))
            (if (if kind1_0 (eq? 'weak kind1_0) (hash-weak? table3_0))
              (if (hash-equal? table3_0)
                (make-weak-hash)
-               (if (hash-eqv? table3_0)
-                 (make-weak-hasheqv)
-                 (if (hash-eq? table3_0) (make-weak-hasheq) (void))))
+               (if (hash-equal-always? table3_0)
+                 (make-weak-hashequalw)
+                 (if (hash-eqv? table3_0)
+                   (make-weak-hasheqv)
+                   (if (hash-eq? table3_0) (make-weak-hasheq) (void)))))
              (if (if kind1_0
                    (eq? 'ephemeron kind1_0)
                    (hash-ephemeron? table3_0))
@@ -3498,9 +3502,11 @@
                    (if (hash-eq? table3_0) (make-ephemeron-hasheq) (void))))
                (if (hash-equal? table3_0)
                  (make-hash)
-                 (if (hash-eqv? table3_0)
-                   (make-hasheqv)
-                   (if (hash-eq? table3_0) (make-hasheq) (void))))))))))))
+                 (if (hash-equal-always? table3_0)
+                   (make-hashequalw)
+                   (if (hash-eqv? table3_0)
+                     (make-hasheqv)
+                     (if (hash-eq? table3_0) (make-hasheq) (void)))))))))))))
 (define hash-map/copy.1
   (|#%name|
    hash-map/copy
@@ -21654,6 +21660,7 @@
 (define fasl-hash-eq-variant 0)
 (define fasl-hash-equal-variant 1)
 (define fasl-hash-eqv-variant 2)
+(define fasl-hash-equal-always-variant 3)
 (define s-exp->fasl.1
   (|#%name|
    s-exp->fasl
@@ -22495,7 +22502,10 @@
                                                                                                              (if (hash-eqv?
                                                                                                                   v_0)
                                                                                                                2
-                                                                                                               1))))
+                                                                                                               (if (hash-equal-always?
+                                                                                                                    v_0)
+                                                                                                                 3
+                                                                                                                 1)))))
                                                                                                       (begin-unsafe
                                                                                                        (write-byte
                                                                                                         byte_0
@@ -23199,7 +23209,9 @@
                                                             (make-hasheq)
                                                             (if (eq? tmp_0 2)
                                                               (make-hasheqv)
-                                                              (make-hash))))))
+                                                              (if (eq? tmp_0 3)
+                                                                (make-hashequalw)
+                                                                (make-hash)))))))
                                                    (let ((len_1
                                                           (|#%app|
                                                            read-fasl-integer
@@ -23239,7 +23251,9 @@
                                                             hash2610
                                                             (if (eq? tmp_0 2)
                                                               hash2589
-                                                              hash2725)))))
+                                                              (if (eq? tmp_0 3)
+                                                                (hashequalw)
+                                                                hash2725))))))
                                                    (let ((len_1
                                                           (|#%app|
                                                            read-fasl-integer
@@ -69108,30 +69122,59 @@
                                                       config_0
                                                       temp43_1
                                                       (list temp44_0)))))))
-                                           (begin
-                                             (if (char? c_0)
+                                           (if (if (eqv? ec_0 '#\x75)
+                                                 #t
+                                                 (eqv? ec_0 '#\x55))
+                                             (begin
                                                (accum-string-add!
                                                 accum-str_0
                                                 c_0)
-                                               (void))
-                                             (let ((temp50_0
-                                                    "bad syntax `~a`"))
-                                               (let ((temp51_0
-                                                      (accum-string-get!.1
-                                                       0
-                                                       accum-str_0
-                                                       config_0)))
-                                                 (let ((temp50_1 temp50_0))
-                                                   (reader-error.1
-                                                    unsafe-undefined
-                                                    c_0
-                                                    #f
-                                                    unsafe-undefined
-                                                    in_0
-                                                    config_0
-                                                    temp50_1
-                                                    (list
-                                                     temp51_0))))))))))))))))))
+                                               (get-next!_0 '#\x61 '#\x41)
+                                               (get-next!_0 '#\x6c '#\x4c)
+                                               (get-next!_0 '#\x77 '#\x57)
+                                               (if (eq? mode_0 'eq)
+                                                 (loop_0 'equal-always)
+                                                 (let ((temp49_0
+                                                        "bad syntax `~a`"))
+                                                   (let ((temp50_0
+                                                          (accum-string-get!.1
+                                                           0
+                                                           accum-str_0
+                                                           config_0)))
+                                                     (let ((temp49_1 temp49_0))
+                                                       (reader-error.1
+                                                        unsafe-undefined
+                                                        '#\x78
+                                                        #f
+                                                        unsafe-undefined
+                                                        in_0
+                                                        config_0
+                                                        temp49_1
+                                                        (list temp50_0)))))))
+                                             (begin
+                                               (if (char? c_0)
+                                                 (accum-string-add!
+                                                  accum-str_0
+                                                  c_0)
+                                                 (void))
+                                               (let ((temp56_0
+                                                      "bad syntax `~a`"))
+                                                 (let ((temp57_0
+                                                        (accum-string-get!.1
+                                                         0
+                                                         accum-str_0
+                                                         config_0)))
+                                                   (let ((temp56_1 temp56_0))
+                                                     (reader-error.1
+                                                      unsafe-undefined
+                                                      c_0
+                                                      #f
+                                                      unsafe-undefined
+                                                      in_0
+                                                      config_0
+                                                      temp56_1
+                                                      (list
+                                                       temp57_0)))))))))))))))))))
                       (loop_0 'equal)))
                    (case-lambda
                     ((content_0 opener_0 mode_0)
@@ -69155,7 +69198,11 @@
                               (if graph?_0
                                 (make-hasheqv-placeholder content_0)
                                 (make-immutable-hasheqv content_0))
-                              (void))))
+                              (if (eq? mode_0 'equal-always)
+                                (if graph?_0
+                                  (make-hashequalw-placeholder content_0)
+                                  (make-immutable-hashequalw content_0))
+                                (void)))))
                         in_0
                         config_0
                         opener_0)))
@@ -69193,14 +69240,14 @@
                             #f)))))
                  (if (not closer_0)
                    (if (eof-object? c_0)
-                     (let ((temp58_0 "expected ~a to close `~a`"))
-                       (let ((temp59_0
+                     (let ((temp64_0 "expected ~a to close `~a`"))
+                       (let ((temp65_0
                               (begin-unsafe
                                (effective-char-names
                                 overall-closer-ec_0
                                 config_0
                                 "closer"))))
-                         (let ((temp58_1 temp58_0))
+                         (let ((temp64_1 temp64_0))
                            (reader-error.1
                             unsafe-undefined
                             c_0
@@ -69208,31 +69255,31 @@
                             unsafe-undefined
                             in_0
                             config_0
-                            temp58_1
-                            (list temp59_0 overall-opener-c_0)))))
+                            temp64_1
+                            (list temp65_0 overall-opener-c_0)))))
                      (if (char-closer? ec_0 config_0)
-                       (let ((temp62_0
+                       (let ((temp68_0
                               (reading-at
                                config_0
                                open-line_0
                                open-col_0
                                open-pos_0)))
-                         (let ((temp63_0 "~a"))
-                           (let ((temp64_0
+                         (let ((temp69_0 "~a"))
+                           (let ((temp70_0
                                   (indentation-unexpected-closer-message
                                    ec_0
                                    c_0
                                    config_0)))
-                             (let ((temp63_1 temp63_0) (temp62_1 temp62_0))
+                             (let ((temp69_1 temp69_0) (temp68_1 temp68_0))
                                (reader-error.1
                                 unsafe-undefined
                                 '#\x78
                                 #f
                                 unsafe-undefined
                                 in_0
-                                temp62_1
-                                temp63_1
-                                (list temp64_0))))))
+                                temp68_1
+                                temp69_1
+                                (list temp70_0))))))
                        (let ((v_0
                               (|#%app|
                                read-one_0
@@ -69249,25 +69296,25 @@
                             #f
                             in_0
                             config_0)
-                           (let ((temp66_0
+                           (let ((temp72_0
                                   (reading-at
                                    config_0
                                    open-line_0
                                    open-col_0
                                    open-pos_0)))
-                             (let ((temp67_0
+                             (let ((temp73_0
                                     "expected ~a to start a hash pair"))
-                               (let ((temp68_0 (all-openers-str config_0)))
-                                 (let ((temp67_1 temp67_0) (temp66_1 temp66_0))
+                               (let ((temp74_0 (all-openers-str config_0)))
+                                 (let ((temp73_1 temp73_0) (temp72_1 temp72_0))
                                    (reader-error.1
                                     unsafe-undefined
                                     '#\x78
                                     #f
                                     unsafe-undefined
                                     in_0
-                                    temp66_1
-                                    temp67_1
-                                    (list temp68_0))))))))))
+                                    temp72_1
+                                    temp73_1
+                                    (list temp74_0))))))))))
                    (let ((k_0
                           (|#%app|
                            read-one_0
@@ -69311,26 +69358,26 @@
                                         config_0)))
                                     #f)
                                 (void)
-                                (let ((temp70_0
+                                (let ((temp76_0
                                        (reading-at
                                         config_0
                                         dot-line_0
                                         dot-col_0
                                         dot-pos_0)))
-                                  (let ((temp72_0
+                                  (let ((temp78_0
                                          "expected ~a and value for hash"))
-                                    (let ((temp73_0 (begin-unsafe "`.`")))
-                                      (let ((temp72_1 temp72_0)
-                                            (temp70_1 temp70_0))
+                                    (let ((temp79_0 (begin-unsafe "`.`")))
+                                      (let ((temp78_1 temp78_0)
+                                            (temp76_1 temp76_0))
                                         (reader-error.1
                                          unsafe-undefined
                                          dot-c_0
                                          #f
                                          unsafe-undefined
                                          in_0
-                                         temp70_1
-                                         temp72_1
-                                         (list temp73_0)))))))
+                                         temp76_1
+                                         temp78_1
+                                         (list temp79_0)))))))
                               (let ((v_0
                                      (|#%app|
                                       read-one_0
@@ -69355,31 +69402,31 @@
                                        (begin
                                          (if (eqv? closer-ec_0 closer_0)
                                            (void)
-                                           (let ((temp75_0
+                                           (let ((temp81_0
                                                   (reading-at
                                                    config_0
                                                    closer-line_0
                                                    closer-col_0
                                                    closer-pos_0)))
-                                             (let ((temp77_0
+                                             (let ((temp83_0
                                                     "expected ~a after value within a hash"))
-                                               (let ((temp78_0
+                                               (let ((temp84_0
                                                       (begin-unsafe
                                                        (effective-char-names
                                                         closer_0
                                                         config_0
                                                         "closer"))))
-                                                 (let ((temp77_1 temp77_0)
-                                                       (temp75_1 temp75_0))
+                                                 (let ((temp83_1 temp83_0)
+                                                       (temp81_1 temp81_0))
                                                    (reader-error.1
                                                     unsafe-undefined
                                                     closer-c_0
                                                     #f
                                                     unsafe-undefined
                                                     in_0
-                                                    temp75_1
-                                                    temp77_1
-                                                    (list temp78_0)))))))
+                                                    temp81_1
+                                                    temp83_1
+                                                    (list temp84_0)))))))
                                          (cons
                                           (coerce-key k_0 elem-config_0)
                                           v_0))))
