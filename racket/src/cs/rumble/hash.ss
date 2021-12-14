@@ -411,11 +411,13 @@
           (|#%app| default)
           (raise (|#%app|
                   exn:fail:contract:arity
-                  (string-append (symbol->string who)
-                                 ": arity mismatch for failure procedure;\n"
-                                 " given procedure does not accept zero arguments\n"
-                                 "  procedure: "
-                                 (error-value->string default))
+                  (error-message->string
+                   (error-primitive-name->symbol who)
+                   (string-append
+                    "arity mismatch for failure procedure;\n"
+                    " given procedure does not accept zero arguments\n"
+                    "  procedure: "
+                    (error-value->string default)))
                   (current-continuation-marks))))
       default))
 

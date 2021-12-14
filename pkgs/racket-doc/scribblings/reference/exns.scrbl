@@ -626,6 +626,19 @@ print; a single ``...'' line is printed if more lines are available
 after the first @racket[cnt] lines. A @racket[0] value for
 @racket[cnt] disables context printing entirely.}
 
+
+@defboolparam[error-print-source-location include?]{
+
+A @tech{parameter} that controls whether read and syntax error messages
+include source information, such as the source line and column or the
+expression.  This parameter also controls the error message when a
+module-defined variable is accessed before its definition is executed;
+the parameter determines whether the message includes a module
+name. Only the message field of an @racket[exn:fail:read],
+@racket[exn:fail:syntax], or @racket[exn:fail:contract:variable]
+structure is affected by the parameter. The default is @racket[#t].}
+
+
 @defparam[error-value->string-handler proc (any/c exact-nonnegative-integer?
                                                   . -> .
                                                   string?)]{
@@ -676,16 +689,89 @@ not syntax objects.
 @history[#:added "8.2.0.8"]}
 
 
-@defboolparam[error-print-source-location include?]{
+@defparam[error-primitive-name->symbol-handler proc (symbol? . -> . symbol?)]{
 
-A @tech{parameter} that controls whether read and syntax error messages
-include source information, such as the source line and column or the
-expression.  This parameter also controls the error message when a
-module-defined variable is accessed before its definition is executed;
-the parameter determines whether the message includes a module
-name. Only the message field of an @racket[exn:fail:read],
-@racket[exn:fail:syntax], or @racket[exn:fail:contract:variable]
-structure is affected by the parameter. The default is @racket[#t].}
+A @tech{parameter} that determines a conversion on the name of a
+@tech{primitive procedure} in errors related to those procedures,
+including @racket[exn:fail:contract] and
+@racket[exn:fail:contract:arity] errors for the primitives. Setting
+the conversion can be an alternative to wrapping primitives with extra
+checks, which might substantially decrease performance. The intent of
+constraining this parameter's use to primitives is also to ensure that
+procedure names are distinct, well-known, and relatively stable. The
+name @racket['application] is used for error messages about procedure
+application.
+
+The default conversion returns the given symbol as-is. If the result
+is not a symbol, @racket['...] is used in place of the result.
+
+@history[#:added "8.3.0.11"]}
+
+
+@defparam[error-primitive-contract->string-handler proc (string? . -> . string?)]{
+
+A @tech{parameter} that determines a conversion on the contract of an
+argument for a @tech{primitive procedure} in
+@racket[exn:fail:contract] exception messages. The use and intent of
+this handler is similar to that of
+@racket[error-primitive-name->symbol-handler].
+
+The default conversion returns the given contract string as-is. If the
+result is not a string, @racket["..."] is used in place of the result.
+
+@history[#:added "8.3.0.11"]}
+
+
+@defparam[error-primitive-message->string-handler proc ((or/c symbol? #f) string? . -> . string?)]{
+
+A @tech{parameter} that determines how the error-message string for a
+primitive exception is constructed from a name and a string for the
+error message. The use and intent of this handler is similar to that
+of @racket[error-primitive-name->symbol-handler]. The set of primitive
+exceptions that trigger this handler includes wrong-arity procedure
+application and use-before-initialization variable references, so the
+name symbol is not necessarily a primitive name. The name and
+error-message string are provided separately so that the name does not
+interfere with attempts to parse and transform the (relatively stable)
+error-message text. The handler's first argument is @racket[#f] when
+no name is available for the error message.
+
+The default conversion appends the string form of a symbol argument,
+@racket[": "], and the message string. If the first argument is
+@racket[#f] instead of a symbol, the default conversion returns the
+message string as-is. If the result is not a string, @racket["..."] is
+used in place of the result.
+
+@history[#:added "8.3.0.11"]}
+
+
+@defparam[error-struct-operation-names-handler proc (symbol? symbol? (or/c 'ref 'set!)
+                                                     . -> . (values symbol? string?))]{
+
+A @tech{parameter} that determines how the procedure-name symbol and
+contract string are constructed for an error message involving a
+@tech{structure type} accessor or mutator. The first handler argument
+is the name of a structure type as a symbol. The second handler
+argument is the name of a field as a symbol. The third argument
+indicates where the error is for an accessor (@racket['ref]) or
+mutation (@racket['set!]). The two results are a symbol for the
+accessor/mutator name and a string for a contract matching instances
+of the structure type.
+
+For the first result, the default conversion appends the string forms
+of the symbols with a @racket["-"] in between, adding a
+@racket["set-"] prefix and @racket["!"] suffix in the case of a
+mutator. For the second result, the default conversion appends the
+string form of the structure-type name and @racket["?"].
+
+If the handler procedure does not return two results, @racket['...]
+and @racket["..."] are used in place of the results. Along the same
+lines, if the first of two results is not a symbol, @racket['...] is
+used, and if the second result is not a string, @racket["..."] us
+used.
+
+@history[#:added "8.3.0.11"]}
+
 
 @;------------------------------------------------------------------------
 @section{Built-in Exception Types}

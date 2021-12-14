@@ -950,9 +950,9 @@
 ;; ----------------------------------------
 
 (define (primitive? v)
-  (or (eq? v make-struct-type-property)
-      (eq? v make-struct-type)
-      (eq? v car)))
+  (and (procedure? v)
+       (not (object-name? v))
+       (eq? v (hash-ref primitive-names (object-name v) #f))))
 
 (define (primitive-closure? v) #f)
 
@@ -963,13 +963,6 @@
    [(eq? prim car) 1]
    [else
     (raise-argument-error 'primitive-result-arity "primitive?" prim)]))
-
-;; ----------------------------------------
-
-;; Used to encode an 'inferred-name property as a Scheme expression
-(define-syntax (|#%name| stx)
-  (syntax-case stx ()
-    [(_ name val) #`(let ([name val]) name)]))
 
 ;; ----------------------------------------
 

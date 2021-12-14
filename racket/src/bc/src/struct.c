@@ -1464,6 +1464,21 @@ static char *extract_field_proc_name(Scheme_Object *prim)
   return (char *)SCHEME_PRIM_CLOSURE_ELS(prim)[2];
 }
 
+static char *extract_filtered_field_proc_name(Scheme_Object *st_name, Scheme_Object *prim, int mutator, char **_pred_name)
+{
+  char *name;
+  name = extract_field_proc_name(prim);
+  name = scheme_filter_struct_operation_name(st_name, name, mutator, _pred_name);
+
+  if (!*_pred_name) {
+    char *pred_name;
+    pred_name = pred_name_string(st_name);
+    *_pred_name = pred_name;
+  }
+
+  return name;
+}
+
 typedef int (*Check_Val_Proc)(Scheme_Object *);
 
 static void wrong_property_contract(const char *name, const char *contract, Scheme_Object *v)
@@ -2614,12 +2629,12 @@ Scheme_Object *scheme_struct_getter(int argc, Scheme_Object **args, Scheme_Objec
     inst = (Scheme_Structure *)SCHEME_CHAPERONE_VAL((Scheme_Object *)inst);
 
   if (!SCHEME_STRUCTP(((Scheme_Object *)inst))) {
-    scheme_wrong_contract(extract_field_proc_name(prim), 
-                          pred_name_string(st->name), 
-                          0, argc, args);
+    char *name, *pred_name;
+    name = extract_filtered_field_proc_name(st->name, prim, 0, &pred_name);
+    scheme_wrong_contract_user(name, pred_name, 0, argc, args);
     return NULL;
   } else if (!STRUCT_TYPEP(st, inst)) {
-    wrong_struct_type(extract_field_proc_name(prim), 
+    wrong_struct_type(extract_field_proc_name(prim),
 		      st->name, 
 		      SCHEME_STRUCT_NAME_SYM(inst), 
 		      0, argc, args);
@@ -2649,9 +2664,9 @@ Scheme_Object *scheme_struct_setter(int argc, Scheme_Object **args, Scheme_Objec
     inst = (Scheme_Structure *)SCHEME_CHAPERONE_VAL((Scheme_Object *)inst);
 
   if (!SCHEME_STRUCTP(((Scheme_Object *)inst))) {
-    scheme_wrong_contract(extract_field_proc_name(prim),
-                          pred_name_string(st->name), 
-                          0, argc, args);
+    char *name, *pred_name;
+    name = extract_filtered_field_proc_name(st->name, prim, 1, &pred_name);
+    scheme_wrong_contract_user(name, pred_name, 0, argc, args);
     return NULL;
   }
 	

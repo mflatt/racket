@@ -19,6 +19,6 @@
   (raise
    (|#%app|
     exn:fail:contract:variable
-    (string-append (symbol->string (variable-name var))
-                   ": undefined;\n cannot reference undefined identifier")
+    (error-message->string (variable-name var)
+                           "undefined;\n cannot reference undefined identifier")
     (current-continuation-marks))))

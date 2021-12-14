@@ -230,8 +230,8 @@
   (when (eq? v unsafe-undefined)
     (raise (|#%app|
             exn:fail:contract:variable
-            (string-append (symbol->string sym)
-                           ": undefined;\n cannot use before initialization")
+            (error-message->string sym
+                                   "undefined;\n cannot use before initialization")
             (current-continuation-marks)
             sym)))
   v)
@@ -240,8 +240,8 @@
   (when (eq? v unsafe-undefined)
     (raise (|#%app|
             exn:fail:contract:variable
-            (string-append (symbol->string sym)
-                           ": assignment disallowed;\n cannot assign before initialization")
+            (error-message->string sym
+                                   "assignment disallowed;\n cannot assign before initialization")
             (current-continuation-marks)
             sym)))
   v)

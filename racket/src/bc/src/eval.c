@@ -2243,7 +2243,7 @@ scheme_do_eval(Scheme_Object *obj, int num_rands, Scheme_Object **rands,
 
       if (num_rands < prim->mina 
 	  || (num_rands > prim->mu.maxa && prim->mina >= 0)) {
-	scheme_wrong_count_m(prim->name, prim->mina, prim->mu.maxa,
+	scheme_wrong_count_m(scheme_primitive_error_name((Scheme_Object *)prim), prim->mina, prim->mu.maxa,
 			     num_rands, rands,
 			     0);
 	return NULL; /* Shouldn't get here */
@@ -2657,7 +2657,7 @@ scheme_do_eval(Scheme_Object *obj, int num_rands, Scheme_Object **rands,
       
       if (num_rands < prim->mina 
 	  || (num_rands > prim->maxa && prim->maxa >= 0)) {
-	scheme_wrong_count_m(prim->name, prim->mina, prim->maxa, 
+	scheme_wrong_count_m(scheme_primitive_error_name((Scheme_Object *)prim), prim->mina, prim->maxa, 
 			     num_rands, rands,
 			     0);
 	return NULL; /* Shouldn't get here */

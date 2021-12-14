@@ -518,7 +518,7 @@
     (or (position-based-mutator? v)
         (and (wrapper-procedure? v)
              (let ([d (wrapper-procedure-data v)])
-             <  (and (pair? d)
+               (and (pair? d)
                     (record-type-descriptor? (cdr d))))))))
 
 (define (struct-accessor-procedure-rtd+pos v)
@@ -537,6 +537,31 @@
   (syntax-case stx ()
     [(_ name) #`(quote #,(datum->syntax #'name ((current-generate-id) (datum name))))]
     [else #'#f]))
+
+(define (|#%struct-ref-error| v record-name field-name)
+  (#%$app/no-return struct-ref-error v record-name field-name))
+
+(define (|#%struct-set!-error| v record-name field-name)
+  (#%$app/no-return struct-set!-error v record-name field-name))
+
+(define (struct-ref-error v record-name field-name)
+  (struct-operation-error v record-name field-name 'ref))
+
+(define (struct-set!-error v record-name field-name)
+  (struct-operation-error v record-name field-name 'set!))
+
+(define (struct-operation-error v record-name field-name mode)
+  (#%call-with-values
+   (lambda () (|#%app|
+               (|#%app| error-struct-operation-names-handler)
+               record-name field-name mode))
+   (case-lambda
+    [(name ctc)
+     (raise-argument-error/user (if (symbol? name) name '...)
+                                (if (string? ctc) ctc "...")
+                                v)]
+    [args
+     (raise-argument-error/user '... "..." v)])))
 
 ;; ----------------------------------------
 

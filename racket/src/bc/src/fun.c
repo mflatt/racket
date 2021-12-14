@@ -6977,7 +6977,7 @@ static Scheme_Object **chaperone_do_control(const char *name, int mode,
 
         if (mode == 3) {
           if (!scheme_check_proc_arity(NULL, 1, 0, argc, vals)) {
-            scheme_wrong_type("call/cc guard-wrapping function", "(procedure-arity-includes/c 2)", 0, -1, vals);
+            scheme_wrong_contract("call/cc guard-wrapping function", "(procedure-arity-includes/c 2)", 0, -1, vals);
           }
         }
 

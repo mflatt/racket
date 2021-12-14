@@ -35,6 +35,8 @@ THREAD_LOCAL_DECL(static Scheme_Logger *scheme_gc_logger);
 THREAD_LOCAL_DECL(static Scheme_Logger *scheme_future_logger);
 THREAD_LOCAL_DECL(static Scheme_Logger *scheme_place_logger);
 
+THREAD_LOCAL_DECL(static intptr_t primitive_exn_name_len);
+
 /* readonly globals */
 ROSYM static Scheme_Object *none_symbol;
 ROSYM static Scheme_Object *fatal_symbol;
@@ -49,6 +51,10 @@ ROSYM static Scheme_Object *arity_property;
 ROSYM static Scheme_Object *def_err_val_proc;
 ROSYM static Scheme_Object *def_err_stx_proc;
 ROSYM static Scheme_Object *def_error_esc_proc;
+ROSYM static Scheme_Object *def_prim_name_proc;
+ROSYM static Scheme_Object *def_prim_contract_proc;
+ROSYM static Scheme_Object *def_prim_message_proc;
+ROSYM static Scheme_Object *def_struct_names_proc;
 ROSYM static Scheme_Object *default_display_handler;
 ROSYM static Scheme_Object *emergency_display_handler;
 ROSYM static Scheme_Object *def_exe_yield_proc;
@@ -88,6 +94,10 @@ static Scheme_Object *error_escape_handler(int, Scheme_Object *[]);
 static Scheme_Object *error_display_handler(int, Scheme_Object *[]);
 static Scheme_Object *error_value_string_handler(int, Scheme_Object *[]);
 static Scheme_Object *error_syntax_string_handler(int, Scheme_Object *[]);
+static Scheme_Object *error_primitive_name_handler(int, Scheme_Object *[]);
+static Scheme_Object *error_primitive_contract_handler(int, Scheme_Object *[]);
+static Scheme_Object *error_primitive_message_handler(int, Scheme_Object *[]);
+static Scheme_Object *error_struct_names_handler(int, Scheme_Object *[]);
 static Scheme_Object *exit_handler(int, Scheme_Object *[]);
 static Scheme_Object *exe_yield_handler(int, Scheme_Object *[]);
 static Scheme_Object *error_print_width(int, Scheme_Object *[]);
@@ -98,6 +108,10 @@ static Scheme_Object *def_error_display_proc(int, Scheme_Object *[]);
 static Scheme_Object *emergency_error_display_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_error_value_string_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_error_syntax_string_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_prim_name_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_prim_contract_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_prim_message_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_struct_names_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_exit_handler_proc(int, Scheme_Object *[]);
 static Scheme_Object *default_yield_handler(int, Scheme_Object *[]);
 static Scheme_Object *srcloc_to_string(int argc, Scheme_Object **argv);
@@ -128,6 +142,9 @@ static Scheme_Object *check_arity_property_value_ok(int argc, Scheme_Object *arg
 static char *make_provided_list(Scheme_Object *o, int count, intptr_t *lenout);
 
 static char *init_buf(intptr_t *len, intptr_t *blen);
+
+static const char *filter_primitive_name(const char *name);
+static const char *filter_primitive_contract(const char *name);
 
 void scheme_set_logging2(int syslog_level, int stderr_level, int stdout_level)
 {
@@ -811,6 +828,10 @@ void scheme_init_error(Scheme_Startup_Env *env)
   ADD_PARAMETER("error-display-handler",       error_display_handler,      MZCONFIG_ERROR_DISPLAY_HANDLER,       env);
   ADD_PARAMETER("error-value->string-handler", error_value_string_handler, MZCONFIG_ERROR_PRINT_VALUE_HANDLER,   env);
   ADD_PARAMETER("error-syntax->string-handler", error_syntax_string_handler, MZCONFIG_ERROR_PRINT_SYNTAX_HANDLER, env);
+  ADD_PARAMETER("error-primitive-name->symbol-handler", error_primitive_name_handler, MZCONFIG_ERROR_PRIM_NAME_HANDLER, env);
+  ADD_PARAMETER("error-primitive-contract->string-handler", error_primitive_contract_handler, MZCONFIG_ERROR_PRIM_CONTRACT_HANDLER, env);
+  ADD_PARAMETER("error-primitive-message->string-handler", error_primitive_message_handler, MZCONFIG_ERROR_PRIM_MESSAGE_HANDLER, env);
+  ADD_PARAMETER("error-struct-operation-names-handler", error_struct_names_handler, MZCONFIG_ERROR_STRUCT_NAMES_HANDLER, env);
   ADD_PARAMETER("error-escape-handler",        error_escape_handler,       MZCONFIG_ERROR_ESCAPE_HANDLER,        env);
   ADD_PARAMETER("exit-handler",                exit_handler,               MZCONFIG_EXIT_HANDLER,                env);
   ADD_PARAMETER("executable-yield-handler",    exe_yield_handler,          MZCONFIG_EXE_YIELD_HANDLER,           env);
@@ -856,6 +877,22 @@ void scheme_init_error(Scheme_Startup_Env *env)
 
   REGISTER_SO(def_err_stx_proc);
   def_err_stx_proc = scheme_make_prim_w_arity(def_error_syntax_string_proc, "default-error-syntax->string-handler", 2, 2);
+
+  REGISTER_SO(def_prim_name_proc);
+  def_prim_name_proc = scheme_make_prim_w_arity(def_error_prim_name_proc,
+                                                "default-error-primitive-name->symbol-handler", 1, 1);
+
+  REGISTER_SO(def_prim_contract_proc);
+  def_prim_contract_proc = scheme_make_prim_w_arity(def_error_prim_contract_proc,
+                                                    "default-error-primitive-contract->string-handler", 1, 1);
+
+  REGISTER_SO(def_prim_message_proc);
+  def_prim_message_proc = scheme_make_prim_w_arity(def_error_prim_message_proc,
+                                                   "default-error-primitive-message->string-handler", 2, 2);
+
+  REGISTER_SO(def_struct_names_proc);
+  def_struct_names_proc = scheme_make_prim_w_arity2(def_error_struct_names_proc,
+                                                    "default-error-struct-operation-names-handler", 3, 3, 2, 2);
 
   REGISTER_SO(none_symbol);
   REGISTER_SO(fatal_symbol);
@@ -937,6 +974,10 @@ void scheme_init_error_config(void)
   scheme_set_root_param(MZCONFIG_ERROR_DISPLAY_HANDLER, default_display_handler);
   scheme_set_root_param(MZCONFIG_ERROR_PRINT_VALUE_HANDLER, def_err_val_proc);
   scheme_set_root_param(MZCONFIG_ERROR_PRINT_SYNTAX_HANDLER, def_err_val_proc);
+  scheme_set_root_param(MZCONFIG_ERROR_PRIM_NAME_HANDLER, def_prim_name_proc);
+  scheme_set_root_param(MZCONFIG_ERROR_PRIM_CONTRACT_HANDLER, def_prim_contract_proc);
+  scheme_set_root_param(MZCONFIG_ERROR_PRIM_MESSAGE_HANDLER, def_prim_message_proc);
+  scheme_set_root_param(MZCONFIG_ERROR_STRUCT_NAMES_HANDLER, def_struct_names_proc);
   scheme_set_root_param(MZCONFIG_EXE_YIELD_HANDLER, def_exe_yield_proc);
 }
 
@@ -1246,7 +1287,7 @@ static Scheme_Object *check_arity_property_value_ok(int argc, Scheme_Object *arg
   return argv[0];
 }
 
-static char *make_arity_expect_string(const char *name, int namelen,
+static char *make_arity_expect_string(const char *name, int namelen, int *_namelen,
 				      int minc, int maxc,
 				      int argc, Scheme_Object **argv,
 				      intptr_t *_len, int is_method,
@@ -1284,7 +1325,11 @@ static char *make_arity_expect_string(const char *name, int namelen,
           arity_len = SCHEME_BYTE_STRLEN_VAL(v);
           if (arity_len > len)
             arity_len = len;
-          name = scheme_get_proc_name((Scheme_Object *)name, &namelen, 1);
+          if ((SCHEME_PRIMP((Scheme_Object *)name) || SCHEME_CLSD_PRIMP((Scheme_Object *)name))
+              && scheme_hash_get(scheme_startup_env->primitive_ids_table, (Scheme_Object *)name))
+            name = scheme_primitive_error_name((Scheme_Object *)name);
+          else
+            name = scheme_get_proc_name((Scheme_Object *)name, &namelen, 1);
           if (!name) {
             name = "#<procedure>";
             namelen = strlen(name);
@@ -1300,7 +1345,7 @@ static char *make_arity_expect_string(const char *name, int namelen,
           v = SCHEME_CHAPERONE_VAL(v);
         if (scheme_is_struct_instance(scheme_reduced_procedure_struct, v))
           v = NULL; /* hide any wider type that a nested structure might report */
-        else
+        else          
           v = scheme_extract_struct_procedure(v, -1, NULL, &is_method);
         if (!v || is_method || !SCHEME_CHAPERONE_PROC_STRUCTP(v))
           break;
@@ -1341,6 +1386,11 @@ static char *make_arity_expect_string(const char *name, int namelen,
                   " the expected number of arguments does not match the given number");
   }
 
+  if (namelen == -1)
+    namelen = strlen(name);
+  
+  *_namelen = namelen + strlen(prefix_msg1);
+
   if (arity_str) {
     pos = scheme_sprintf(s, slen, 
                          "%s%s%t%s\n"
@@ -1365,6 +1415,8 @@ static char *make_arity_expect_string(const char *name, int namelen,
       nlen = strlen(n);
     }
 
+    *_namelen = nlen + strlen(prefix_msg1);
+      
     pos = scheme_sprintf(s, slen, 
                          "%s%s%t%s\n"
                          "  given: %d",
@@ -1447,6 +1499,7 @@ void scheme_wrong_count_m(const char *name, int minc, int maxc,
 {
   char *s;
   intptr_t len;
+  int name_len;
   Scheme_Thread *p = scheme_current_thread;
 
   if (argv == p->tail_buffer) {
@@ -1517,8 +1570,10 @@ void scheme_wrong_count_m(const char *name, int minc, int maxc,
   if (maxc > SCHEME_MAX_ARGS)
     maxc = -1;
 
-  s = make_arity_expect_string(name, -1, minc, maxc, argc, argv, &len, is_method, NULL);
+  s = make_arity_expect_string(name, -1, &name_len, minc, maxc, argc, argv, &len, is_method, NULL);
 
+  primitive_exn_name_len = name_len+2;
+  
   scheme_raise_exn(MZEXN_FAIL_CONTRACT_ARITY, "%t", s, len);
 }
 
@@ -1536,12 +1591,15 @@ void scheme_case_lambda_wrong_count(const char *name,
 {
   char *s;
   intptr_t len;
-
+  int name_len;
+ 
   /* Watch out for impossible is_method claims: */
   if (!argc)
     is_method = 0;
 
-  s = make_arity_expect_string(name, -1, -2, 0, argc, argv, &len, is_method, NULL);
+  s = make_arity_expect_string(name, -1, &name_len, -2, 0, argc, argv, &len, is_method, NULL);
+
+  primitive_exn_name_len = name_len+2;
 
   scheme_raise_exn(MZEXN_FAIL_CONTRACT_ARITY, "%t", s, len);
 }
@@ -1552,8 +1610,9 @@ char *scheme_make_arity_expect_string(const char *map_name,
 				      intptr_t *_slen)
 {
   const char *name;
+  char *result;
   int namelen = -1;
-  int mina, maxa;
+  int mina, maxa, actual_name_len;
 
   if (SCHEME_CHAPERONEP(proc)) {
     proc = SCHEME_CHAPERONE_VAL(proc);
@@ -1622,7 +1681,13 @@ char *scheme_make_arity_expect_string(const char *map_name,
     name = scheme_get_proc_name(proc, &namelen, 1);
   }
 
-  return make_arity_expect_string(name, namelen, mina, maxa, argc, argv, _slen, 0, map_name);
+  result = make_arity_expect_string(name, namelen, &actual_name_len,
+                                    mina, maxa, argc, argv, _slen, 0, map_name);
+
+  /* assume this string will be raised right away */
+  primitive_exn_name_len = actual_name_len+2;
+
+  return result;
 }
 
 char *scheme_make_args_string(const char *s, int which, int argc, Scheme_Object **argv, intptr_t *_olen)
@@ -1741,6 +1806,8 @@ void scheme_wrong_type(const char *name, const char *expected,
   GC_CAN_IGNORE char *isress = "argument";
   GC_CAN_IGNORE char *isgiven = "given";
 
+  primitive_exn_name_len = 0;
+
   o = argv[which < 0 ? 0 : which];
   if (argc < 0) {
     argc = -argc;
@@ -1755,7 +1822,8 @@ void scheme_wrong_type(const char *name, const char *expected,
 
   s = scheme_make_provided_string(o, 1, &slen);
 
-  if ((which < 0) || (argc == 1))
+  if ((which < 0) || (argc == 1)) {
+    primitive_exn_name_len = strlen(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT,
 		     "%s: expect%s %s of type <%s>; "
 		     "%s: %t",
@@ -1763,7 +1831,7 @@ void scheme_wrong_type(const char *name, const char *expected,
 		     (which < 0) ? "ed" : "s",
 		     isress, expected, isgiven,
                      s, slen);
-  else {
+  } else {
     char *other;
     intptr_t olen;
 
@@ -1776,6 +1844,7 @@ void scheme_wrong_type(const char *name, const char *expected,
       olen = 0;
     }
 
+    primitive_exn_name_len = strlen(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT,
 		     "%s: expects type <%s> as %d%s %s, "
 		     "given: %t%t",
@@ -1843,6 +1912,13 @@ void scheme_wrong_contract(const char *name, const char *expected,
   int isres = 0;
   GC_CAN_IGNORE char *isgiven = "given", *kind = "argument";
 
+  if (primitive_exn_name_len < 0) /* => no filter */
+    primitive_exn_name_len = 0;
+  else {
+    name = filter_primitive_name(name);
+    expected = filter_primitive_contract(expected);
+  }
+
   o = argv[which < 0 ? 0 : which];
   if (argc < 0) {
     argc = -argc;
@@ -1859,7 +1935,8 @@ void scheme_wrong_contract(const char *name, const char *expected,
 
   s = scheme_make_provided_string(o, 1, &slen);
 
-  if ((which < 0) || (argc <= 1))
+  if ((which < 0) || (argc <= 1)) {
+    primitive_exn_name_len = strlen(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT,
 		     "%s: contract violation\n"
                      "  expected: %s\n"
@@ -1867,12 +1944,13 @@ void scheme_wrong_contract(const char *name, const char *expected,
 		     name,
 		     indent_lines(expected, NULL, 1, 3),
                      isgiven, s, slen);
-  else {
+  } else {
     char *other;
     intptr_t olen;
 
     other = scheme_make_arg_lines_string("   ", which, argc, argv, &olen);
 
+    primitive_exn_name_len = strlen(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT,
                      "%s: contract violation\n"
                      "  expected: %s\n"
@@ -1885,6 +1963,12 @@ void scheme_wrong_contract(const char *name, const char *expected,
                      kind, which + 1, scheme_number_suffix(which + 1),
                      (!isres ? "arguments" : "results"), other, olen);
   }
+}
+
+void scheme_wrong_contract_user(const char *name, const char *expected, int which, int argc, Scheme_Object **argv)
+{
+  primitive_exn_name_len = -1;
+  scheme_wrong_contract(name, expected, which, argc, argv);
 }
 
 void scheme_wrong_field_type(Scheme_Object *c_name,
@@ -1913,13 +1997,17 @@ void scheme_arg_mismatch(const char *name, const char *msg, Scheme_Object *o)
 {
   char *s;
   intptr_t slen;
-  
+
+  name = filter_primitive_name(name);
+
   if (o)
     s = scheme_make_provided_string(o, 1, &slen);
   else {
     s = "";
     slen = 0;
   }
+
+  primitive_exn_name_len = strlen(name)+2;
 
   scheme_raise_exn(MZEXN_FAIL_CONTRACT,
 		   "%s: %s%t",
@@ -1937,7 +2025,7 @@ static void do_out_of_range(const char *name, const char *type, const char *whic
   
   if (!scheme_bin_lt(slen, sstart)) {
     char *sstr;
-    intptr_t strlen;
+    intptr_t sstrlen;
     int small_end = 0;
 
     if (ending) {
@@ -1946,7 +2034,8 @@ static void do_out_of_range(const char *name, const char *type, const char *whic
         small_end = 1;
     }
 
-    sstr = scheme_make_provided_string(s, 2, &strlen);
+    sstr = scheme_make_provided_string(s, 2, &sstrlen);
+    primitive_exn_name_len = strlen(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT,
 		     "%s: %sindex is %s\n  %sindex: %s\n  %s%V%s%V]\n  %s: %t",
 		     name, which, 
@@ -1957,8 +2046,9 @@ static void do_out_of_range(const char *name, const char *type, const char *whic
                      ending ? "\n  valid range: [0, " : ", ",
                      slen,
 		     type,
-		     sstr, strlen);
+		     sstr, sstrlen);
   } else {
+    primitive_exn_name_len = strlen(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT,
 		     "%s: %sindex is out of range for empty %s\n  %sindex: %s",
 		     name, which,
@@ -1971,6 +2061,8 @@ void scheme_out_of_range(const char *name, const char *type, const char *which,
                          Scheme_Object *i, Scheme_Object *s,
                          intptr_t start, intptr_t len)
 {
+  name = filter_primitive_name(name);
+  
   if (start < 0) {
     start = 0;
     len = len - 1;
@@ -2030,6 +2122,8 @@ void scheme_contract_error(const char *name, const char *msg, ...)
   intptr_t v_str_lens[MAX_MISMATCH_EXTRAS], v_str_len;
   char *s;
 
+  primitive_exn_name_len = 0;
+
   HIDE_FROM_XFORM(va_start(args, msg));
   while (1) {
     str = mzVA_ARG(args, const char *);
@@ -2057,6 +2151,8 @@ void scheme_contract_error(const char *name, const char *msg, ...)
       v_str_len = v_str_lens[i];
     len += v_str_len + 5 + strlen(strs[i]);
   }
+
+  name = filter_primitive_name(name);
 
   sep = ": ";
 
@@ -2087,8 +2183,9 @@ void scheme_contract_error(const char *name, const char *msg, ...)
   }
   s[len] = 0;
 
+  primitive_exn_name_len = nlen+2;
   scheme_raise_exn(MZEXN_FAIL_CONTRACT,
-		   "%t",
+                   "%t",
                    s, len);
 }
 
@@ -2110,6 +2207,8 @@ void scheme_wrong_chaperoned(const char *who, const char *what, Scheme_Object *o
 
 void scheme_system_error(const char *name, const char *what, int errid)
 {
+  name = filter_primitive_name(name);
+  primitive_exn_name_len = strlen(name)+2;
   scheme_raise_exn(MZEXN_FAIL, 
                    "%s: %s failed\n"
                    "  system error: %e", 
@@ -2118,6 +2217,8 @@ void scheme_system_error(const char *name, const char *what, int errid)
 
 void scheme_rktio_error(const char *name, const char *what)
 {
+  name = filter_primitive_name(name);
+  primitive_exn_name_len = strlen(name)+2;
   scheme_raise_exn(MZEXN_FAIL, 
                    "%s: %s failed\n"
                    "  system error: %R", 
@@ -2448,16 +2549,21 @@ void scheme_wrong_rator(Scheme_Object *rator, int argc, Scheme_Object **argv)
 {
   intptr_t slen, rlen;
   char *s, *r;
+  const char *name;
+
+  name = filter_primitive_name("application");
 
   r = scheme_make_provided_string(rator, 1, &rlen);
 
   s = scheme_make_arg_lines_string("   ", -1, argc, argv, &slen);
-    
+
+  primitive_exn_name_len = strlen(name)+2;
   scheme_raise_exn(MZEXN_FAIL_CONTRACT,
-                   "application: not a procedure;\n"
+                   "%s: not a procedure;\n"
                    " expected a procedure that can be applied to arguments\n"
                    "  given: %t\n"
                    "  arguments...:%t",
+                   name,
                    r, rlen, s, slen);
 }
 
@@ -2543,6 +2649,11 @@ void scheme_raise_out_of_memory(const char *where, const char *msg, ...)
     HIDE_FROM_XFORM(va_end(args));
   }
 
+  if (where) {
+    where = filter_primitive_name(where);
+    primitive_exn_name_len = strlen(where)+2;
+  }
+  
   scheme_raise_exn(MZEXN_FAIL_OUT_OF_MEMORY,
 		   "%s%sout of memory %t",
 		   where ? where : "",
@@ -2579,6 +2690,7 @@ void scheme_unbound_global(Scheme_Bucket *b)
       errmsg = ("%S: undefined;\n"
                 " cannot reference an identifier before its definition%_%_");
 
+    primitive_exn_name_len = SCHEME_SYM_LEN(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT_VARIABLE,
 		     name,
 		     errmsg,
@@ -2586,6 +2698,7 @@ void scheme_unbound_global(Scheme_Bucket *b)
 		     home->name,
                      name);
   } else {
+    primitive_exn_name_len = SCHEME_SYM_LEN(name)+2;
     scheme_raise_exn(MZEXN_FAIL_CONTRACT_VARIABLE,
 		     name,
 		     "%S: undefined;\n"
@@ -2761,6 +2874,7 @@ static Scheme_Object *do_raise_type_error(const char *name, int argc, Scheme_Obj
     Scheme_Object *v, *s;
     v = argv[2];
     s = scheme_char_string_to_byte_string(argv[1]);
+    primitive_exn_name_len = -1;
     wrong(scheme_symbol_val(argv[0]),
           SCHEME_BYTE_STR_VAL(s),
           negate ? -2 : -1, 0, &v);
@@ -2791,6 +2905,7 @@ static Scheme_Object *do_raise_type_error(const char *name, int argc, Scheme_Obj
 
     s = scheme_char_string_to_byte_string(argv[1]);
 
+    primitive_exn_name_len = -1;
     wrong(scheme_symbol_val(argv[0]),
           SCHEME_BYTE_STR_VAL(s),
           SCHEME_INT_VAL(argv[2]),
@@ -3438,6 +3553,88 @@ error_escape_handler(int argc, Scheme_Object *argv[])
 			     argc, argv,
 			     0, NULL, NULL, 0);
 }
+
+static Scheme_Object *
+error_primitive_name_handler(int argc, Scheme_Object *argv[])
+{
+  return scheme_param_config("error-primitive-name->symbol-handler",
+			     scheme_make_integer(MZCONFIG_ERROR_PRIM_NAME_HANDLER),
+			     argc, argv,
+			     1, NULL, NULL, 0);
+}
+
+static Scheme_Object *
+error_primitive_contract_handler(int argc, Scheme_Object *argv[])
+{
+  return scheme_param_config("error-primitive-contract->string-handler",
+			     scheme_make_integer(MZCONFIG_ERROR_PRIM_CONTRACT_HANDLER),
+			     argc, argv,
+			     1, NULL, NULL, 0);
+}
+
+static Scheme_Object *
+error_primitive_message_handler(int argc, Scheme_Object *argv[])
+{
+  return scheme_param_config("error-primitive-message->string-handler",
+			     scheme_make_integer(MZCONFIG_ERROR_PRIM_MESSAGE_HANDLER),
+			     argc, argv,
+			     2, NULL, NULL, 0);
+}
+
+static Scheme_Object *
+error_struct_names_handler(int argc, Scheme_Object *argv[])
+{
+  return scheme_param_config("error-struct-operation-names-handler",
+			     scheme_make_integer(MZCONFIG_ERROR_STRUCT_NAMES_HANDLER),
+			     argc, argv,
+			     3, NULL, NULL, 0);
+}
+
+static Scheme_Object *
+def_error_prim_name_proc(int argc, Scheme_Object *argv[])
+{
+  if (!SCHEME_SYMBOLP(argv[0]))
+    scheme_wrong_contract("default-error-primitive-name->symbol-handler", "symbol?", 0, argc, argv);
+
+  return argv[0];
+}
+
+static Scheme_Object *
+def_error_prim_contract_proc(int argc, Scheme_Object *argv[])
+{
+  if (!SCHEME_CHAR_STRINGP(argv[0]))
+    scheme_wrong_contract("default-error-primitive-contract->string-handler", "string?", 0, argc, argv);
+
+  return argv[0];
+}
+
+static Scheme_Object *
+def_error_prim_message_proc(int argc, Scheme_Object *argv[])
+{
+  if (SCHEME_TRUEP(argv[0]) && !SCHEME_SYMBOLP(argv[0]))
+    scheme_wrong_contract("default-error-primitive-message->string-handler", "(or/c symbol? #f)", 0, argc, argv);
+  if (!SCHEME_CHAR_STRINGP(argv[1]))
+    scheme_wrong_contract("default-error-primitive-message->string-handler", "string?", 1, argc, argv);
+
+  if (SCHEME_FALSEP(argv[0]))
+    return argv[1];
+
+  return scheme_append_char_string(scheme_append_char_string(scheme_symbol_to_string(argv[0]),
+                                                             scheme_make_sized_utf8_string(": ", 2)),
+                                   argv[1]);
+}
+
+static Scheme_Object *
+def_error_struct_names_proc(int argc, Scheme_Object *argv[])
+{
+  if (!SCHEME_SYMBOLP(argv[0]))
+    scheme_wrong_contract("default-error-struct-operation-names-handler", "symbol?", 1, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[1]))
+    scheme_wrong_contract("default-error-struct-operation-names-handler", "symbol?", 1, argc, argv);
+
+  return argv[0];
+}
+
 
 static Scheme_Object *
 exit_handler(int argc, Scheme_Object *argv[])
@@ -4440,16 +4637,155 @@ static int log_reader_get(Scheme_Object *_lr, Scheme_Schedule_Info *sinfo)
 
 /***********************************************************************/
 
+static const char *filter_primitive_name(const char *name)
+{
+  Scheme_Object *handler, *a[1], *r;
+  
+  handler = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_PRIM_NAME_HANDLER);
+
+  if (SAME_OBJ(handler, def_prim_name_proc))
+    return name;
+
+  a[0] = scheme_intern_exact_symbol(name, strlen(name));
+  r = scheme_apply(handler, 1, a);
+
+  if (!SCHEME_SYMBOLP(r))
+    return "...";
+  else
+    return scheme_symbol_val(r);
+}
+
+const char *scheme_primitive_error_name(Scheme_Object *prim)
+{
+  const char *name;
+
+  if (SCHEME_CLSD_PRIMP(prim))
+    name = ((Scheme_Closed_Primitive_Proc *)prim)->name;
+  else
+    name = ((Scheme_Primitive_Proc *)prim)->name;
+  
+  if (scheme_hash_get(scheme_startup_env->primitive_ids_table, prim))
+    return filter_primitive_name(name);
+  else
+    return name;
+}
+
+static const char *filter_primitive_contract(const char *name)
+{
+  Scheme_Object *handler, *a[1], *r;
+  
+  handler = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_PRIM_CONTRACT_HANDLER);
+
+  if (SAME_OBJ(handler, def_prim_contract_proc))
+    return name;
+
+  a[0] = scheme_make_utf8_string(name);
+  r = scheme_apply(handler, 1, a);
+
+  if (!SCHEME_CHAR_STRINGP(r))
+    return "...";
+  else
+    return SCHEME_BYTE_STR_VAL(scheme_char_string_to_byte_string(r));
+}
+
+char *scheme_filter_struct_operation_name(Scheme_Object *type_name, char *name, int mutator, char **_pred_name)
+{
+  Scheme_Object *handler, *a[3], *r, *mode;
+  char *buffer;
+  intptr_t len, delta;
+  
+  handler = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_STRUCT_NAMES_HANDLER);
+
+  if (SAME_OBJ(handler, def_struct_names_proc)) {
+    *_pred_name = NULL;
+    return name;
+  }
+
+  delta = SCHEME_SYM_LEN(type_name) + 1;
+  len = strlen(name) - delta;
+  if (mutator) {
+    len -= 5;
+    delta += 4;
+  }
+
+  if (len < 0)
+    return name;
+
+  buffer = scheme_malloc_atomic(len);
+  memcpy(buffer, name + delta, len);
+
+  a[0] = type_name;
+  a[1] = scheme_intern_exact_symbol(buffer, len);
+  if (mutator)
+    mode = scheme_intern_symbol("set!");
+  else
+    mode = scheme_intern_symbol("ref");
+  a[2] = mode;
+
+  r = scheme_apply_multi(handler, 3, a);
+  
+  if (r == SCHEME_MULTIPLE_VALUES) {
+    Scheme_Thread *p = scheme_current_thread;
+    if (p->ku.multiple.count == 2) {
+      r = p->ku.multiple.array[1];
+      if (SCHEME_CHAR_STRINGP(r)) {
+        char *pred_name;
+        pred_name = SCHEME_BYTE_STR_VAL(scheme_char_string_to_byte_string(r));
+        *_pred_name = pred_name;
+      } else
+        *_pred_name = "...";
+
+      r = p->ku.multiple.array[0];
+      if (SCHEME_SYMBOLP(r))
+        return scheme_symbol_val(r);
+      else
+        return "...";
+    }
+  }
+    
+  *_pred_name = "...";
+  return "...";
+}
+
+static Scheme_Object *apply_error_message_filter(char *buffer, intptr_t alen, intptr_t namelen)
+{
+  Scheme_Object *handler, *a[2], *r;
+  
+  handler = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_PRIM_MESSAGE_HANDLER);
+
+  if (SAME_OBJ(handler, def_prim_message_proc))
+    return scheme_make_immutable_sized_utf8_string(buffer, alen);
+
+  if (namelen < 2)
+    abort();
+
+  a[0] = scheme_intern_exact_symbol(buffer, namelen-2);
+  a[1] = scheme_make_sized_offset_utf8_string(buffer, namelen, alen - namelen);
+
+  r = scheme_apply(handler, 2, a);
+
+  if (!SCHEME_CHAR_STRINGP(r))
+    return scheme_make_immutable_sized_utf8_string("...", 3);
+  else
+    return scheme_make_immutable_sized_char_string(SCHEME_CHAR_STR_VAL(r), SCHEME_CHAR_STRLEN_VAL(r), 1);
+}
+
+/***********************************************************************/
+
 void
 scheme_raise_exn(int id, ...)
 {
   GC_CAN_IGNORE va_list args;
-  intptr_t alen;
+  intptr_t alen, namelen;
   char *msg;
   int i, c, unsupported = 0;
   Scheme_Object *eargs[MZEXN_MAXARGS], *errno_val = NULL;
   char *buffer;
 
+  /* back-door argument to trigger `error-primitive-message->string-handler` handler: */
+  namelen = primitive_exn_name_len;
+  primitive_exn_name_len = 0;
+  
   rktio_remap_last_error(scheme_rktio);
 
   /* Precise GC: Don't allocate before getting hidden args off stack */
@@ -4469,7 +4805,12 @@ scheme_raise_exn(int id, ...)
   alen = sch_vsprintf(NULL, 0, msg, args, &buffer, &errno_val, &unsupported);
   HIDE_FROM_XFORM(va_end(args));
 
-  eargs[0] = scheme_make_immutable_sized_utf8_string(buffer, alen);
+  if (namelen > 0) {
+    eargs[0] = apply_error_message_filter(buffer, alen, namelen);
+  } else {
+    eargs[0] = scheme_make_immutable_sized_utf8_string(buffer, alen);
+  }
+
   eargs[1] = TMP_CMARK_VALUE;
   if (errno_val) {
     if (id == MZEXN_FAIL_FILESYSTEM) {
@@ -4490,6 +4831,12 @@ scheme_raise_exn(int id, ...)
 				       c, eargs),
 	   1,
            1);
+}
+
+void scheme_raise_prim_exn(int exn, const char *msg, const char *name)
+{
+  name = filter_primitive_name(name);
+  scheme_raise_exn(exn, msg, name);
 }
 
 static MZ_NORETURN void

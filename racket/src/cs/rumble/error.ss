@@ -76,6 +76,66 @@
                     v)
                   'error-syntax->string-handler))
 
+(define/who error-primitive-name->symbol-handler
+  (make-parameter (lambda (who-sym)
+                    (if (symbol? who-sym)
+                        who-sym
+                        (raise-argument-error who "symbol?" who-sym)))
+                  (lambda (v)
+                    (check who (procedure-arity-includes/c 1) v)
+                    v)
+                  'error-primitive-name->symbol-handler))
+
+(define/who error-primitive-contract->string-handler
+  (make-parameter (lambda (str)
+                    (if (string? str)
+                        str
+                        (raise-argument-error who "string?" str)))
+                  (lambda (v)
+                    (check who (procedure-arity-includes/c 1) v)
+                    v)
+                  'error-primitive-contract->string-handler))
+
+(define/who error-primitive-message->string-handler
+  (make-parameter (lambda (from str)
+                    (check who symbol? :or-false from)
+                    (check who string? str)
+                    (if from
+                        (string-append (error-who->string from)
+                                       ": "
+                                       str)
+                        str))
+                  (lambda (v)
+                    (check who (procedure-arity-includes/c 2) v)
+                    v)
+                  'error-primitive-message->string-handler))
+
+(define/who error-struct-operation-names-handler
+  (make-parameter (lambda (struct-name field-name mode)
+                    (check who symbol? struct-name)
+                    (check who symbol? field-name)
+                    (check who (lambda (v) (or (eq? mode 'ref) (eq? mode 'set!)))
+                           :contract "(or/c 'ref 'set!)"
+                           mode)
+                    (let ([struct-name (symbol->string struct-name)]
+                          [field-name (symbol->string field-name)])
+                      (values (if (eq? mode 'ref)
+                                  (string->symbol
+                                   (string-append struct-name
+                                                  "-"
+                                                  field-name))
+                                  (string->symbol
+                                   (string-append "set-"
+                                                  struct-name
+                                                  "-"
+                                                  field-name
+                                                  "!")))
+                              (string-append struct-name "?"))))
+                  (lambda (v)
+                    (check who (procedure-arity-includes/c 3) v)
+                    v)
+                  'error-struct-operation-names-handler))
+
 (define/who error-print-context-length
   (make-parameter 16
                   (lambda (v)
@@ -137,45 +197,61 @@
 
 ;; ----------------------------------------
 
+;; this is the real raise-arguments-error:
+(define raise-arguments-error/user
+  (|#%name|
+   raise-arguments-error
+   (lambda (who what . more)
+     (unless (symbol? who)
+       (raise-argument-error 'raise-arguments-error "symbol?" who))
+     (unless (string? what)
+       (raise-argument-error 'raise-arguments-error "string?" what))
+     (#%$app/no-return do-raise-arguments-error who what exn:fail:contract more
+                       user-error-message->string))))
+
+;; variant of `raise-arguments-error` intended for primitives:
 (define (raise-arguments-error who what . more)
-  (unless (symbol? who)
-    (raise-argument-error 'raise-arguments-error "symbol?" who))
-  (unless (string? what)
-    (raise-argument-error 'raise-arguments-error "string?" what))
-  (#%$app/no-return do-raise-arguments-error who what exn:fail:contract more))
+  (#%$app/no-return do-raise-arguments-error
+                    (error-primitive-name->symbol who)
+                    (error-contract-string->string what)
+                    exn:fail:contract
+                    more
+                    error-message->string))
   
-(define (do-raise-arguments-error who what exn:fail:contract more)
+(define (do-raise-arguments-error who what exn:fail:contract more
+                                  error-message->string)
   (raise
    (|#%app|
     exn:fail:contract
-    (apply
-     string-append
-     (symbol->string who)
-     ": "
-     what
-     (let loop ([more more])
-       (cond
-        [(null? more) '()]
-        [(string? (car more))
-         (cond
-          [(null? (cdr more))
-           (raise-arguments-error 'raise-arguments-error
-                                  "missing value after field string"
-                                  "string"
-                                  (car more))]
+    (error-message->string
+     who
+     (apply
+      string-append
+      what
+      (let loop ([more more])
+        (cond
+          [(null? more) '()]
+          [(string? (car more))
+           (cond
+             [(null? (cdr more))
+              (raise-arguments-error 'raise-arguments-error
+                                     "missing value after field string"
+                                     "string"
+                                     (car more))]
+             [else
+              (cons (string-append "\n  "
+                                   (car more) ": "
+                                   (let ([val (cadr more)])
+                                     (if (unquoted-printing-string? val)
+                                         (unquoted-printing-string-value val)
+                                         (error-value->string val))))
+                    (loop (cddr more)))])]
           [else
-           (cons (string-append "\n  "
-                                (car more) ": "
-                                (let ([val (cadr more)])
-                                  (if (unquoted-printing-string? val)
-                                      (unquoted-printing-string-value val)
-                                      (error-value->string val))))
-                 (loop (cddr more)))])]
-        [else
-         (raise-argument-error 'raise-arguments-error "string?" (car more))])))
+           (raise-argument-error 'raise-arguments-error "string?" (car more))]))))
     (current-continuation-marks))))
 
-(define (do-raise-argument-error e-who tag who what pos arg args)
+(define (do-raise-argument-error e-who tag who what pos arg args
+                                 error-message->string)
   (unless (symbol? who)
     (raise-argument-error e-who "symbol?" who))
   (unless (string? what)
@@ -188,25 +264,26 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (string-append (symbol->string who)
-                   ": contract violation\n  expected: "
-                   (reindent what (string-length "  expected: "))
-                   "\n  " tag ": "
-                   (error-value->string
-                    (if pos (list-ref (cons arg args) pos) arg))
-                   (if (and pos (pair? args))
-                       (apply
-                        string-append
-                        "\n  argument position: "
-                        (nth-str (add1 pos))
-                        "\n  other arguments...:"
-                        (let loop ([pos pos] [args (cons arg args)])
-                          (cond
-                           [(null? args) '()]
-                           [(zero? pos) (loop (sub1 pos) (cdr args))]
-                           [else (cons (string-append "\n   " (error-value->string (car args)))
-                                       (loop (sub1 pos) (cdr args)))])))
-                       ""))
+    (error-message->string
+     who
+     (string-append "contract violation\n  expected: "
+                    (reindent what (string-length "  expected: "))
+                    "\n  " tag ": "
+                    (error-value->string
+                     (if pos (list-ref (cons arg args) pos) arg))
+                    (if (and pos (pair? args))
+                        (apply
+                         string-append
+                         "\n  argument position: "
+                         (nth-str (add1 pos))
+                         "\n  other arguments...:"
+                         (let loop ([pos pos] [args (cons arg args)])
+                           (cond
+                             [(null? args) '()]
+                             [(zero? pos) (loop (sub1 pos) (cdr args))]
+                             [else (cons (string-append "\n   " (error-value->string (car args)))
+                                         (loop (sub1 pos) (cdr args)))])))
+                        "")))
     (current-continuation-marks))))
 
 (define (reindent s amt)
@@ -228,23 +305,83 @@
           (loop i s end)]))])))
 
 (define (error-value->string v)
-  ((|#%app| error-value->string-handler)
-   v
-   (|#%app| error-print-width)))
+  (let ([s (|#%app|
+            (|#%app| error-value->string-handler)
+            v
+            (|#%app| error-print-width))])
+    (cond
+      [(string? s) s]
+      [(bytes? s)
+       ;; Racket BC allows byte strings, and we approximate that here
+       (utf8->string s)]
+      [else "..."])))
+        
+(define (error-primitive-name->symbol v)
+  (let ([s (|#%app|
+            (|#%app| error-primitive-name->symbol-handler)
+            v)])
+    (if (symbol? s)
+        s
+        '...)))
+
+(define (maybe-primitive-name->symbol name proc)
+  (if (eq? proc (hash-ref primitive-names name #f))
+      (error-primitive-name->symbol name)
+      name))
+
+(define (error-who->string v)
+  (#%symbol->string v))
+
+(define (error-contract-string->string v)
+  (let ([s (|#%app|
+            (|#%app| error-primitive-contract->string-handler)
+            v)])
+    (if (string? s)
+        s
+        "...")))
+
+(define (error-message->string from str)
+  (let ([s (|#%app|
+            (|#%app| error-primitive-message->string-handler)
+            from
+            str)])
+    (if (string? s)
+        s
+        "...")))
+
+(define (user-error-message->string from str)
+  (string-append (error-who->string from)
+                 ": "
+                 str))
+
+(define raise-argument-error/user
+  (|#%name|
+   raise-argument-error
+   (case-lambda
+    [(who what arg)
+     (#%$app/no-return do-raise-argument-error 'raise-argument-error "given" who what #f arg #f
+                       user-error-message->string)]
+    [(who what pos arg . args)
+     (#%$app/no-return do-raise-argument-error 'raise-argument-error "given" who what pos arg args
+                       user-error-message->string)])))
 
 (define raise-argument-error
   (case-lambda
     [(who what arg)
-     (#%$app/no-return do-raise-argument-error 'raise-argument-error "given" who what #f arg #f)]
+     (#%$app/no-return do-raise-argument-error 'raise-argument-error "given" (error-primitive-name->symbol who) what #f arg #f
+                       error-message->string)]
     [(who what pos arg . args)
-     (#%$app/no-return do-raise-argument-error 'raise-argument-error "given" who what pos arg args)]))
+     (#%$app/no-return do-raise-argument-error 'raise-argument-error "given" (error-primitive-name->symbol who) what pos arg args
+                       error-message->string)]))
 
 (define raise-result-error
   (case-lambda
     [(who what arg)
-     (#%$app/no-return do-raise-argument-error 'raise-result-error "result" who what #f arg #f)]
+     (#%$app/no-return do-raise-argument-error 'raise-result-error "result" who what #f arg #f
+                       user-error-message->string)]
     [(who what pos arg . args)
-     (#%$app/no-return do-raise-argument-error 'raise-result-error "result" who what pos arg args)]))
+     (#%$app/no-return do-raise-argument-error 'raise-result-error "result" who what pos arg args
+                       user-error-message->string)]))
 
 (define (do-raise-type-error e-who tag who what pos arg args)
   (unless (symbol? who)
@@ -259,7 +396,7 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (string-append (symbol->string who)
+    (string-append (error-who->string who)
                    ": expected argument of type <" what ">"
                    "; given: "
                    (error-value->string
@@ -292,7 +429,7 @@
     exn:fail:contract
     (apply
      string-append
-     (symbol->string in-who)
+     (error-who->string in-who)
      ": "
      what
      (let loop ([more (cons v more)])
@@ -313,40 +450,15 @@
      lower-bound
      upper-bound
      alt-lower-bound)
-    (check who symbol? in-who)
-    (check who string? type-description)
-    (check who string? index-prefix)
-    (check who exact-integer? index)
-    (check who exact-integer? lower-bound)
-    (check who exact-integer? upper-bound)
-    (check who :or-false exact-integer? alt-lower-bound)
-    (raise
-     (|#%app|
-      exn:fail:contract
-      (string-append (symbol->string in-who)
-                     ": "
-                     index-prefix "index is "
-                     (cond
-                      [(< upper-bound lower-bound)
-                       (string-append "out of range for empty " type-description "\n"
-                                      "  index: " (number->string index))]
-                      [else
-                       (string-append
-                        (cond
-                         [(and alt-lower-bound
-                               (>= index alt-lower-bound)
-                               (< index upper-bound))
-                          (string-append "smaller than starting index\n"
-                                         "  " index-prefix "index: " (number->string index) "\n"
-                                         "  starting index: "  (number->string lower-bound) "\n")]
-                         [else
-                          (string-append "out of range\n"
-                                         "  " index-prefix "index: " (number->string index) "\n")])
-                        "  valid range: ["
-                        (number->string (or alt-lower-bound lower-bound)) ", "
-                        (number->string upper-bound) "]" "\n"
-                        "  " type-description ": " (error-value->string in-value))]))
-      (current-continuation-marks)))]
+    (do-raise-range-error in-who
+                          type-description
+                          index-prefix
+                          index
+                          in-value
+                          lower-bound
+                          upper-bound
+                          alt-lower-bound
+                          error-message->string)]
    [(who
      type-description
      index-prefix
@@ -362,6 +474,86 @@
                        lower-bound
                        upper-bound
                        #f)]))
+
+(define/who raise-range-error/user
+  (case-lambda
+   [(in-who
+     type-description
+     index-prefix
+     index
+     in-value
+     lower-bound
+     upper-bound
+     alt-lower-bound)
+    (check who symbol? in-who)
+    (check who string? type-description)
+    (check who string? index-prefix)
+    (check who exact-integer? index)
+    (check who exact-integer? lower-bound)
+    (check who exact-integer? upper-bound)
+    (check who :or-false exact-integer? alt-lower-bound)
+    (do-raise-range-error in-who
+                          type-description
+                          index-prefix
+                          index
+                          in-value
+                          lower-bound
+                          upper-bound
+                          alt-lower-bound
+                          user-error-message->string)]
+   [(who
+     type-description
+     index-prefix
+     index
+     in-value
+     lower-bound
+     upper-bound)
+    (raise-range-error who
+                       type-description
+                       index-prefix
+                       index
+                       in-value
+                       lower-bound
+                       upper-bound
+                       #f)]))
+
+(define (do-raise-range-error in-who
+                              type-description
+                              index-prefix
+                              index
+                              in-value
+                              lower-bound
+                              upper-bound
+                              alt-lower-bound
+                              error-message->string)
+  (raise
+   (|#%app|
+    exn:fail:contract
+    (error-message->string
+     in-who
+     (string-append
+      index-prefix "index is "
+      (cond
+        [(< upper-bound lower-bound)
+         (string-append "out of range for empty " type-description "\n"
+                        "  index: " (number->string index))]
+        [else
+         (string-append
+          (cond
+            [(and alt-lower-bound
+                  (>= index alt-lower-bound)
+                  (< index upper-bound))
+             (string-append "smaller than starting index\n"
+                            "  " index-prefix "index: " (number->string index) "\n"
+                            "  starting index: "  (number->string lower-bound) "\n")]
+            [else
+             (string-append "out of range\n"
+                            "  " index-prefix "index: " (number->string index) "\n")])
+          "  valid range: ["
+          (number->string (or alt-lower-bound lower-bound)) ", "
+          (number->string upper-bound) "]" "\n"
+          "  " type-description ": " (error-value->string in-value))])))
+    (current-continuation-marks))))
 
 (define (arguments->context-string args)
   (cond
@@ -379,20 +571,21 @@
   (raise
    (|#%app|
     exn:fail:contract:arity
-    (string-append
+    (error-message->string
      (let ([name (if (procedure? name)
-                     (object-name name)
+                     (maybe-primitive-name->symbol (object-name name)
+                                                   name)
                      name)])
-       (if (symbol? name)
-           (string-append (symbol->string name) ": ")
-           ""))
-     "arity mismatch;\n"
-     " the expected number of arguments does not match the given number\n"
-     (if (string? arity-or-expect-string)
-         arity-or-expect-string
-         (expected-arity-string arity-or-expect-string))
-     "  given: " (number->string (length args))
-     (arguments->context-string args))
+       (and (symbol? name)
+            name))
+     (string-append
+      "arity mismatch;\n"
+      " the expected number of arguments does not match the given number\n"
+      (if (string? arity-or-expect-string)
+          arity-or-expect-string
+          (expected-arity-string arity-or-expect-string))
+      "  given: " (number->string (length args))
+      (arguments->context-string args)))
     (current-continuation-marks))))
 
 (define/who (raise-arity-error name arity . args)
@@ -426,14 +619,15 @@
   (raise
    (|#%app|
     exn:fail:contract:arity
-    (string-append
-     (if who (string-append (symbol->string who) ": ") "")
-     "result arity mismatch;\n"
-     " expected number of values not received\n"
-     "  expected: " (number->string num-expected-args) "\n"
-     "  received: " (number->string (length args))
-     (or where "")
-     (arguments->context-string args))
+    (error-message->string
+     who
+     (string-append
+      "result arity mismatch;\n"
+      " expected number of values not received\n"
+      "  expected: " (number->string num-expected-args) "\n"
+      "  received: " (number->string (length args))
+      (or where "")
+      (arguments->context-string args)))
     (current-continuation-marks))))
 
 (define (raise-binding-result-arity-error expected-args args)
@@ -462,7 +656,7 @@
     (raise
      (|#%app|
       exn:fail:unsupported
-      (string-append (symbol->string id) ": " msg)
+      (string-append (error-who->string id) ": " msg)
       (current-continuation-marks)))]
    [(id) (raise-unsupported-error id "unsupported")]))
 
@@ -801,31 +995,32 @@
    [else 'unknown-who]))
 
 (define (exn->string v)
-  (format "~a~a"
-          (if (who-condition? v)
-              (format "~a: " (rewrite-who (who->symbol (condition-who v))))
-              "")
-          (cond
-           [(exn? v)
-            (exn-message v)]
-           [(format-condition? v)
-            (let-values ([(fmt irritants)
-                          (rewrite-format (and (who-condition? v) (who->symbol (condition-who v)))
-                                          (condition-message v)
-                                          (condition-irritants v))])
-              (apply format fmt irritants))]
-           [(syntax-violation? v)
-            (let ([show (lambda (s)
-                          (cond
-                           [(not s) ""]
-                           [else (format " ~s" (syntax->datum s))]))])
-              (format "~a~a~a"
-                      (condition-message v)
-                      (show (syntax-violation-form v))
-                      (show (syntax-violation-subform v))))]
-           [(message-condition? v)
-            (condition-message v)]
-           [else (format "~s" v)])))
+  (error-message->string
+   (and (who-condition? v)
+        (error-primitive-name->symbol
+         (rewrite-who (who->symbol (condition-who v)))))
+   (cond
+     [(exn? v)
+      (exn-message v)]
+     [(format-condition? v)
+      (let-values ([(fmt irritants)
+                    (rewrite-format (and (who-condition? v)
+                                         (who->symbol (condition-who v)))
+                                    (condition-message v)
+                                    (condition-irritants v))])
+        (apply format fmt irritants))]
+     [(syntax-violation? v)
+      (let ([show (lambda (s)
+                    (cond
+                      [(not s) ""]
+                      [else (format " ~s" (syntax->datum s))]))])
+        (format "~a~a~a"
+                (condition-message v)
+                (show (syntax-violation-form v))
+                (show (syntax-violation-subform v))))]
+     [(message-condition? v)
+      (condition-message v)]
+     [else (format "~s" v)])))
 
 (define (condition->exn v)
   (if (condition? v)
@@ -851,7 +1046,8 @@
       v))
 
 (define (make-arity-exn proc n-args)
-  (let* ([name (object-name proc)]
+  (let* ([name (maybe-primitive-name->symbol (object-name proc)
+                                             proc)]
          [make-str (arity-string-maker proc)]
          [arity (procedure-arity proc)]
          [adjust-for-method (lambda (n)
@@ -861,27 +1057,28 @@
                                   n))])
     (|#%app|
      exn:fail:contract:arity
-     (string-append
-      (if (symbol? name) (symbol->string name) "#<procedure>")
-      ": arity mismatch;\n the expected number of arguments does not match the given number"
-      (cond
-       [make-str
-        (let ([str (make-str)])
-          (if (string? str)
-              (string-append "\n  expected: " str)
-              ""))]
-       [(list? arity)
-        ""]
-       [else
-        (string-append
-         "\n  expected: "
-         (cond
-          [(arity-at-least? arity) (string-append "at least " (number->string
-                                                               (adjust-for-method (arity-at-least-value arity))))]
-          [else (number->string (adjust-for-method arity))]))])
-      (cond
-       [(not n-args) ""]
-       [else (string-append "\n  given: " (number->string (adjust-for-method n-args)))]))
+     (error-message->string
+      (and (symbol? name) name)
+      (string-append
+       "arity mismatch;\n the expected number of arguments does not match the given number"
+       (cond
+         [make-str
+          (let ([str (make-str)])
+            (if (string? str)
+                (string-append "\n  expected: " str)
+                ""))]
+         [(list? arity)
+          ""]
+         [else
+          (string-append
+           "\n  expected: "
+           (cond
+             [(arity-at-least? arity) (string-append "at least " (number->string
+                                                                  (adjust-for-method (arity-at-least-value arity))))]
+             [else (number->string (adjust-for-method arity))]))])
+       (cond
+         [(not n-args) ""]
+         [else (string-append "\n  given: " (number->string (adjust-for-method n-args)))])))
      (current-continuation-marks))))
 
 (define/who uncaught-exception-handler
@@ -937,28 +1134,30 @@
 (define (make-nested-exception-handler what old-exn)
   (lambda (exn)
     (let ([msg
-           (string-append
-            (cond
-             [(not what)
-              "handler for uncaught exceptions: did not escape"]
-             [else
-              (string-append
-               (cond [(exn? exn)
-                      (string-append "exception raised by " what)]
-                     [else
-                      (string-append "raise called (with non-exception value) by " what)])
-               ": "
-               (if (exn? exn)
-                   (exn-message exn)
-                   (error-value->string exn)))])
-            "; original "
-            (if (exn? old-exn)
-                "exception raised"
-                "raise called (with non-exception value)")
-            ": "
-            (if (exn? old-exn)
-                (exn-message old-exn)
-                (error-value->string old-exn)))])
+           (error-message->string
+            #f
+            (string-append
+             (cond
+               [(not what)
+                "handler for uncaught exceptions: did not escape"]
+               [else
+                (string-append
+                 (cond [(exn? exn)
+                        (string-append "exception raised by " what)]
+                       [else
+                        (string-append "raise called (with non-exception value) by " what)])
+                 ": "
+                 (if (exn? exn)
+                     (exn-message exn)
+                     (error-value->string exn)))])
+             "; original "
+             (if (exn? old-exn)
+                 "exception raised"
+                 "raise called (with non-exception value)")
+             ": "
+             (if (exn? old-exn)
+                 (exn-message old-exn)
+                 (error-value->string old-exn))))])
       (default-uncaught-exception-handler
         (|#%app| exn:fail msg (current-continuation-marks))))))
 

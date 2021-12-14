@@ -23657,7 +23657,7 @@
       (begin
         (begin-unsafe (hash-set! built-in-symbols built-in-s_0 #t))
         built-in-s_0))))
-(define effect_2411
+(define effect_2872
   (begin
     (void
      (begin
@@ -23723,6 +23723,8 @@
              |#%struct-field-accessor|
              |#%struct-field-mutator|
              |#%nongenerative-uid|
+             |#%struct-ref-error|
+             |#%struct-set!-error|
              unsafe-struct?
              unsafe-sealed-struct?
              unsafe-struct

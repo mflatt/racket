@@ -2172,7 +2172,7 @@ intptr_t scheme_get_semaphore_init(const char *who, int n, Scheme_Object **p);
   }
 # define CHECK_MZ_LONG_DOUBLE_UNSUPPORTED(who) \
   if (!long_double_available()) {                                        \
-    scheme_raise_exn(MZEXN_FAIL_UNSUPPORTED, who ": " NOT_SUPPORTED_STR); \
+    scheme_raise_prim_exn(MZEXN_FAIL_UNSUPPORTED, "%d : " NOT_SUPPORTED_STR, who); \
     ESCAPED_BEFORE_HERE;                                                \
   }
 #else
@@ -3443,6 +3443,12 @@ void scheme_rktio_error(const char *name, const char *what);
 void scheme_non_fixnum_result(const char *name, Scheme_Object *o);
 
 MZ_NORETURN void scheme_raise_out_of_memory(const char *where, const char *msg, ...);
+MZ_NORETURN void scheme_raise_prim_exn(int exn, const char *msg, const char *name);
+
+MZ_NORETURN void scheme_wrong_contract_user(const char *name, const char *expected, int which, int argc, Scheme_Object **argv);
+
+char *scheme_filter_struct_operation_name(Scheme_Object *type_name, char *name, int mutator, char **_pred_name);
+const char *scheme_primitive_error_name(Scheme_Object *prim);
 
 char *scheme_make_srcloc_string(Scheme_Object *stx, intptr_t *len);
 
@@ -3712,7 +3718,7 @@ intptr_t scheme_port_closed_p (Scheme_Object *port);
 
 #define CURRENT_INPUT_PORT(config) scheme_get_param(config, MZCONFIG_INPUT_PORT)
 #define CURRENT_OUTPUT_PORT(config) scheme_get_param(config, MZCONFIG_OUTPUT_PORT)
-#define CHECK_PORT_CLOSED(who, kind, port, closed) if (closed) scheme_raise_exn(MZEXN_FAIL, "%s: " kind " port is closed", who);
+#define CHECK_PORT_CLOSED(who, kind, port, closed) if (closed) scheme_raise_prim_exn(MZEXN_FAIL, "%s: " kind " port is closed", who);
 
 #define MAX_UTF8_CHAR_BYTES 6
 

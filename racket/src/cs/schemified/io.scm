@@ -5864,6 +5864,15 @@
            (if (<= n_0 127)
              1
              (if (<= n_0 2047) 2 (if (<= n_0 65535) 3 4)))))))))
+(define error-message->string
+  (lambda (orig-who_0 msg_0)
+    (let ((who_0
+           (if (symbol? orig-who_0)
+             (|#%app| (error-primitive-name->symbol-handler) orig-who_0)
+             (if (string? orig-who_0)
+               (string->symbol orig-who_0)
+               orig-who_0))))
+      (|#%app| (error-primitive-message->string-handler) who_0 msg_0))))
 (define remap-rktio-error
   (lambda (err_0)
     (begin
@@ -5888,14 +5897,12 @@
               (begin (unsafe-end-atomic) (vector errkind_0 errno_0)))))))))
 (define format-rktio-message
   (lambda (who_0 err_0 base-msg_0)
-    (let ((app_0 (if who_0 (symbol->string who_0) "")))
-      (let ((app_1 (if who_0 ": " "")))
-        (string-append
-         app_0
-         app_1
-         base-msg_0
-         "\n  system error: "
-         (format-rktio-system-error-message err_0))))))
+    (error-message->string
+     who_0
+     (string-append
+      base-msg_0
+      "\n  system error: "
+      (format-rktio-system-error-message err_0)))))
 (define format-rktio-system-error-message
   (lambda (err_0)
     (begin
@@ -5927,7 +5934,14 @@
 (define raise-rktio-error
   (lambda (who_0 err_0 base-msg_0)
     (raise
-     (let ((app_0 (format-rktio-message who_0 err_0 base-msg_0)))
+     (let ((app_0
+            (begin-unsafe
+             (error-message->string
+              who_0
+              (string-append
+               base-msg_0
+               "\n  system error: "
+               (format-rktio-system-error-message err_0))))))
        (|#%app| exn:fail app_0 (current-continuation-marks))))))
 (define check-rktio-error
   (lambda (v_0 base-msg_0)
@@ -5935,7 +5949,14 @@
       (if (vector? v_0)
         (begin-unsafe
          (raise
-          (let ((app_0 (format-rktio-message #f v_0 base-msg_0)))
+          (let ((app_0
+                 (begin-unsafe
+                  (error-message->string
+                   #f
+                   (string-append
+                    base-msg_0
+                    "\n  system error: "
+                    (format-rktio-system-error-message v_0))))))
             (|#%app| exn:fail app_0 (current-continuation-marks)))))
         (void))
       v_0)))
@@ -5947,10 +5968,14 @@
              (remap-rktio-error orig-err_0))))
       (let ((msg_0
              (if (racket-error? err_0 4)
-               (if who_0
-                 (string-append (symbol->string who_0) ": " base-msg_0)
-                 base-msg_0)
-               (format-rktio-message who_0 err_0 base-msg_0))))
+               (error-message->string who_0 base-msg_0)
+               (begin-unsafe
+                (error-message->string
+                 who_0
+                 (string-append
+                  base-msg_0
+                  "\n  system error: "
+                  (format-rktio-system-error-message err_0)))))))
         (raise
          (if (racket-error? err_0 4)
            (|#%app|
@@ -6092,21 +6117,20 @@
         (let ((input?_0 (core-input-port? cp_0)))
           (raise
            (let ((app_0
-                  (let ((app_0 (symbol->string who_0)))
-                    (let ((app_1
-                           (if input?_0
-                             "input port is closed"
-                             "output port is closed")))
-                      (let ((app_2
-                             (if input?_0 "input port: " "output port: ")))
-                        (string-append
-                         app_0
-                         ": "
-                         app_1
-                         "\n  "
-                         app_2
-                         (let ((app_3 (error-value->string-handler)))
-                           (|#%app| app_3 cp_0 (error-print-width)))))))))
+                  (error-message->string
+                   who_0
+                   (let ((app_0
+                          (if input?_0
+                            "input port is closed"
+                            "output port is closed")))
+                     (let ((app_1
+                            (if input?_0 "input port: " "output port: ")))
+                       (string-append
+                        app_0
+                        "\n  "
+                        app_1
+                        (let ((app_2 (error-value->string-handler)))
+                          (|#%app| app_2 cp_0 (error-print-width)))))))))
              (|#%app| exn:fail app_0 (current-continuation-marks))))))
       (void))))
 (define 1/file-position
@@ -6121,10 +6145,12 @@
         (lambda ()
           (raise
            (let ((app_0
-                  (string-append
-                   "file-position: the port's current position is not known\n port: "
-                   (let ((app_0 (error-value->string-handler)))
-                     (|#%app| app_0 p_0 (error-print-width))))))
+                  (error-message->string
+                   'file-position
+                   (string-append
+                    "the port's current position is not known\n port: "
+                    (let ((app_0 (error-value->string-handler)))
+                      (|#%app| app_0 p_0 (error-print-width)))))))
              (|#%app|
               exn:fail:filesystem
               app_0
@@ -9652,7 +9678,14 @@
                    (let ((base-msg_0 "error closing stream port"))
                      (begin-unsafe
                       (raise
-                       (let ((app_0 (format-rktio-message #f v_0 base-msg_0)))
+                       (let ((app_0
+                              (begin-unsafe
+                               (error-message->string
+                                #f
+                                (string-append
+                                 base-msg_0
+                                 "\n  system error: "
+                                 (format-rktio-system-error-message v_0))))))
                          (|#%app|
                           exn:fail
                           app_0
@@ -10048,7 +10081,7 @@
                 p16_0
                 (register-fd-close cust_0 fd_0 fd-refcount_0 #f p16_0))
                (finish-port/count p16_0)))))))))
-(define finish_2363
+(define finish_2321
   (make-struct-type-install-properties
    '(fd-output-port)
    8
@@ -10077,10 +10110,13 @@
                  (begin-unsafe
                   (raise
                    (let ((app_0
-                          (format-rktio-message
-                           'file-truncate
-                           result_0
-                           base-msg_0)))
+                          (begin-unsafe
+                           (error-message->string
+                            'file-truncate
+                            (string-append
+                             base-msg_0
+                             "\n  system error: "
+                             (format-rktio-system-error-message result_0))))))
                      (|#%app| exn:fail app_0 (current-continuation-marks)))))))
              (void))))))
     (cons prop:file-stream (lambda (p_0) (fd-output-port-fd p_0))))
@@ -10098,7 +10134,7 @@
    #f
    8
    255))
-(define effect_2896 (finish_2363 struct:fd-output-port))
+(define effect_2896 (finish_2321 struct:fd-output-port))
 (define create-fd-output-port
   (|#%name|
    create-fd-output-port
@@ -10758,7 +10794,13 @@
             (begin-unsafe
              (raise
               (let ((app_0
-                     (format-rktio-message 'file-position r_0 base-msg_0)))
+                     (begin-unsafe
+                      (error-message->string
+                       'file-position
+                       (string-append
+                        base-msg_0
+                        "\n  system error: "
+                        (format-rktio-system-error-message r_0))))))
                 (|#%app| exn:fail app_0 (current-continuation-marks)))))))
         (void)))))
 (define finish_2118
@@ -11066,10 +11108,13 @@
                 (begin-unsafe
                  (raise
                   (let ((app_0
-                         (format-rktio-message
-                          'place-channel-put
-                          new-fd_0
-                          base-msg_0)))
+                         (begin-unsafe
+                          (error-message->string
+                           'place-channel-put
+                           (string-append
+                            base-msg_0
+                            "\n  system error: "
+                            (format-rktio-system-error-message new-fd_0))))))
                     (|#%app| exn:fail app_0 (current-continuation-marks)))))))
             (void))
           (let ((fd-dup_0
@@ -14974,10 +15019,13 @@
                 (begin-unsafe
                  (raise
                   (let ((app_0
-                         (format-rktio-message
-                          'locale-string-encoding
-                          e_0
-                          base-msg_0)))
+                         (begin-unsafe
+                          (error-message->string
+                           'locale-string-encoding
+                           (string-append
+                            base-msg_0
+                            "\n  system error: "
+                            (format-rktio-system-error-message e_0))))))
                     (|#%app| exn:fail app_0 (current-continuation-marks)))))))
             (begin0
               (|#%app| rktio_to_bytes e_0)
@@ -15011,10 +15059,13 @@
                  (begin-unsafe
                   (raise
                    (let ((app_0
-                          (format-rktio-message
-                           'system-language+country
-                           c_0
-                           base-msg_0)))
+                          (begin-unsafe
+                           (error-message->string
+                            'system-language+country
+                            (string-append
+                             base-msg_0
+                             "\n  system error: "
+                             (format-rktio-system-error-message c_0))))))
                      (|#%app| exn:fail app_0 (current-continuation-marks)))))))
              (begin0
                (|#%app| rktio_to_bytes c_0)
@@ -21753,9 +21804,9 @@
 (define install-do-global-print!
   (lambda (param_0 default-value_0)
     (set! do-global-print
-      (let ((...rc/io/print/main.rkt:123:8_0
+      (let ((...rc/io/print/main.rkt:124:8_0
              (|#%name|
-              ...rc/io/print/main.rkt:123:8
+              ...rc/io/print/main.rkt:124:8
               (lambda (who34_0 v35_0 o36_0 quote-depth-in32_0 max-length33_0)
                 (begin
                   (let ((quote-depth-in_0
@@ -21823,25 +21874,25 @@
                                            bstr_1)))))))))))
                         (void)))))))))
         (|#%name|
-         ...rc/io/print/main.rkt:123:8
+         ...rc/io/print/main.rkt:124:8
          (case-lambda
           ((who_0 v_0 o_0)
            (begin
-             (...rc/io/print/main.rkt:123:8_0
+             (...rc/io/print/main.rkt:124:8_0
               who_0
               v_0
               o_0
               unsafe-undefined
               #f)))
           ((who_0 v_0 o_0 quote-depth-in_0 max-length33_0)
-           (...rc/io/print/main.rkt:123:8_0
+           (...rc/io/print/main.rkt:124:8_0
             who_0
             v_0
             o_0
             quote-depth-in_0
             max-length33_0))
           ((who_0 v_0 o_0 quote-depth-in32_0)
-           (...rc/io/print/main.rkt:123:8_0
+           (...rc/io/print/main.rkt:124:8_0
             who_0
             v_0
             o_0
@@ -22375,20 +22426,20 @@
   (lambda (who_0 v_0)
     (raise
      (let ((app_0
-            (let ((app_0 (symbol->immutable-string who_0)))
-              (string-append
-               app_0
-               ": printing disabled for unreadable value"
-               "\n  value: "
-               (with-continuation-mark*
-                push-authentic
-                parameterization-key
-                (extend-parameterization
-                 (continuation-mark-set-first #f parameterization-key)
-                 1/print-unreadable
-                 #t)
-                (let ((app_1 (error-value->string-handler)))
-                  (|#%app| app_1 v_0 (error-print-width))))))))
+            (error-message->string
+             who_0
+             (string-append
+              "printing disabled for unreadable value"
+              "\n  value: "
+              (with-continuation-mark*
+               push-authentic
+               parameterization-key
+               (extend-parameterization
+                (continuation-mark-set-first #f parameterization-key)
+                1/print-unreadable
+                #t)
+               (let ((app_0 (error-value->string-handler)))
+                 (|#%app| app_0 v_0 (error-print-width))))))))
        (|#%app| exn:fail app_0 (current-continuation-marks))))))
 (define check-unreadable
   (lambda (who_0 config_0 mode_0 v_0)
@@ -26757,10 +26808,14 @@
                                  (begin-unsafe
                                   (raise
                                    (let ((app_0
-                                          (format-rktio-message
-                                           'port-try-file-lock?
-                                           r_0
-                                           base-msg_0)))
+                                          (begin-unsafe
+                                           (error-message->string
+                                            'port-try-file-lock?
+                                            (string-append
+                                             base-msg_0
+                                             "\n  system error: "
+                                             (format-rktio-system-error-message
+                                              r_0))))))
                                      (|#%app|
                                       exn:fail
                                       app_0
@@ -26797,10 +26852,14 @@
                          (begin-unsafe
                           (raise
                            (let ((app_0
-                                  (format-rktio-message
-                                   'port-file-unlock
-                                   r_0
-                                   base-msg_0)))
+                                  (begin-unsafe
+                                   (error-message->string
+                                    'port-file-unlock
+                                    (string-append
+                                     base-msg_0
+                                     "\n  system error: "
+                                     (format-rktio-system-error-message
+                                      r_0))))))
                              (|#%app|
                               exn:fail
                               app_0
@@ -30252,13 +30311,12 @@
                                  (if (hash-ref seen_0 from-base_0 #f)
                                    (raise
                                     (let ((app_0
-                                           (let ((app_0
-                                                  (symbol->string who_0)))
-                                             (string-append
-                                              app_0
-                                              ": cycle detected at link"
-                                              "\n  link path: "
-                                              (path->string new-base_0)))))
+                                           (error-message->string
+                                            who_0
+                                            (string-append
+                                             "cycle detected at link"
+                                             "\n  link path: "
+                                             (path->string new-base_0)))))
                                       (|#%app|
                                        exn:fail:filesystem
                                        app_0
@@ -30546,10 +30604,14 @@
                                         (begin-unsafe
                                          (raise
                                           (let ((app_0
-                                                 (format-rktio-message
-                                                  'environment-variables-set!
-                                                  r_0
-                                                  base-msg_0)))
+                                                 (begin-unsafe
+                                                  (error-message->string
+                                                   'environment-variables-set!
+                                                   (string-append
+                                                    base-msg_0
+                                                    "\n  system error: "
+                                                    (format-rktio-system-error-message
+                                                     r_0))))))
                                             (|#%app|
                                              exn:fail
                                              app_0
@@ -30866,7 +30928,14 @@
             (let ((base-msg_0 "path lookup failed"))
               (begin-unsafe
                (raise
-                (let ((app_0 (format-rktio-message who_0 s_0 base-msg_0)))
+                (let ((app_0
+                       (begin-unsafe
+                        (error-message->string
+                         who_0
+                         (string-append
+                          base-msg_0
+                          "\n  system error: "
+                          (format-rktio-system-error-message s_0))))))
                   (|#%app| exn:fail app_0 (current-continuation-marks)))))))
           (let ((bstr_0 (|#%app| rktio_to_bytes s_0)))
             (begin
@@ -34242,10 +34311,14 @@
                                 (|#%app| fail2_0)
                                 (if (racket-error? rfc_0 1)
                                   (raise
-                                   (|#%app|
-                                    exn:fail:unsupported
-                                    "filesystem-change-evt: unsupported"
-                                    (current-continuation-marks)))
+                                   (let ((app_0
+                                          (error-message->string
+                                           'filesystem-change-evt
+                                           "unsupported")))
+                                     (|#%app|
+                                      exn:fail:unsupported
+                                      app_0
+                                      (current-continuation-marks))))
                                   (raise-filesystem-error
                                    'filesystem-change-evt
                                    rfc_0
@@ -34710,11 +34783,11 @@
                 'subprocess
                 "(or/c (and/c output-port? file-stream-port?) #f 'stdout)"
                 stderr_0))
-             (let ((lr1346 unsafe-undefined)
+             (let ((lr1381 unsafe-undefined)
                    (group_0 unsafe-undefined)
                    (command_0 unsafe-undefined)
                    (exact/args_0 unsafe-undefined))
-               (set! lr1346
+               (set! lr1381
                  (call-with-values
                   (lambda ()
                     (if (path-string? group/command_0)
@@ -34769,9 +34842,9 @@
                    ((group_1 command_1 exact/args_1)
                     (vector group_1 command_1 exact/args_1))
                    (args (raise-binding-result-arity-error 3 args)))))
-               (set! group_0 (unsafe-vector*-ref lr1346 0))
-               (set! command_0 (unsafe-vector*-ref lr1346 1))
-               (set! exact/args_0 (unsafe-vector*-ref lr1346 2))
+               (set! group_0 (unsafe-vector*-ref lr1381 0))
+               (set! command_0 (unsafe-vector*-ref lr1381 1))
+               (set! exact/args_0 (unsafe-vector*-ref lr1381 2))
                (call-with-values
                 (lambda ()
                   (if (if (pair? exact/args_0)
@@ -35062,10 +35135,14 @@
                                                                           (begin-unsafe
                                                                            (raise
                                                                             (let ((app_0
-                                                                                   (format-rktio-message
-                                                                                    'subprocess
-                                                                                    r_0
-                                                                                    base-msg_0)))
+                                                                                   (begin-unsafe
+                                                                                    (error-message->string
+                                                                                     'subprocess
+                                                                                     (string-append
+                                                                                      base-msg_0
+                                                                                      "\n  system error: "
+                                                                                      (format-rktio-system-error-message
+                                                                                       r_0))))))
                                                                               (|#%app|
                                                                                exn:fail
                                                                                app_0
@@ -35183,10 +35260,13 @@
                    (begin-unsafe
                     (raise
                      (let ((app_0
-                            (format-rktio-message
-                             'subprocess-status
-                             r_0
-                             base-msg_0)))
+                            (begin-unsafe
+                             (error-message->string
+                              'subprocess-status
+                              (string-append
+                               base-msg_0
+                               "\n  system error: "
+                               (format-rktio-system-error-message r_0))))))
                        (|#%app|
                         exn:fail
                         app_0
@@ -35377,10 +35457,14 @@
                          (begin-unsafe
                           (raise
                            (let ((app_0
-                                  (format-rktio-message
-                                   'shell-execute
-                                   r_0
-                                   base-msg_0)))
+                                  (begin-unsafe
+                                   (error-message->string
+                                    'shell-execute
+                                    (string-append
+                                     base-msg_0
+                                     "\n  system error: "
+                                     (format-rktio-system-error-message
+                                      r_0))))))
                              (|#%app|
                               exn:fail
                               app_0
@@ -35405,7 +35489,14 @@
 (define raise-network-error
   (lambda (who_0 orig-err_0 base-msg_0)
     (let ((err_0 (remap-rktio-error orig-err_0)))
-      (let ((msg_0 (format-rktio-message who_0 err_0 base-msg_0)))
+      (let ((msg_0
+             (begin-unsafe
+              (error-message->string
+               who_0
+               (string-append
+                base-msg_0
+                "\n  system error: "
+                (format-rktio-system-error-message err_0))))))
         (raise
          (if (not (eq? (begin-unsafe (vector-ref err_0 0)) 3))
            (let ((app_0 (current-continuation-marks)))
@@ -35438,14 +35529,13 @@
          socket-str_0))
       (raise
        (let ((app_0
-              (let ((app_0 (symbol->string who_0)))
-                (string-append
-                 app_0
-                 ": "
-                 msg_0
-                 "\n  socket: "
-                 (let ((app_1 (error-value->string-handler)))
-                   (|#%app| app_1 u_0 (error-print-width)))))))
+              (error-message->string
+               who_0
+               (string-append
+                msg_0
+                "\n  socket: "
+                (let ((app_0 (error-value->string-handler)))
+                  (|#%app| app_0 u_0 (error-print-width)))))))
          (|#%app| exn:fail:network app_0 (current-continuation-marks)))))))
 (define raise-network-option-error
   (lambda (who_0 mode_0 v_0)
@@ -38650,10 +38740,12 @@
   (lambda (who_0 size_0)
     (raise
      (let ((app_0
-            (1/format
-             (string-append "~a: given size is too large\n" "  given size: ~e")
+            (error-message->string
              who_0
-             size_0)))
+             (string-append
+              "given size is too large\n"
+              "  given size: "
+              (number->string size_0)))))
        (|#%app| exn:fail:network app_0 (current-continuation-marks))))))
 (define 1/udp-multicast-join-group!
   (|#%name|
@@ -39102,13 +39194,12 @@
                       (if err-str_0
                         (raise
                          (let ((app_0
-                                (let ((app_0 (symbol->string who_0)))
-                                  (string-append
-                                   app_0
-                                   ": "
-                                   msg_0
-                                   "\n  system error: "
-                                   (->string err-str_0)))))
+                                (error-message->string
+                                 who_0
+                                 (string-append
+                                  msg_0
+                                  "\n  system error: "
+                                  (->string err-str_0)))))
                            (|#%app|
                             exn:fail:filesystem
                             app_0
@@ -39129,13 +39220,12 @@
     (if err-str_0
       (raise
        (let ((app_0
-              (let ((app_0 (symbol->string who_0)))
-                (string-append
-                 app_0
-                 ": "
-                 msg_0
-                 "\n  system error: "
-                 (->string err-str_0)))))
+              (error-message->string
+               who_0
+               (string-append
+                msg_0
+                "\n  system error: "
+                (->string err-str_0)))))
          (|#%app| exn:fail:filesystem app_0 (current-continuation-marks))))
       (raise-filesystem-error who_0 v_0 msg_0))))
 (define ->string
@@ -39150,10 +39240,11 @@
         (void)
         (raise-argument-error 'default-load-extension "symbol?" sym_0))
       (raise
-       (|#%app|
-        exn:fail:unsupported
-        "default-load-extension: extensions are not supported"
-        (current-continuation-marks))))))
+       (let ((app_0
+              (error-message->string
+               "default-load-extension"
+               "extensions are not supported")))
+         (|#%app| exn:fail:unsupported app_0 (current-continuation-marks)))))))
 (define 1/current-load-extension
   (make-parameter
    default-load-extension
@@ -39201,10 +39292,14 @@
                                 (begin-unsafe
                                  (raise
                                   (let ((app_0
-                                         (format-rktio-message
-                                          'seconds->date
-                                          dt_0
-                                          base-msg_0)))
+                                         (begin-unsafe
+                                          (error-message->string
+                                           'seconds->date
+                                           (string-append
+                                            base-msg_0
+                                            "\n  system error: "
+                                            (format-rktio-system-error-message
+                                             dt_0))))))
                                     (|#%app|
                                      exn:fail
                                      app_0
@@ -39686,10 +39781,13 @@
               (begin-unsafe
                (raise
                 (let ((app_0
-                       (format-rktio-message
-                        'dynamic-place
-                        new-fd_0
-                        base-msg_0)))
+                       (begin-unsafe
+                        (error-message->string
+                         'dynamic-place
+                         (string-append
+                          base-msg_0
+                          "\n  system error: "
+                          (format-rktio-system-error-message new-fd_0))))))
                   (|#%app| exn:fail app_0 (current-continuation-marks)))))))
           (void))
         new-fd_0))))
@@ -39705,7 +39803,13 @@
               (begin-unsafe
                (raise
                 (let ((app_0
-                       (format-rktio-message 'dynamic-place p_0 base-msg_0)))
+                       (begin-unsafe
+                        (error-message->string
+                         'dynamic-place
+                         (string-append
+                          base-msg_0
+                          "\n  system error: "
+                          (format-rktio-system-error-message p_0))))))
                   (|#%app| exn:fail app_0 (current-continuation-marks)))))))
           (void))
         (call-with-values

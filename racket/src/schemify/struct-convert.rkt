@@ -56,7 +56,9 @@
                  (null? (struct-type-info-rest sti))
                  (not (set!ed-mutated-state? (hash-ref mutated (unwrap struct:s) #f)))))
         (define can-impersonate? (not (struct-type-info-authentic? sti)))
-        (define raw-s? (if can-impersonate? (deterministic-gensym (unwrap s?)) s?))
+        (define generate-check? (or can-impersonate?
+                                    (not (aim? target 'system))))
+        (define raw-s? (if generate-check? (deterministic-gensym (unwrap s?)) s?))
         (define system-opaque? (and (aim? target 'system)
                                     (or (not exports)
                                         (eq? 'no (hash-ref exports (unwrap struct:s) 'no)))))
@@ -134,32 +136,35 @@
            (define ,raw-s? ,(let ([p (name-procedure
                                       "" (struct-type-info-name sti) "" '|| "?"
                                       `(record-predicate ,struct:s))])
-                              (if (or can-impersonate?
+                              (if (or generate-check?
                                       system-opaque?)
                                   p
                                   `(#%struct-predicate ,p))))
-           ,@(if can-impersonate?
+           ,@(if generate-check?
                  `((define ,s? ,(let ([p (name-procedure
                                           "" (struct-type-info-name sti) "" '|| "?"
-                                          `(lambda (v) (if (,raw-s? v) #t ($value (if (impersonator? v) (,raw-s? (impersonator-val v)) #f)))))])
+                                          `(lambda (v)
+                                             ,(if can-impersonate?
+                                                  `(if (,raw-s? v) #t ($value (if (impersonator? v) (,raw-s? (impersonator-val v)) #f)))
+                                                  `(,raw-s? v))))])
                                   (if system-opaque?
                                       p
                                       `(#%struct-predicate ,p)))))
                  null)
            ,@(for/list ([acc/mut (in-list acc/muts)]
                         [make-acc/mut (in-list make-acc/muts)])
-               (define raw-acc/mut (if can-impersonate? (deterministic-gensym (unwrap acc/mut)) acc/mut))
+               (define raw-acc/mut (if generate-check? (deterministic-gensym (unwrap acc/mut)) acc/mut))
                (match make-acc/mut
                  [`(make-struct-field-accessor ,(? (lambda (v) (wrap-eq? v -ref))) ,pos ',field-name)
                   (define raw-def `(define ,raw-acc/mut
                                      ,(let ([p (name-procedure
                                                 "" (struct-type-info-name sti) "-" field-name ""
                                                 `(record-accessor ,struct:s ,pos))])
-                                        (if (or can-impersonate?
+                                        (if (or generate-check?
                                                 system-opaque?)
                                             p
                                             `(#%struct-field-accessor ,p ,struct:s ,pos)))))
-                  (if can-impersonate?
+                  (if generate-check?
                       `(begin
                          ,raw-def
                          (define ,acc/mut
@@ -167,8 +172,10 @@
                                       "" (struct-type-info-name sti) "-" field-name ""
                                       `(lambda (s) (if (,raw-s? s)
                                                        (,raw-acc/mut s)
-                                                       ($value (impersonate-ref ,raw-acc/mut ,struct:s ,pos s
-                                                                                ',(struct-type-info-name sti) ',field-name)))))])
+                                                       ,(if can-impersonate?
+                                                            `($value (impersonate-ref ,raw-acc/mut ,struct:s ,pos s
+                                                                                      ',(struct-type-info-name sti) ',field-name))
+                                                            `(#%struct-ref-error s ',(struct-type-info-name sti) ',field-name)))))])
                               (if system-opaque?
                                   p
                                   `(#%struct-field-accessor ,p ,struct:s ,pos)))))
@@ -178,13 +185,13 @@
                                      ,(let ([p (name-procedure
                                                 "set-" (struct-type-info-name sti) "-" field-name "!"
                                                 `(record-mutator ,struct:s ,pos))])
-                                        (if (or can-impersonate?
+                                        (if (or generate-check?
                                                 system-opaque?)
                                             p
                                             `(#%struct-field-mutator ,p ,struct:s ,pos)))))
                   (define abs-pos (+ pos (- (struct-type-info-field-count sti)
                                             (struct-type-info-immediate-field-count sti))))
-                  (if can-impersonate?
+                  (if generate-check?
                       `(begin
                          ,raw-def
                          (define ,acc/mut
@@ -192,8 +199,10 @@
                                        "set-" (struct-type-info-name sti) "-" field-name "!"
                                        `(lambda (s v) (if (,raw-s? s)
                                                           (,raw-acc/mut s v)
-                                                          ($value (impersonate-set! ,raw-acc/mut ,struct:s ,pos ,abs-pos s v
-                                                                                    ',(struct-type-info-name sti) ',field-name)))))])
+                                                          ,(if can-impersonate?
+                                                               `($value (impersonate-set! ,raw-acc/mut ,struct:s ,pos ,abs-pos s v
+                                                                                          ',(struct-type-info-name sti) ',field-name))
+                                                               `(#%struct-set!-error s ',(struct-type-info-name sti) ',field-name)))))])
                                (if system-opaque?
                                    p
                                    `(#%struct-field-mutator ,p ,struct:s ,pos)))))

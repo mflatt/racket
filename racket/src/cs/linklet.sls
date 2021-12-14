@@ -70,7 +70,13 @@
           call-with-module-prompt)
   (import (chezpart)
           (only (chezscheme) printf)
-          (rumble)
+          (rename (rumble)
+                  [raise-argument-error raise-argument-error/primitive]
+                  [raise-argument-error/user raise-argument-error]
+                  [raise-arguments-error raise-arguments-error/primitive]
+                  [raise-arguments-error/user raise-arguments-error]
+                  [raise-range-error raise-range-error/primitive]
+                  [raise-range-error/user raise-range-error])
           (only (io)
                 path?
                 complete-path?

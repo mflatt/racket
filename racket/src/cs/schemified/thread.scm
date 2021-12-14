@@ -4069,6 +4069,15 @@
                    (for-loop_0 lst_0))))
               (void)))))
       (void))))
+(define error-message->string
+  (lambda (orig-who_0 msg_0)
+    (let ((who_0
+           (if (symbol? orig-who_0)
+             (|#%app| (error-primitive-name->symbol-handler) orig-who_0)
+             (if (string? orig-who_0)
+               (string->symbol orig-who_0)
+               orig-who_0))))
+      (|#%app| (error-primitive-message->string-handler) who_0 msg_0))))
 (define finish_2797
   (make-struct-type-install-properties
    '(semaphore)
@@ -4233,10 +4242,12 @@
                   (void)
                   (raise
                    (let ((app_0
-                          (string-append
-                           "make-semaphore: starting value "
-                           (number->string init4_0)
-                           " is too large")))
+                          (error-message->string
+                           'make-semaphore
+                           (string-append
+                            "starting value "
+                            (number->string init4_0)
+                            " is too large"))))
                      (|#%app| exn:fail app_0 (current-continuation-marks)))))
                 (semaphore1.1 #f #f init4_0)))))))
     (|#%name|
@@ -5906,10 +5917,14 @@
             "custodian?"
             stop-cust_0))
          (raise
-          (|#%app|
-           exn:fail:unsupported
-           "custodian-require-memory: unsupported"
-           (current-continuation-marks))))))))
+          (let ((app_0
+                 (error-message->string
+                  'custodian-require-memory
+                  "unsupported")))
+            (|#%app|
+             exn:fail:unsupported
+             app_0
+             (current-continuation-marks)))))))))
 (define 1/custodian-limit-memory
   (let ((custodian-limit-memory_0
          (|#%name|
@@ -6507,10 +6522,12 @@
                     (begin
                       (if (if limit_0 (>= n_0 limit_0) #f)
                         (raise
-                         (|#%app|
-                          exn:fail:out-of-memory
-                          "out of memory"
-                          (current-continuation-marks)))
+                         (let ((app_0
+                                (error-message->string #f "out of memory")))
+                           (|#%app|
+                            exn:fail:out-of-memory
+                            app_0
+                            (current-continuation-marks))))
                         (void))
                       (loop_0 (custodian-parent-reference c_0))))
                   (void)))
@@ -7839,11 +7856,13 @@
                           (call-with-escape-continuation
                            (lambda (k_0)
                              (raise
-                              (|#%app|
-                               exn:break*_0
-                               "user break"
-                               (current-continuation-marks)
-                               k_0)))))))
+                              (let ((app_0
+                                     (error-message->string #f "user break")))
+                                (|#%app|
+                                 exn:break*_0
+                                 app_0
+                                 (current-continuation-marks)
+                                 k_0))))))))
                     void)
                   (end-atomic))))
              (void))))))))
@@ -8699,20 +8718,23 @@
                         (raise
                          (let ((app_0
                                 (let ((app_0
-                                       (if chaperone?_0
-                                         "chaperone"
-                                         "impersonator")))
-                                  (let ((app_1 (number->string (length rs_0))))
-                                    (string-append
-                                     what_0
-                                     " "
-                                     app_0
-                                     ": result wrapper returned wrong number of values\n"
-                                     "  expected count: "
-                                     app_1
-                                     "\n"
-                                     "  returned count: "
-                                     (number->string (length new-rs_0)))))))
+                                       (string-append
+                                        what_0
+                                        " "
+                                        (if chaperone?_0
+                                          "chaperone"
+                                          "impersonator"))))
+                                  (error-message->string
+                                   app_0
+                                   (let ((app_1
+                                          (number->string (length rs_0))))
+                                     (string-append
+                                      "result wrapper returned wrong number of values\n"
+                                      "  expected count: "
+                                      app_1
+                                      "\n"
+                                      "  returned count: "
+                                      (number->string (length new-rs_0))))))))
                            (|#%app|
                             exn:fail:contract:arity
                             app_0
@@ -8745,15 +8767,18 @@
            (args_1
             (raise
              (let ((app_0
-                    (let ((app_0 (if chaperone?_0 "chaperone" "impersonator")))
-                      (string-append
-                       what_0
-                       " "
+                    (let ((app_0
+                           (string-append
+                            what_0
+                            " "
+                            (if chaperone?_0 "chaperone" "impersonator"))))
+                      (error-message->string
                        app_0
-                       ": returned wrong number of values\n"
-                       "  expected count: 2\n"
-                       "  returned count: "
-                       (number->string (length args_1))))))
+                       (string-append
+                        "returned wrong number of values\n"
+                        "  expected count: 2\n"
+                        "  returned count: "
+                        (number->string (length args_1)))))))
                (|#%app|
                 exn:fail:contract:arity
                 app_0
@@ -11621,10 +11646,11 @@
                  (begin
                    (lock-release-both f_0)
                    (raise
-                    (|#%app|
-                     exn:fail
-                     "touch: future previously aborted"
-                     (current-continuation-marks))))
+                    (let ((app_0
+                           (error-message->string
+                            'touch
+                            "future previously aborted")))
+                      (|#%app| exn:fail app_0 (current-continuation-marks)))))
                  (if (eq? s_0 'blocked)
                    (if (current-future$1)
                      (dependent-on-future f_0)
@@ -15203,7 +15229,5 @@
   (lambda (who_0)
     (raise
      (let ((app_0
-            (string-append
-             (symbol->string who_0)
-             ": unsupported on this platform")))
+            (error-message->string who_0 "unsupported on this platform")))
        (|#%app| exn:fail:unsupported app_0 (current-continuation-marks))))))

@@ -17023,716 +17023,468 @@
                    #f)
                (let ((can-impersonate?_0
                       (not (struct-type-info-authentic? sti_0))))
-                 (let ((raw-s?_0
+                 (let ((generate-check?_0
                         (if can-impersonate?_0
-                          (deterministic-gensym (unwrap s?_0))
-                          s?_0)))
-                   (let ((system-opaque?_0
-                          (if (eq? target_0 'system)
-                            (let ((or-part_0 (not exports_0)))
-                              (if or-part_0
-                                or-part_0
-                                (eq?
-                                 'no
-                                 (hash-ref
-                                  exports_0
-                                  (unwrap struct:s_0)
-                                  'no))))
-                            #f)))
-                     (let ((finish!-id_0
-                            (if (let ((or-part_0
-                                       (pair? (struct-type-info-rest sti_0))))
-                                  (if or-part_0
-                                    or-part_0
-                                    (if (struct-type-info-prefab-immutables
-                                         sti_0)
-                                      (unwrap (struct-type-info-parent sti_0))
-                                      #f)))
-                              (deterministic-gensym "finish")
+                          can-impersonate?_0
+                          (not (eq? target_0 'system)))))
+                   (let ((raw-s?_0
+                          (if generate-check?_0
+                            (deterministic-gensym (unwrap s?_0))
+                            s?_0)))
+                     (let ((system-opaque?_0
+                            (if (eq? target_0 'system)
+                              (let ((or-part_0 (not exports_0)))
+                                (if or-part_0
+                                  or-part_0
+                                  (eq?
+                                   'no
+                                   (hash-ref
+                                    exports_0
+                                    (unwrap struct:s_0)
+                                    'no))))
                               #f)))
-                       (list*
-                        'begin
-                        (let ((app_0
-                               (if finish!-id_0
-                                 (list
-                                  (list
-                                   'define
-                                   finish!-id_0
-                                   (let ((app_0
-                                          (list
-                                           'quote
-                                           (if system-opaque?_0
-                                             (list
-                                              (struct-type-info-name sti_0))
-                                             (struct-type-info-name sti_0)))))
+                       (let ((finish!-id_0
+                              (if (let ((or-part_0
+                                         (pair?
+                                          (struct-type-info-rest sti_0))))
+                                    (if or-part_0
+                                      or-part_0
+                                      (if (struct-type-info-prefab-immutables
+                                           sti_0)
+                                        (unwrap
+                                         (struct-type-info-parent sti_0))
+                                        #f)))
+                                (deterministic-gensym "finish")
+                                #f)))
+                         (list*
+                          'begin
+                          (let ((app_0
+                                 (if finish!-id_0
+                                   (list
+                                    (list
+                                     'define
+                                     finish!-id_0
+                                     (let ((app_0
+                                            (list
+                                             'quote
+                                             (if system-opaque?_0
+                                               (list
+                                                (struct-type-info-name sti_0))
+                                               (struct-type-info-name
+                                                sti_0)))))
+                                       (let ((app_1
+                                              (struct-type-info-immediate-field-count
+                                               sti_0)))
+                                         (let ((app_2
+                                                (|#%app|
+                                                 schemify_0
+                                                 (struct-type-info-parent
+                                                  sti_0)
+                                                 knowns_0)))
+                                           (list*
+                                            'make-struct-type-install-properties
+                                            app_0
+                                            app_1
+                                            0
+                                            app_2
+                                            (schemify-body$1
+                                             schemify_0
+                                             knowns_0
+                                             (struct-type-info-rest
+                                              sti_0))))))))
+                                   null)))
+                            (qq-append
+                             app_0
+                             (let ((app_1
+                                    (list
+                                     'define
+                                     struct:s_0
                                      (let ((app_1
-                                            (struct-type-info-immediate-field-count
-                                             sti_0)))
+                                            (list
+                                             'quote
+                                             (struct-type-info-name sti_0))))
                                        (let ((app_2
                                               (|#%app|
                                                schemify_0
                                                (struct-type-info-parent sti_0)
                                                knowns_0)))
-                                         (list*
-                                          'make-struct-type-install-properties
-                                          app_0
-                                          app_1
-                                          0
-                                          app_2
-                                          (schemify-body$1
-                                           schemify_0
-                                           knowns_0
-                                           (struct-type-info-rest sti_0))))))))
-                                 null)))
-                          (qq-append
-                           app_0
-                           (let ((app_1
-                                  (list
-                                   'define
-                                   struct:s_0
-                                   (let ((app_1
+                                         (let ((app_3
+                                                (if (not
+                                                     (struct-type-info-prefab-immutables
+                                                      sti_0))
+                                                  (if (if top?_0
+                                                        (eq? target_0 'system)
+                                                        #f)
+                                                    (list
+                                                     '|#%nongenerative-uid|
+                                                     (struct-type-info-name
+                                                      sti_0))
+                                                    #f)
+                                                  (let ((app_3
+                                                         (list
+                                                          'quote
+                                                          (struct-type-info-name
+                                                           sti_0))))
+                                                    (let ((app_4
+                                                           (|#%app|
+                                                            schemify_0
+                                                            (struct-type-info-parent
+                                                             sti_0)
+                                                            knowns_0)))
+                                                      (let ((app_5
+                                                             (struct-type-info-immediate-field-count
+                                                              sti_0)))
+                                                        (list
+                                                         'structure-type-lookup-prefab-uid
+                                                         app_3
+                                                         app_4
+                                                         app_5
+                                                         0
+                                                         #f
+                                                         (list
+                                                          'quote
+                                                          (struct-type-info-prefab-immutables
+                                                           sti_0)))))))))
+                                           (let ((app_4
+                                                  (struct-type-info-sealed?
+                                                   sti_0)))
+                                             (let ((app_5
+                                                    (struct-type-info-immediate-field-count
+                                                     sti_0)))
+                                               (list
+                                                'make-record-type-descriptor*
+                                                app_1
+                                                app_2
+                                                app_3
+                                                app_4
+                                                #f
+                                                app_5
+                                                (let ((n_0
+                                                       (struct-type-info-immediate-field-count
+                                                        sti_0)))
+                                                  (let ((mask_0
+                                                         (sub1
+                                                          (arithmetic-shift
+                                                           1
+                                                           n_0))))
+                                                    (let ((c1_0
+                                                           (struct-type-info-non-prefab-immutables
+                                                            sti_0)))
+                                                      (if c1_0
+                                                        (letrec*
+                                                         ((loop_0
+                                                           (|#%name|
+                                                            loop
+                                                            (lambda (imms_0
+                                                                     mask_1)
+                                                              (begin
+                                                                (if (null?
+                                                                     imms_0)
+                                                                  mask_1
+                                                                  (let ((m_0
+                                                                         (bitwise-not
+                                                                          (arithmetic-shift
+                                                                           1
+                                                                           (car
+                                                                            imms_0)))))
+                                                                    (let ((app_6
+                                                                           (cdr
+                                                                            imms_0)))
+                                                                      (loop_0
+                                                                       app_6
+                                                                       (bitwise-and
+                                                                        mask_1
+                                                                        m_0))))))))))
+                                                         (loop_0 c1_0 mask_0))
+                                                        mask_0)))))))))))))
+                               (list*
+                                app_1
+                                (let ((app_2
+                                       (if finish!-id_0
+                                         (list
+                                          (let ((app_2
+                                                 (deterministic-gensym
+                                                  "effect")))
+                                            (list
+                                             'define
+                                             app_2
+                                             (list finish!-id_0 struct:s_0))))
+                                         null)))
+                                  (qq-append
+                                   app_2
+                                   (let ((app_3
                                           (list
-                                           'quote
-                                           (struct-type-info-name sti_0))))
-                                     (let ((app_2
-                                            (|#%app|
-                                             schemify_0
-                                             (struct-type-info-parent sti_0)
-                                             knowns_0)))
-                                       (let ((app_3
-                                              (if (not
-                                                   (struct-type-info-prefab-immutables
-                                                    sti_0))
-                                                (if (if top?_0
-                                                      (eq? target_0 'system)
-                                                      #f)
+                                           'define
+                                           make-s_0
+                                           (let ((ctr_0
                                                   (list
-                                                   '|#%nongenerative-uid|
-                                                   (struct-type-info-name
-                                                    sti_0))
-                                                  #f)
-                                                (let ((app_3
+                                                   'record-constructor
+                                                   (list*
+                                                    'make-record-constructor-descriptor
+                                                    struct:s_0
+                                                    '(#f #f)))))
+                                             (let ((ctr-expr_0
+                                                    (if (struct-type-info-pure-constructor?
+                                                         sti_0)
+                                                      ctr_0
+                                                      (list
+                                                       'struct-type-constructor-add-guards
+                                                       ctr_0
+                                                       struct:s_0
                                                        (list
                                                         'quote
                                                         (struct-type-info-name
-                                                         sti_0))))
-                                                  (let ((app_4
-                                                         (|#%app|
-                                                          schemify_0
-                                                          (struct-type-info-parent
-                                                           sti_0)
-                                                          knowns_0)))
-                                                    (let ((app_5
-                                                           (struct-type-info-immediate-field-count
-                                                            sti_0)))
-                                                      (list
-                                                       'structure-type-lookup-prefab-uid
-                                                       app_3
-                                                       app_4
-                                                       app_5
-                                                       0
-                                                       #f
-                                                       (list
-                                                        'quote
-                                                        (struct-type-info-prefab-immutables
-                                                         sti_0)))))))))
-                                         (let ((app_4
-                                                (struct-type-info-sealed?
-                                                 sti_0)))
-                                           (let ((app_5
-                                                  (struct-type-info-immediate-field-count
-                                                   sti_0)))
-                                             (list
-                                              'make-record-type-descriptor*
-                                              app_1
-                                              app_2
-                                              app_3
-                                              app_4
-                                              #f
-                                              app_5
-                                              (let ((n_0
-                                                     (struct-type-info-immediate-field-count
-                                                      sti_0)))
-                                                (let ((mask_0
-                                                       (sub1
-                                                        (arithmetic-shift
-                                                         1
-                                                         n_0))))
-                                                  (let ((c1_0
-                                                         (struct-type-info-non-prefab-immutables
-                                                          sti_0)))
-                                                    (if c1_0
-                                                      (letrec*
-                                                       ((loop_0
-                                                         (|#%name|
-                                                          loop
-                                                          (lambda (imms_0
-                                                                   mask_1)
-                                                            (begin
-                                                              (if (null?
-                                                                   imms_0)
-                                                                mask_1
-                                                                (let ((m_0
-                                                                       (bitwise-not
-                                                                        (arithmetic-shift
-                                                                         1
-                                                                         (car
-                                                                          imms_0)))))
-                                                                  (let ((app_6
-                                                                         (cdr
-                                                                          imms_0)))
-                                                                    (loop_0
-                                                                     app_6
-                                                                     (bitwise-and
-                                                                      mask_1
-                                                                      m_0))))))))))
-                                                       (loop_0 c1_0 mask_0))
-                                                      mask_0)))))))))))))
-                             (list*
-                              app_1
-                              (let ((app_2
-                                     (if finish!-id_0
-                                       (list
-                                        (let ((app_2
-                                               (deterministic-gensym
-                                                "effect")))
-                                          (list
-                                           'define
-                                           app_2
-                                           (list finish!-id_0 struct:s_0))))
-                                       null)))
-                                (qq-append
-                                 app_2
-                                 (let ((app_3
-                                        (list
-                                         'define
-                                         make-s_0
-                                         (let ((ctr_0
-                                                (list
-                                                 'record-constructor
-                                                 (list*
-                                                  'make-record-constructor-descriptor
-                                                  struct:s_0
-                                                  '(#f #f)))))
-                                           (let ((ctr-expr_0
-                                                  (if (struct-type-info-pure-constructor?
-                                                       sti_0)
-                                                    ctr_0
-                                                    (list
-                                                     'struct-type-constructor-add-guards
-                                                     ctr_0
-                                                     struct:s_0
-                                                     (list
-                                                      'quote
-                                                      (struct-type-info-name
-                                                       sti_0))))))
-                                             (let ((name-expr_0
-                                                    (struct-type-info-constructor-name-expr
-                                                     sti_0)))
-                                               (let ((c_0
-                                                      (if (begin-unsafe
-                                                           (let ((app_3
-                                                                  (unwrap #f)))
-                                                             (eq?
-                                                              app_3
-                                                              (unwrap
-                                                               name-expr_0))))
-                                                        (wrap-property-set
-                                                         ctr-expr_0
-                                                         'inferred-name
-                                                         (struct-type-info-name
-                                                          sti_0))
-                                                        (if (let ((p_0
-                                                                   (unwrap
-                                                                    name-expr_0)))
-                                                              (if (pair? p_0)
-                                                                (if (let ((a_0
-                                                                           (car
-                                                                            p_0)))
-                                                                      (begin-unsafe
-                                                                       (let ((app_3
-                                                                              (unwrap
-                                                                               'quote)))
-                                                                         (eq?
-                                                                          app_3
-                                                                          (unwrap
-                                                                           a_0)))))
-                                                                  (let ((a_0
-                                                                         (cdr
-                                                                          p_0)))
-                                                                    (let ((p_1
-                                                                           (unwrap
-                                                                            a_0)))
-                                                                      (if (pair?
-                                                                           p_1)
-                                                                        (let ((a_1
-                                                                               (cdr
-                                                                                p_1)))
-                                                                          (begin-unsafe
-                                                                           (let ((app_3
-                                                                                  (unwrap
-                                                                                   '())))
-                                                                             (eq?
-                                                                              app_3
-                                                                              (unwrap
-                                                                               a_1)))))
-                                                                        #f)))
-                                                                  #f)
-                                                                #f))
-                                                          (let ((sym_0
-                                                                 (let ((d_0
-                                                                        (cdr
-                                                                         (unwrap
-                                                                          name-expr_0))))
-                                                                   (let ((a_0
-                                                                          (car
-                                                                           (unwrap
-                                                                            d_0))))
-                                                                     a_0))))
-                                                            (if (symbol? sym_0)
-                                                              (wrap-property-set
-                                                               ctr-expr_0
-                                                               'inferred-name
-                                                               sym_0)
-                                                              (list
-                                                               'procedure-rename
-                                                               ctr-expr_0
-                                                               name-expr_0)))
-                                                          (list
-                                                           'procedure-rename
+                                                         sti_0))))))
+                                               (let ((name-expr_0
+                                                      (struct-type-info-constructor-name-expr
+                                                       sti_0)))
+                                                 (let ((c_0
+                                                        (if (begin-unsafe
+                                                             (let ((app_3
+                                                                    (unwrap
+                                                                     #f)))
+                                                               (eq?
+                                                                app_3
+                                                                (unwrap
+                                                                 name-expr_0))))
+                                                          (wrap-property-set
                                                            ctr-expr_0
-                                                           name-expr_0)))))
-                                                 (if system-opaque?_0
-                                                   c_0
-                                                   (list
-                                                    '|#%struct-constructor|
-                                                    c_0
-                                                    (arithmetic-shift
-                                                     1
-                                                     (struct-type-info-field-count
-                                                      sti_0)))))))))))
-                                   (let ((app_4
-                                          (list
-                                           'define
-                                           raw-s?_0
-                                           (let ((pre_0 ""))
-                                             (let ((p_0
-                                                    (let ((st_0
+                                                           'inferred-name
                                                            (struct-type-info-name
-                                                            sti_0)))
-                                                      (let ((sep_0 ""))
-                                                        (let ((post_0 "?"))
-                                                          (let ((proc-expr_0
-                                                                 (list
-                                                                  'record-predicate
-                                                                  struct:s_0)))
-                                                            (let ((post_1
-                                                                   post_0)
-                                                                  (sep_1 sep_0)
-                                                                  (st_1 st_0)
-                                                                  (pre_1
-                                                                   pre_0))
-                                                              (begin-unsafe
-                                                               (wrap-property-set
-                                                                proc-expr_0
-                                                                'inferred-name
-                                                                (string->symbol
-                                                                 (let ((app_4
-                                                                        (symbol->string
-                                                                         st_1)))
-                                                                   (string-append
-                                                                    pre_1
-                                                                    app_4
-                                                                    sep_1
-                                                                    (symbol->string
-                                                                     '||)
-                                                                    post_1))))))))))))
-                                               (if (if can-impersonate?_0
-                                                     can-impersonate?_0
-                                                     system-opaque?_0)
-                                                 p_0
-                                                 (list
-                                                  '|#%struct-predicate|
-                                                  p_0)))))))
-                                     (list*
-                                      app_3
-                                      app_4
-                                      (let ((app_5
-                                             (if can-impersonate?_0
-                                               (list
-                                                (list
-                                                 'define
-                                                 s?_0
-                                                 (let ((pre_0 ""))
-                                                   (let ((p_0
-                                                          (let ((st_0
-                                                                 (struct-type-info-name
-                                                                  sti_0)))
-                                                            (let ((sep_0 ""))
-                                                              (let ((post_0
-                                                                     "?"))
-                                                                (let ((proc-expr_0
-                                                                       (list
-                                                                        'lambda
-                                                                        '(v)
-                                                                        (list
-                                                                         'if
-                                                                         (list*
-                                                                          raw-s?_0
-                                                                          '(v))
-                                                                         #t
-                                                                         (list
-                                                                          '$value
-                                                                          (list*
-                                                                           'if
-                                                                           '(impersonator?
-                                                                             v)
-                                                                           (list*
-                                                                            raw-s?_0
-                                                                            '((impersonator-val
-                                                                               v)))
-                                                                           '(#f)))))))
-                                                                  (let ((post_1
-                                                                         post_0)
-                                                                        (sep_1
-                                                                         sep_0)
-                                                                        (st_1
-                                                                         st_0)
-                                                                        (pre_1
-                                                                         pre_0))
-                                                                    (begin-unsafe
-                                                                     (wrap-property-set
-                                                                      proc-expr_0
-                                                                      'inferred-name
-                                                                      (string->symbol
-                                                                       (let ((app_5
-                                                                              (symbol->string
-                                                                               st_1)))
-                                                                         (string-append
-                                                                          pre_1
-                                                                          app_5
-                                                                          sep_1
+                                                            sti_0))
+                                                          (if (let ((p_0
+                                                                     (unwrap
+                                                                      name-expr_0)))
+                                                                (if (pair? p_0)
+                                                                  (if (let ((a_0
+                                                                             (car
+                                                                              p_0)))
+                                                                        (begin-unsafe
+                                                                         (let ((app_3
+                                                                                (unwrap
+                                                                                 'quote)))
+                                                                           (eq?
+                                                                            app_3
+                                                                            (unwrap
+                                                                             a_0)))))
+                                                                    (let ((a_0
+                                                                           (cdr
+                                                                            p_0)))
+                                                                      (let ((p_1
+                                                                             (unwrap
+                                                                              a_0)))
+                                                                        (if (pair?
+                                                                             p_1)
+                                                                          (let ((a_1
+                                                                                 (cdr
+                                                                                  p_1)))
+                                                                            (begin-unsafe
+                                                                             (let ((app_3
+                                                                                    (unwrap
+                                                                                     '())))
+                                                                               (eq?
+                                                                                app_3
+                                                                                (unwrap
+                                                                                 a_1)))))
+                                                                          #f)))
+                                                                    #f)
+                                                                  #f))
+                                                            (let ((sym_0
+                                                                   (let ((d_0
+                                                                          (cdr
+                                                                           (unwrap
+                                                                            name-expr_0))))
+                                                                     (let ((a_0
+                                                                            (car
+                                                                             (unwrap
+                                                                              d_0))))
+                                                                       a_0))))
+                                                              (if (symbol?
+                                                                   sym_0)
+                                                                (wrap-property-set
+                                                                 ctr-expr_0
+                                                                 'inferred-name
+                                                                 sym_0)
+                                                                (list
+                                                                 'procedure-rename
+                                                                 ctr-expr_0
+                                                                 name-expr_0)))
+                                                            (list
+                                                             'procedure-rename
+                                                             ctr-expr_0
+                                                             name-expr_0)))))
+                                                   (if system-opaque?_0
+                                                     c_0
+                                                     (list
+                                                      '|#%struct-constructor|
+                                                      c_0
+                                                      (arithmetic-shift
+                                                       1
+                                                       (struct-type-info-field-count
+                                                        sti_0)))))))))))
+                                     (let ((app_4
+                                            (list
+                                             'define
+                                             raw-s?_0
+                                             (let ((pre_0 ""))
+                                               (let ((p_0
+                                                      (let ((st_0
+                                                             (struct-type-info-name
+                                                              sti_0)))
+                                                        (let ((sep_0 ""))
+                                                          (let ((post_0 "?"))
+                                                            (let ((proc-expr_0
+                                                                   (list
+                                                                    'record-predicate
+                                                                    struct:s_0)))
+                                                              (let ((post_1
+                                                                     post_0)
+                                                                    (sep_1
+                                                                     sep_0)
+                                                                    (st_1 st_0)
+                                                                    (pre_1
+                                                                     pre_0))
+                                                                (begin-unsafe
+                                                                 (wrap-property-set
+                                                                  proc-expr_0
+                                                                  'inferred-name
+                                                                  (string->symbol
+                                                                   (let ((app_4
                                                                           (symbol->string
-                                                                           '||)
-                                                                          post_1))))))))))))
-                                                     (if system-opaque?_0
-                                                       p_0
-                                                       (list
-                                                        '|#%struct-predicate|
-                                                        p_0))))))
-                                               null)))
-                                        (qq-append
-                                         app_5
-                                         (reverse$1
-                                          (begin
-                                            (letrec*
-                                             ((for-loop_0
-                                               (|#%name|
-                                                for-loop
-                                                (lambda (fold-var_0
-                                                         lst_0
-                                                         lst_1)
-                                                  (begin
-                                                    (if (if (pair? lst_0)
-                                                          (pair? lst_1)
-                                                          #f)
-                                                      (let ((acc/mut_0
-                                                             (unsafe-car
-                                                              lst_0)))
-                                                        (let ((rest_0
-                                                               (unsafe-cdr
+                                                                           st_1)))
+                                                                     (string-append
+                                                                      pre_1
+                                                                      app_4
+                                                                      sep_1
+                                                                      (symbol->string
+                                                                       '||)
+                                                                      post_1))))))))))))
+                                                 (if (if generate-check?_0
+                                                       generate-check?_0
+                                                       system-opaque?_0)
+                                                   p_0
+                                                   (list
+                                                    '|#%struct-predicate|
+                                                    p_0)))))))
+                                       (list*
+                                        app_3
+                                        app_4
+                                        (let ((app_5
+                                               (if generate-check?_0
+                                                 (list
+                                                  (list
+                                                   'define
+                                                   s?_0
+                                                   (let ((pre_0 ""))
+                                                     (let ((p_0
+                                                            (let ((st_0
+                                                                   (struct-type-info-name
+                                                                    sti_0)))
+                                                              (let ((sep_0 ""))
+                                                                (let ((post_0
+                                                                       "?"))
+                                                                  (let ((proc-expr_0
+                                                                         (list
+                                                                          'lambda
+                                                                          '(v)
+                                                                          (if can-impersonate?_0
+                                                                            (list
+                                                                             'if
+                                                                             (list*
+                                                                              raw-s?_0
+                                                                              '(v))
+                                                                             #t
+                                                                             (list
+                                                                              '$value
+                                                                              (list*
+                                                                               'if
+                                                                               '(impersonator?
+                                                                                 v)
+                                                                               (list*
+                                                                                raw-s?_0
+                                                                                '((impersonator-val
+                                                                                   v)))
+                                                                               '(#f))))
+                                                                            (list*
+                                                                             raw-s?_0
+                                                                             '(v))))))
+                                                                    (let ((post_1
+                                                                           post_0)
+                                                                          (sep_1
+                                                                           sep_0)
+                                                                          (st_1
+                                                                           st_0)
+                                                                          (pre_1
+                                                                           pre_0))
+                                                                      (begin-unsafe
+                                                                       (wrap-property-set
+                                                                        proc-expr_0
+                                                                        'inferred-name
+                                                                        (string->symbol
+                                                                         (let ((app_5
+                                                                                (symbol->string
+                                                                                 st_1)))
+                                                                           (string-append
+                                                                            pre_1
+                                                                            app_5
+                                                                            sep_1
+                                                                            (symbol->string
+                                                                             '||)
+                                                                            post_1))))))))))))
+                                                       (if system-opaque?_0
+                                                         p_0
+                                                         (list
+                                                          '|#%struct-predicate|
+                                                          p_0))))))
+                                                 null)))
+                                          (qq-append
+                                           app_5
+                                           (reverse$1
+                                            (begin
+                                              (letrec*
+                                               ((for-loop_0
+                                                 (|#%name|
+                                                  for-loop
+                                                  (lambda (fold-var_0
+                                                           lst_0
+                                                           lst_1)
+                                                    (begin
+                                                      (if (if (pair? lst_0)
+                                                            (pair? lst_1)
+                                                            #f)
+                                                        (let ((acc/mut_0
+                                                               (unsafe-car
                                                                 lst_0)))
-                                                          (let ((make-acc/mut_0
-                                                                 (unsafe-car
-                                                                  lst_1)))
-                                                            (let ((rest_1
-                                                                   (unsafe-cdr
+                                                          (let ((rest_0
+                                                                 (unsafe-cdr
+                                                                  lst_0)))
+                                                            (let ((make-acc/mut_0
+                                                                   (unsafe-car
                                                                     lst_1)))
-                                                              (let ((fold-var_1
-                                                                     (let ((fold-var_1
-                                                                            (cons
-                                                                             (let ((raw-acc/mut_0
-                                                                                    (if can-impersonate?_0
-                                                                                      (deterministic-gensym
-                                                                                       (unwrap
-                                                                                        acc/mut_0))
-                                                                                      acc/mut_0)))
-                                                                               (let ((hd_1
-                                                                                      (let ((p_0
-                                                                                             (unwrap
-                                                                                              make-acc/mut_0)))
-                                                                                        (if (pair?
-                                                                                             p_0)
-                                                                                          (unwrap
-                                                                                           (car
-                                                                                            p_0))
-                                                                                          #f))))
-                                                                                 (if (if (eq?
-                                                                                          'make-struct-field-accessor
-                                                                                          hd_1)
-                                                                                       (let ((a_0
-                                                                                              (cdr
+                                                              (let ((rest_1
+                                                                     (unsafe-cdr
+                                                                      lst_1)))
+                                                                (let ((fold-var_1
+                                                                       (let ((fold-var_1
+                                                                              (cons
+                                                                               (let ((raw-acc/mut_0
+                                                                                      (if generate-check?_0
+                                                                                        (deterministic-gensym
+                                                                                         (unwrap
+                                                                                          acc/mut_0))
+                                                                                        acc/mut_0)))
+                                                                                 (let ((hd_1
+                                                                                        (let ((p_0
                                                                                                (unwrap
-                                                                                                make-acc/mut_0))))
-                                                                                         (let ((p_0
-                                                                                                (unwrap
-                                                                                                 a_0)))
-                                                                                           (if (pair?
-                                                                                                p_0)
-                                                                                             (let ((a_1
-                                                                                                    (cdr
-                                                                                                     p_0)))
-                                                                                               (let ((p_1
-                                                                                                      (unwrap
-                                                                                                       a_1)))
-                                                                                                 (if (pair?
-                                                                                                      p_1)
-                                                                                                   (let ((a_2
-                                                                                                          (cdr
-                                                                                                           p_1)))
-                                                                                                     (let ((p_2
-                                                                                                            (unwrap
-                                                                                                             a_2)))
-                                                                                                       (if (pair?
-                                                                                                            p_2)
-                                                                                                         (if (let ((a_3
-                                                                                                                    (car
-                                                                                                                     p_2)))
-                                                                                                               (let ((p_3
-                                                                                                                      (unwrap
-                                                                                                                       a_3)))
-                                                                                                                 (if (pair?
-                                                                                                                      p_3)
-                                                                                                                   (if (let ((a_4
-                                                                                                                              (car
-                                                                                                                               p_3)))
-                                                                                                                         (begin-unsafe
-                                                                                                                          (let ((app_6
-                                                                                                                                 (unwrap
-                                                                                                                                  'quote)))
-                                                                                                                            (eq?
-                                                                                                                             app_6
-                                                                                                                             (unwrap
-                                                                                                                              a_4)))))
-                                                                                                                     (let ((a_4
-                                                                                                                            (cdr
-                                                                                                                             p_3)))
-                                                                                                                       (let ((p_4
-                                                                                                                              (unwrap
-                                                                                                                               a_4)))
-                                                                                                                         (if (pair?
-                                                                                                                              p_4)
-                                                                                                                           (let ((a_5
-                                                                                                                                  (cdr
-                                                                                                                                   p_4)))
-                                                                                                                             (begin-unsafe
-                                                                                                                              (let ((app_6
-                                                                                                                                     (unwrap
-                                                                                                                                      '())))
-                                                                                                                                (eq?
-                                                                                                                                 app_6
-                                                                                                                                 (unwrap
-                                                                                                                                  a_5)))))
-                                                                                                                           #f)))
-                                                                                                                     #f)
-                                                                                                                   #f)))
-                                                                                                           (let ((a_3
-                                                                                                                  (cdr
-                                                                                                                   p_2)))
-                                                                                                             (begin-unsafe
-                                                                                                              (let ((app_6
-                                                                                                                     (unwrap
-                                                                                                                      '())))
-                                                                                                                (eq?
-                                                                                                                 app_6
-                                                                                                                 (unwrap
-                                                                                                                  a_3)))))
-                                                                                                           #f)
-                                                                                                         #f)))
-                                                                                                   #f)))
-                                                                                             #f)))
-                                                                                       #f)
-                                                                                   (call-with-values
-                                                                                    (lambda ()
-                                                                                      (let ((d_0
-                                                                                             (cdr
-                                                                                              (unwrap
-                                                                                               make-acc/mut_0))))
-                                                                                        (let ((d_1
-                                                                                               (cdr
-                                                                                                (unwrap
-                                                                                                 d_0))))
-                                                                                          (let ((p_0
-                                                                                                 (unwrap
-                                                                                                  d_1)))
-                                                                                            (let ((pos_0
-                                                                                                   (let ((a_0
-                                                                                                          (car
-                                                                                                           p_0)))
-                                                                                                     a_0)))
-                                                                                              (let ((field-name_0
-                                                                                                     (let ((d_2
-                                                                                                            (cdr
-                                                                                                             p_0)))
-                                                                                                       (let ((a_0
-                                                                                                              (car
-                                                                                                               (unwrap
-                                                                                                                d_2))))
-                                                                                                         (let ((d_3
-                                                                                                                (cdr
-                                                                                                                 (unwrap
-                                                                                                                  a_0))))
-                                                                                                           (let ((a_1
-                                                                                                                  (car
-                                                                                                                   (unwrap
-                                                                                                                    d_3))))
-                                                                                                             a_1))))))
-                                                                                                (let ((pos_1
-                                                                                                       pos_0))
-                                                                                                  (values
-                                                                                                   pos_1
-                                                                                                   field-name_0))))))))
-                                                                                    (case-lambda
-                                                                                     ((pos_0
-                                                                                       field-name_0)
-                                                                                      (let ((raw-def_0
-                                                                                             (list
-                                                                                              'define
-                                                                                              raw-acc/mut_0
-                                                                                              (let ((pre_0
-                                                                                                     ""))
-                                                                                                (let ((p_0
-                                                                                                       (let ((st_0
-                                                                                                              (struct-type-info-name
-                                                                                                               sti_0)))
-                                                                                                         (let ((sep_0
-                                                                                                                "-"))
-                                                                                                           (let ((post_0
-                                                                                                                  ""))
-                                                                                                             (let ((proc-expr_0
-                                                                                                                    (list
-                                                                                                                     'record-accessor
-                                                                                                                     struct:s_0
-                                                                                                                     pos_0)))
-                                                                                                               (let ((post_1
-                                                                                                                      post_0)
-                                                                                                                     (sep_1
-                                                                                                                      sep_0)
-                                                                                                                     (st_1
-                                                                                                                      st_0)
-                                                                                                                     (pre_1
-                                                                                                                      pre_0))
-                                                                                                                 (begin-unsafe
-                                                                                                                  (wrap-property-set
-                                                                                                                   proc-expr_0
-                                                                                                                   'inferred-name
-                                                                                                                   (string->symbol
-                                                                                                                    (let ((app_6
-                                                                                                                           (symbol->string
-                                                                                                                            st_1)))
-                                                                                                                      (string-append
-                                                                                                                       pre_1
-                                                                                                                       app_6
-                                                                                                                       sep_1
-                                                                                                                       (symbol->string
-                                                                                                                        field-name_0)
-                                                                                                                       post_1))))))))))))
-                                                                                                  (if (if can-impersonate?_0
-                                                                                                        can-impersonate?_0
-                                                                                                        system-opaque?_0)
-                                                                                                    p_0
-                                                                                                    (list
-                                                                                                     '|#%struct-field-accessor|
-                                                                                                     p_0
-                                                                                                     struct:s_0
-                                                                                                     pos_0)))))))
-                                                                                        (if can-impersonate?_0
-                                                                                          (list
-                                                                                           'begin
-                                                                                           raw-def_0
-                                                                                           (list
-                                                                                            'define
-                                                                                            acc/mut_0
-                                                                                            (let ((pre_0
-                                                                                                   ""))
-                                                                                              (let ((p_0
-                                                                                                     (let ((st_0
-                                                                                                            (struct-type-info-name
-                                                                                                             sti_0)))
-                                                                                                       (let ((sep_0
-                                                                                                              "-"))
-                                                                                                         (let ((post_0
-                                                                                                                ""))
-                                                                                                           (let ((proc-expr_0
-                                                                                                                  (list
-                                                                                                                   'lambda
-                                                                                                                   '(s)
-                                                                                                                   (let ((app_6
-                                                                                                                          (list*
-                                                                                                                           raw-s?_0
-                                                                                                                           '(s))))
-                                                                                                                     (let ((app_7
-                                                                                                                            (list*
-                                                                                                                             raw-acc/mut_0
-                                                                                                                             '(s))))
-                                                                                                                       (list
-                                                                                                                        'if
-                                                                                                                        app_6
-                                                                                                                        app_7
-                                                                                                                        (list
-                                                                                                                         '$value
-                                                                                                                         (let ((app_8
-                                                                                                                                (list
-                                                                                                                                 'quote
-                                                                                                                                 (struct-type-info-name
-                                                                                                                                  sti_0))))
-                                                                                                                           (list
-                                                                                                                            'impersonate-ref
-                                                                                                                            raw-acc/mut_0
-                                                                                                                            struct:s_0
-                                                                                                                            pos_0
-                                                                                                                            's
-                                                                                                                            app_8
-                                                                                                                            (list
-                                                                                                                             'quote
-                                                                                                                             field-name_0))))))))))
-                                                                                                             (let ((post_1
-                                                                                                                    post_0)
-                                                                                                                   (sep_1
-                                                                                                                    sep_0)
-                                                                                                                   (st_1
-                                                                                                                    st_0)
-                                                                                                                   (pre_1
-                                                                                                                    pre_0))
-                                                                                                               (begin-unsafe
-                                                                                                                (wrap-property-set
-                                                                                                                 proc-expr_0
-                                                                                                                 'inferred-name
-                                                                                                                 (string->symbol
-                                                                                                                  (let ((app_6
-                                                                                                                         (symbol->string
-                                                                                                                          st_1)))
-                                                                                                                    (string-append
-                                                                                                                     pre_1
-                                                                                                                     app_6
-                                                                                                                     sep_1
-                                                                                                                     (symbol->string
-                                                                                                                      field-name_0)
-                                                                                                                     post_1))))))))))))
-                                                                                                (if system-opaque?_0
-                                                                                                  p_0
-                                                                                                  (list
-                                                                                                   '|#%struct-field-accessor|
-                                                                                                   p_0
-                                                                                                   struct:s_0
-                                                                                                   pos_0))))))
-                                                                                          raw-def_0)))
-                                                                                     (args
-                                                                                      (raise-binding-result-arity-error
-                                                                                       2
-                                                                                       args))))
+                                                                                                make-acc/mut_0)))
+                                                                                          (if (pair?
+                                                                                               p_0)
+                                                                                            (unwrap
+                                                                                             (car
+                                                                                              p_0))
+                                                                                            #f))))
                                                                                    (if (if (eq?
-                                                                                            'make-struct-field-mutator
+                                                                                            'make-struct-field-accessor
                                                                                             hd_1)
                                                                                          (let ((a_0
                                                                                                 (cdr
@@ -17864,7 +17616,7 @@
                                                                                                 'define
                                                                                                 raw-acc/mut_0
                                                                                                 (let ((pre_0
-                                                                                                       "set-"))
+                                                                                                       ""))
                                                                                                   (let ((p_0
                                                                                                          (let ((st_0
                                                                                                                 (struct-type-info-name
@@ -17872,10 +17624,10 @@
                                                                                                            (let ((sep_0
                                                                                                                   "-"))
                                                                                                              (let ((post_0
-                                                                                                                    "!"))
+                                                                                                                    ""))
                                                                                                                (let ((proc-expr_0
                                                                                                                       (list
-                                                                                                                       'record-mutator
+                                                                                                                       'record-accessor
                                                                                                                        struct:s_0
                                                                                                                        pos_0)))
                                                                                                                  (let ((post_1
@@ -17901,60 +17653,49 @@
                                                                                                                          (symbol->string
                                                                                                                           field-name_0)
                                                                                                                          post_1))))))))))))
-                                                                                                    (if (if can-impersonate?_0
-                                                                                                          can-impersonate?_0
+                                                                                                    (if (if generate-check?_0
+                                                                                                          generate-check?_0
                                                                                                           system-opaque?_0)
                                                                                                       p_0
                                                                                                       (list
-                                                                                                       '|#%struct-field-mutator|
+                                                                                                       '|#%struct-field-accessor|
                                                                                                        p_0
                                                                                                        struct:s_0
                                                                                                        pos_0)))))))
-                                                                                          (let ((abs-pos_0
-                                                                                                 (+
-                                                                                                  pos_0
-                                                                                                  (let ((app_6
-                                                                                                         (struct-type-info-field-count
-                                                                                                          sti_0)))
-                                                                                                    (-
-                                                                                                     app_6
-                                                                                                     (struct-type-info-immediate-field-count
-                                                                                                      sti_0))))))
-                                                                                            (if can-impersonate?_0
-                                                                                              (list
-                                                                                               'begin
-                                                                                               raw-def_0
-                                                                                               (list
-                                                                                                'define
-                                                                                                acc/mut_0
-                                                                                                (let ((pre_0
-                                                                                                       "set-"))
-                                                                                                  (let ((p_0
-                                                                                                         (let ((st_0
-                                                                                                                (struct-type-info-name
-                                                                                                                 sti_0)))
-                                                                                                           (let ((sep_0
-                                                                                                                  "-"))
-                                                                                                             (let ((post_0
-                                                                                                                    "!"))
-                                                                                                               (let ((proc-expr_0
-                                                                                                                      (list
-                                                                                                                       'lambda
-                                                                                                                       '(s
-                                                                                                                         v)
-                                                                                                                       (let ((app_6
+                                                                                          (if generate-check?_0
+                                                                                            (list
+                                                                                             'begin
+                                                                                             raw-def_0
+                                                                                             (list
+                                                                                              'define
+                                                                                              acc/mut_0
+                                                                                              (let ((pre_0
+                                                                                                     ""))
+                                                                                                (let ((p_0
+                                                                                                       (let ((st_0
+                                                                                                              (struct-type-info-name
+                                                                                                               sti_0)))
+                                                                                                         (let ((sep_0
+                                                                                                                "-"))
+                                                                                                           (let ((post_0
+                                                                                                                  ""))
+                                                                                                             (let ((proc-expr_0
+                                                                                                                    (list
+                                                                                                                     'lambda
+                                                                                                                     '(s)
+                                                                                                                     (let ((app_6
+                                                                                                                            (list*
+                                                                                                                             raw-s?_0
+                                                                                                                             '(s))))
+                                                                                                                       (let ((app_7
                                                                                                                               (list*
-                                                                                                                               raw-s?_0
+                                                                                                                               raw-acc/mut_0
                                                                                                                                '(s))))
-                                                                                                                         (let ((app_7
-                                                                                                                                (list*
-                                                                                                                                 raw-acc/mut_0
-                                                                                                                                 '(s
-                                                                                                                                   v))))
-                                                                                                                           (list
-                                                                                                                            'if
-                                                                                                                            app_6
-                                                                                                                            app_7
+                                                                                                                         (list
+                                                                                                                          'if
+                                                                                                                          app_6
+                                                                                                                          app_7
+                                                                                                                          (if can-impersonate?_0
                                                                                                                             (list
                                                                                                                              '$value
                                                                                                                              (let ((app_8
@@ -17963,66 +17704,367 @@
                                                                                                                                      (struct-type-info-name
                                                                                                                                       sti_0))))
                                                                                                                                (list
-                                                                                                                                'impersonate-set!
+                                                                                                                                'impersonate-ref
                                                                                                                                 raw-acc/mut_0
                                                                                                                                 struct:s_0
                                                                                                                                 pos_0
-                                                                                                                                abs-pos_0
                                                                                                                                 's
-                                                                                                                                'v
                                                                                                                                 app_8
                                                                                                                                 (list
                                                                                                                                  'quote
-                                                                                                                                 field-name_0))))))))))
-                                                                                                                 (let ((post_1
-                                                                                                                        post_0)
-                                                                                                                       (sep_1
-                                                                                                                        sep_0)
-                                                                                                                       (st_1
-                                                                                                                        st_0)
-                                                                                                                       (pre_1
-                                                                                                                        pre_0))
-                                                                                                                   (begin-unsafe
-                                                                                                                    (wrap-property-set
-                                                                                                                     proc-expr_0
-                                                                                                                     'inferred-name
-                                                                                                                     (string->symbol
-                                                                                                                      (let ((app_6
-                                                                                                                             (symbol->string
-                                                                                                                              st_1)))
-                                                                                                                        (string-append
-                                                                                                                         pre_1
-                                                                                                                         app_6
-                                                                                                                         sep_1
-                                                                                                                         (symbol->string
-                                                                                                                          field-name_0)
-                                                                                                                         post_1))))))))))))
-                                                                                                    (if system-opaque?_0
-                                                                                                      p_0
-                                                                                                      (list
-                                                                                                       '|#%struct-field-mutator|
-                                                                                                       p_0
-                                                                                                       struct:s_0
-                                                                                                       pos_0))))))
-                                                                                              raw-def_0))))
+                                                                                                                                 field-name_0))))
+                                                                                                                            (let ((app_8
+                                                                                                                                   (list
+                                                                                                                                    'quote
+                                                                                                                                    (struct-type-info-name
+                                                                                                                                     sti_0))))
+                                                                                                                              (list
+                                                                                                                               '|#%struct-ref-error|
+                                                                                                                               's
+                                                                                                                               app_8
+                                                                                                                               (list
+                                                                                                                                'quote
+                                                                                                                                field-name_0))))))))))
+                                                                                                               (let ((post_1
+                                                                                                                      post_0)
+                                                                                                                     (sep_1
+                                                                                                                      sep_0)
+                                                                                                                     (st_1
+                                                                                                                      st_0)
+                                                                                                                     (pre_1
+                                                                                                                      pre_0))
+                                                                                                                 (begin-unsafe
+                                                                                                                  (wrap-property-set
+                                                                                                                   proc-expr_0
+                                                                                                                   'inferred-name
+                                                                                                                   (string->symbol
+                                                                                                                    (let ((app_6
+                                                                                                                           (symbol->string
+                                                                                                                            st_1)))
+                                                                                                                      (string-append
+                                                                                                                       pre_1
+                                                                                                                       app_6
+                                                                                                                       sep_1
+                                                                                                                       (symbol->string
+                                                                                                                        field-name_0)
+                                                                                                                       post_1))))))))))))
+                                                                                                  (if system-opaque?_0
+                                                                                                    p_0
+                                                                                                    (list
+                                                                                                     '|#%struct-field-accessor|
+                                                                                                     p_0
+                                                                                                     struct:s_0
+                                                                                                     pos_0))))))
+                                                                                            raw-def_0)))
                                                                                        (args
                                                                                         (raise-binding-result-arity-error
                                                                                          2
                                                                                          args))))
-                                                                                     (error
-                                                                                      "oops")))))
-                                                                             fold-var_0)))
-                                                                       (values
-                                                                        fold-var_1))))
-                                                                (for-loop_0
-                                                                 fold-var_1
-                                                                 rest_0
-                                                                 rest_1))))))
-                                                      fold-var_0))))))
-                                             (for-loop_0
-                                              null
-                                              acc/muts_0
-                                              make-acc/muts_0))))))))))))))))))))
+                                                                                     (if (if (eq?
+                                                                                              'make-struct-field-mutator
+                                                                                              hd_1)
+                                                                                           (let ((a_0
+                                                                                                  (cdr
+                                                                                                   (unwrap
+                                                                                                    make-acc/mut_0))))
+                                                                                             (let ((p_0
+                                                                                                    (unwrap
+                                                                                                     a_0)))
+                                                                                               (if (pair?
+                                                                                                    p_0)
+                                                                                                 (let ((a_1
+                                                                                                        (cdr
+                                                                                                         p_0)))
+                                                                                                   (let ((p_1
+                                                                                                          (unwrap
+                                                                                                           a_1)))
+                                                                                                     (if (pair?
+                                                                                                          p_1)
+                                                                                                       (let ((a_2
+                                                                                                              (cdr
+                                                                                                               p_1)))
+                                                                                                         (let ((p_2
+                                                                                                                (unwrap
+                                                                                                                 a_2)))
+                                                                                                           (if (pair?
+                                                                                                                p_2)
+                                                                                                             (if (let ((a_3
+                                                                                                                        (car
+                                                                                                                         p_2)))
+                                                                                                                   (let ((p_3
+                                                                                                                          (unwrap
+                                                                                                                           a_3)))
+                                                                                                                     (if (pair?
+                                                                                                                          p_3)
+                                                                                                                       (if (let ((a_4
+                                                                                                                                  (car
+                                                                                                                                   p_3)))
+                                                                                                                             (begin-unsafe
+                                                                                                                              (let ((app_6
+                                                                                                                                     (unwrap
+                                                                                                                                      'quote)))
+                                                                                                                                (eq?
+                                                                                                                                 app_6
+                                                                                                                                 (unwrap
+                                                                                                                                  a_4)))))
+                                                                                                                         (let ((a_4
+                                                                                                                                (cdr
+                                                                                                                                 p_3)))
+                                                                                                                           (let ((p_4
+                                                                                                                                  (unwrap
+                                                                                                                                   a_4)))
+                                                                                                                             (if (pair?
+                                                                                                                                  p_4)
+                                                                                                                               (let ((a_5
+                                                                                                                                      (cdr
+                                                                                                                                       p_4)))
+                                                                                                                                 (begin-unsafe
+                                                                                                                                  (let ((app_6
+                                                                                                                                         (unwrap
+                                                                                                                                          '())))
+                                                                                                                                    (eq?
+                                                                                                                                     app_6
+                                                                                                                                     (unwrap
+                                                                                                                                      a_5)))))
+                                                                                                                               #f)))
+                                                                                                                         #f)
+                                                                                                                       #f)))
+                                                                                                               (let ((a_3
+                                                                                                                      (cdr
+                                                                                                                       p_2)))
+                                                                                                                 (begin-unsafe
+                                                                                                                  (let ((app_6
+                                                                                                                         (unwrap
+                                                                                                                          '())))
+                                                                                                                    (eq?
+                                                                                                                     app_6
+                                                                                                                     (unwrap
+                                                                                                                      a_3)))))
+                                                                                                               #f)
+                                                                                                             #f)))
+                                                                                                       #f)))
+                                                                                                 #f)))
+                                                                                           #f)
+                                                                                       (call-with-values
+                                                                                        (lambda ()
+                                                                                          (let ((d_0
+                                                                                                 (cdr
+                                                                                                  (unwrap
+                                                                                                   make-acc/mut_0))))
+                                                                                            (let ((d_1
+                                                                                                   (cdr
+                                                                                                    (unwrap
+                                                                                                     d_0))))
+                                                                                              (let ((p_0
+                                                                                                     (unwrap
+                                                                                                      d_1)))
+                                                                                                (let ((pos_0
+                                                                                                       (let ((a_0
+                                                                                                              (car
+                                                                                                               p_0)))
+                                                                                                         a_0)))
+                                                                                                  (let ((field-name_0
+                                                                                                         (let ((d_2
+                                                                                                                (cdr
+                                                                                                                 p_0)))
+                                                                                                           (let ((a_0
+                                                                                                                  (car
+                                                                                                                   (unwrap
+                                                                                                                    d_2))))
+                                                                                                             (let ((d_3
+                                                                                                                    (cdr
+                                                                                                                     (unwrap
+                                                                                                                      a_0))))
+                                                                                                               (let ((a_1
+                                                                                                                      (car
+                                                                                                                       (unwrap
+                                                                                                                        d_3))))
+                                                                                                                 a_1))))))
+                                                                                                    (let ((pos_1
+                                                                                                           pos_0))
+                                                                                                      (values
+                                                                                                       pos_1
+                                                                                                       field-name_0))))))))
+                                                                                        (case-lambda
+                                                                                         ((pos_0
+                                                                                           field-name_0)
+                                                                                          (let ((raw-def_0
+                                                                                                 (list
+                                                                                                  'define
+                                                                                                  raw-acc/mut_0
+                                                                                                  (let ((pre_0
+                                                                                                         "set-"))
+                                                                                                    (let ((p_0
+                                                                                                           (let ((st_0
+                                                                                                                  (struct-type-info-name
+                                                                                                                   sti_0)))
+                                                                                                             (let ((sep_0
+                                                                                                                    "-"))
+                                                                                                               (let ((post_0
+                                                                                                                      "!"))
+                                                                                                                 (let ((proc-expr_0
+                                                                                                                        (list
+                                                                                                                         'record-mutator
+                                                                                                                         struct:s_0
+                                                                                                                         pos_0)))
+                                                                                                                   (let ((post_1
+                                                                                                                          post_0)
+                                                                                                                         (sep_1
+                                                                                                                          sep_0)
+                                                                                                                         (st_1
+                                                                                                                          st_0)
+                                                                                                                         (pre_1
+                                                                                                                          pre_0))
+                                                                                                                     (begin-unsafe
+                                                                                                                      (wrap-property-set
+                                                                                                                       proc-expr_0
+                                                                                                                       'inferred-name
+                                                                                                                       (string->symbol
+                                                                                                                        (let ((app_6
+                                                                                                                               (symbol->string
+                                                                                                                                st_1)))
+                                                                                                                          (string-append
+                                                                                                                           pre_1
+                                                                                                                           app_6
+                                                                                                                           sep_1
+                                                                                                                           (symbol->string
+                                                                                                                            field-name_0)
+                                                                                                                           post_1))))))))))))
+                                                                                                      (if (if generate-check?_0
+                                                                                                            generate-check?_0
+                                                                                                            system-opaque?_0)
+                                                                                                        p_0
+                                                                                                        (list
+                                                                                                         '|#%struct-field-mutator|
+                                                                                                         p_0
+                                                                                                         struct:s_0
+                                                                                                         pos_0)))))))
+                                                                                            (let ((abs-pos_0
+                                                                                                   (+
+                                                                                                    pos_0
+                                                                                                    (let ((app_6
+                                                                                                           (struct-type-info-field-count
+                                                                                                            sti_0)))
+                                                                                                      (-
+                                                                                                       app_6
+                                                                                                       (struct-type-info-immediate-field-count
+                                                                                                        sti_0))))))
+                                                                                              (if generate-check?_0
+                                                                                                (list
+                                                                                                 'begin
+                                                                                                 raw-def_0
+                                                                                                 (list
+                                                                                                  'define
+                                                                                                  acc/mut_0
+                                                                                                  (let ((pre_0
+                                                                                                         "set-"))
+                                                                                                    (let ((p_0
+                                                                                                           (let ((st_0
+                                                                                                                  (struct-type-info-name
+                                                                                                                   sti_0)))
+                                                                                                             (let ((sep_0
+                                                                                                                    "-"))
+                                                                                                               (let ((post_0
+                                                                                                                      "!"))
+                                                                                                                 (let ((proc-expr_0
+                                                                                                                        (list
+                                                                                                                         'lambda
+                                                                                                                         '(s
+                                                                                                                           v)
+                                                                                                                         (let ((app_6
+                                                                                                                                (list*
+                                                                                                                                 raw-s?_0
+                                                                                                                                 '(s))))
+                                                                                                                           (let ((app_7
+                                                                                                                                  (list*
+                                                                                                                                   raw-acc/mut_0
+                                                                                                                                   '(s
+                                                                                                                                     v))))
+                                                                                                                             (list
+                                                                                                                              'if
+                                                                                                                              app_6
+                                                                                                                              app_7
+                                                                                                                              (if can-impersonate?_0
+                                                                                                                                (list
+                                                                                                                                 '$value
+                                                                                                                                 (let ((app_8
+                                                                                                                                        (list
+                                                                                                                                         'quote
+                                                                                                                                         (struct-type-info-name
+                                                                                                                                          sti_0))))
+                                                                                                                                   (list
+                                                                                                                                    'impersonate-set!
+                                                                                                                                    raw-acc/mut_0
+                                                                                                                                    struct:s_0
+                                                                                                                                    pos_0
+                                                                                                                                    abs-pos_0
+                                                                                                                                    's
+                                                                                                                                    'v
+                                                                                                                                    app_8
+                                                                                                                                    (list
+                                                                                                                                     'quote
+                                                                                                                                     field-name_0))))
+                                                                                                                                (let ((app_8
+                                                                                                                                       (list
+                                                                                                                                        'quote
+                                                                                                                                        (struct-type-info-name
+                                                                                                                                         sti_0))))
+                                                                                                                                  (list
+                                                                                                                                   '|#%struct-set!-error|
+                                                                                                                                   's
+                                                                                                                                   app_8
+                                                                                                                                   (list
+                                                                                                                                    'quote
+                                                                                                                                    field-name_0))))))))))
+                                                                                                                   (let ((post_1
+                                                                                                                          post_0)
+                                                                                                                         (sep_1
+                                                                                                                          sep_0)
+                                                                                                                         (st_1
+                                                                                                                          st_0)
+                                                                                                                         (pre_1
+                                                                                                                          pre_0))
+                                                                                                                     (begin-unsafe
+                                                                                                                      (wrap-property-set
+                                                                                                                       proc-expr_0
+                                                                                                                       'inferred-name
+                                                                                                                       (string->symbol
+                                                                                                                        (let ((app_6
+                                                                                                                               (symbol->string
+                                                                                                                                st_1)))
+                                                                                                                          (string-append
+                                                                                                                           pre_1
+                                                                                                                           app_6
+                                                                                                                           sep_1
+                                                                                                                           (symbol->string
+                                                                                                                            field-name_0)
+                                                                                                                           post_1))))))))))))
+                                                                                                      (if system-opaque?_0
+                                                                                                        p_0
+                                                                                                        (list
+                                                                                                         '|#%struct-field-mutator|
+                                                                                                         p_0
+                                                                                                         struct:s_0
+                                                                                                         pos_0))))))
+                                                                                                raw-def_0))))
+                                                                                         (args
+                                                                                          (raise-binding-result-arity-error
+                                                                                           2
+                                                                                           args))))
+                                                                                       (error
+                                                                                        "oops")))))
+                                                                               fold-var_0)))
+                                                                         (values
+                                                                          fold-var_1))))
+                                                                  (for-loop_0
+                                                                   fold-var_1
+                                                                   rest_0
+                                                                   rest_1))))))
+                                                        fold-var_0))))))
+                                               (for-loop_0
+                                                null
+                                                acc/muts_0
+                                                make-acc/muts_0)))))))))))))))))))))
                #f)))
           (args (raise-binding-result-arity-error 14 args))))
         #f))))

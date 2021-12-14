@@ -87,12 +87,7 @@
             (unsafe-struct*-ref v abs-pos))]
          [else val/acc])]))]
    [else
-    (raise-argument-error (string->symbol
-                           (string-append (symbol->string (or record-name 'struct))
-                                          "-"
-                                          (symbol->string (or field-name 'field))))
-                          (string-append (symbol->string (or record-name 'struct)) "?")
-                          orig)]))
+    (struct-ref-error orig record-name field-name)]))
 
 (define (impersonate-set! set rtd pos abs-pos orig a record-name field-name)
   (#%$app/no-inline do-impersonate-set! set rtd pos abs-pos orig a record-name field-name))
@@ -140,16 +135,7 @@
           ;; Equivalent to `(set v a)`:
           (unsafe-struct*-set! v abs-pos a)])))]
    [else
-    (raise-argument-error (string->symbol
-                           (string-append "set-"
-                                          (symbol->string (or record-name 'struct))
-                                          "-"
-                                          (if field-name
-                                              (symbol->string field-name)
-                                              (string-append "field" (number->string pos)))
-                                          "!"))
-                          (string-append (symbol->string (or record-name 'struct)) "?")
-                          orig)]))
+    (struct-set!-error orig record-name field-name)]))
 
 (define (impersonate-struct-info orig)
   (let loop ([v orig])
@@ -272,9 +258,9 @@
                 (let ([fail (lambda ()
                               (cond
                                [(eq? default none)
-                                (raise-argument-error accessor-name
-                                                      (format "~a?" name)
-                                                      v)]
+                                (raise-argument-error/user accessor-name
+                                                           (format "~a?" name)
+                                                           v)]
                                [(procedure? default)
                                 (default)]
                                [else default]))])

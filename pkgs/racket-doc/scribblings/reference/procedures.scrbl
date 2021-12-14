@@ -578,10 +578,17 @@ bound outside of the @racket[lambda] or @racket[case-lambda], and when
 
 @section{Reflecting on Primitives}
 
-A @idefterm{primitive procedure} is a built-in procedure that is
-implemented in low-level language. Not all procedures of
+A @deftech{primitive procedure} is a built-in procedure that may be
+implemented in a lower-level language. Not all procedures of
 @racketmodname[racket/base] are primitives, but many are. The
-distinction is mainly useful to other low-level code.
+distinction between primitives and other procedures may be useful to
+other low-level code.
+
+The distinction between primitives and other procedures may also be
+useful for adjusting exception messages through parameters such as
+@racket[error-primitive-name->symbol-handler], but the notion of
+``primitive'' for those handlers and the notion for
+@racket[primitive?] do not coincide completely.
 
 @defproc[(primitive? [v any/c]) boolean?]{
 
