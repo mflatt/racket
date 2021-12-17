@@ -2927,10 +2927,11 @@
 (define check-ranges
   (lambda (who_0 type-name_0 vec_0 start_0 stop_0 step_0 len_0)
     (begin
-      (if (if (exact-nonnegative-integer? start_0)
-            (let ((or-part_0 (< start_0 len_0)))
-              (if or-part_0 or-part_0 (= len_0 start_0 stop_0)))
-            #f)
+      (if (exact-nonnegative-integer? start_0)
+        (void)
+        (raise-argument-error who_0 "exact-nonnegative-integer?" start_0))
+      (if (let ((or-part_0 (< start_0 len_0)))
+            (if or-part_0 or-part_0 (= len_0 start_0 stop_0)))
         (void)
         (raise-range-error
          who_0
@@ -2940,9 +2941,10 @@
          vec_0
          0
          (sub1 len_0)))
-      (if (if (exact-integer? stop_0)
-            (if (<= -1 stop_0) (<= stop_0 len_0) #f)
-            #f)
+      (if (exact-integer? stop_0)
+        (void)
+        (raise-argument-error who_0 "exact-integer?" stop_0))
+      (if (if (<= -1 stop_0) (<= stop_0 len_0) #f)
         (void)
         (raise-range-error
          who_0
@@ -4003,8 +4005,7 @@
    (lambda (s)
      (if (region?_2430 s)
        (region-path_2994 s)
-       ($value
-        (impersonate-ref region-path_2994 struct:region 0 s 'region 'path))))))
+       ($value (impersonate-ref region-path_2994 struct:region 0 s 'path))))))
 (define region-start_2092
   (|#%name| region-start (record-accessor struct:region 1)))
 (define region-start
@@ -4014,13 +4015,7 @@
      (if (region?_2430 s)
        (region-start_2092 s)
        ($value
-        (impersonate-ref
-         region-start_2092
-         struct:region
-         1
-         s
-         'region
-         'start))))))
+        (impersonate-ref region-start_2092 struct:region 1 s 'start))))))
 (define region-start-memory_2878
   (|#%name| region-start-memory (record-accessor struct:region 2)))
 (define region-start-memory
@@ -4035,7 +4030,6 @@
          struct:region
          2
          s
-         'region
          'start-memory))))))
 (define region-as-nested_2870
   (|#%name| region-as-nested (record-accessor struct:region 3)))
@@ -4051,7 +4045,6 @@
          struct:region
          3
          s
-         'region
          'as-nested))))))
 (define region-as-nested-memory_2442
   (|#%name| region-as-nested-memory (record-accessor struct:region 4)))
@@ -4067,7 +4060,6 @@
          struct:region
          4
          s
-         'region
          'as-nested-memory))))))
 (define set-region-start!_2321
   (|#%name| set-region-start! (record-mutator struct:region 1)))
@@ -4085,7 +4077,6 @@
          1
          s
          v
-         'region
          'start))))))
 (define set-region-start-memory!_3209
   (|#%name| set-region-start-memory! (record-mutator struct:region 2)))
@@ -4103,7 +4094,6 @@
          2
          s
          v
-         'region
          'start-memory))))))
 (define set-region-as-nested!_2510
   (|#%name| set-region-as-nested! (record-mutator struct:region 3)))
@@ -4121,7 +4111,6 @@
          3
          s
          v
-         'region
          'as-nested))))))
 (define set-region-as-nested-memory!_2903
   (|#%name| set-region-as-nested-memory! (record-mutator struct:region 4)))
@@ -4139,7 +4128,6 @@
          4
          s
          v
-         'region
          'as-nested-memory))))))
 (define finish_2300
   (make-struct-type-install-properties
@@ -4183,8 +4171,7 @@
    (lambda (s)
      (if (stat?_2843 s)
        (stat-msecs_3052 s)
-       ($value
-        (impersonate-ref stat-msecs_3052 struct:stat 0 s 'stat 'msecs))))))
+       ($value (impersonate-ref stat-msecs_3052 struct:stat 0 s 'msecs))))))
 (define stat-memory_2120
   (|#%name| stat-memory (record-accessor struct:stat 1)))
 (define stat-memory
@@ -4193,8 +4180,7 @@
    (lambda (s)
      (if (stat?_2843 s)
        (stat-memory_2120 s)
-       ($value
-        (impersonate-ref stat-memory_2120 struct:stat 1 s 'stat 'memory))))))
+       ($value (impersonate-ref stat-memory_2120 struct:stat 1 s 'memory))))))
 (define stat-count_2033 (|#%name| stat-count (record-accessor struct:stat 2)))
 (define stat-count
   (|#%name|
@@ -4202,8 +4188,7 @@
    (lambda (s)
      (if (stat?_2843 s)
        (stat-count_2033 s)
-       ($value
-        (impersonate-ref stat-count_2033 struct:stat 2 s 'stat 'count))))))
+       ($value (impersonate-ref stat-count_2033 struct:stat 2 s 'count))))))
 (define set-stat-msecs!_2321
   (|#%name| set-stat-msecs! (record-mutator struct:stat 0)))
 (define set-stat-msecs!
@@ -4213,15 +4198,7 @@
      (if (stat?_2843 s)
        (set-stat-msecs!_2321 s v)
        ($value
-        (impersonate-set!
-         set-stat-msecs!_2321
-         struct:stat
-         0
-         0
-         s
-         v
-         'stat
-         'msecs))))))
+        (impersonate-set! set-stat-msecs!_2321 struct:stat 0 0 s v 'msecs))))))
 (define set-stat-memory!_2358
   (|#%name| set-stat-memory! (record-mutator struct:stat 1)))
 (define set-stat-memory!
@@ -4238,7 +4215,6 @@
          1
          s
          v
-         'stat
          'memory))))))
 (define set-stat-count!_2436
   (|#%name| set-stat-count! (record-mutator struct:stat 2)))
@@ -4249,15 +4225,7 @@
      (if (stat?_2843 s)
        (set-stat-count!_2436 s v)
        ($value
-        (impersonate-set!
-         set-stat-count!_2436
-         struct:stat
-         2
-         2
-         s
-         v
-         'stat
-         'count))))))
+        (impersonate-set! set-stat-count!_2436 struct:stat 2 2 s v 'count))))))
 (define stat-key (gensym))
 (define start-performance-region
   (lambda path_0
@@ -7352,7 +7320,6 @@
          struct:preserved-property-value
          0
          s
-         'preserved-property-value
          'content))))))
 (define plain-property-value
   (lambda (v_0)
@@ -8948,7 +8915,6 @@
          struct:bulk-binding-class
          0
          s
-         'bulk-binding-class
          'get-symbols))))))
 (define bulk-binding-class-create_3361
   (|#%name|
@@ -8966,7 +8932,6 @@
          struct:bulk-binding-class
          1
          s
-         'bulk-binding-class
          'create))))))
 (define bulk-binding-class-modname_2547
   (|#%name|
@@ -8984,7 +8949,6 @@
          struct:bulk-binding-class
          2
          s
-         'bulk-binding-class
          'modname))))))
 (define bulk-binding-symbols
   (lambda (b_0 s_0 extra-shifts_0)
@@ -10093,7 +10057,6 @@
          struct:fallback
          0
          s
-         'fallback
          'search-list))))))
 (define fallback-first
   (lambda (smss_0)
@@ -11001,7 +10964,6 @@
          struct:shifted-to-label-phase
          0
          s
-         'shifted-to-label-phase
          'from))))))
 (define cell.1$5 (unsafe-make-place-local 0))
 (define new-scope-id!
@@ -13384,7 +13346,6 @@
          struct:id-rename-transformer
          0
          s
-         'rename-transformer
          'id))))))
 (define 1/make-rename-transformer
   (|#%name|
@@ -13640,7 +13601,6 @@
          struct:non-source-shift
          0
          s
-         'non-source-shift
          'from))))))
 (define non-source-shift-to_2244
   (|#%name| non-source-shift-to (record-accessor struct:non-source-shift 1)))
@@ -13656,7 +13616,6 @@
          struct:non-source-shift
          1
          s
-         'non-source-shift
          'to))))))
 (define shift-from
   (lambda (s_0) (if (pair? s_0) (car s_0) (non-source-shift-from s_0))))
@@ -14511,7 +14470,6 @@
          struct:bulk-provide
          0
          s
-         'bulk-provide
          'self))))))
 (define bulk-provide-provides_2573
   (|#%name| bulk-provide-provides (record-accessor struct:bulk-provide 1)))
@@ -14527,7 +14485,6 @@
          struct:bulk-provide
          1
          s
-         'bulk-provide
          'provides))))))
 (define finish_2603
   (make-struct-type-install-properties
@@ -14586,7 +14543,6 @@
          struct:bulk-binding-registry
          0
          s
-         'bulk-binding-registry
          'table))))))
 (define make-bulk-binding-registry
   (lambda () (bulk-binding-registry14.1 (make-hasheq))))
@@ -15267,7 +15223,6 @@
          struct:module-registry
          0
          s
-         'module-registry
          'declarations))))))
 (define module-registry-lock-box_2205
   (|#%name|
@@ -15285,7 +15240,6 @@
          struct:module-registry
          1
          s
-         'module-registry
          'lock-box))))))
 (define make-module-registry
   (lambda ()
@@ -16019,7 +15973,6 @@
          struct:syntax-binding-set
          0
          s
-         'syntax-binding-set
          'binds))))))
 (define finish_2672
   (make-struct-type-install-properties
@@ -16063,7 +16016,7 @@
    (lambda (s)
      (if (bind?_2465 s)
        (bind-sym_2139 s)
-       ($value (impersonate-ref bind-sym_2139 struct:bind 0 s 'bind 'sym))))))
+       ($value (impersonate-ref bind-sym_2139 struct:bind 0 s 'sym))))))
 (define bind-phase_2605 (|#%name| bind-phase (record-accessor struct:bind 1)))
 (define bind-phase
   (|#%name|
@@ -16071,8 +16024,7 @@
    (lambda (s)
      (if (bind?_2465 s)
        (bind-phase_2605 s)
-       ($value
-        (impersonate-ref bind-phase_2605 struct:bind 1 s 'bind 'phase))))))
+       ($value (impersonate-ref bind-phase_2605 struct:bind 1 s 'phase))))))
 (define bind-binding_2667
   (|#%name| bind-binding (record-accessor struct:bind 2)))
 (define bind-binding
@@ -16082,7 +16034,7 @@
      (if (bind?_2465 s)
        (bind-binding_2667 s)
        ($value
-        (impersonate-ref bind-binding_2667 struct:bind 2 s 'bind 'binding))))))
+        (impersonate-ref bind-binding_2667 struct:bind 2 s 'binding))))))
 (define syntax-binding-set-extend$1
   (|#%name|
    syntax-binding-set-extend
@@ -16646,7 +16598,6 @@
          struct:module-use
          0
          s
-         'module-use
          'module))))))
 (define module-use-phase_2668
   (|#%name| module-use-phase (record-accessor struct:module-use 1)))
@@ -16662,7 +16613,6 @@
          struct:module-use
          1
          s
-         'module-use
          'phase))))))
 (define finish_2633
   (make-struct-type-install-properties
@@ -16717,7 +16667,6 @@
          struct:portal-syntax
          0
          s
-         'portal-syntax
          'content))))))
 (define 1/make-portal-syntax
   (|#%name|
@@ -18692,7 +18641,6 @@
                               struct:set!-transformer_0
                               0
                               s
-                              'set!-transformer
                               'proc)))))))
                   (|#%name|
                    make-set!-transformer
@@ -23569,7 +23517,6 @@
          struct:mpi-intern-table
          0
          s
-         'mpi-intern-table
          'normal))))))
 (define mpi-intern-table-fast_2301
   (|#%name| mpi-intern-table-fast (record-accessor struct:mpi-intern-table 1)))
@@ -23585,7 +23532,6 @@
          struct:mpi-intern-table
          1
          s
-         'mpi-intern-table
          'fast))))))
 (define make-module-path-index-intern-table
   (lambda ()
@@ -23832,7 +23778,6 @@
          struct:module-path-index-table
          0
          s
-         'module-path-index-table
          'positions))))))
 (define module-path-index-table-intern_2630
   (|#%name|
@@ -23850,7 +23795,6 @@
          struct:module-path-index-table
          1
          s
-         'module-path-index-table
          'intern))))))
 (define make-module-path-index-table
   (lambda ()
@@ -30822,7 +30766,6 @@
          struct:adjust-only
          0
          s
-         'adjust-only
          'syms))))))
 (define finish_2542
   (make-struct-type-install-properties
@@ -30877,7 +30820,6 @@
          struct:adjust-prefix
          0
          s
-         'adjust-prefix
          'sym))))))
 (define finish_2348
   (make-struct-type-install-properties
@@ -30934,7 +30876,6 @@
          struct:adjust-all-except
          0
          s
-         'adjust-all-except
          'prefix-sym))))))
 (define adjust-all-except-syms_3082
   (|#%name|
@@ -30952,7 +30893,6 @@
          struct:adjust-all-except
          1
          s
-         'adjust-all-except
          'syms))))))
 (define finish_2750
   (make-struct-type-install-properties
@@ -31007,7 +30947,6 @@
          struct:adjust-rename
          0
          s
-         'adjust-rename
          'to-id))))))
 (define adjust-rename-from-sym_2159
   (|#%name| adjust-rename-from-sym (record-accessor struct:adjust-rename 1)))
@@ -31023,7 +30962,6 @@
          struct:adjust-rename
          1
          s
-         'adjust-rename
          'from-sym))))))
 (define layers$1 '(raw phaseless spaceless justspaceless path))
 (define parse-and-perform-requires!.1
@@ -34564,7 +34502,6 @@
          struct:compiled-in-memory
          0
          s
-         'compiled-in-memory
          'linklet-directory))))))
 (define compiled-in-memory-original-self_2522
   (|#%name|
@@ -34582,7 +34519,6 @@
          struct:compiled-in-memory
          1
          s
-         'compiled-in-memory
          'original-self))))))
 (define compiled-in-memory-requires_2380
   (|#%name|
@@ -34600,7 +34536,6 @@
          struct:compiled-in-memory
          2
          s
-         'compiled-in-memory
          'requires))))))
 (define compiled-in-memory-provides_2636
   (|#%name|
@@ -34618,7 +34553,6 @@
          struct:compiled-in-memory
          3
          s
-         'compiled-in-memory
          'provides))))))
 (define compiled-in-memory-phase-to-link-module-uses_2832
   (|#%name|
@@ -34636,7 +34570,6 @@
          struct:compiled-in-memory
          4
          s
-         'compiled-in-memory
          'phase-to-link-module-uses))))))
 (define compiled-in-memory-compile-time-inspector_2366
   (|#%name|
@@ -34654,7 +34587,6 @@
          struct:compiled-in-memory
          5
          s
-         'compiled-in-memory
          'compile-time-inspector))))))
 (define compiled-in-memory-phase-to-link-extra-inspectorsss_2805
   (|#%name|
@@ -34672,7 +34604,6 @@
          struct:compiled-in-memory
          6
          s
-         'compiled-in-memory
          'phase-to-link-extra-inspectorsss))))))
 (define compiled-in-memory-portal-stxes_2702
   (|#%name|
@@ -34690,7 +34621,6 @@
          struct:compiled-in-memory
          7
          s
-         'compiled-in-memory
          'portal-stxes))))))
 (define compiled-in-memory-mpis_2316
   (|#%name|
@@ -34708,7 +34638,6 @@
          struct:compiled-in-memory
          8
          s
-         'compiled-in-memory
          'mpis))))))
 (define compiled-in-memory-syntax-literals_1964
   (|#%name|
@@ -34726,7 +34655,6 @@
          struct:compiled-in-memory
          9
          s
-         'compiled-in-memory
          'syntax-literals))))))
 (define compiled-in-memory-pre-compiled-in-memorys_2482
   (|#%name|
@@ -34744,7 +34672,6 @@
          struct:compiled-in-memory
          10
          s
-         'compiled-in-memory
          'pre-compiled-in-memorys))))))
 (define compiled-in-memory-post-compiled-in-memorys_2598
   (|#%name|
@@ -34762,7 +34689,6 @@
          struct:compiled-in-memory
          11
          s
-         'compiled-in-memory
          'post-compiled-in-memorys))))))
 (define compiled-in-memory-namespace-scopes_2374
   (|#%name|
@@ -34780,7 +34706,6 @@
          struct:compiled-in-memory
          12
          s
-         'compiled-in-memory
          'namespace-scopes))))))
 (define compiled-in-memory-purely-functional?_2621
   (|#%name|
@@ -34798,7 +34723,6 @@
          struct:compiled-in-memory
          13
          s
-         'compiled-in-memory
          'purely-functional?))))))
 (define version-bytes$1 (string->bytes/utf-8 (version)))
 (define vm-bytes$1 (linklet-virtual-machine-bytes))
@@ -35002,7 +34926,6 @@
          struct:faslable-correlated
          0
          s
-         'faslable-correlated
          'e))))))
 (define faslable-correlated-source_1985
   (|#%name|
@@ -35020,7 +34943,6 @@
          struct:faslable-correlated
          1
          s
-         'faslable-correlated
          'source))))))
 (define faslable-correlated-position_2283
   (|#%name|
@@ -35038,7 +34960,6 @@
          struct:faslable-correlated
          2
          s
-         'faslable-correlated
          'position))))))
 (define faslable-correlated-line_2531
   (|#%name|
@@ -35056,7 +34977,6 @@
          struct:faslable-correlated
          3
          s
-         'faslable-correlated
          'line))))))
 (define faslable-correlated-column_2707
   (|#%name|
@@ -35074,7 +34994,6 @@
          struct:faslable-correlated
          4
          s
-         'faslable-correlated
          'column))))))
 (define faslable-correlated-span_2176
   (|#%name|
@@ -35092,7 +35011,6 @@
          struct:faslable-correlated
          5
          s
-         'faslable-correlated
          'span))))))
 (define faslable-correlated-props_2838
   (|#%name|
@@ -35110,7 +35028,6 @@
          struct:faslable-correlated
          6
          s
-         'faslable-correlated
          'props))))))
 (define finish_2803
   (make-struct-type-install-properties
@@ -35178,7 +35095,6 @@
          struct:faslable-correlated-linklet
          0
          s
-         'faslable-correlated-linklet
          'expr))))))
 (define faslable-correlated-linklet-name_2691
   (|#%name|
@@ -35196,7 +35112,6 @@
          struct:faslable-correlated-linklet
          1
          s
-         'faslable-correlated-linklet
          'name))))))
 (define write-correlated-linklet-bundle-hash
   (lambda (ht_0 o_0)
@@ -35927,7 +35842,6 @@
          struct:linklet-directory
          0
          s
-         'linklet-directory
          'ht))))))
 (define finish_2265
   (make-struct-type-install-properties
@@ -35990,7 +35904,6 @@
          struct:linklet-bundle
          0
          s
-         'linklet-bundle
          'ht))))))
 (define 1/hash->linklet-directory
   (|#%name|
@@ -36218,7 +36131,6 @@
          struct:namespace-scopes
          0
          s
-         'namespace-scopes
          'post))))))
 (define namespace-scopes-other_2110
   (|#%name|
@@ -36236,7 +36148,6 @@
          struct:namespace-scopes
          1
          s
-         'namespace-scopes
          'other))))))
 (define swap-top-level-scopes
   (lambda (s_0 original-scopes-s_0 new-ns_0)
@@ -36360,7 +36271,6 @@
          struct:syntax-literals
          0
          s
-         'syntax-literals
          'stxes))))))
 (define syntax-literals-count_2487
   (|#%name| syntax-literals-count (record-accessor struct:syntax-literals 1)))
@@ -36376,7 +36286,6 @@
          struct:syntax-literals
          1
          s
-         'syntax-literals
          'count))))))
 (define set-syntax-literals-stxes!_3052
   (|#%name|
@@ -36396,7 +36305,6 @@
          0
          s
          v
-         'syntax-literals
          'stxes))))))
 (define set-syntax-literals-count!_3102
   (|#%name|
@@ -36416,7 +36324,6 @@
          1
          s
          v
-         'syntax-literals
          'count))))))
 (define finish_2543
   (make-struct-type-install-properties
@@ -36468,7 +36375,6 @@
          struct:header
          0
          s
-         'header
          'module-path-indexes))))))
 (define header-binding-sym-to-define-sym_2390
   (|#%name|
@@ -36486,7 +36392,6 @@
          struct:header
          1
          s
-         'header
          'binding-sym-to-define-sym))))))
 (define header-binding-syms-in-order_2365
   (|#%name| header-binding-syms-in-order (record-accessor struct:header 2)))
@@ -36502,7 +36407,6 @@
          struct:header
          2
          s
-         'header
          'binding-syms-in-order))))))
 (define header-require-var-to-import-sym_2845
   (|#%name|
@@ -36520,7 +36424,6 @@
          struct:header
          3
          s
-         'header
          'require-var-to-import-sym))))))
 (define header-import-sym-to-extra-inspectors_2352
   (|#%name|
@@ -36538,7 +36441,6 @@
          struct:header
          4
          s
-         'header
          'import-sym-to-extra-inspectors))))))
 (define header-require-vars-in-order_2218
   (|#%name| header-require-vars-in-order (record-accessor struct:header 5)))
@@ -36554,7 +36456,6 @@
          struct:header
          5
          s
-         'header
          'require-vars-in-order))))))
 (define header-define-and-import-syms_2444
   (|#%name| header-define-and-import-syms (record-accessor struct:header 6)))
@@ -36570,7 +36471,6 @@
          struct:header
          6
          s
-         'header
          'define-and-import-syms))))))
 (define header-syntax-literals_3129
   (|#%name| header-syntax-literals (record-accessor struct:header 7)))
@@ -36586,7 +36486,6 @@
          struct:header
          7
          s
-         'header
          'syntax-literals))))))
 (define set-header-binding-syms-in-order!_2287
   (|#%name|
@@ -36606,7 +36505,6 @@
          2
          s
          v
-         'header
          'binding-syms-in-order))))))
 (define set-header-require-vars-in-order!_2994
   (|#%name|
@@ -36626,7 +36524,6 @@
          5
          s
          v
-         'header
          'require-vars-in-order))))))
 (define finish_2560
   (make-struct-type-install-properties
@@ -36681,7 +36578,6 @@
          struct:variable-use
          0
          s
-         'variable-use
          'module-use))))))
 (define variable-use-sym_2257
   (|#%name| variable-use-sym (record-accessor struct:variable-use 1)))
@@ -36697,7 +36593,6 @@
          struct:variable-use
          1
          s
-         'variable-use
          'sym))))))
 (define make-syntax-literals (lambda () (syntax-literals1.1 null 0)))
 (define make-header
@@ -38286,7 +38181,6 @@
          struct:module-use*
          0
          s
-         'module-use*
          'extra-inspectorss))))))
 (define module-use*-self-inspector_2469
   (|#%name| module-use*-self-inspector (record-accessor struct:module-use* 1)))
@@ -38302,7 +38196,6 @@
          struct:module-use*
          1
          s
-         'module-use*
          'self-inspector))))))
 (define set-module-use*-extra-inspectorss!_2709
   (|#%name|
@@ -38322,7 +38215,6 @@
          2
          s
          v
-         'module-use*
          'extra-inspectorss))))))
 (define set-module-use*-self-inspector!_2824
   (|#%name|
@@ -38342,7 +38234,6 @@
          3
          s
          v
-         'module-use*
          'self-inspector))))))
 (define module-uses-add-extra-inspectorsss
   (lambda (mus_0 extra-inspectorsss_0)
@@ -38719,7 +38610,6 @@
          struct:link-info
          0
          s
-         'link-info
          'link-module-uses))))))
 (define link-info-imports_2277
   (|#%name| link-info-imports (record-accessor struct:link-info 1)))
@@ -38735,7 +38625,6 @@
          struct:link-info
          1
          s
-         'link-info
          'imports))))))
 (define link-info-extra-inspectorsss_2727
   (|#%name| link-info-extra-inspectorsss (record-accessor struct:link-info 2)))
@@ -38751,7 +38640,6 @@
          struct:link-info
          2
          s
-         'link-info
          'extra-inspectorsss))))))
 (define link-info-def-decls_3021
   (|#%name| link-info-def-decls (record-accessor struct:link-info 3)))
@@ -38767,7 +38655,6 @@
          struct:link-info
          3
          s
-         'link-info
          'def-decls))))))
 (define compile-forms.1
   (|#%name|
@@ -40845,7 +40732,6 @@
          struct:known-defined/delay
          0
          s
-         'known-defined/delay
          'thunk))))))
 (define finish_2590
   (make-struct-type-install-properties
@@ -40952,7 +40838,6 @@
          struct:known-property-of-function
          0
          s
-         'known-property-of-function
          'arity))))))
 (define finish_2740
   (make-struct-type-install-properties
@@ -41007,7 +40892,6 @@
          struct:known-function
          0
          s
-         'known-function
          'arity))))))
 (define known-function-pure?_2002
   (|#%name| known-function-pure? (record-accessor struct:known-function 1)))
@@ -41023,7 +40907,6 @@
          struct:known-function
          1
          s
-         'known-function
          'pure?))))))
 (define finish_2156
   (make-struct-type-install-properties
@@ -41091,7 +40974,6 @@
          struct:known-function-of-satisfying
          0
          s
-         'known-function-of-satisfying
          'arg-predicate-keys))))))
 (define finish_2577
   (make-struct-type-install-properties
@@ -41146,7 +41028,6 @@
          struct:known-predicate
          0
          s
-         'known-predicate
          'key))))))
 (define finish_2469
   (make-struct-type-install-properties
@@ -41203,7 +41084,6 @@
          struct:known-satisfies
          0
          s
-         'known-satisfies
          'predicate-key))))))
 (define finish_2604
   (make-struct-type-install-properties
@@ -41258,7 +41138,6 @@
          struct:known-struct-op
          0
          s
-         'known-struct-op
          'type))))))
 (define known-struct-op-field-count_2507
   (|#%name|
@@ -41276,7 +41155,6 @@
          struct:known-struct-op
          1
          s
-         'known-struct-op
          'field-count))))))
 (define lookup-defn
   (lambda (defns_0 sym_0)
@@ -43667,7 +43545,7 @@
 (define ok-make-struct-type-property?
   (lambda (e_0 defns_0)
     (let ((l_0 (correlated->list e_0)))
-      (if (<= 2 (length l_0) 5)
+      (if (<= 2 (length l_0) 8)
         (let ((lst_0 (cdr l_0)))
           (let ((lst_1
                  (list
@@ -43682,7 +43560,18 @@
                       hash2610
                       unsafe-undefined
                       v_0
-                      1))))))
+                      1)))
+                  (lambda (v_0) (quoted? symbol? v_0))
+                  (lambda (v_0)
+                    (quoted?
+                     (lambda (x_0)
+                       (let ((or-part_0 (not x_0)))
+                         (if or-part_0
+                           or-part_0
+                           (let ((or-part_1 (symbol? x_0)))
+                             (if or-part_1 or-part_1 (string? x_0))))))
+                     v_0))
+                  (lambda (v_0) (quoted? symbol? v_0)))))
             (let ((lst_2 lst_0))
               (begin
                 (letrec*
@@ -44266,24 +44155,47 @@
 (define ok-make-struct-field-accessor/mutator?
   (lambda (e_0 locals_0 type_0 defns_0)
     (let ((l_0 (correlated->list e_0)))
-      (let ((a_0
-             (if (let ((or-part_0 (= (length l_0) 3)))
-                   (if or-part_0 or-part_0 (= (length l_0) 4)))
-               (let ((or-part_0
-                      (hash-ref locals_0 (correlated-e (list-ref l_0 1)) #f)))
-                 (if or-part_0
-                   or-part_0
-                   (lookup-defn defns_0 (correlated-e (list-ref l_0 1)))))
-               #f)))
-        (if (known-struct-op? a_0)
-          (if (eq? (known-struct-op-type a_0) type_0)
-            (if (let ((c_0 (field-count-expr-to-field-count (list-ref l_0 2))))
-                  (if c_0 (< c_0 (known-struct-op-field-count a_0)) #f))
-              (let ((or-part_0 (= (length l_0) 3)))
-                (if or-part_0 or-part_0 (quoted? symbol? (list-ref l_0 3))))
+      (let ((len_0 (length l_0)))
+        (let ((a_0
+               (if (<= 3 len_0 6)
+                 (let ((or-part_0
+                        (hash-ref
+                         locals_0
+                         (correlated-e (list-ref l_0 1))
+                         #f)))
+                   (if or-part_0
+                     or-part_0
+                     (lookup-defn defns_0 (correlated-e (list-ref l_0 1)))))
+                 #f)))
+          (if (known-struct-op? a_0)
+            (if (eq? (known-struct-op-type a_0) type_0)
+              (if (let ((c_0
+                         (field-count-expr-to-field-count (list-ref l_0 2))))
+                    (if c_0 (< c_0 (known-struct-op-field-count a_0)) #f))
+                (if (let ((or-part_0 (< len_0 4)))
+                      (if or-part_0
+                        or-part_0
+                        (quoted? symbol? (list-ref l_0 3))))
+                  (if (let ((or-part_0 (< len_0 5)))
+                        (if or-part_0
+                          or-part_0
+                          (quoted?
+                           (lambda (x_0)
+                             (let ((or-part_1 (not x_0)))
+                               (if or-part_1
+                                 or-part_1
+                                 (let ((or-part_2 (string? x_0)))
+                                   (if or-part_2 or-part_2 (symbol? x_0))))))
+                           (list-ref l_0 4))))
+                    (let ((or-part_0 (< len_0 6)))
+                      (if or-part_0
+                        or-part_0
+                        (quoted? symbol? (list-ref l_0 5))))
+                    #f)
+                  #f)
+                #f)
               #f)
-            #f)
-          #f)))))
+            #f))))))
 (define maybe+ (lambda (x_0 y_0) (if x_0 (if y_0 (+ x_0 y_0) #f) #f)))
 (define compile-single
   (lambda (p_0 cctx_0) (compile-top.1 #f #t #f p_0 cctx_0)))
@@ -46332,7 +46244,6 @@
          struct:instance-data
          0
          s
-         'instance-data
          'syntax-literals-instance))))))
 (define instance-data-cache-key_2423
   (|#%name| instance-data-cache-key (record-accessor struct:instance-data 1)))
@@ -46348,7 +46259,6 @@
          struct:instance-data
          1
          s
-         'instance-data
          'cache-key))))))
 (define init-instance-data!
   (lambda (data-box_0
@@ -50991,7 +50901,6 @@
          struct:already-expanded
          0
          s
-         'expanded-syntax
          's))))))
 (define already-expanded-binding-layer_2482
   (|#%name|
@@ -51009,7 +50918,6 @@
          struct:already-expanded
          1
          s
-         'expanded-syntax
          'binding-layer))))))
 (define-values
  (1/prop:liberal-define-context
@@ -53507,7 +53415,6 @@
          struct:internal-definition-context
          0
          s
-         'internal-definition-context
          'frame-id))))))
 (define internal-definition-context-outside-edge_1731
   (|#%name|
@@ -53525,7 +53432,6 @@
          struct:internal-definition-context
          1
          s
-         'internal-definition-context
          'outside-edge))))))
 (define internal-definition-context-inside-edge_2770
   (|#%name|
@@ -53543,7 +53449,6 @@
          struct:internal-definition-context
          2
          s
-         'internal-definition-context
          'inside-edge))))))
 (define internal-definition-context-add-scope?_2849
   (|#%name|
@@ -53561,7 +53466,6 @@
          struct:internal-definition-context
          3
          s
-         'internal-definition-context
          'add-scope?))))))
 (define internal-definition-context-env-mixins_1685
   (|#%name|
@@ -53579,7 +53483,6 @@
          struct:internal-definition-context
          4
          s
-         'internal-definition-context
          'env-mixins))))))
 (define internal-definition-context-use-site-scopes_3204
   (|#%name|
@@ -53597,7 +53500,6 @@
          struct:internal-definition-context
          5
          s
-         'internal-definition-context
          'use-site-scopes))))))
 (define internal-definition-context-parent-ctx_2522
   (|#%name|
@@ -53615,7 +53517,6 @@
          struct:internal-definition-context
          6
          s
-         'internal-definition-context
          'parent-ctx))))))
 (define finish_2692
   (make-struct-type-install-properties
@@ -53663,13 +53564,7 @@
      (if (env-mixin?_2685 s)
        (env-mixin-id_3169 s)
        ($value
-        (impersonate-ref
-         env-mixin-id_3169
-         struct:env-mixin
-         0
-         s
-         'env-mixin
-         'id))))))
+        (impersonate-ref env-mixin-id_3169 struct:env-mixin 0 s 'id))))))
 (define env-mixin-sym_1834
   (|#%name| env-mixin-sym (record-accessor struct:env-mixin 1)))
 (define env-mixin-sym
@@ -53679,13 +53574,7 @@
      (if (env-mixin?_2685 s)
        (env-mixin-sym_1834 s)
        ($value
-        (impersonate-ref
-         env-mixin-sym_1834
-         struct:env-mixin
-         1
-         s
-         'env-mixin
-         'sym))))))
+        (impersonate-ref env-mixin-sym_1834 struct:env-mixin 1 s 'sym))))))
 (define env-mixin-value_2403
   (|#%name| env-mixin-value (record-accessor struct:env-mixin 2)))
 (define env-mixin-value
@@ -53695,13 +53584,7 @@
      (if (env-mixin?_2685 s)
        (env-mixin-value_2403 s)
        ($value
-        (impersonate-ref
-         env-mixin-value_2403
-         struct:env-mixin
-         2
-         s
-         'env-mixin
-         'value))))))
+        (impersonate-ref env-mixin-value_2403 struct:env-mixin 2 s 'value))))))
 (define env-mixin-cache_2675
   (|#%name| env-mixin-cache (record-accessor struct:env-mixin 3)))
 (define env-mixin-cache
@@ -53711,13 +53594,7 @@
      (if (env-mixin?_2685 s)
        (env-mixin-cache_2675 s)
        ($value
-        (impersonate-ref
-         env-mixin-cache_2675
-         struct:env-mixin
-         3
-         s
-         'env-mixin
-         'cache))))))
+        (impersonate-ref env-mixin-cache_2675 struct:env-mixin 3 s 'cache))))))
 (define 1/syntax-local-make-definition-context
   (let ((syntax-local-make-definition-context_0
          (|#%name|
@@ -58808,7 +58685,6 @@
          struct:lifted-parsed-begin
          0
          s
-         'lifted-parsed-begin
          'seq))))))
 (define lifted-parsed-begin-last_2385
   (|#%name|
@@ -58826,7 +58702,6 @@
          struct:lifted-parsed-begin
          1
          s
-         'lifted-parsed-begin
          'last))))))
 (define compile-single.1
   (|#%name|
@@ -62383,7 +62258,6 @@
          struct:read-config-state
          0
          s
-         'read-config-state
          'accum-str))))))
 (define read-config-state-graph_2751
   (|#%name|
@@ -62401,7 +62275,6 @@
          struct:read-config-state
          1
          s
-         'read-config-state
          'graph))))))
 (define set-read-config-state-accum-str!_2145
   (|#%name|
@@ -62421,7 +62294,6 @@
          0
          s
          v
-         'read-config-state
          'accum-str))))))
 (define set-read-config-state-graph!_3119
   (|#%name|
@@ -62441,7 +62313,6 @@
          1
          s
          v
-         'read-config-state
          'graph))))))
 (define default-val.1 #f)
 (define current-read-config
@@ -63342,13 +63213,7 @@
      (if (special?_3109 s)
        (special-value_2789 s)
        ($value
-        (impersonate-ref
-         special-value_2789
-         struct:special
-         0
-         s
-         'special
-         'value))))))
+        (impersonate-ref special-value_2789 struct:special 0 s 'value))))))
 (define wrap
   (lambda (s-exp_0 in_0 config_0 rep_0)
     (let ((wrap_0 (begin-unsafe (read-config/outer-wrap config_0))))
@@ -64022,7 +63887,6 @@
          struct:indentation
          0
          s
-         'indentation
          'closer))))))
 (define indentation-suspicious-closer_2131
   (|#%name|
@@ -64040,7 +63904,6 @@
          struct:indentation
          1
          s
-         'indentation
          'suspicious-closer))))))
 (define indentation-multiline?_2443
   (|#%name| indentation-multiline? (record-accessor struct:indentation 2)))
@@ -64056,7 +63919,6 @@
          struct:indentation
          2
          s
-         'indentation
          'multiline?))))))
 (define indentation-start-line_2628
   (|#%name| indentation-start-line (record-accessor struct:indentation 3)))
@@ -64072,7 +63934,6 @@
          struct:indentation
          3
          s
-         'indentation
          'start-line))))))
 (define indentation-last-line_2502
   (|#%name| indentation-last-line (record-accessor struct:indentation 4)))
@@ -64088,7 +63949,6 @@
          struct:indentation
          4
          s
-         'indentation
          'last-line))))))
 (define indentation-suspicious-line_2778
   (|#%name|
@@ -64106,7 +63966,6 @@
          struct:indentation
          5
          s
-         'indentation
          'suspicious-line))))))
 (define indentation-max-indent_2482
   (|#%name| indentation-max-indent (record-accessor struct:indentation 6)))
@@ -64122,7 +63981,6 @@
          struct:indentation
          6
          s
-         'indentation
          'max-indent))))))
 (define indentation-suspicious-quote_2590
   (|#%name|
@@ -64140,7 +63998,6 @@
          struct:indentation
          7
          s
-         'indentation
          'suspicious-quote))))))
 (define set-indentation-suspicious-closer!_2590
   (|#%name|
@@ -64160,7 +64017,6 @@
          1
          s
          v
-         'indentation
          'suspicious-closer))))))
 (define set-indentation-multiline?!_2223
   (|#%name| set-indentation-multiline?! (record-mutator struct:indentation 2)))
@@ -64178,7 +64034,6 @@
          2
          s
          v
-         'indentation
          'multiline?))))))
 (define set-indentation-last-line!_2595
   (|#%name| set-indentation-last-line! (record-mutator struct:indentation 4)))
@@ -64196,7 +64051,6 @@
          4
          s
          v
-         'indentation
          'last-line))))))
 (define set-indentation-suspicious-line!_2285
   (|#%name|
@@ -64216,7 +64070,6 @@
          5
          s
          v
-         'indentation
          'suspicious-line))))))
 (define set-indentation-max-indent!_2868
   (|#%name| set-indentation-max-indent! (record-mutator struct:indentation 6)))
@@ -64234,7 +64087,6 @@
          6
          s
          v
-         'indentation
          'max-indent))))))
 (define set-indentation-suspicious-quote!_2621
   (|#%name|
@@ -64254,7 +64106,6 @@
          7
          s
          v
-         'indentation
          'suspicious-quote))))))
 (define make-indentation
   (lambda (closer_0 in_0 config_0)
@@ -74676,7 +74527,6 @@
          struct:serialized-syntax
          0
          s
-         'serialized-syntax
          'version))))))
 (define serialized-syntax-mpis_2591
   (|#%name|
@@ -74694,7 +74544,6 @@
          struct:serialized-syntax
          1
          s
-         'serialized-syntax
          'mpis))))))
 (define serialized-syntax-base-mpi-pos_2382
   (|#%name|
@@ -74712,7 +74561,6 @@
          struct:serialized-syntax
          2
          s
-         'serialized-syntax
          'base-mpi-pos))))))
 (define serialized-syntax-data_2598
   (|#%name|
@@ -74730,7 +74578,6 @@
          struct:serialized-syntax
          3
          s
-         'serialized-syntax
          'data))))))
 (define serialized-syntax-need-registry?_3073
   (|#%name|
@@ -74748,7 +74595,6 @@
          struct:serialized-syntax
          4
          s
-         'serialized-syntax
          'need-registry?))))))
 (define 1/syntax-serialize
   (let ((syntax-serialize_0

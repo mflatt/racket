@@ -412,12 +412,13 @@
           (raise (|#%app|
                   exn:fail:contract:arity
                   (error-message->string
-                   (error-primitive-name->symbol who)
+                   who primitive-realm
                    (string-append
                     "arity mismatch for failure procedure;\n"
                     " given procedure does not accept zero arguments\n"
                     "  procedure: "
-                    (error-value->string default)))
+                    (error-value->string default))
+                   primitive-realm)
                   (current-continuation-marks))))
       default))
 

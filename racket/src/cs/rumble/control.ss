@@ -818,10 +818,12 @@
     (raise-no-prompt-tag who tag)))
 
 (define (raise-no-prompt-tag who tag)
-  (do-raise-arguments-error who "no corresponding prompt in the continuation"
+  (do-raise-arguments-error 'internal
+                            who
+                            primitive-realm
+                            "no corresponding prompt in the continuation"
                             exn:fail:contract:continuation
-                            (list "tag" tag)
-                            error-message->string))
+                            (list "tag" tag)))
 
 (define (apply-continuation-with-appended-metacontinuation rmc dest-c dest-args)
   ;; Assumes that the current metacontinuation frame is ready to be
@@ -1474,9 +1476,13 @@
                                 (vector-set! tmp i v)
                                 (key-loop (cdr keys) (cdr wrappers) (add1 i) #t)]))])))]))]))])))))))
 
-(define/who (continuation-mark-set->context marks)
-  (check who continuation-mark-set? marks)
-  (traces->context (continuation-mark-set-traces marks)))
+(define/who continuation-mark-set->context
+  (case-lambda
+   [(marks realms?)
+    (check who continuation-mark-set? marks)
+    (traces->context (continuation-mark-set-traces marks) realms?)]
+   [(marks)
+    (continuation-mark-set->context marks #f)]))
 
 (define/who current-continuation-marks
   (case-lambda

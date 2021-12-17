@@ -19,6 +19,8 @@
   (raise
    (|#%app|
     exn:fail:contract:variable
-    (error-message->string (variable-name var)
-                           "undefined;\n cannot reference undefined identifier")
+    (error-message->string
+     (variable-name var) 'local
+     "undefined;\n cannot reference undefined identifier"
+     primitive-realm)
     (current-continuation-marks))))

@@ -2071,10 +2071,11 @@
 (define check-ranges
   (lambda (who_0 type-name_0 vec_0 start_0 stop_0 step_0 len_0)
     (begin
-      (if (if (exact-nonnegative-integer? start_0)
-            (let ((or-part_0 (< start_0 len_0)))
-              (if or-part_0 or-part_0 (= len_0 start_0 stop_0)))
-            #f)
+      (if (exact-nonnegative-integer? start_0)
+        (void)
+        (raise-argument-error who_0 "exact-nonnegative-integer?" start_0))
+      (if (let ((or-part_0 (< start_0 len_0)))
+            (if or-part_0 or-part_0 (= len_0 start_0 stop_0)))
         (void)
         (raise-range-error
          who_0
@@ -2084,9 +2085,10 @@
          vec_0
          0
          (sub1 len_0)))
-      (if (if (exact-integer? stop_0)
-            (if (<= -1 stop_0) (<= stop_0 len_0) #f)
-            #f)
+      (if (exact-integer? stop_0)
+        (void)
+        (raise-argument-error who_0 "exact-integer?" stop_0))
+      (if (if (<= -1 stop_0) (<= stop_0 len_0) #f)
         (void)
         (raise-range-error
          who_0
@@ -2587,7 +2589,6 @@
          struct:sandman
          0
          s
-         'sandman
          'do-sleep))))))
 (define sandman-do-poll_2411
   (|#%name| sandman-do-poll (record-accessor struct:sandman 1)))
@@ -2598,13 +2599,7 @@
      (if (sandman?_2599 s)
        (sandman-do-poll_2411 s)
        ($value
-        (impersonate-ref
-         sandman-do-poll_2411
-         struct:sandman
-         1
-         s
-         'sandman
-         'do-poll))))))
+        (impersonate-ref sandman-do-poll_2411 struct:sandman 1 s 'do-poll))))))
 (define sandman-do-get-wakeup_3028
   (|#%name| sandman-do-get-wakeup (record-accessor struct:sandman 2)))
 (define sandman-do-get-wakeup
@@ -2619,7 +2614,6 @@
          struct:sandman
          2
          s
-         'sandman
          'do-get-wakeup))))))
 (define sandman-do-wakeup_2562
   (|#%name| sandman-do-wakeup (record-accessor struct:sandman 3)))
@@ -2635,7 +2629,6 @@
          struct:sandman
          3
          s
-         'sandman
          'do-wakeup))))))
 (define sandman-do-any-sleepers?_2376
   (|#%name| sandman-do-any-sleepers? (record-accessor struct:sandman 4)))
@@ -2651,7 +2644,6 @@
          struct:sandman
          4
          s
-         'sandman
          'do-any-sleepers?))))))
 (define sandman-do-sleepers-external-events_2747
   (|#%name|
@@ -2669,7 +2661,6 @@
          struct:sandman
          5
          s
-         'sandman
          'do-sleepers-external-events))))))
 (define sandman-do-add-thread!_3210
   (|#%name| sandman-do-add-thread! (record-accessor struct:sandman 6)))
@@ -2685,7 +2676,6 @@
          struct:sandman
          6
          s
-         'sandman
          'do-add-thread!))))))
 (define sandman-do-remove-thread!_2183
   (|#%name| sandman-do-remove-thread! (record-accessor struct:sandman 7)))
@@ -2701,7 +2691,6 @@
          struct:sandman
          7
          s
-         'sandman
          'do-remove-thread!))))))
 (define sandman-do-merge-external-event-sets_2575
   (|#%name|
@@ -2719,7 +2708,6 @@
          struct:sandman
          8
          s
-         'sandman
          'do-merge-external-event-sets))))))
 (define sandman-do-merge-timeout_2100
   (|#%name| sandman-do-merge-timeout (record-accessor struct:sandman 9)))
@@ -2735,7 +2723,6 @@
          struct:sandman
          9
          s
-         'sandman
          'do-merge-timeout))))))
 (define sandman-do-extract-timeout_2311
   (|#%name| sandman-do-extract-timeout (record-accessor struct:sandman 10)))
@@ -2751,7 +2738,6 @@
          struct:sandman
          10
          s
-         'sandman
          'do-extract-timeout))))))
 (define table
   (let ((or-part_0 (primitive-table '|#%thread|)))
@@ -3567,13 +3553,7 @@
      (if (exts?_3457 s)
        (exts-timeout-at_2133 s)
        ($value
-        (impersonate-ref
-         exts-timeout-at_2133
-         struct:exts
-         0
-         s
-         'exts
-         'timeout-at))))))
+        (impersonate-ref exts-timeout-at_2133 struct:exts 0 s 'timeout-at))))))
 (define exts-fd-adders_2889
   (|#%name| exts-fd-adders (record-accessor struct:exts 1)))
 (define exts-fd-adders
@@ -3583,13 +3563,7 @@
      (if (exts?_3457 s)
        (exts-fd-adders_2889 s)
        ($value
-        (impersonate-ref
-         exts-fd-adders_2889
-         struct:exts
-         1
-         s
-         'exts
-         'fd-adders))))))
+        (impersonate-ref exts-fd-adders_2889 struct:exts 1 s 'fd-adders))))))
 (define sandman-add-poll-set-adder
   (lambda (old-exts_0 adder_0)
     (let ((app_0 (if old-exts_0 (exts-timeout-at old-exts_0) #f)))
@@ -3929,7 +3903,6 @@
          struct:core-port-methods.1
          0
          s
-         'core-port-methods
          'close))))))
 (define core-port-methods-count-lines!.1_2484
   (|#%name|
@@ -3947,7 +3920,6 @@
          struct:core-port-methods.1
          1
          s
-         'core-port-methods
          'count-lines!))))))
 (define core-port-methods-get-location.1_2923
   (|#%name|
@@ -3965,7 +3937,6 @@
          struct:core-port-methods.1
          2
          s
-         'core-port-methods
          'get-location))))))
 (define core-port-methods-file-position.1_2707
   (|#%name|
@@ -3983,7 +3954,6 @@
          struct:core-port-methods.1
          3
          s
-         'core-port-methods
          'file-position))))))
 (define core-port-methods-buffer-mode.1_2291
   (|#%name|
@@ -4001,7 +3971,6 @@
          struct:core-port-methods.1
          4
          s
-         'core-port-methods
          'buffer-mode))))))
 (define core-port-vtable.1
   (core-port-methods1.1
@@ -4289,7 +4258,6 @@
          struct:core-input-port-methods.1
          0
          s
-         'core-input-port-methods
          'prepare-change))))))
 (define core-input-port-methods-read-in.1_2920
   (|#%name|
@@ -4307,7 +4275,6 @@
          struct:core-input-port-methods.1
          1
          s
-         'core-input-port-methods
          'read-in))))))
 (define core-input-port-methods-peek-in.1_2905
   (|#%name|
@@ -4325,7 +4292,6 @@
          struct:core-input-port-methods.1
          2
          s
-         'core-input-port-methods
          'peek-in))))))
 (define core-input-port-methods-byte-ready.1_2198
   (|#%name|
@@ -4343,7 +4309,6 @@
          struct:core-input-port-methods.1
          3
          s
-         'core-input-port-methods
          'byte-ready))))))
 (define core-input-port-methods-get-progress-evt.1_2402
   (|#%name|
@@ -4361,7 +4326,6 @@
          struct:core-input-port-methods.1
          4
          s
-         'core-input-port-methods
          'get-progress-evt))))))
 (define core-input-port-methods-commit.1_2988
   (|#%name|
@@ -4379,7 +4343,6 @@
          struct:core-input-port-methods.1
          5
          s
-         'core-input-port-methods
          'commit))))))
 (define core-input-port-vtable.1
   (let ((app_0 (core-port-methods-close.1 core-port-vtable.1)))
@@ -4609,7 +4572,6 @@
          struct:core-output-port-methods.1
          0
          s
-         'core-output-port-methods
          'write-out))))))
 (define core-output-port-methods-write-out-special.1_1911
   (|#%name|
@@ -4627,7 +4589,6 @@
          struct:core-output-port-methods.1
          1
          s
-         'core-output-port-methods
          'write-out-special))))))
 (define core-output-port-methods-get-write-evt.1_2434
   (|#%name|
@@ -4645,7 +4606,6 @@
          struct:core-output-port-methods.1
          2
          s
-         'core-output-port-methods
          'get-write-evt))))))
 (define core-output-port-methods-get-write-special-evt.1_3014
   (|#%name|
@@ -4663,7 +4623,6 @@
          struct:core-output-port-methods.1
          3
          s
-         'core-output-port-methods
          'get-write-special-evt))))))
 (define core-output-port-vtable.1
   (let ((app_0 (core-port-methods-close.1 core-port-vtable.1)))
@@ -4772,13 +4731,7 @@
      (if (write-evt?_2870 s)
        (write-evt-proc_2583 s)
        ($value
-        (impersonate-ref
-         write-evt-proc_2583
-         struct:write-evt
-         0
-         s
-         'write-evt
-         'proc))))))
+        (impersonate-ref write-evt-proc_2583 struct:write-evt 0 s 'proc))))))
 (define empty-output-port
   (create-core-output-port
    core-output-port-vtable.1
@@ -4843,7 +4796,6 @@
          struct:utf-8-state
          0
          s
-         'utf-8-state
          'accum))))))
 (define utf-8-state-remaining_2167
   (|#%name| utf-8-state-remaining (record-accessor struct:utf-8-state 1)))
@@ -4859,7 +4811,6 @@
          struct:utf-8-state
          1
          s
-         'utf-8-state
          'remaining))))))
 (define utf-8-state-pending-amt_2017
   (|#%name| utf-8-state-pending-amt (record-accessor struct:utf-8-state 2)))
@@ -4875,7 +4826,6 @@
          struct:utf-8-state
          2
          s
-         'utf-8-state
          'pending-amt))))))
 (define utf-8-decode!.1
   (|#%name|
@@ -5868,11 +5818,11 @@
   (lambda (orig-who_0 msg_0)
     (let ((who_0
            (if (symbol? orig-who_0)
-             (|#%app| (error-primitive-name->symbol-handler) orig-who_0)
+             (symbol->string orig-who_0)
              (if (string? orig-who_0)
                (string->symbol orig-who_0)
                orig-who_0))))
-      (|#%app| (error-primitive-message->string-handler) who_0 msg_0))))
+      (if who_0 (string-append who_0 ": " msg_0) msg_0))))
 (define remap-rktio-error
   (lambda (err_0)
     (begin
@@ -6717,7 +6667,6 @@
          struct:commit-manager
          0
          s
-         'commit-manager
          'pause-channel))))))
 (define commit-manager-commit-channel_2862
   (|#%name|
@@ -6735,7 +6684,6 @@
          struct:commit-manager
          1
          s
-         'commit-manager
          'commit-channel))))))
 (define commit-manager-thread_2564
   (|#%name| commit-manager-thread (record-accessor struct:commit-manager 2)))
@@ -6751,7 +6699,6 @@
          struct:commit-manager
          2
          s
-         'commit-manager
          'thread))))))
 (define finish_2581
   (make-struct-type-install-properties
@@ -6806,7 +6753,6 @@
          struct:commit-request
          0
          s
-         'commit-request
          'ext-evt))))))
 (define commit-request-progress-evt_2907
   (|#%name|
@@ -6824,7 +6770,6 @@
          struct:commit-request
          1
          s
-         'commit-request
          'progress-evt))))))
 (define commit-request-abandon-evt_2705
   (|#%name|
@@ -6842,7 +6787,6 @@
          struct:commit-request
          2
          s
-         'commit-request
          'abandon-evt))))))
 (define commit-request-finish_2610
   (|#%name| commit-request-finish (record-accessor struct:commit-request 3)))
@@ -6858,7 +6802,6 @@
          struct:commit-request
          3
          s
-         'commit-request
          'finish))))))
 (define commit-request-result-ch_2336
   (|#%name|
@@ -6876,7 +6819,6 @@
          struct:commit-request
          4
          s
-         'commit-request
          'result-ch))))))
 (define finish_2113
   (make-struct-type-install-properties
@@ -6933,7 +6875,6 @@
          struct:commit-response
          0
          s
-         'commit-response
          'abandon-evt))))))
 (define commit-response-result-put-evt_2135
   (|#%name|
@@ -6951,7 +6892,6 @@
          struct:commit-response
          1
          s
-         'commit-response
          'result-put-evt))))))
 (define make-commit-manager
   (lambda ()
@@ -8759,7 +8699,6 @@
          struct:pipe-write-poller
          0
          s
-         'pipe-write-poller
          'd))))))
 (define finish_2669
   (make-struct-type-install-properties
@@ -8844,7 +8783,6 @@
          struct:pipe-read-poller
          0
          s
-         'pipe-read-poller
          'd))))))
 (define finish_2316
   (make-struct-type-install-properties
@@ -8980,7 +8918,6 @@
          struct:peek-via-read-input-port-methods.1
          0
          s
-         'peek-via-read-input-port-methods
          'read-in/inner))))))
 (define peek-via-read-input-port-methods-byte-ready/inner.1_2519
   (|#%name|
@@ -8998,7 +8935,6 @@
          struct:peek-via-read-input-port-methods.1
          1
          s
-         'peek-via-read-input-port-methods
          'byte-ready/inner))))))
 (define peek-via-read-input-port-vtable.1
   (let ((app_0 (core-port-methods-count-lines!.1 commit-input-port-vtable.1)))
@@ -9814,7 +9750,6 @@
          struct:fd-input-port-methods.1
          0
          s
-         'fd-input-port-methods
          'on-close))))))
 (define fd-input-port-methods-raise-read-error.1_2306
   (|#%name|
@@ -9832,7 +9767,6 @@
          struct:fd-input-port-methods.1
          1
          s
-         'fd-input-port-methods
          'raise-read-error))))))
 (define fd-input-port-vtable.1
   (let ((app_0
@@ -10256,7 +10190,6 @@
          struct:fd-output-port-methods.1
          0
          s
-         'fd-output-port-methods
          'on-close))))))
 (define fd-output-port-methods-raise-write-error.1_2502
   (|#%name|
@@ -10274,7 +10207,6 @@
          struct:fd-output-port-methods.1
          1
          s
-         'fd-output-port-methods
          'raise-write-error))))))
 (define fd-output-port-vtable.1
   (let ((app_0 (core-port-methods-count-lines!.1 core-output-port-vtable.1)))
@@ -10896,8 +10828,7 @@
    (lambda (s)
      (if (fd-evt?_2860 s)
        (fd-evt-fd_2964 s)
-       ($value
-        (impersonate-ref fd-evt-fd_2964 struct:fd-evt 0 s 'fd-evt 'fd))))))
+       ($value (impersonate-ref fd-evt-fd_2964 struct:fd-evt 0 s 'fd))))))
 (define fd-evt-mode_2993
   (|#%name| fd-evt-mode (record-accessor struct:fd-evt 1)))
 (define fd-evt-mode
@@ -10906,8 +10837,7 @@
    (lambda (s)
      (if (fd-evt?_2860 s)
        (fd-evt-mode_2993 s)
-       ($value
-        (impersonate-ref fd-evt-mode_2993 struct:fd-evt 1 s 'fd-evt 'mode))))))
+       ($value (impersonate-ref fd-evt-mode_2993 struct:fd-evt 1 s 'mode))))))
 (define fd-evt-closed_2690
   (|#%name| fd-evt-closed (record-accessor struct:fd-evt 2)))
 (define fd-evt-closed
@@ -10917,13 +10847,7 @@
      (if (fd-evt?_2860 s)
        (fd-evt-closed_2690 s)
        ($value
-        (impersonate-ref
-         fd-evt-closed_2690
-         struct:fd-evt
-         2
-         s
-         'fd-evt
-         'closed))))))
+        (impersonate-ref fd-evt-closed_2690 struct:fd-evt 2 s 'closed))))))
 (define set-fd-evt-closed!_2161
   (|#%name| set-fd-evt-closed! (record-mutator struct:fd-evt 2)))
 (define set-fd-evt-closed!
@@ -10940,7 +10864,6 @@
          2
          s
          v
-         'fd-evt
          'closed))))))
 (define finish_2932
   (make-struct-type-install-properties
@@ -11023,7 +10946,6 @@
          struct:rktio-fd-flushed-evt
          0
          s
-         'rktio-fd-flushed-evt
          'p))))))
 (define register-fd-close
   (lambda (custodian_0 fd_0 fd-refcount_0 flush-handle_0 port_0)
@@ -11793,7 +11715,6 @@
          struct:progress-evt
          0
          s
-         'progress-evt
          'port))))))
 (define progress-evt-evt_1640
   (|#%name| progress-evt-evt (record-accessor struct:progress-evt 1)))
@@ -11809,7 +11730,6 @@
          struct:progress-evt
          1
          s
-         'progress-evt
          'evt))))))
 (define progress-evt?*
   (|#%name|
@@ -15139,7 +15059,6 @@
          struct:utf-8-converter
          0
          s
-         'utf-8-converter
          'from))))))
 (define utf-8-converter-to_2267
   (|#%name| utf-8-converter-to (record-accessor struct:utf-8-converter 1)))
@@ -15155,7 +15074,6 @@
          struct:utf-8-converter
          1
          s
-         'utf-8-converter
          'to))))))
 (define big-endian?$1 (system-big-endian?))
 (define utf-8-convert-in
@@ -16085,7 +16003,6 @@
          struct:bytes-converter
          0
          s
-         'bytes-converter
          'c))))))
 (define bytes-converter-custodian-reference_2648
   (|#%name|
@@ -16103,7 +16020,6 @@
          struct:bytes-converter
          1
          s
-         'bytes-converter
          'custodian-reference))))))
 (define set-bytes-converter-c!_2380
   (|#%name| set-bytes-converter-c! (record-mutator struct:bytes-converter 0)))
@@ -16121,7 +16037,6 @@
          0
          s
          v
-         'bytes-converter
          'c))))))
 (define set-bytes-converter-custodian-reference!_2613
   (|#%name|
@@ -16141,7 +16056,6 @@
          1
          s
          v
-         'bytes-converter
          'custodian-reference))))))
 (define windows? (eq? 'windows (system-type)))
 (define platform-utf-8 (if windows? 'wtf-8 'utf-8))
@@ -17354,8 +17268,7 @@
    (lambda (s)
      (if (1/path?_2312 s)
        (path-bytes_2645 s)
-       ($value
-        (impersonate-ref path-bytes_2645 struct:path 0 s 'path 'bytes))))))
+       ($value (impersonate-ref path-bytes_2645 struct:path 0 s 'bytes))))))
 (define path-convention_2368
   (|#%name| path-convention (record-accessor struct:path 1)))
 (define path-convention
@@ -17365,13 +17278,7 @@
      (if (1/path?_2312 s)
        (path-convention_2368 s)
        ($value
-        (impersonate-ref
-         path-convention_2368
-         struct:path
-         1
-         s
-         'path
-         'convention))))))
+        (impersonate-ref path-convention_2368 struct:path 1 s 'convention))))))
 (define is-path?
   (|#%name|
    path?
@@ -18988,7 +18895,6 @@
          struct:bytes-output-port-methods.1
          0
          s
-         'bytes-output-port-methods
          'get-length))))))
 (define bytes-output-port-methods-get-bytes.1_2698
   (|#%name|
@@ -19006,7 +18912,6 @@
          struct:bytes-output-port-methods.1
          1
          s
-         'bytes-output-port-methods
          'get-bytes))))))
 (define bytes-output-port-vtable.1
   (let ((app_0 (core-port-methods-close.1 core-output-port-vtable.1)))
@@ -20675,7 +20580,6 @@
          struct:as-constructor
          0
          s
-         'as-constructor
          'tag))))))
 (define build-graph
   (lambda (v_0 ht_0 print-graph?_0 mode_0 config_0)
@@ -23675,7 +23579,6 @@
          struct:starting-point
          0
          s
-         'starting-point
          'kind))))))
 (define starting-point-bstr_2482
   (|#%name| starting-point-bstr (record-accessor struct:starting-point 1)))
@@ -23691,7 +23594,6 @@
          struct:starting-point
          1
          s
-         'starting-point
          'bstr))))))
 (define starting-point-len_2128
   (|#%name| starting-point-len (record-accessor struct:starting-point 2)))
@@ -23707,7 +23609,6 @@
          struct:starting-point
          2
          s
-         'starting-point
          'len))))))
 (define starting-point-orig-len_2772
   (|#%name| starting-point-orig-len (record-accessor struct:starting-point 3)))
@@ -23723,7 +23624,6 @@
          struct:starting-point
          3
          s
-         'starting-point
          'orig-len))))))
 (define starting-point-extra-sep_1722
   (|#%name|
@@ -23741,7 +23641,6 @@
          struct:starting-point
          4
          s
-         'starting-point
          'extra-sep))))))
 (define starting-point-add-ups?_2423
   (|#%name| starting-point-add-ups? (record-accessor struct:starting-point 5)))
@@ -23757,7 +23656,6 @@
          struct:starting-point
          5
          s
-         'starting-point
          'add-ups?))))))
 (define starting-point-drive?_2742
   (|#%name| starting-point-drive? (record-accessor struct:starting-point 6)))
@@ -23773,7 +23671,6 @@
          struct:starting-point
          6
          s
-         'starting-point
          'drive?))))))
 (define make-starting-point.1
   (|#%name|
@@ -25676,7 +25573,6 @@
          struct:security-guard
          0
          s
-         'security-guard
          'parent))))))
 (define security-guard-file-guard_2311
   (|#%name|
@@ -25694,7 +25590,6 @@
          struct:security-guard
          1
          s
-         'security-guard
          'file-guard))))))
 (define security-guard-network-guard_2285
   (|#%name|
@@ -25712,7 +25607,6 @@
          struct:security-guard
          2
          s
-         'security-guard
          'network-guard))))))
 (define security-guard-link-guard_2431
   (|#%name|
@@ -25730,7 +25624,6 @@
          struct:security-guard
          3
          s
-         'security-guard
          'link-guard))))))
 (define root-security-guard (security-guard1.1 #f void void void))
 (define 1/current-security-guard
@@ -32213,13 +32106,7 @@
      (if (1/logger?_2836 s)
        (logger-topic_2043 s)
        ($value
-        (impersonate-ref
-         logger-topic_2043
-         struct:logger
-         0
-         s
-         'logger
-         'topic))))))
+        (impersonate-ref logger-topic_2043 struct:logger 0 s 'topic))))))
 (define logger-parent_2124
   (|#%name| logger-parent (record-accessor struct:logger 1)))
 (define logger-parent
@@ -32229,13 +32116,7 @@
      (if (1/logger?_2836 s)
        (logger-parent_2124 s)
        ($value
-        (impersonate-ref
-         logger-parent_2124
-         struct:logger
-         1
-         s
-         'logger
-         'parent))))))
+        (impersonate-ref logger-parent_2124 struct:logger 1 s 'parent))))))
 (define logger-propagate-filters_2354
   (|#%name| logger-propagate-filters (record-accessor struct:logger 2)))
 (define logger-propagate-filters
@@ -32250,7 +32131,6 @@
          struct:logger
          2
          s
-         'logger
          'propagate-filters))))))
 (define logger-receiver-box+backrefs_2574
   (|#%name| logger-receiver-box+backrefs (record-accessor struct:logger 3)))
@@ -32266,7 +32146,6 @@
          struct:logger
          3
          s
-         'logger
          'receiver-box+backrefs))))))
 (define logger-prune-counter_2638
   (|#%name| logger-prune-counter (record-accessor struct:logger 4)))
@@ -32282,7 +32161,6 @@
          struct:logger
          4
          s
-         'logger
          'prune-counter))))))
 (define logger-permanent-receivers_3109
   (|#%name| logger-permanent-receivers (record-accessor struct:logger 5)))
@@ -32298,7 +32176,6 @@
          struct:logger
          5
          s
-         'logger
          'permanent-receivers))))))
 (define logger-max-receiver-level_2792
   (|#%name| logger-max-receiver-level (record-accessor struct:logger 6)))
@@ -32314,7 +32191,6 @@
          struct:logger
          6
          s
-         'logger
          'max-receiver-level))))))
 (define logger-topic-level-cache_2239
   (|#%name| logger-topic-level-cache (record-accessor struct:logger 7)))
@@ -32330,7 +32206,6 @@
          struct:logger
          7
          s
-         'logger
          'topic-level-cache))))))
 (define logger-local-level-timestamp_2442
   (|#%name| logger-local-level-timestamp (record-accessor struct:logger 8)))
@@ -32346,7 +32221,6 @@
          struct:logger
          8
          s
-         'logger
          'local-level-timestamp))))))
 (define logger-root-level-timestamp-box_2700
   (|#%name| logger-root-level-timestamp-box (record-accessor struct:logger 9)))
@@ -32362,7 +32236,6 @@
          struct:logger
          9
          s
-         'logger
          'root-level-timestamp-box))))))
 (define logger-level-sema-box_2755
   (|#%name| logger-level-sema-box (record-accessor struct:logger 10)))
@@ -32378,7 +32251,6 @@
          struct:logger
          10
          s
-         'logger
          'level-sema-box))))))
 (define set-logger-receiver-box+backrefs!_2144
   (|#%name|
@@ -32398,7 +32270,6 @@
          3
          s
          v
-         'logger
          'receiver-box+backrefs))))))
 (define set-logger-prune-counter!_2916
   (|#%name| set-logger-prune-counter! (record-mutator struct:logger 4)))
@@ -32416,7 +32287,6 @@
          4
          s
          v
-         'logger
          'prune-counter))))))
 (define set-logger-permanent-receivers!_2219
   (|#%name| set-logger-permanent-receivers! (record-mutator struct:logger 5)))
@@ -32434,7 +32304,6 @@
          5
          s
          v
-         'logger
          'permanent-receivers))))))
 (define set-logger-max-receiver-level!_2599
   (|#%name| set-logger-max-receiver-level! (record-mutator struct:logger 6)))
@@ -32452,7 +32321,6 @@
          6
          s
          v
-         'logger
          'max-receiver-level))))))
 (define set-logger-local-level-timestamp!_2922
   (|#%name|
@@ -32472,7 +32340,6 @@
          8
          s
          v
-         'logger
          'local-level-timestamp))))))
 (define 1/logger-name
   (|#%name|
@@ -32790,7 +32657,6 @@
          struct:log-receiver
          0
          s
-         'log-receiver
          'filters))))))
 (define-values
  (prop:receiver-send receiver-send? receiver-send-ref)
@@ -32902,7 +32768,6 @@
          struct:queue-log-receiver
          0
          s
-         'log-receiver
          'msgs))))))
 (define queue-log-receiver-waiters_2361
   (|#%name|
@@ -32920,7 +32785,6 @@
          struct:queue-log-receiver
          1
          s
-         'log-receiver
          'waiters))))))
 (define queue-log-receiver-backref_2724
   (|#%name|
@@ -32938,7 +32802,6 @@
          struct:queue-log-receiver
          2
          s
-         'log-receiver
          'backref))))))
 (define 1/make-log-receiver
   (|#%name|
@@ -33066,7 +32929,6 @@
          struct:stdio-log-receiver
          0
          s
-         'stdio-log-receiver
          'rktio))))))
 (define stdio-log-receiver-which_2480
   (|#%name|
@@ -33084,7 +32946,6 @@
          struct:stdio-log-receiver
          1
          s
-         'stdio-log-receiver
          'which))))))
 (define add-stdio-log-receiver!
   (lambda (who_0 logger_0 args_0 parse-who_0 which_0)
@@ -33203,7 +33064,6 @@
          struct:syslog-log-receiver
          0
          s
-         'syslog-log-receiver
          'rktio))))))
 (define syslog-log-receiver-cmd_2652
   (|#%name|
@@ -33221,7 +33081,6 @@
          struct:syslog-log-receiver
          1
          s
-         'syslog-log-receiver
          'cmd))))))
 (define add-syslog-log-receiver!
   (lambda (logger_0 . args_0)
@@ -34168,7 +34027,6 @@
          struct:fs-change-evt
          0
          s
-         'filesystem-change-evt
          'rfc))))))
 (define fs-change-evt-cust-ref_2823
   (|#%name|
@@ -34186,7 +34044,6 @@
          struct:fs-change-evt
          1
          s
-         'filesystem-change-evt
          'cust-ref))))))
 (define set-fs-change-evt-rfc!_3343
   (|#%name|
@@ -34206,7 +34063,6 @@
          0
          s
          v
-         'filesystem-change-evt
          'rfc))))))
 (define set-fs-change-evt-cust-ref!_2399
   (|#%name|
@@ -34226,7 +34082,6 @@
          1
          s
          v
-         'filesystem-change-evt
          'cust-ref))))))
 (define 1/filesystem-change-evt?
   (|#%name|
@@ -34669,7 +34524,6 @@
          struct:subprocess
          0
          s
-         'subprocess
          'process))))))
 (define subprocess-cust-ref_2827
   (|#%name| subprocess-cust-ref (record-accessor struct:subprocess 1)))
@@ -34685,7 +34539,6 @@
          struct:subprocess
          1
          s
-         'subprocess
          'cust-ref))))))
 (define subprocess-is-group?_2132
   (|#%name| subprocess-is-group? (record-accessor struct:subprocess 2)))
@@ -34701,7 +34554,6 @@
          struct:subprocess
          2
          s
-         'subprocess
          'is-group?))))))
 (define set-subprocess-process!_1881
   (|#%name| set-subprocess-process! (record-mutator struct:subprocess 0)))
@@ -34719,7 +34571,6 @@
          0
          s
          v
-         'subprocess
          'process))))))
 (define set-subprocess-cust-ref!_2630
   (|#%name| set-subprocess-cust-ref! (record-mutator struct:subprocess 1)))
@@ -34737,7 +34588,6 @@
          1
          s
          v
-         'subprocess
          'cust-ref))))))
 (define do-subprocess
   (|#%name|
@@ -36542,7 +36392,6 @@
          struct:tcp-listener
          0
          s
-         'tcp-listener
          'lnr))))))
 (define tcp-listener-closed_2540
   (|#%name| tcp-listener-closed (record-accessor struct:tcp-listener 1)))
@@ -36558,7 +36407,6 @@
          struct:tcp-listener
          1
          s
-         'tcp-listener
          'closed))))))
 (define tcp-listener-custodian-reference_2721
   (|#%name|
@@ -36576,7 +36424,6 @@
          struct:tcp-listener
          2
          s
-         'tcp-listener
          'custodian-reference))))))
 (define 1/tcp-listen
   (let ((tcp-listen_0
@@ -36987,7 +36834,6 @@
          struct:accept-evt
          0
          s
-         'tcp-accept-evt
          'listener))))))
 (define error-result
   (lambda (thunk_0)

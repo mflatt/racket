@@ -61,8 +61,10 @@
             (positive? n))
        (raise (|#%app|
                exn:fail:out-of-memory
-               (error-message->string (error-primitive-name->symbol 'arithmetic-shift)
-                                      "out of memory")
+               (error-message->string
+                'arithmetic-shift primitive-realm
+                "out of memory"
+                primitive-realm)
                (current-continuation-marks)))]
       [else
        (#2%bitwise-arithmetic-shift x n)]))))

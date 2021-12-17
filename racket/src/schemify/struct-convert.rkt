@@ -1,5 +1,6 @@
 #lang racket/base
-(require "match.rkt"
+(require racket/symbol
+         "match.rkt"
          "wrap.rkt"
          "struct-type-info.rkt"
          "mutated-state.rkt"
@@ -29,15 +30,41 @@
                       (wrap-eq? ?1 ?2)
                       (for/and ([acc/mut (in-list acc/muts)]
                                 [make-acc/mut (in-list make-acc/muts)])
+                        (define (ok-contract? contract)
+                          (match contract
+                            [`',sym (symbol? sym)]
+                            [`,_ (or (not contract) (string? contract))]))
                         (match make-acc/mut
                           [`(make-struct-field-accessor ,ref-id ,pos ',field-name)
                            (and (wrap-eq? ref-id -ref)
                                 (symbol? field-name)
                                 (exact-nonnegative-integer? pos))]
+                          [`(make-struct-field-accessor ,ref-id ,pos ',field/proc-name ,contract)
+                           (and (wrap-eq? ref-id -ref)
+                                (symbol? field/proc-name)
+                                (exact-nonnegative-integer? pos)
+                                (ok-contract? contract))]
+                          [`(make-struct-field-accessor ,ref-id ,pos ',field/proc-name ,contract ',realm)
+                           (and (wrap-eq? ref-id -ref)
+                                (symbol? field/proc-name)
+                                (exact-nonnegative-integer? pos)
+                                (ok-contract? contract)
+                                (symbol? realm))]
                           [`(make-struct-field-mutator ,set-id ,pos ',field-name)
                            (and (wrap-eq? set-id -set!)
                                 (symbol? field-name)
                                 (exact-nonnegative-integer? pos))]
+                          [`(make-struct-field-mutator ,set-id ,pos ',field/proc-name ,contract)
+                           (and (wrap-eq? set-id -set!)
+                                (symbol? field/proc-name)
+                                (exact-nonnegative-integer? pos)
+                                (ok-contract? contract))]
+                          [`(make-struct-field-mutator ,set-id ,pos ',field/proc-name ,contract ',realm)
+                           (and (wrap-eq? set-id -set!)
+                                (symbol? field/proc-name)
+                                (exact-nonnegative-integer? pos)
+                                (ok-contract? contract)
+                                (symbol? realm))]
                           [`,_ #f]))
                       (make-struct-type-info mk prim-knowns knowns imports mutated)))
      (cond
@@ -134,7 +161,7 @@
                                   c
                                   `(#%struct-constructor ,c ,(arithmetic-shift 1 (struct-type-info-field-count sti))))))
            (define ,raw-s? ,(let ([p (name-procedure
-                                      "" (struct-type-info-name sti) "" '|| "?"
+                                      (build-name "" (struct-type-info-name sti) "" '|| "?")
                                       `(record-predicate ,struct:s))])
                               (if (or generate-check?
                                       system-opaque?)
@@ -142,7 +169,7 @@
                                   `(#%struct-predicate ,p))))
            ,@(if generate-check?
                  `((define ,s? ,(let ([p (name-procedure
-                                          "" (struct-type-info-name sti) "" '|| "?"
+                                          (build-name "" (struct-type-info-name sti) "" '|| "?")
                                           `(lambda (v)
                                              ,(if can-impersonate?
                                                   `(if (,raw-s? v) #t ($value (if (impersonator? v) (,raw-s? (impersonator-val v)) #f)))
@@ -154,59 +181,88 @@
            ,@(for/list ([acc/mut (in-list acc/muts)]
                         [make-acc/mut (in-list make-acc/muts)])
                (define raw-acc/mut (if generate-check? (deterministic-gensym (unwrap acc/mut)) acc/mut))
-               (match make-acc/mut
-                 [`(make-struct-field-accessor ,(? (lambda (v) (wrap-eq? v -ref))) ,pos ',field-name)
-                  (define raw-def `(define ,raw-acc/mut
-                                     ,(let ([p (name-procedure
-                                                "" (struct-type-info-name sti) "-" field-name ""
-                                                `(record-accessor ,struct:s ,pos))])
-                                        (if (or generate-check?
-                                                system-opaque?)
-                                            p
-                                            `(#%struct-field-accessor ,p ,struct:s ,pos)))))
-                  (if generate-check?
+               (define (make-err-args field/proc-name proc-name contract realm)
+                 (cond
+                   [(and (not contract) (eq? realm 'racket))
+                    `(',field/proc-name)]
+                   [else
+                    (let ([contract (or contract
+                                        `',(string->symbol
+                                            (string-append-immutable
+                                             (symbol->immutable-string (struct-type-info-name sti))
+                                             "?")))])
+                      `(',proc-name ,contract ',realm))]))
+               (define (build-accessor pos field/proc-name contract realm)
+                 (define proc-name (if contract
+                                       field/proc-name
+                                       (build-name "" (struct-type-info-name sti) "-" field/proc-name "")))
+                 (define raw-def `(define ,raw-acc/mut
+                                    ,(let ([p (name-procedure
+                                               proc-name
+                                               `(record-accessor ,struct:s ,pos))])
+                                       (if (or generate-check?
+                                               system-opaque?)
+                                           p
+                                           `(#%struct-field-accessor ,p ,struct:s ,pos)))))
+                 (define (err-args) (make-err-args field/proc-name proc-name contract realm))
+                 (if generate-check?
                       `(begin
                          ,raw-def
                          (define ,acc/mut
                            ,(let ([p (name-procedure
-                                      "" (struct-type-info-name sti) "-" field-name ""
+                                      proc-name
                                       `(lambda (s) (if (,raw-s? s)
                                                        (,raw-acc/mut s)
                                                        ,(if can-impersonate?
-                                                            `($value (impersonate-ref ,raw-acc/mut ,struct:s ,pos s
-                                                                                      ',(struct-type-info-name sti) ',field-name))
-                                                            `(#%struct-ref-error s ',(struct-type-info-name sti) ',field-name)))))])
+                                                            `($value (impersonate-ref ,raw-acc/mut ,struct:s ,pos s ,@(err-args)))
+                                                            `(#%struct-ref-error s ,@(err-args))))))])
                               (if system-opaque?
                                   p
                                   `(#%struct-field-accessor ,p ,struct:s ,pos)))))
-                      raw-def)]
-                 [`(make-struct-field-mutator ,(? (lambda (v) (wrap-eq? v -set!))) ,pos ',field-name)
-                  (define raw-def `(define ,raw-acc/mut
-                                     ,(let ([p (name-procedure
-                                                "set-" (struct-type-info-name sti) "-" field-name "!"
-                                                `(record-mutator ,struct:s ,pos))])
-                                        (if (or generate-check?
-                                                system-opaque?)
-                                            p
-                                            `(#%struct-field-mutator ,p ,struct:s ,pos)))))
-                  (define abs-pos (+ pos (- (struct-type-info-field-count sti)
-                                            (struct-type-info-immediate-field-count sti))))
-                  (if generate-check?
-                      `(begin
-                         ,raw-def
-                         (define ,acc/mut
-                            ,(let ([p (name-procedure
-                                       "set-" (struct-type-info-name sti) "-" field-name "!"
-                                       `(lambda (s v) (if (,raw-s? s)
-                                                          (,raw-acc/mut s v)
-                                                          ,(if can-impersonate?
-                                                               `($value (impersonate-set! ,raw-acc/mut ,struct:s ,pos ,abs-pos s v
-                                                                                          ',(struct-type-info-name sti) ',field-name))
-                                                               `(#%struct-set!-error s ',(struct-type-info-name sti) ',field-name)))))])
-                               (if system-opaque?
-                                   p
-                                   `(#%struct-field-mutator ,p ,struct:s ,pos)))))
-                      raw-def)]
+                      raw-def))
+               (define (build-mutator pos field/proc-name contract realm)
+                 (define proc-name (if contract
+                                       field/proc-name
+                                       (build-name "set-" (struct-type-info-name sti) "-" field/proc-name "!")))
+                 (define raw-def `(define ,raw-acc/mut
+                                      ,(let ([p (name-procedure
+                                                 proc-name
+                                                 `(record-mutator ,struct:s ,pos))])
+                                         (if (or generate-check?
+                                                 system-opaque?)
+                                             p
+                                             `(#%struct-field-mutator ,p ,struct:s ,pos)))))
+                 (define abs-pos (+ pos (- (struct-type-info-field-count sti)
+                                           (struct-type-info-immediate-field-count sti))))
+                 (define (err-args) (make-err-args field/proc-name proc-name contract realm))
+                 (if generate-check?
+                     `(begin
+                        ,raw-def
+                        (define ,acc/mut
+                          ,(let ([p (name-procedure
+                                     proc-name
+                                     `(lambda (s v) (if (,raw-s? s)
+                                                        (,raw-acc/mut s v)
+                                                        ,(if can-impersonate?
+                                                             `($value (impersonate-set! ,raw-acc/mut ,struct:s ,pos ,abs-pos s v ,@(err-args)))
+                                                             `(#%struct-set!-error s ,@(err-args))))))])
+                             (if system-opaque?
+                                 p
+                                 `(#%struct-field-mutator ,p ,struct:s ,pos)))))
+                     raw-def))
+               (match make-acc/mut
+                 [`(make-struct-field-accessor ,_ ,pos ',field-name)
+                  (build-accessor pos field-name #f 'racket)]
+                 [`(make-struct-field-accessor ,_ ,pos ',field/proc-name ,contract)
+                  (build-accessor pos field/proc-name contract 'racket)]
+                 [`(make-struct-field-accessor ,_ ,pos ',field/proc-name ,contract ',realm)
+                  (build-accessor pos field/proc-name contract realm)]
+                 [`(make-struct-field-mutator ,_ ,pos ',field-name)
+                  (build-mutator pos field-name #f 'racket)]
+                 [`(make-struct-field-mutator ,_ ,pos ',field-name ,contract)
+                  (build-mutator pos field-name contract 'racket)]
+                 [`(make-struct-field-mutator ,_ ,pos ',field-name ,contract ',realm)
+                  (build-mutator pos field-name contract realm)]
                  [`,_ (error "oops")])))]
        [else #f])]
     [`,_ #f]))
@@ -258,12 +314,15 @@
   (for/list ([e (in-list l)])
     (schemify e knowns)))
 
-(define (name-procedure pre st sep fld post proc-expr)
+(define (name-procedure proc-name proc-expr)
   (wrap-property-set proc-expr
                      'inferred-name
-                     (string->symbol
-                      (string-append pre
-                                     (symbol->string st)
-                                     sep
-                                     (symbol->string fld)
-                                     post))))
+                     proc-name))
+
+(define (build-name pre st sep fld post)
+  (string->symbol
+   (string-append-immutable pre
+                            (symbol->immutable-string st)
+                            sep
+                            (symbol->immutable-string fld)
+                            post)))

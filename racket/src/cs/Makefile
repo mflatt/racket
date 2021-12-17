@@ -290,6 +290,7 @@ RUMBLE_SRCS = rumble/virtual-register.ss \
               rumble/engine.ss \
               rumble/source.ss \
               rumble/error.ss \
+              rumble/error-adjuster.ss \
               rumble/error-rewrite.ss \
               rumble/srcloc.ss \
               rumble/boolean.ss \

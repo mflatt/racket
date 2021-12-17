@@ -89,10 +89,8 @@
           uncaught-exception-handler
           error-display-handler
           error-escape-handler
-          error-primitive-name->symbol-handler
-          error-primitive-contract->string-handler
-          error-primitive-message->string-handler
-          error-struct-operation-names-handler
+          current-error-message-adjuster
+          error-message-adjuster-key
           linklet-instantiate-key ; not exported to Racket
           set-error-display-eprintf! ; not exported to Racket
           set-log-system-message! ; not exported to Racket
@@ -164,6 +162,7 @@
           procedure-reduce-arity-mask
           procedure-rename
           procedure->method
+          procedure-realm
           procedure-arity?
           prop:checked-procedure
           checked-procedure-check-and-extract
@@ -204,15 +203,22 @@
 
           raise-argument-error/user
           raise-argument-error ; not exported to Racket; replaced with `raise-argument-error/user`
+          raise-argument-error*
           raise-arguments-error/user
           raise-arguments-error ; not exported to Racket; replaced with `raise-arguments-error/user`
+          raise-arguments-error*
           raise-result-error
+          raise-result-error*
           raise-mismatch-error
           raise-range-error/user
           raise-range-error ; not exported to Racket; replaced with `raise-range-error`
+          raise-range-error*
           raise-arity-error
+          raise-arity-error*
           raise-arity-mask-error
+          raise-arity-mask-error*
           raise-result-arity-error
+          raise-result-arity-error*
           raise-type-error
           raise-binding-result-arity-error ; not exported to Racket
           raise-definition-result-arity-error ; not exported to Racket
@@ -758,7 +764,7 @@
           call-as-asynchronous-callback
           post-as-asynchronous-callback
           ensure-virtual-registers
-
+<
           ;; compile-time use in "thread.sls"
           current-atomic-virtual-register
           end-atomic-virtual-register
@@ -782,6 +788,9 @@
   ;; Internal tokens that are different from all possible user-level values:
   (define none '#{none kwcju864gpycc2h151s9atbmo-1})
   (define none2 '#{none kwcju864gpycc2h151s9atbmo-2}) ; never put this in an emphemeron
+
+  (define default-realm 'racket)
+  (define primitive-realm 'racket/realm)
 
   (include "rumble/virtual-register.ss")
   (include "rumble/begin0.ss")
@@ -815,6 +824,7 @@
   (include "rumble/source.ss")
   (include "rumble/error.ss")
   (include "rumble/error-rewrite.ss")
+  (include "rumble/error-adjuster.ss")
   (include "rumble/srcloc.ss")
   (include "rumble/boolean.ss")
   (include "rumble/bytes.ss")

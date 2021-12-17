@@ -10,7 +10,9 @@
 ;; a string as `orig-who` means "not a primitive name"
 (define (error-message->string orig-who msg)
   (define who (cond
-                [(symbol? orig-who) ((error-primitive-name->symbol-handler) orig-who)]
+                [(symbol? orig-who) (symbol->string orig-who)]
                 [(string? orig-who) (string->symbol orig-who)]
                 [else orig-who]))
-  ((error-primitive-message->string-handler) who msg))
+  (if who
+      (string-append who ": " msg)
+      msg))

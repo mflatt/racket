@@ -42,6 +42,7 @@
              new-prop:procedure
              new:procedure->method
              new:procedure-rename
+             new:procedure-realm
              new:chaperone-procedure
              (protect new:unsafe-chaperone-procedure)
              new:impersonate-procedure
@@ -375,7 +376,7 @@
   ;; Constructor generator for a wrapper on a procedure with a required keyword.
   ;; The `procedure' property is a per-type method that has exactly
   ;;  the right arity, and that sends all arguments to `missing-kw'.
-  (define (make-required name fail-proc method? impersonator?)
+  (define (make-required name realm fail-proc method? impersonator?)
     (let-values ([(s: mk ? -ref -set!)
                   (make-struct-type (or name 'unknown)
                                     (if impersonator?
@@ -387,7 +388,7 @@
                                             struct:keyword-procedure/arity-error))
                                     0 0 #f
                                     (list (cons prop:named-keyword-procedure
-                                                (cons name fail-proc)))
+                                                (vector name realm fail-proc)))
                                     (current-inspector)
                                     fail-proc)])
       mk))
@@ -403,12 +404,12 @@
   ;;  is used for each evaluation of a keyword lambda.)
   (define-syntax (make-required* stx)
     (syntax-case stx ()
-      [(_ struct:km/ae name fail-proc)
+      [(_ struct:km/ae name realm fail-proc)
        #'(make-struct-type name
                            struct:km/ae
                            0 0 #f
                            (list (cons prop:named-keyword-procedure
-                                       (cons name fail-proc)))
+                                       (vector name realm fail-proc)))
                            (current-inspector)
                            fail-proc)]))
 
@@ -446,13 +447,14 @@
   (define make-keyword-procedure
     (case-lambda 
      [(proc) (let ([proc-name (object-name proc)]
+                   [proc-realm (procedure-realm proc)]
                    [plain-proc (no-inferred-name
                                 (lambda args
                                   (apply proc null null args)))])
                (make-keyword-procedure
                 proc
                 (if (symbol? proc-name)
-                    (procedure-rename plain-proc proc-name)
+                    (procedure-rename plain-proc proc-name proc-realm)
                     plain-proc)))]
      [(proc plain-proc)
       (make-optional-keyword-procedure
@@ -854,7 +856,7 @@
                                                                  [call-fail (mk-kw-arity-stub)])
                                                      (syntax-local-lift-values-expression
                                                       5
-                                                      #'(make-required* struct:kp/ae 'n call-fail)))])
+                                                      #'(make-required* struct:kp/ae 'n #f call-fail)))])
                         (quasisyntax/loc stx
                           (mk-id
                            (lambda (given-kws given-argc)
@@ -1574,7 +1576,7 @@
                                     (format "\n   ~a ~e" kw kw-arg))
                                   kws kw-args))))]
                       [proc-name (lambda (p) (or (and (named-keyword-procedure? p)
-                                                 (car (keyword-procedure-name+fail p)))
+                                                 (vector-ref (keyword-procedure-name+fail p) 0))
                                             (object-name p)
                                             p))])
                   (raise
@@ -1624,24 +1626,28 @@
   ;; setting procedure arity
   (define procedure-reduce-keyword-arity 
     (case-lambda
+      [(proc arity req-kw allowed-kw name realm)
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f name realm req-kw allowed-kw)]
       [(proc arity req-kw allowed-kw name)
-       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f name req-kw allowed-kw)]
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f name 'racket req-kw allowed-kw)]
       [(proc arity req-kw allowed-kw)
-       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f #f req-kw allowed-kw)]))
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity proc arity #f #f 'racket req-kw allowed-kw)]))
   (define procedure-reduce-keyword-arity-mask
     (case-lambda
+      [(proc mask req-kw allowed-kw name realm)
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask name realm req-kw allowed-kw)]
       [(proc mask req-kw allowed-kw name)
-       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask name req-kw allowed-kw)]
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask name 'racket req-kw allowed-kw)]
       [(proc mask req-kw allowed-kw)
-       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask #f req-kw allowed-kw)]))
+       (do-procedure-reduce-keyword-arity 'procedure-reduce-keyword-arity-mask proc #f mask #f 'racket req-kw allowed-kw)]))
   
-  (define (do-procedure-reduce-keyword-arity who proc arity mask name req-kw allowed-kw)
+  (define (do-procedure-reduce-keyword-arity who proc arity mask name realm req-kw allowed-kw)
     (let* ([plain-proc (let ([p (if (okp? proc) 
                                     (okp-ref proc 0)
                                     proc)])
                          (if arity
-                             (procedure-reduce-arity p arity)
-                             (procedure-reduce-arity-mask p mask name)))])
+                             (procedure-reduce-arity p arity name realm)
+                             (procedure-reduce-arity-mask p mask name realm)))])
       (define (sorted? kws)
         (let loop ([kws kws])
           (cond
@@ -1702,9 +1708,16 @@
                  plain-proc)
                 ;; Some keywords are required, so "plain" proc is
                 ;;  irrelevant; we build a new one that wraps `missing-kws'.
-                ((make-required (or (and (named-keyword-procedure? proc)
-                                         (car (keyword-procedure-name+fail proc)))
+                ((make-required (or name
+                                    (and (named-keyword-procedure? proc)
+                                         (vector-ref (keyword-procedure-name+fail proc) 0))
                                     (object-name proc))
+                                (or (and name realm)
+                                    (and (named-keyword-procedure? proc)
+                                         (or (vector-ref (keyword-procedure-name+fail proc) 1)
+                                             (procedure-realm
+                                              (vector-ref (keyword-procedure-name+fail proc) 2))))
+                                    (procedure-realm proc))
                                 (procedure-reduce-arity-mask
                                  missing-kw
                                  (arithmetic-shift mask 1))
@@ -1738,7 +1751,7 @@
   (define new:procedure-reduce-arity
     (let ([procedure-reduce-arity
            (case-lambda
-             [(proc arity name)
+             [(proc arity name realm)
               (if (and (procedure? proc)
                        (let-values ([(req allows) (procedure-keywords proc)])
                          (pair? req))
@@ -1750,15 +1763,18 @@
                                               (procedure->method proc)
                                               proc)
                                           arity
-                                          name))]
+                                          name
+                                          realm))]
+             [(proc arity name)
+              (new:procedure-reduce-arity proc arity name 'racket)]
              [(proc arity)
-              (new:procedure-reduce-arity proc arity #f)])])
+              (new:procedure-reduce-arity proc arity #f 'racket)])])
       procedure-reduce-arity))
 
   (define new:procedure-reduce-arity-mask
     (let ([procedure-reduce-arity
            (case-lambda
-             [(proc mask name)
+             [(proc mask name realm)
               (if (and (procedure? proc)
                        (let-values ([(req allows) (procedure-keywords proc)])
                          (pair? req))
@@ -1770,9 +1786,12 @@
                                                    (procedure->method proc)
                                                    proc)
                                                mask
-                                               name))]
+                                               name
+                                               realm))]
+             [(proc mask name)
+              (new:procedure-reduce-arity-mask proc mask name 'racket)]
              [(proc mask)
-              (new:procedure-reduce-arity-mask proc mask #f)])])
+              (new:procedure-reduce-arity-mask proc mask #f 'racket)])])
       procedure-reduce-arity))
     
   (define new:procedure->method
@@ -1793,7 +1812,10 @@
                      ;; Constructor must be from `make-required', but not a method.
                      ;; Make a new variant that's a method:
                      (let* ([name+fail (keyword-procedure-name+fail proc)]
-                            [mk (make-required (car name+fail) (cdr name+fail) #t #f)])
+                            [mk (make-required (vector-ref name+fail 0)
+                                               (vector-ref name+fail 1)
+                                               (vector-ref name+fail 2)
+                                               #t #f)])
                        (mk
                         (keyword-procedure-checker proc)
                         (keyword-procedure-proc proc)
@@ -1805,31 +1827,50 @@
 
   (define new:procedure-rename
     (let ([procedure-rename 
-           (lambda (proc name)
-             (if (not (and (keyword-procedure? proc)
-                           (symbol? name)))
-                 (procedure-rename proc name)
-                 ;; Rename a keyword procedure:
-                 (cond
-                  [(okp? proc)
-                   ((if (okm? proc)
-                        make-optional-keyword-method
-                        make-optional-keyword-procedure)
-                    (keyword-procedure-checker proc)
-                    (keyword-procedure-proc proc)
-                    (keyword-procedure-required proc)
-                    (keyword-procedure-allowed proc)
-                    (procedure-rename (okp-ref proc 0) name))]
-                  [else
-                   ;; Constructor must be from `make-required':
-                   (let* ([name+fail (keyword-procedure-name+fail proc)]
-                          [mk (make-required name (cdr name+fail) (keyword-method? proc) #f)])
-                     (mk
+           (case-lambda
+             [(proc name realm)
+              (if (not (and (keyword-procedure? proc)
+                            (symbol? name)
+                            (symbol? realm)))
+                  (procedure-rename proc name realm)
+                  ;; Rename a keyword procedure:
+                  (cond
+                    [(okp? proc)
+                     ((if (okm? proc)
+                          make-optional-keyword-method
+                          make-optional-keyword-procedure)
                       (keyword-procedure-checker proc)
                       (keyword-procedure-proc proc)
                       (keyword-procedure-required proc)
-                      (keyword-procedure-allowed proc)))])))])
+                      (keyword-procedure-allowed proc)
+                      (procedure-rename (okp-ref proc 0) name realm))]
+                    [else
+                     ;; Constructor must be from `make-required':
+                     (let* ([name+fail (keyword-procedure-name+fail proc)]
+                            [mk (make-required name realm (vector-ref name+fail 2) (keyword-method? proc) #f)])
+                       (mk
+                        (keyword-procedure-checker proc)
+                        (keyword-procedure-proc proc)
+                        (keyword-procedure-required proc)
+                        (keyword-procedure-allowed proc)))]))]
+             [(proc name)
+              (new:procedure-rename proc name 'racket)])])
       procedure-rename))
+
+  (define new:procedure-realm
+    (let ([procedure-realm
+           (lambda (proc)
+             (if (keyword-procedure? proc)
+                 (cond
+                   [(named-keyword-procedure? proc)
+                    (define name+fail (keyword-procedure-name+fail proc))
+                    (or (vector-ref name+fail 1)
+                        (procedure-realm (vector-ref name+fail 2)))]
+                   [else
+                    (procedure-realm (keyword-procedure-proc proc))])
+                 ;; Not a keyword-accepting procedure:
+                 (procedure-realm proc)))])
+      procedure-realm))
 
   (define new:chaperone-procedure
     (let ([chaperone-procedure
@@ -2048,7 +2089,10 @@
                                 (if is-impersonator?
                                     ;; Constructor must be from `make-required':
                                     (let* ([name+fail (keyword-procedure-name+fail n-proc)]
-                                           [mk (make-required (car name+fail) (cdr name+fail) (keyword-method? n-proc) #t)])
+                                           [mk (make-required (vector-ref name+fail 0)
+                                                              (vector-ref name+fail 1)
+                                                              (vector-ref name+fail 2)
+                                                              (keyword-method? n-proc) #t)])
                                       (mk
                                        (keyword-procedure-checker n-proc)
                                        (chaperone-procedure/add-mark (keyword-procedure-proc n-proc) kw-chaperone)
