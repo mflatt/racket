@@ -359,6 +359,9 @@ MZ_EXTERN Scheme_Object *scheme_extract_one_cc_mark(Scheme_Object *mark_set,
 MZ_EXTERN Scheme_Object *scheme_extract_one_cc_mark_to_tag(Scheme_Object *mark_set, 
                                                            Scheme_Object *key,
                                                            Scheme_Object *prompt_tag);
+MZ_EXTERN Scheme_Object *scheme_extract_cc_mark_list(Scheme_Object *mark_set, 
+                                                     Scheme_Object *key,
+                                                     Scheme_Object *prompt_tag);
 
 /* Internal */
 MZ_EXTERN Scheme_Object *scheme_do_eval(Scheme_Object *obj, int _num_rands, Scheme_Object **rands, int val);

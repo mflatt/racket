@@ -4583,9 +4583,8 @@ make_struct_proc_for_realm(Scheme_Struct_Type *struct_type,
     a[0] = (Scheme_Object *)struct_type;
     a[1] = scheme_make_integer(field_num);
     if (contract)
-      a[2] = scheme_make_pair(realm, contract);
-    else
-      a[2] = realm;
+      realm = scheme_make_pair(realm, contract);
+    a[2] = realm;
 
     if ((proc_type == SCHEME_GETTER) || (proc_type == SCHEME_GEN_GETTER)) {
       p = scheme_make_folding_prim_closure(scheme_struct_getter,
@@ -4662,7 +4661,7 @@ Scheme_Object *scheme_rename_struct_proc(Scheme_Object *p, Scheme_Object *sym, S
         contract = SCHEME_CDR(contract);
       else
         contract = NULL;
-      
+ 
       return make_struct_proc_for_realm(st, (char *)func_name, realm, contract,
                                         is_getter ? SCHEME_GETTER : SCHEME_SETTER,
                                         field_pos);

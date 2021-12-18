@@ -2727,13 +2727,14 @@ typedef struct Scheme_Comp_Env
   Scheme_Hash_Tree *vars; /* symbol -> Scheme_IR_Local */
   Scheme_Object *value_name; /* propagated down */
   Scheme_Linklet *linklet;
+  Scheme_Object *realm;
 } Scheme_Comp_Env;
 
 #define COMP_ENV_CHECKING_CONSTANT    0x1
 #define COMP_ENV_DONT_COUNT_AS_USE    0x2
 #define COMP_ENV_ALLOW_SET_UNDEFINED  0x4
 
-Scheme_Comp_Env *scheme_new_comp_env(Scheme_Linklet *linklet, int flags);
+Scheme_Comp_Env *scheme_new_comp_env(Scheme_Linklet *linklet, int flags, Scheme_Object *realm);
 Scheme_Comp_Env *scheme_extend_comp_env(Scheme_Comp_Env *env, Scheme_Object *id, Scheme_Object *var,
                                         int mutate, int check_dups);
 Scheme_Comp_Env *scheme_set_comp_env_flags(Scheme_Comp_Env *env, int flags);
@@ -3053,7 +3054,8 @@ Scheme_Object *scheme_toplevel_to_flagged_toplevel(Scheme_Object *tl, int flags)
 int scheme_expr_produces_local_type(Scheme_Object *expr, int *_involves_k_cross);
 
 Scheme_Linklet *scheme_compile_and_optimize_linklet(Scheme_Object *form, Scheme_Object *name);
-Scheme_Linklet *scheme_compile_linklet(Scheme_Object *form, int set_undef, Scheme_Object *import_keys);
+Scheme_Linklet *scheme_compile_linklet(Scheme_Object *form, int set_undef, Scheme_Object *import_keys,
+                                       Scheme_Object *realm);
 
 Scheme_Object *scheme_make_sequence_compilation(Scheme_Object *compiled_list,
 						int strip_values,
@@ -3079,8 +3081,6 @@ struct Start_Module_Args;
 Scheme_Object *scheme_linklet_run_start(Scheme_Linklet* linklet, Scheme_Instance *instance, Scheme_Object *name);
 #endif
 Scheme_Object *scheme_linklet_run_finish(Scheme_Linklet* linklet, Scheme_Instance *instance, int use_prompt);
-
-Scheme_Object *scheme_build_closure_name(Scheme_Object *code, Scheme_Comp_Env *env);
 
 /* flags reported by scheme_resolve_info_flags */
 #define SCHEME_INFO_BOXED 0x1

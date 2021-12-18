@@ -2464,8 +2464,8 @@ Scheme_Object *scheme_proc_struct_name_source(Scheme_Object *a)
         && scheme_struct_type_property_ref(scheme_object_name_property, a)) {
       return a;
     } else if (scheme_reduced_procedure_struct
-        && scheme_is_struct_instance(scheme_reduced_procedure_struct, a)
-        && SCHEME_TRUEP(((Scheme_Structure *)a)->slots[2])) {
+               && scheme_is_struct_instance(scheme_reduced_procedure_struct, a)
+               && SCHEME_TRUEP(((Scheme_Structure *)a)->slots[2])) {
       return a;
     } else {
       /* Either use struct name, or extract proc, depending
@@ -8343,6 +8343,15 @@ extract_cc_marks(int argc, Scheme_Object *argv[])
   return first;
 }
 
+Scheme_Object *scheme_extract_cc_mark_list(Scheme_Object *mark_set, Scheme_Object *key, Scheme_Object *prompt_tag)
+{
+  Scheme_Object *argv[3];
+  argv[0] = (mark_set ? mark_set : scheme_false);
+  argv[1] = key;
+  argv[2] = prompt_tag;
+  return extract_cc_marks(3, argv);
+}
+
 static Scheme_Object *
 iterate_cc_markses(const char *who,
                    Scheme_Object *prompt_tag, Scheme_Object *none,
@@ -8567,7 +8576,7 @@ scheme_get_stack_trace(Scheme_Object *mark_set)
   /* Make srclocs */
   for (n = l; SCHEME_PAIRP(n); n = SCHEME_CDR(n)) { 
     name = SCHEME_CAR(n);
-    if (SCHEME_VECTORP(name)) {
+    if (SCHEME_VECTORP(name) && SCHEME_TRUEP(SCHEME_VEC_ELS(name)[1])) {
       loc = scheme_make_location(SCHEME_VEC_ELS(name)[1],
 				 SCHEME_VEC_ELS(name)[2],
 				 SCHEME_VEC_ELS(name)[3],

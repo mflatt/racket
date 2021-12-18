@@ -753,11 +753,9 @@ void scheme_init_parameterization()
   REGISTER_SO(scheme_exn_handler_key);
   REGISTER_SO(scheme_parameterization_key);
   REGISTER_SO(scheme_break_enabled_key);
-  REGISTER_SO(scheme_error_message_adjuster_key);
   scheme_exn_handler_key = scheme_make_symbol("exnh");
   scheme_parameterization_key = scheme_make_symbol("paramz");
   scheme_break_enabled_key = scheme_make_symbol("break-on?");
-  scheme_error_message_adjuster_key = scheme_make_symbol("err-adjust");
 }
 
 void scheme_init_paramz(Scheme_Startup_Env *env)

@@ -4,26 +4,26 @@
                     (case mode
                       [(name)
                        (lambda (name realm)
-                         (define who 'default-error-message-adjust-handler/name-mode)
+                         (define who 'default-error-message-adjuster/name-mode)
                          (check who symbol? name)
                          (check who symbol? realm)
                          (values name realm))]
                       [(contract)
                        (lambda (str realm)
-                         (define who 'default-error-message-adjust-handler/contract-mode)
+                         (define who 'default-error-message-adjuster/contract-mode)
                          (check who string? str)
                          (check who symbol? realm)
                          (values str realm))]
                       [(message)
                        (lambda (from from-realm msg msg-realm)
-                         (define who 'default-error-message-adjust-handler/message)
+                         (define who 'default-error-message-adjuster/message)
                          (check who symbol? :or-false from)
                          (check who symbol? from-realm)
                          (check who string? msg)
                          (check who symbol? msg-realm)
                          (values from from-realm msg msg-realm))]
                       [else
-                       (let ([who 'default-error-message-adjust-handler])
+                       (let ([who 'default-error-message-adjuster])
                          (check who (lambda (x) #f)
                                 :contract "(or/c 'name 'contract 'message)"
                                 mode))]))
@@ -40,7 +40,9 @@
     (let loop ([modes modes])
       (cond
         [(null? modes) vals]
-        [(|#%app| adjr (caar modes))
+        [(call-with-continuation-barrier
+          (lambda ()
+            (|#%app| adjr (caar modes))))
          => (lambda (adj)
               (define n-args (cadar modes))
               (define apply-adj (caddar modes))
@@ -71,7 +73,11 @@
                        (apply-adjuster adjr vals)
                        vals)))))]))
 
-(define (error-message->adjusted-string name name-realm msg msg-realm)
+(define/who (error-message->adjusted-string name name-realm msg msg-realm)
+  (check who symbol? :or-false name)
+  (check who symbol? name-realm)
+  (check who string? msg)
+  (check who symbol? msg-realm)
   (let ([v (apply-adjusters (vector name name-realm msg msg-realm)
                             (list
                              (list
@@ -80,12 +86,14 @@
                               (lambda (proc v)
                                 (let ([who '|current-error-message-adjuster for message|])
                                   (#%call-with-values
-                                   (lambda () (|#%app|
-                                               proc
-                                               (#%vector-ref v 0)
-                                               (#%vector-ref v 1)
-                                               (#%vector-ref v 2)
-                                               (#%vector-ref v 3)))
+                                   (lambda () (call-with-continuation-barrier
+                                               (lambda ()
+                                                 (|#%app|
+                                                  proc
+                                                  (#%vector-ref v 0)
+                                                  (#%vector-ref v 1)
+                                                  (#%vector-ref v 2)
+                                                  (#%vector-ref v 3)))))
                                    (case-lambda
                                     [(name name-realm msg msg-realm)
                                      (unless (or (not name) (symbol? name))
@@ -105,10 +113,12 @@
                               (lambda (proc v)
                                 (let ([who '|current-error-message-adjuster for name|])
                                   (#%call-with-values
-                                   (lambda () (|#%app|
-                                               proc
-                                               (#%vector-ref v 0)
-                                               (#%vector-ref v 1)))
+                                   (lambda () (call-with-continuation-barrier
+                                               (lambda ()
+                                                 (|#%app|
+                                                  proc
+                                                  (#%vector-ref v 0)
+                                                  (#%vector-ref v 1)))))
                                    (case-lambda
                                     [(name name-realm)
                                      (unless (or (not name) (symbol? name))
@@ -126,7 +136,9 @@
                                    msg)
           msg))))
 
-(define (error-contract->adjusted-string contract realm)
+(define/who (error-contract->adjusted-string contract realm)
+  (check who string? contract)
+  (check who symbol? realm)
   (car
    (apply-adjusters (cons contract realm)
                     (list
@@ -136,7 +148,9 @@
                       (lambda (proc ctc+realm)
                         (let ([who '|current-error-message-adjuster for contract|])
                           (#%call-with-values
-                           (lambda () (|#%app| proc (car ctc+realm) (cdr ctc+realm)))
+                           (lambda () (call-with-continuation-barrier
+                                       (lambda ()
+                                         (|#%app| proc (car ctc+realm) (cdr ctc+realm)))))
                            (case-lambda
                             [(ctc realm)
                              (unless (string? ctc)

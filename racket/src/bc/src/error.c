@@ -49,11 +49,17 @@ ROSYM static Scheme_Object *posix_symbol;
 ROSYM static Scheme_Object *windows_symbol;
 ROSYM static Scheme_Object *gai_symbol;
 ROSYM static Scheme_Object *local_realm_symbol;
+ROSYM static Scheme_Object *name_symbol;
+ROSYM static Scheme_Object *message_symbol;
+ROSYM static Scheme_Object *contract_symbol;
 ROSYM static Scheme_Object *arity_property;
 ROSYM static Scheme_Object *def_err_val_proc;
 ROSYM static Scheme_Object *def_err_stx_proc;
 ROSYM static Scheme_Object *def_error_esc_proc;
 ROSYM static Scheme_Object *def_err_msg_adjust_proc;
+ROSYM static Scheme_Object *def_err_msg_adjust_name_proc;
+ROSYM static Scheme_Object *def_err_msg_adjust_message_proc;
+ROSYM static Scheme_Object *def_err_msg_adjust_contract_proc;
 ROSYM static Scheme_Object *default_display_handler;
 ROSYM static Scheme_Object *emergency_display_handler;
 ROSYM static Scheme_Object *def_exe_yield_proc;
@@ -114,6 +120,9 @@ static Scheme_Object *emergency_error_display_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_error_value_string_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_error_syntax_string_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_error_message_adjust_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_message_adjust_name_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_message_adjust_message_proc(int, Scheme_Object *[]);
+static Scheme_Object *def_error_message_adjust_contract_proc(int, Scheme_Object *[]);
 static Scheme_Object *def_exit_handler_proc(int, Scheme_Object *[]);
 static Scheme_Object *default_yield_handler(int, Scheme_Object *[]);
 static Scheme_Object *srcloc_to_string(int argc, Scheme_Object **argv);
@@ -887,8 +896,17 @@ void scheme_init_error(Scheme_Startup_Env *env)
   def_err_stx_proc = scheme_make_prim_w_arity(def_error_syntax_string_proc, "default-error-syntax->string-handler", 2, 2);
 
   REGISTER_SO(def_err_msg_adjust_proc);
+  REGISTER_SO(def_err_msg_adjust_name_proc);
+  REGISTER_SO(def_err_msg_adjust_message_proc);
+  REGISTER_SO(def_err_msg_adjust_contract_proc);
   def_err_msg_adjust_proc = scheme_make_prim_w_arity(def_error_message_adjust_proc,
                                                      "default-error-message-adjuster", 1, 1);
+  def_err_msg_adjust_name_proc = scheme_make_prim_w_arity2(def_error_message_adjust_name_proc,
+                                                           "default-error-message-adjuster/name-mode", 2, 2, 2, 2);
+  def_err_msg_adjust_message_proc = scheme_make_prim_w_arity2(def_error_message_adjust_message_proc,
+                                                              "default-error-message-adjuster/message-mode", 4, 4, 4, 4);
+  def_err_msg_adjust_contract_proc = scheme_make_prim_w_arity2(def_error_message_adjust_contract_proc,
+                                                               "default-error-message-adjuster/contract-mode", 2, 2, 2, 2);
 
   REGISTER_SO(none_symbol);
   REGISTER_SO(fatal_symbol);
@@ -917,6 +935,13 @@ void scheme_init_error(Scheme_Startup_Env *env)
   scheme_primitive_realm = scheme_intern_symbol("racket/primitive");
   local_realm_symbol = scheme_intern_symbol("local");
 
+  REGISTER_SO(name_symbol);
+  REGISTER_SO(message_symbol);
+  REGISTER_SO(contract_symbol);
+  name_symbol = scheme_intern_symbol("name");
+  message_symbol = scheme_intern_symbol("message");
+  contract_symbol = scheme_intern_symbol("contract");
+
   REGISTER_SO(arity_property);
   {
     Scheme_Object *guard;
@@ -931,6 +956,8 @@ void scheme_init_error(Scheme_Startup_Env *env)
                                                 "default-executable-yield-handler",
                                                 1, 1);
 
+  REGISTER_SO(scheme_error_message_adjuster_key);
+  scheme_error_message_adjuster_key = scheme_make_symbol("err-adjust");
   scheme_addto_prim_instance("error-message-adjuster-key", scheme_error_message_adjuster_key, env);
 }
 
@@ -2592,14 +2619,13 @@ void scheme_wrong_rator(Scheme_Object *rator, int argc, Scheme_Object **argv)
 {
   intptr_t slen, rlen;
   char *s, *r;
-  const char *name;
 
   r = scheme_make_provided_string(rator, 1, &rlen);
 
   s = scheme_make_arg_lines_string("   ", -1, argc, argv, &slen);
 
   scheme_raise_realm_exn(MZEXN_FAIL_CONTRACT,
-                         strlen(name), scheme_primitive_realm, scheme_primitive_realm,
+                         strlen("application"), scheme_primitive_realm, scheme_primitive_realm,
                          "%s: not a procedure;\n"
                          " expected a procedure that can be applied to arguments\n"
                          "  given: %t\n"
@@ -3694,12 +3720,6 @@ current_error_message_adjuster(int argc, Scheme_Object *argv[])
 }
 
 static Scheme_Object *
-def_error_message_adjust_proc(int argc, Scheme_Object *argv[])
-{
-  return scheme_false;
-}
-
-static Scheme_Object *
 exit_handler(int argc, Scheme_Object *argv[])
 {
   return scheme_param_config("exit-handler",
@@ -4700,27 +4720,254 @@ static int log_reader_get(Scheme_Object *_lr, Scheme_Schedule_Info *sinfo)
 
 /***********************************************************************/
 
+static Scheme_Object *
+def_error_message_adjust_proc(int argc, Scheme_Object *argv[])
+{
+  if (SAME_OBJ(argv[0], name_symbol))
+    return def_err_msg_adjust_name_proc;
+  else if (SAME_OBJ(argv[0], message_symbol))
+    return def_err_msg_adjust_message_proc;
+  else if (SAME_OBJ(argv[0], contract_symbol))
+    return def_err_msg_adjust_contract_proc;
+  else {
+    scheme_wrong_contract("default-error-message-adjuster", "(or/c 'name 'message 'contract)", 0, argc, argv);
+    return scheme_false;
+  }
+}
+
+static Scheme_Object *def_error_message_adjust_name_proc(int argc, Scheme_Object *argv[])
+{
+  if (!SCHEME_SYMBOLP(argv[0]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "symbol?", 0, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[1]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "symbol?", 1, argc, argv);
+
+  return scheme_values(2, argv);
+}
+
+static Scheme_Object *def_error_message_adjust_message_proc(int argc, Scheme_Object *argv[])
+{
+  if (SCHEME_TRUEP(argv[0]) && !SCHEME_SYMBOLP(argv[0]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "(or/c symbol? #f)", 0, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[1]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "symbol?", 1, argc, argv);
+  if (!SCHEME_CHAR_STRINGP(argv[2]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "string?", 2, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[3]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "symbol?", 3, argc, argv);
+
+  return scheme_values(4, argv);
+}
+
+static Scheme_Object *def_error_message_adjust_contract_proc(int argc, Scheme_Object *argv[])
+{
+  if (!SCHEME_CHAR_STRINGP(argv[0]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "string?", 0, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[1]))
+    scheme_wrong_contract("default-error-message-adjuster/name-mode", "symbol?", 1, argc, argv);
+
+  return scheme_values(2, argv);
+}
+
+#define adjust_CONTRACT_MODE 0
+#define adjust_MESSAGE_MODE  1
+#define adjust_NAME_MODE     2
+
+static void apply_one_adjuster(Scheme_Object *adjr,
+                               Scheme_Object **_v1, Scheme_Object **_realm1,
+                               Scheme_Object **_v2, Scheme_Object **_realm2,
+                               int mode) {
+  const char *who;
+  Scheme_Object *proc, *a[4], *r, **vals;
+  Scheme_Thread *p;
+  int n, rn;
+
+  a[0] = ((mode == adjust_CONTRACT_MODE) ? contract_symbol : message_symbol);
+  proc = scheme_apply(adjr, 1, a);
+  if (SCHEME_FALSEP(proc)) {
+    if (mode == adjust_MESSAGE_MODE) {
+      mode = adjust_NAME_MODE;
+      a[0] = name_symbol;
+      proc = scheme_apply(adjr, 1, a);
+    }
+    if (SCHEME_FALSEP(proc))
+      return;
+  }
+
+  if (mode == adjust_CONTRACT_MODE)
+    who = "current-error-message-adjuster for contract";
+  else if (mode == adjust_MESSAGE_MODE)
+    who = "current-error-message-adjuster for message";
+  else
+    who = "current-error-message-adjuster for name";
+  
+  if (mode == adjust_MESSAGE_MODE)
+    n = 4;
+  else
+    n = 2;
+
+  if (!scheme_check_proc_arity(NULL, n, -1, 0, &proc)) {
+    scheme_wrong_contract(who,
+                          ((n == 2)
+                           ? "(procedure-arity-includes/c 2)"
+                           : "(procedure-arity-includes/c 4)"),
+                          -1, 0, &proc);
+  }
+
+  a[0] = *_v1;
+  a[1] = *_realm1;
+  a[2] = *_v2;
+  a[3] = *_realm2;
+
+  r = scheme_apply_multi(proc, n, a);
+
+  p = scheme_current_thread;
+  if (SAME_OBJ(r, SCHEME_MULTIPLE_VALUES)) {
+    rn = p->ku.multiple.count;
+    if (rn <= 4) {
+      int i;
+      for (i = 0; i < rn; i++) {
+        a[i] = p->ku.multiple.array[i];
+      }
+      vals = a;
+    } else {
+      if (SAME_OBJ(p->ku.multiple.array, p->values_buffer))
+        p->values_buffer = NULL;
+      vals = p->ku.multiple.array;
+    }
+    p->ku.multiple.array = NULL;
+  } else {
+    rn = 1;
+    a[0] = r;
+    vals = a;
+  }
+
+  if (n != rn)
+    scheme_wrong_return_arity(who, n, rn, vals, NULL);
+
+  if (mode == adjust_MESSAGE_MODE) {
+    if (SCHEME_TRUEP(vals[0]) && !SCHEME_SYMBOLP(vals[0]))
+      scheme_wrong_contract(who, "(or/c symbol? #f)", -1, -1, &(vals[0]));
+  } else if (mode == adjust_NAME_MODE) {
+    if (!SCHEME_SYMBOLP(vals[0]))
+      scheme_wrong_contract(who, "symbol?", -1, -1, &(vals[0]));
+  } else {
+    if (!SCHEME_CHAR_STRINGP(vals[0]))
+      scheme_wrong_contract(who, "string?", -1, -1, &(vals[0]));
+  }
+  if (!SCHEME_SYMBOLP(vals[1]))
+    scheme_wrong_contract(who, "symbol?", -1, -1, &(vals[1]));
+  if (mode == adjust_MESSAGE_MODE) {
+    if (!SCHEME_CHAR_STRINGP(vals[2]))
+      scheme_wrong_contract(who, "string?", -1, -1, &(vals[2]));
+    if (!SCHEME_SYMBOLP(vals[3]))
+      scheme_wrong_contract(who, "symbol?", -1, -1, &(vals[3]));
+  }
+
+  *_v1 = vals[0];
+  *_realm1 = vals[1];
+  if (mode == adjust_MESSAGE_MODE) {
+    *_v2 = vals[2];
+    *_realm2 = vals[3];
+  }
+}
+
+static Scheme_Object *apply_adjusters(Scheme_Object *v1, Scheme_Object *realm1,
+                                      Scheme_Object *v2, Scheme_Object *realm2,
+                                      Scheme_Object *base_adjr,
+                                      int mode) {
+  if (scheme_extract_one_cc_mark(NULL, scheme_error_message_adjuster_key)) {
+    Scheme_Object *l;
+    l = scheme_extract_cc_mark_list(NULL, scheme_error_message_adjuster_key, scheme_root_prompt_tag);
+    while (SCHEME_PAIRP(l)) {
+      Scheme_Object *a = SCHEME_CAR(l);
+      if (scheme_check_proc_arity(NULL, 1, -1, 0, &a))
+        apply_one_adjuster(a, &v1, &realm1, &v2, &realm2, mode);
+      l = SCHEME_CDR(l);
+    }
+  }
+
+  apply_one_adjuster(base_adjr, &v1, &realm1, &v2, &realm2, mode);
+
+  if (mode == adjust_CONTRACT_MODE)
+    return v1;
+  else {
+    if (SCHEME_FALSEP(v1))
+      return v2;
+    else {
+      v1 = scheme_append_char_string(scheme_make_utf8_string(scheme_symbol_val(v1)),
+                                     scheme_make_utf8_string(": "));
+      return scheme_append_char_string(v1, v2);
+    }
+  }
+}
+
 static const char *contract_realm_adjust(const char *contract, Scheme_Object *realm)
 {
-  return contract;
+  Scheme_Object *base_adjr, *ctc;
+
+  base_adjr = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_MESSAGE_ADJUSTER);
+  if (!scheme_extract_one_cc_mark(NULL, scheme_error_message_adjuster_key)
+      && SAME_OBJ(base_adjr, def_err_msg_adjust_proc))
+    return contract;
+
+  ctc = scheme_make_utf8_string(contract);
+  ctc = apply_adjusters(ctc, realm, NULL, NULL, base_adjr, adjust_CONTRACT_MODE);
+
+  return SCHEME_BYTE_STR_VAL(scheme_char_string_to_byte_string(ctc));
 }
 
 static Scheme_Object *error_message_adjust(char *buffer, intptr_t alen, intptr_t namelen, Scheme_Object *name_realm, Scheme_Object *msg_realm)
 {
-  if (msg_realm == NULL)
+  Scheme_Object *base_adjr, *name, *msg;
+  intptr_t delta;
+
+  base_adjr = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_MESSAGE_ADJUSTER);
+  if (!scheme_extract_one_cc_mark(NULL, scheme_error_message_adjuster_key)
+      && SAME_OBJ(base_adjr, def_err_msg_adjust_proc))
     return scheme_make_immutable_sized_utf8_string(buffer, alen);
 
-  return scheme_make_immutable_sized_utf8_string(buffer, alen); 
+  if (namelen < 0)
+    name = scheme_false;
+  else
+    name = scheme_intern_exact_symbol(buffer, namelen);
+
+  delta = ((namelen < 0) ? 0 : (namelen + 2));
+  msg = scheme_make_sized_offset_utf8_string(buffer, delta, alen - delta);
+
+  return apply_adjusters(name, name_realm, msg, msg_realm, base_adjr, adjust_MESSAGE_MODE);
 }
 
 static Scheme_Object *error_message_to_adjusted_string(int argc, Scheme_Object *argv[])
 {
-  return scheme_false;
+  Scheme_Object *base_adjr;
+
+  if (SCHEME_TRUEP(argv[0]) && !SCHEME_SYMBOLP(argv[0]))
+    scheme_wrong_contract("error-message->adjusted-string", "(or/c symbol? #f)", 0, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[1]))
+    scheme_wrong_contract("error-message->adjusted-string", "symbol?", 1, argc, argv);
+  if (!SCHEME_CHAR_STRINGP(argv[2]))
+    scheme_wrong_contract("error-message->adjusted-string", "string?", 2, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[3]))
+    scheme_wrong_contract("error-message->adjusted-string", "symbol?", 3, argc, argv);
+
+  base_adjr = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_MESSAGE_ADJUSTER);
+
+  return apply_adjusters(argv[0], argv[1], argv[2], argv[3], base_adjr, adjust_MESSAGE_MODE);
 }
 
 static Scheme_Object *error_contract_to_adjusted_string(int argc, Scheme_Object *argv[])
 {
-  return scheme_false;
+  Scheme_Object *base_adjr;
+
+  if (!SCHEME_CHAR_STRINGP(argv[0]))
+    scheme_wrong_contract("error-contract->adjusted-string", "string?", 0, argc, argv);
+  if (!SCHEME_SYMBOLP(argv[1]))
+    scheme_wrong_contract("error-contract->adjusted-string", "symbol?", 1, argc, argv);
+
+  base_adjr = scheme_get_param(scheme_current_config(), MZCONFIG_ERROR_MESSAGE_ADJUSTER);
+
+  return apply_adjusters(argv[0], argv[1], NULL, NULL, base_adjr, adjust_CONTRACT_MODE);
 }
 
 /***********************************************************************/
@@ -4730,7 +4977,10 @@ static MZ_NORETURN void finish_raise_exn(int id, int c, Scheme_Object **eargs,
                                          char *buffer, intptr_t alen,
                                          Scheme_Object *errno_val, int unsupported)
 {
-  eargs[0] = error_message_adjust(buffer, alen, namelen, name_realm, msg_realm);
+  Scheme_Object *msg;
+
+  msg = error_message_adjust(buffer, alen, namelen, name_realm, msg_realm);
+  eargs[0] = msg;
 
   eargs[1] = TMP_CMARK_VALUE;
   if (errno_val) {
