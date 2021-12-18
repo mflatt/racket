@@ -230,6 +230,7 @@
               (if (chaperone? f)
                   (unsafe-procedure-chaperone-replace-proc f)
                   (unsafe-procedure-impersonator-replace-proc f)))]
+            [(procedure? v) (procedure-realm v)]
             [else default-realm]))])]
     [else default-realm]))
 

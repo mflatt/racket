@@ -270,7 +270,6 @@ typedef struct Thread_Local_Variables {
   double needs_sleep_time_end_;
   int tls_pos_;
   struct Scheme_Object *the_nested_exn_handler_;
-  intptr_t primitive_exn_name_len_;
   struct Scheme_Object *cust_closers_;
   struct Scheme_Object *thread_swap_callbacks_;
   struct Scheme_Object *thread_swap_out_callbacks_;
@@ -659,7 +658,6 @@ XFORM_GC_VARIABLE_STACK_THROUGH_THREAD_LOCAL;
 #define needs_sleep_time_end XOA (scheme_get_thread_local_variables()->needs_sleep_time_end_)
 #define tls_pos XOA (scheme_get_thread_local_variables()->tls_pos_)
 #define the_nested_exn_handler XOA (scheme_get_thread_local_variables()->the_nested_exn_handler_)
-#define primitive_exn_name_len XOA (scheme_get_thread_local_variables()->primitive_exn_name_len_)
 #define cust_closers XOA (scheme_get_thread_local_variables()->cust_closers_)
 #define thread_swap_callbacks XOA (scheme_get_thread_local_variables()->thread_swap_callbacks_)
 #define thread_swap_out_callbacks XOA (scheme_get_thread_local_variables()->thread_swap_out_callbacks_)
