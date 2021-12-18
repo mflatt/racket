@@ -653,8 +653,8 @@
 
 ;; A boxed `name` means a method
 (define (make-interp-procedure proc mask name+realm)
-  (define (name-part n+r) (if (symbol? n+r) n+r (car n+r)))
-  (define (realm-part n+r) (if (symbol? n+r) default-realm (cdr n+r)))
+  (define (name-part n+r) (if (pair? n+r) (car n+r) n+r))
+  (define (realm-part n+r) (if (pair? n+r) (cdr n+r) default-realm))
   (make-arity-wrapper-procedure
    proc
    mask

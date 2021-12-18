@@ -411,7 +411,7 @@
           (|#%app| default)
           (raise (|#%app|
                   exn:fail:contract:arity
-                  (error-message->string
+                  (error-message->adjusted-string
                    who primitive-realm
                    (string-append
                     "arity mismatch for failure procedure;\n"

@@ -91,6 +91,8 @@
           error-escape-handler
           current-error-message-adjuster
           error-message-adjuster-key
+          error-message->adjusted-string
+          error-contract->adjusted-string
           linklet-instantiate-key ; not exported to Racket
           set-error-display-eprintf! ; not exported to Racket
           set-log-system-message! ; not exported to Racket
@@ -764,7 +766,7 @@
           call-as-asynchronous-callback
           post-as-asynchronous-callback
           ensure-virtual-registers
-<
+
           ;; compile-time use in "thread.sls"
           current-atomic-virtual-register
           end-atomic-virtual-register
@@ -790,7 +792,7 @@
   (define none2 '#{none kwcju864gpycc2h151s9atbmo-2}) ; never put this in an emphemeron
 
   (define default-realm 'racket)
-  (define primitive-realm 'racket/realm)
+  (define primitive-realm 'racket/primitive)
 
   (include "rumble/virtual-register.ss")
   (include "rumble/begin0.ss")

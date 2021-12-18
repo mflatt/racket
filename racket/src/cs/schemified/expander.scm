@@ -1347,7 +1347,11 @@
                   (procedure-keywords (|#%app| a_0 p_0))
                   (values null null)))))
           (values null null))
-        (raise-argument-error 'procedure-keywords "procedure?" p_0)))))
+        (raise-argument-error*
+         'procedure-keywords
+         'racket/primitive
+         "procedure?"
+         p_0)))))
 (define print-values
   (lambda vs_0 (begin (for-each (current-print) vs_0) (apply values vs_0))))
 (define reverse$1
@@ -41294,10 +41298,17 @@
                                                                               'constructor
                                                                               (known-struct-op-type
                                                                                c1_0))
-                                                                           (=
-                                                                            (known-struct-op-field-count
-                                                                             c1_0)
-                                                                            n-args_0)
+                                                                           (let ((or-part_0
+                                                                                  (eq?
+                                                                                   #t
+                                                                                   (known-struct-op-field-count
+                                                                                    c1_0))))
+                                                                             (if or-part_0
+                                                                               or-part_0
+                                                                               (=
+                                                                                (known-struct-op-field-count
+                                                                                 c1_0)
+                                                                                n-args_0)))
                                                                            #f)
                                                                          #f)))
                                                                   (if or-part_0

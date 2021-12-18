@@ -271,7 +271,11 @@
                   (procedure-keywords (|#%app| a_0 p_0))
                   (values null null)))))
           (values null null))
-        (raise-argument-error 'procedure-keywords "procedure?" p_0)))))
+        (raise-argument-error*
+         'procedure-keywords
+         'racket/primitive
+         "procedure?"
+         p_0)))))
 (define reverse$1
   (|#%name|
    reverse
@@ -4032,14 +4036,12 @@
               (void)))))
       (void))))
 (define error-message->string
-  (lambda (orig-who_0 msg_0)
-    (let ((who_0
-           (if (symbol? orig-who_0)
-             (symbol->string orig-who_0)
-             (if (string? orig-who_0)
-               (string->symbol orig-who_0)
-               orig-who_0))))
-      (if who_0 (string-append who_0 ": " msg_0) msg_0))))
+  (lambda (who_0 msg_0)
+    (error-message->adjusted-string
+     who_0
+     'racket/primitive
+     msg_0
+     'racket/primitive)))
 (define finish_2797
   (make-struct-type-install-properties
    '(semaphore)
@@ -4203,12 +4205,17 @@
                   (void)
                   (raise
                    (let ((app_0
-                          (error-message->string
-                           'make-semaphore
-                           (string-append
-                            "starting value "
-                            (number->string init4_0)
-                            " is too large"))))
+                          (let ((msg_0
+                                 (string-append
+                                  "starting value "
+                                  (number->string init4_0)
+                                  " is too large")))
+                            (begin-unsafe
+                             (error-message->adjusted-string
+                              'make-semaphore
+                              'racket/primitive
+                              msg_0
+                              'racket/primitive)))))
                      (|#%app| exn:fail app_0 (current-continuation-marks)))))
                 (semaphore1.1 #f #f init4_0)))))))
     (|#%name|
@@ -5873,9 +5880,13 @@
             stop-cust_0))
          (raise
           (let ((app_0
-                 (error-message->string
-                  'custodian-require-memory
-                  "unsupported")))
+                 (let ((msg_0 "unsupported"))
+                   (begin-unsafe
+                    (error-message->adjusted-string
+                     'custodian-require-memory
+                     'racket/primitive
+                     msg_0
+                     'racket/primitive)))))
             (|#%app|
              exn:fail:unsupported
              app_0
@@ -6478,7 +6489,13 @@
                       (if (if limit_0 (>= n_0 limit_0) #f)
                         (raise
                          (let ((app_0
-                                (error-message->string #f "out of memory")))
+                                (let ((msg_0 "out of memory"))
+                                  (begin-unsafe
+                                   (error-message->adjusted-string
+                                    #f
+                                    'racket/primitive
+                                    msg_0
+                                    'racket/primitive)))))
                            (|#%app|
                             exn:fail:out-of-memory
                             app_0
@@ -7803,7 +7820,13 @@
                            (lambda (k_0)
                              (raise
                               (let ((app_0
-                                     (error-message->string #f "user break")))
+                                     (let ((msg_0 "user break"))
+                                       (begin-unsafe
+                                        (error-message->adjusted-string
+                                         #f
+                                         'racket/primitive
+                                         msg_0
+                                         'racket/primitive)))))
                                 (|#%app|
                                  exn:break*_0
                                  app_0
@@ -8658,24 +8681,32 @@
                         (void)
                         (raise
                          (let ((app_0
-                                (let ((app_0
+                                (let ((who_1
                                        (string-append
                                         what_0
                                         " "
                                         (if chaperone?_0
                                           "chaperone"
                                           "impersonator"))))
-                                  (error-message->string
-                                   app_0
-                                   (let ((app_1
-                                          (number->string (length rs_0))))
-                                     (string-append
-                                      "result wrapper returned wrong number of values\n"
-                                      "  expected count: "
-                                      app_1
-                                      "\n"
-                                      "  returned count: "
-                                      (number->string (length new-rs_0))))))))
+                                  (let ((msg_0
+                                         (let ((app_0
+                                                (number->string
+                                                 (length rs_0))))
+                                           (string-append
+                                            "result wrapper returned wrong number of values\n"
+                                            "  expected count: "
+                                            app_0
+                                            "\n"
+                                            "  returned count: "
+                                            (number->string
+                                             (length new-rs_0))))))
+                                    (let ((who_2 who_1))
+                                      (begin-unsafe
+                                       (error-message->adjusted-string
+                                        who_2
+                                        'racket/primitive
+                                        msg_0
+                                        'racket/primitive)))))))
                            (|#%app|
                             exn:fail:contract:arity
                             app_0
@@ -8708,18 +8739,24 @@
            (args_1
             (raise
              (let ((app_0
-                    (let ((app_0
+                    (let ((who_1
                            (string-append
                             what_0
                             " "
                             (if chaperone?_0 "chaperone" "impersonator"))))
-                      (error-message->string
-                       app_0
-                       (string-append
-                        "returned wrong number of values\n"
-                        "  expected count: 2\n"
-                        "  returned count: "
-                        (number->string (length args_1)))))))
+                      (let ((msg_0
+                             (string-append
+                              "returned wrong number of values\n"
+                              "  expected count: 2\n"
+                              "  returned count: "
+                              (number->string (length args_1)))))
+                        (let ((who_2 who_1))
+                          (begin-unsafe
+                           (error-message->adjusted-string
+                            who_2
+                            'racket/primitive
+                            msg_0
+                            'racket/primitive)))))))
                (|#%app|
                 exn:fail:contract:arity
                 app_0
@@ -11512,9 +11549,13 @@
                    (lock-release-both f_0)
                    (raise
                     (let ((app_0
-                           (error-message->string
-                            'touch
-                            "future previously aborted")))
+                           (let ((msg_0 "future previously aborted"))
+                             (begin-unsafe
+                              (error-message->adjusted-string
+                               'touch
+                               'racket/primitive
+                               msg_0
+                               'racket/primitive)))))
                       (|#%app| exn:fail app_0 (current-continuation-marks)))))
                  (if (eq? s_0 'blocked)
                    (if (current-future$1)
@@ -15069,5 +15110,11 @@
   (lambda (who_0)
     (raise
      (let ((app_0
-            (error-message->string who_0 "unsupported on this platform")))
+            (let ((msg_0 "unsupported on this platform"))
+              (begin-unsafe
+               (error-message->adjusted-string
+                who_0
+                'racket/primitive
+                msg_0
+                'racket/primitive)))))
        (|#%app| exn:fail:unsupported app_0 (current-continuation-marks))))))

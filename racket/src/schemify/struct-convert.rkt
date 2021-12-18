@@ -72,7 +72,7 @@
              ;; make sure all accessor/mutator positions are in range:
              (for/and ([make-acc/mut (in-list make-acc/muts)])
                (match make-acc/mut
-                 [`(,_ ,_ ,pos ,_) (pos . < . (struct-type-info-immediate-field-count sti))]))
+                 [`(,_ ,_ ,pos . ,_) (pos . < . (struct-type-info-immediate-field-count sti))]))
              ;; make sure `struct:` isn't used too early, since we're
              ;; reordering it's definition with respect to some arguments
              ;; of `make-struct-type`:

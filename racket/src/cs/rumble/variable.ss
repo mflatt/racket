@@ -19,7 +19,7 @@
   (raise
    (|#%app|
     exn:fail:contract:variable
-    (error-message->string
+    (error-message->adjusted-string
      (variable-name var) 'local
      "undefined;\n cannot reference undefined identifier"
      primitive-realm)

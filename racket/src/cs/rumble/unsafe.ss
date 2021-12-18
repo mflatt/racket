@@ -230,7 +230,7 @@
   (when (eq? v unsafe-undefined)
     (raise (|#%app|
             exn:fail:contract:variable
-            (error-message->string
+            (error-message->adjusted-string
              sym 'local
              "undefined;\n cannot use before initialization"
              primitive-realm)
@@ -242,7 +242,7 @@
   (when (eq? v unsafe-undefined)
     (raise (|#%app|
             exn:fail:contract:variable
-            (error-message->string
+            (error-message->adjusted-string
              sym 'local
              "assignment disallowed;\n cannot assign before initialization"
              primitive-realm)

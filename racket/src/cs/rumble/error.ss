@@ -142,8 +142,11 @@
 ;; ----------------------------------------
 
 ;; this is the real `raise-arguments-error`:
-(define/who (raise-arguments-error/user who-in what . more)
-  (#%$app/no-return do-raise-arguments-error who who-in default-realm what exn:fail:contract more))
+(define raise-arguments-error/user
+  (|#%name|
+   raise-arguments-error
+   (lambda (who-in what . more)
+     (#%$app/no-return do-raise-arguments-error 'raise-arguments-error who-in default-realm what exn:fail:contract more))))
 
 (define/who (raise-arguments-error who-in what . more)
   (#%$app/no-return do-raise-arguments-error who who-in primitive-realm what exn:fail:contract more))
@@ -158,7 +161,7 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (error-message->string
+    (error-message->adjusted-string
      who realm
      (apply
       string-append
@@ -199,9 +202,9 @@
 (define/who raise-argument-error
    (case-lambda
     [(who-in what arg)
-     (#%$app/no-return do-raise-argument-error who "given" who-in default-realm what #f arg #f)]
+     (#%$app/no-return do-raise-argument-error who "given" who-in primitive-realm what #f arg #f)]
     [(who-in what pos arg . args)
-     (#%$app/no-return do-raise-argument-error who "given" who-in default-realm what pos arg args)]))
+     (#%$app/no-return do-raise-argument-error who "given" who-in primitive-realm what pos arg args)]))
 
 (define/who raise-argument-error*
    (case-lambda
@@ -213,16 +216,16 @@
 (define/who raise-result-error
   (case-lambda
     [(who-in what arg)
-     (#%$app/no-return do-raise-argument-error who default-realm "result" who-in what #f arg #f)]
+     (#%$app/no-return do-raise-argument-error who "result" who-in default-realm what #f arg #f)]
     [(who-in what pos arg . args)
-     (#%$app/no-return do-raise-argument-error who default-realm "result" who-in what pos arg args)]))
+     (#%$app/no-return do-raise-argument-error who "result" who-in default-realm what pos arg args)]))
 
 (define/who raise-result-error*
   (case-lambda
     [(who-in realm what arg)
-     (#%$app/no-return do-raise-argument-error who realm "result" who-in what #f arg #f)]
+     (#%$app/no-return do-raise-argument-error who "result" who-in realm what #f arg #f)]
     [(who-in realm what pos arg . args)
-     (#%$app/no-return do-raise-argument-error who realm "result" who-in what pos arg args)]))
+     (#%$app/no-return do-raise-argument-error who "result" who-in realm what pos arg args)]))
 
 (define (do-raise-argument-error e-who tag who realm what pos arg args)
   (check e-who symbol? who)
@@ -236,10 +239,10 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (error-message->string
+    (error-message->adjusted-string
      who realm
      (string-append "contract violation\n  expected: "
-                    (reindent (error-contract->string what realm)
+                    (reindent (error-contract->adjusted-string what realm)
                               (string-length "  expected: "))
                     "\n  " tag ": "
                     (error-value->string
@@ -310,7 +313,7 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (error-message->string
+    (error-message->adjusted-string
      who default-realm
      (string-append-immutable
       ": expected argument of type <" what ">"
@@ -337,7 +340,7 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (error-message->string
+    (error-message->adjusted-string
      in-who default-realm
      (apply
       string-append-immutable
@@ -353,40 +356,42 @@
 
 ;; this is the real `raise-range-error`:
 (define raise-range-error/user
-  (case-lambda
-   [(in-who
-     type-description
-     index-prefix
-     index
-     in-value
-     lower-bound
-     upper-bound
-     alt-lower-bound)
-    (do-raise-range-error 'raise-range-error
-                          in-who
-                          default-realm
-                          type-description
-                          index-prefix
-                          index
-                          in-value
-                          lower-bound
-                          upper-bound
-                          alt-lower-bound)]
-   [(in-who
-     type-description
-     index-prefix
-     index
-     in-value
-     lower-bound
-     upper-bound)
-    (raise-range-error/user in-who
-                            type-description
-                            index-prefix
-                            index
-                            in-value
-                            lower-bound
-                            upper-bound
-                            #f)]))
+  (|#%name|
+   raise-range-error/user
+   (case-lambda
+    [(in-who
+      type-description
+      index-prefix
+      index
+      in-value
+      lower-bound
+      upper-bound
+      alt-lower-bound)
+     (do-raise-range-error 'raise-range-error
+                           in-who
+                           default-realm
+                           type-description
+                           index-prefix
+                           index
+                           in-value
+                           lower-bound
+                           upper-bound
+                           alt-lower-bound)]
+    [(in-who
+      type-description
+      index-prefix
+      index
+      in-value
+      lower-bound
+      upper-bound)
+     (raise-range-error/user in-who
+                             type-description
+                             index-prefix
+                             index
+                             in-value
+                             lower-bound
+                             upper-bound
+                             #f)])))
 
 (define/who raise-range-error
   (case-lambda
@@ -483,7 +488,7 @@
   (raise
    (|#%app|
     exn:fail:contract
-    (error-message->string
+    (error-message->adjusted-string
      in-who realm
      (string-append-immutable
       index-prefix "index is "
@@ -548,7 +553,7 @@
   (raise
    (|#%app|
     exn:fail:contract:arity
-    (error-message->string
+    (error-message->adjusted-string
      (if (procedure? name)
          (object-name name)
          name)
@@ -589,7 +594,7 @@
   (raise
    (|#%app|
     exn:fail:contract:arity
-    (error-message->string
+    (error-message->adjusted-string
      who-in realm
      (string-append
       "result arity mismatch;\n"
@@ -632,7 +637,7 @@
   (raise
    (|#%app|
     exn:fail:unsupported
-    (error-message->string
+    (error-message->adjusted-string
      name realm
      msg
      realm)
@@ -987,7 +992,7 @@
    [else 'unknown-who]))
 
 (define (exn->string v)
-  (error-message->string
+  (error-message->adjusted-string
    (and (who-condition? v)
         (rewrite-who (who->symbol (condition-who v))))
    primitive-realm
@@ -1050,7 +1055,7 @@
                                   n))])
     (|#%app|
      exn:fail:contract:arity
-     (error-message->string
+     (error-message->adjusted-string
       name realm
       (string-append
        "arity mismatch;\n the expected number of arguments does not match the given number"
@@ -1128,7 +1133,7 @@
 (define (make-nested-exception-handler what old-exn)
   (lambda (exn)
     (let ([msg
-           (error-message->string
+           (error-message->adjusted-string
             #f primitive-realm
             (string-append
              (cond

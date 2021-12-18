@@ -17952,26 +17952,7 @@
                                                                              a_1)))
                                                                        (if (pair?
                                                                             p_2)
-                                                                         (let ((a_2
-                                                                                (cdr
-                                                                                 p_2)))
-                                                                           (let ((p_3
-                                                                                  (unwrap
-                                                                                   a_2)))
-                                                                             (if (pair?
-                                                                                  p_3)
-                                                                               (let ((a_3
-                                                                                      (cdr
-                                                                                       p_3)))
-                                                                                 (begin-unsafe
-                                                                                  (let ((app_0
-                                                                                         (unwrap
-                                                                                          '())))
-                                                                                    (eq?
-                                                                                     app_0
-                                                                                     (unwrap
-                                                                                      a_3)))))
-                                                                               #f)))
+                                                                         #t
                                                                          #f)))
                                                                    #f)))
                                                              #f))
