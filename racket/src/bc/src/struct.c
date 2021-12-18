@@ -3689,6 +3689,12 @@ static Scheme_Object *make_struct_field_xxor(const char *who, int getter,
       name = NULL;
     }
   } else {
+    fieldstr = NULL;
+    fieldstrlen = 0;
+    name = NULL;
+  }
+
+  if (!name && !fieldstr) {
     sprintf(digitbuf, "field%d", (int)SCHEME_INT_VAL(argv[1]));
     fieldstr = digitbuf;
     fieldstrlen = strlen(fieldstr);

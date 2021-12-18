@@ -4785,7 +4785,7 @@ static void apply_one_adjuster(Scheme_Object *adjr,
   a[0] = ((mode == adjust_CONTRACT_MODE) ? contract_symbol : message_symbol);
   proc = scheme_apply(adjr, 1, a);
   if (SCHEME_FALSEP(proc)) {
-    if (mode == adjust_MESSAGE_MODE) {
+    if ((mode == adjust_MESSAGE_MODE) && !SCHEME_FALSEP(*_v1)) {
       mode = adjust_NAME_MODE;
       a[0] = name_symbol;
       proc = scheme_apply(adjr, 1, a);

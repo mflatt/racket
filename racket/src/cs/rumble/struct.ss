@@ -824,8 +824,9 @@
              [rec-name (record-type-name rtd)]
              [proc-name (if (and contract name)
                             name
-                            (make-struct-accessor-name rec-name (or name
-                                                                    (string-append "field" (number->string pos)))))]
+                            (if name
+                                (make-struct-accessor-name rec-name name)
+                                'accessor))]
              [wrap-p
               (procedure-rename
                 (lambda (v)
@@ -840,7 +841,11 @@
    [(pba pos name)
     (make-struct-field-accessor pba pos name #f default-realm)]
    [(pba pos)
-    (make-struct-field-accessor pba pos #f #f default-realm)]))
+    (let ([name (string->symbol
+                 (string-append-immutable "field" (if (exact-nonnegative-integer? pos)
+                                                      (number->string pos)
+                                                      "")))])
+      (make-struct-field-accessor pba pos name #f default-realm))]))
 
 (define/who make-struct-field-mutator
   (case-lambda
@@ -860,9 +865,9 @@
              [rec-name (record-type-name rtd)]
              [mut-name (if (and contract name)
                            name
-                           (make-struct-mutator-name rec-name
-                                                     (or name
-                                                         (string-append "field" (number->string pos)))))]
+                           (if name
+                               (make-struct-mutator-name rec-name name)
+                               'mutator))]
              [wrap-p
               (procedure-rename
                (if (struct-type-field-mutable? rtd pos)
@@ -880,7 +885,11 @@
    [(pbm pos name)
     (make-struct-field-mutator pbm pos name #f default-realm)]
    [(pbm pos)
-    (make-struct-field-mutator pbm pos #f #f default-realm)]))
+    (let ([name (string->symbol
+                 (string-append-immutable "field" (if (exact-nonnegative-integer? pos)
+                                                      (number->string pos)
+                                                      "")))])
+      (make-struct-field-mutator pbm pos name #f default-realm))]))
 
 (define (cannot-modify-by-pos-error name v pos)
   (raise-arguments-error name

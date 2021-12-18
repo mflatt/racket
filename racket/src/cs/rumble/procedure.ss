@@ -223,7 +223,7 @@
             [(fixnum? v)
              (let ([v (unsafe-struct-ref f v)])
                (cond
-                 [(procedure? v) (procedure-realm f)]
+                 [(procedure? v) (procedure-realm v)]
                  [else default-realm]))]
             [(eq? v 'unsafe)
              (procedure-realm
@@ -679,7 +679,7 @@
     (cond
      [(#%box? name) (#%unbox name)]
      [(#%vector? name) (or (#%vector-ref name 1)
-                           (extract-wrapper-procedure-realm (#%vector-ref name 2)))]
+                           (procedure-realm (#%vector-ref name 2)))]
      [(parameter-data? name) (parameter-data-realm name)]
      [(symbol? name) default-realm]
      [(and (pair? name) (symbol? (car name))) (cdr name)]

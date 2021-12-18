@@ -40,22 +40,27 @@
     (let loop ([modes modes])
       (cond
         [(null? modes) vals]
-        [(call-with-continuation-barrier
-          (lambda ()
-            (|#%app| adjr (caar modes))))
-         => (lambda (adj)
-              (define n-args (cadar modes))
-              (define apply-adj (caddar modes))
-              (unless (and (procedure? adj)
-                           (procedure-arity-includes? adj n-args))
-                (raise-result-error* 'current-error-message-adjuster
-                                     primitive-realm
-                                     (string-append-immutable "(or/c (procedure-arity-includes/c "
-                                                              (number->string n-args)
-                                                              ") #f)")
-                                     adj))
-              (apply-adj adj vals))]
-        [else (loop (cdr modes))])))
+        [else
+         (let* ([mode (car modes)]
+                [guard (caddr mode)])
+           (cond
+             [(and (guard vals)
+                   (call-with-continuation-barrier
+                    (lambda ()
+                      (|#%app| adjr (car mode)))))
+              => (lambda (adj)
+                   (define n-args (cadr mode))
+                   (define apply-adj (cadddr mode))
+                   (unless (and (procedure? adj)
+                                (procedure-arity-includes? adj n-args))
+                     (raise-result-error* 'current-error-message-adjuster
+                                          primitive-realm
+                                          (string-append-immutable "(or/c (procedure-arity-includes/c "
+                                                                   (number->string n-args)
+                                                                   ") #f)")
+                                          adj))
+                   (apply-adj adj vals))]
+             [else (loop (cdr modes))]))])))
   (cond
     [(eq? none (continuation-mark-set-first #f error-message-adjuster-key none))
      (apply-adjuster (|#%app| current-error-message-adjuster) vals)]
@@ -83,6 +88,7 @@
                              (list
                               'message
                               4
+                              (lambda (v) #t)
                               (lambda (proc v)
                                 (let ([who '|current-error-message-adjuster for message|])
                                   (#%call-with-values
@@ -110,6 +116,7 @@
                              (list
                               'name
                               2
+                              (lambda (v) (#%vector-ref v 0))
                               (lambda (proc v)
                                 (let ([who '|current-error-message-adjuster for name|])
                                   (#%call-with-values
@@ -145,6 +152,7 @@
                      (list
                       'contract
                       2
+                      (lambda (v) #t)
                       (lambda (proc ctc+realm)
                         (let ([who '|current-error-message-adjuster for contract|])
                           (#%call-with-values
