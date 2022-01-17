@@ -3480,7 +3480,7 @@
            (if (hash-equal? table3_0)
              (hash)
              (if (hash-equal-always? table3_0)
-               (hashequalw)
+               (hashalw)
                (if (hash-eqv? table3_0)
                  (hasheqv)
                  (if (hash-eq? table3_0) (hasheq) (void)))))
@@ -3488,7 +3488,7 @@
              (if (hash-equal? table3_0)
                (make-weak-hash)
                (if (hash-equal-always? table3_0)
-                 (make-weak-hashequalw)
+                 (make-weak-hashalw)
                  (if (hash-eqv? table3_0)
                    (make-weak-hasheqv)
                    (if (hash-eq? table3_0) (make-weak-hasheq) (void)))))
@@ -3497,13 +3497,15 @@
                    (hash-ephemeron? table3_0))
                (if (hash-equal? table3_0)
                  (make-ephemeron-hash)
-                 (if (hash-eqv? table3_0)
-                   (make-ephemeron-hasheqv)
-                   (if (hash-eq? table3_0) (make-ephemeron-hasheq) (void))))
+                 (if (hash-equal-always? table3_0)
+                   (make-ephemeron-hashalw)
+                   (if (hash-eqv? table3_0)
+                     (make-ephemeron-hasheqv)
+                     (if (hash-eq? table3_0) (make-ephemeron-hasheq) (void)))))
                (if (hash-equal? table3_0)
                  (make-hash)
                  (if (hash-equal-always? table3_0)
-                   (make-hashequalw)
+                   (make-hashalw)
                    (if (hash-eqv? table3_0)
                      (make-hasheqv)
                      (if (hash-eq? table3_0) (make-hasheq) (void)))))))))))))
@@ -23210,7 +23212,7 @@
                                                             (if (eq? tmp_0 2)
                                                               (make-hasheqv)
                                                               (if (eq? tmp_0 3)
-                                                                (make-hashequalw)
+                                                                (make-hashalw)
                                                                 (make-hash)))))))
                                                    (let ((len_1
                                                           (|#%app|
@@ -23252,7 +23254,7 @@
                                                             (if (eq? tmp_0 2)
                                                               hash2589
                                                               (if (eq? tmp_0 3)
-                                                                (hashequalw)
+                                                                (hashalw)
                                                                 hash2725))))))
                                                    (let ((len_1
                                                           (|#%app|
@@ -69122,17 +69124,16 @@
                                                       config_0
                                                       temp43_1
                                                       (list temp44_0)))))))
-                                           (if (if (eqv? ec_0 '#\x75)
+                                           (if (if (eqv? ec_0 '#\x61)
                                                  #t
-                                                 (eqv? ec_0 '#\x55))
+                                                 (eqv? ec_0 '#\x41))
                                              (begin
                                                (accum-string-add!
                                                 accum-str_0
                                                 c_0)
-                                               (get-next!_0 '#\x61 '#\x41)
                                                (get-next!_0 '#\x6c '#\x4c)
                                                (get-next!_0 '#\x77 '#\x57)
-                                               (if (eq? mode_0 'eq)
+                                               (if (eq? mode_0 'equal)
                                                  (loop_0 'equal-always)
                                                  (let ((temp49_0
                                                         "bad syntax `~a`"))
@@ -69200,8 +69201,8 @@
                                 (make-immutable-hasheqv content_0))
                               (if (eq? mode_0 'equal-always)
                                 (if graph?_0
-                                  (make-hashequalw-placeholder content_0)
-                                  (make-immutable-hashequalw content_0))
+                                  (make-hashalw-placeholder content_0)
+                                  (make-immutable-hashalw content_0))
                                 (void)))))
                         in_0
                         config_0
