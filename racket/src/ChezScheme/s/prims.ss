@@ -661,9 +661,15 @@
 
 (define foreign-callable-entry-point
   (lambda (x)
-    (unless ($code? x)
-      ($oops 'foreign-callable-entry-point "~s is not a code object" x))
-    ($object-address x (constant code-data-disp))))
+    (constant-case architecture
+      [(pb)
+       (unless (vector? x)
+         ($oops 'foreign-callable-entry-point "~s is not a vector" x))
+       (vector-ref x 2)]
+      [else
+       (unless ($code? x)
+         ($oops 'foreign-callable-entry-point "~s is not a code object" x))
+       ($object-address x (constant code-data-disp))])))
 
 (define-who foreign-callable-code-object
   (lambda (x)

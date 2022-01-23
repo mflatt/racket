@@ -646,6 +646,9 @@
   (declare-primitive push effect #f)
   (declare-primitive pop-multiple effect #f) ; arm
   (declare-primitive push-multiple effect #f) ; arm
+  (declare-primitive call-arg effect #f) ;pb
+  (declare-primitive call-fp-arg effect #f) ;pb
+  (declare-primitive c-stack-call effect #f) ;pb
   (declare-primitive remember effect #f)
   (declare-primitive restore-flrv effect #f)
   (declare-primitive restore-lr effect #f) ; ppc
@@ -735,6 +738,9 @@
 
   (declare-primitive load-single value #t) ; not required by cpnanopass
   (declare-primitive load-single->double value #t)
+
+  (declare-primitive call-res value #f) ;pb
+  (declare-primitive call-fp-res value #f) ;pb
 
   (declare-primitive fpcastto value #t) ; 64-bit only
   (declare-primitive fpcastto/hi value #t) ; 32-bit only

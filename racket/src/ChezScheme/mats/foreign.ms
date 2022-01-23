@@ -23,8 +23,10 @@
       [(_ [else e ...]) #'(begin (void) e ...)]
       [(_) #'(void)])))
 
-(machine-case
- [(pb)]
+(meta-cond
+ [(and (eq? 'pb (machine-type))
+       (not (guard (x [#t #f]) (eval '(foreign-callable void () void)))))
+  (void)]
  [else
 
 #;(define-syntax foreign-struct-mat
@@ -225,13 +227,24 @@
    ]
   [(i3osx ti3osx a6osx ta6osx ppc32osx tppc32osx arm64osx tarm64osx)
    (mat load-shared-object
-      (file-exists? foreign1.so)
+     (file-exists? foreign1.so)
       (begin (load-shared-object foreign1.so) #t)
       (begin (load-shared-object "libc.dylib") #t)
       #t
       (error? (load-shared-object 3))
     )
    ]
+  [(pb)
+   (mat load-shared-object
+     (file-exists? foreign1.so)
+     (begin (load-shared-object foreign1.so) #t)
+     (let ([try-load (lambda (path)
+                       (guard (x [#t #f])
+                              (load-shared-object path)
+                              #t))])
+       (or (try-load "libc.so.7")
+           (try-load "libc.so.6")
+           (try-load "libc.dylib"))))]
   [else
    (mat foreign-procedure
       (error? (foreign-procedure "foo" () scheme-object))

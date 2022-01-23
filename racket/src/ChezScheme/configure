@@ -43,6 +43,7 @@ w=""
 pb=no
 threads=yes
 nothreads=no
+libffi=no
 temproot=""
 help=no
 gzipmanpages=yes
@@ -263,6 +264,9 @@ while [ $# != 0 ] ; do
       ;;
     --disable-iconv)
       disableiconv=yes
+      ;;
+    --enable-libffi)
+      libffi=yes
       ;;
     --disable-auto-flags)
       addflags=no
@@ -832,6 +836,12 @@ fi
 
 if [ "$disablex11" = "yes" ]; then
   echo '#define DISABLE_X11' >> $w/c/next_config.h
+fi
+
+if [ "$pb" = "yes" ]; then
+  if [ "$libffi" = "yes" ]; then
+    echo '#define ENABLE_LIBFFI' >> $w/c/next_config.h
+  fi
 fi
 
 if [ ! -f "$w/c/config.h" ] ; then

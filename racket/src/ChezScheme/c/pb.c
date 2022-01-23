@@ -34,6 +34,7 @@ typedef uint32_t instruction_t;
 
 static uptr regs[16];
 static double fpregs[8];
+static char call_argres[1024]; /* scratch space for libffi-based foreign calls */
 
 enum {
    Cretval = 9,
@@ -974,10 +975,29 @@ void S_pb_interp(ptr tc, void *bytecode) {
           flag = 0;
       }
       break;
+    case pb_call_arg:
+      *(ptr *)(call_argres + INSTR_di_imm(instr)) = regs[INSTR_di_dest(instr)];
+      break;
+    case pb_fp_call_arg:
+      *(double *)(call_argres + INSTR_di_imm(instr)) = fpregs[INSTR_di_dest(instr)];
+      break;
+    case pb_call_res:
+      regs[INSTR_di_dest(instr)] = *(ptr *)(call_argres + INSTR_di_imm(instr));
+      break;
+    case pb_fp_call_res:
+      fpregs[INSTR_di_dest(instr)] = *(double *)(call_argres + INSTR_di_imm(instr));
+      break;
+    case pb_stack_call:
+      S_ffi_call(regs[INSTR_dr_reg(instr)], regs[INSTR_dr_dest(instr)], (ptr *)call_argres);
+      break;
     default:
       S_error_abort("illegal pb instruction");
       break;
     }
     ip = next_ip;
   }
+}
+
+ptr *S_get_argres() {
+  return (ptr *)call_argres;
 }

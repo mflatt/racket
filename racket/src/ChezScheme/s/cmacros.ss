@@ -3309,6 +3309,9 @@
     [pb-inc pb-argument-types]
     [pb-lock]
     [pb-cas]
+    [pb-call-arg] [pb-call-res]
+    [pb-fp-call-arg] [pb-fp-call-res]
+    [pb-stack-call]
     [pb-link]) ; used by linker
 
   ;; Only foreign procedures that match specific prototypes are
@@ -3404,3 +3407,18 @@
   ;; end pb
   ]
  [else (void)])
+
+(define-enumerated-constants
+  ffi-typerep-void
+  ffi-typerep-uint8
+  ffi-typerep-sint8
+  ffi-typerep-uint16
+  ffi-typerep-sint16
+  ffi-typerep-uint32
+  ffi-typerep-sint32
+  ffi-typerep-uint64
+  ffi-typerep-sint64
+  ffi-typerep-float
+  ffi-typerep-double
+  ffi-typerep-pointer
+  ffi-default-abi)
