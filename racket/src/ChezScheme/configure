@@ -84,6 +84,7 @@ Kernel=KernelLib
 installkerneltarget=installkernellib
 installzlibtarget=installzlib
 installlz4target=installlz4
+pbendian=l
 
 # On WSL, set OS to "Windows_NT" to create a Windows
 # build instead of a Linux (on Windows) build:
@@ -135,6 +136,7 @@ case "${CONFIG_UNAME}" in
     elif uname -a | egrep 'Power' > /dev/null 2>&1 ; then
       m64=ppc32osx
       tm64=tppc32osx
+      pbendian=b
       default_warning_flags=""
     fi
     installprefix=/usr/local
@@ -172,6 +174,7 @@ if [ "$unixsuffix" != "" ] ; then
     elif uname -a | egrep 'power|ppc' > /dev/null 2>&1 ; then
         m32=ppc32${unixsuffix}
         tm32=tppc32${unixsuffix}
+        pbendian=b
     elif uname -a | egrep 'armv|aarch64' > /dev/null 2>&1 ; then
         m32=arm32${unixsuffix}
         m64=arm64${unixsuffix}
@@ -388,7 +391,7 @@ if [ "$m" = "" ] ; then
      if [ "$mpbhost" = "" ] ; then
          echo "Could not infer current machine type."
          echo ""
-         echo "Event for a pb build, a machine type is needed to select C compiler"
+         echo "Even for a pb build, a machine type is needed to select C compiler"
          echo "and linker flags. You can use"
          echo "  $0 --pb -m=<machine type>"
          echo "to specify the available machine type, but since it wasn't inferred,"
@@ -409,7 +412,7 @@ fi
 
 if [ $threads = yes ] ; then
   if [ $m = pb ] ; then
-    m=tpb
+    m=tpb$pbendian
   fi
 fi
 
@@ -568,7 +571,7 @@ fi
 
 # architecture-specific for Mf-unix
 case "${muni}" in
-  pb)
+  pb*)
       Cpu=PORTABLE_BYTECODE
       mdarchsrc=pb
       ;;

@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x09050705)
+(define-constant scheme-version #x09050706)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -375,8 +375,11 @@
 
 (define-machine-types
   any
-  pb        tpb
-  pb32      tpb32
+  pb
+  pbl       tpbl
+  pbb       tpbb
+  pb32l     tpb32l
+  pb32b     tpb32b
   i3le      ti3le
   i3nt      ti3nt
   i3fb      ti3fb
@@ -3137,7 +3140,7 @@
 ;; Portable bytecode - see "pb.ss"
 
 (constant-case architecture
- [(pb)
+ [else #;(pb)
 
   ;; Enumerated constants can be multiplied by the width of another
   ;; enumeration, which is handy for encoding instructions:
@@ -3222,7 +3225,7 @@
   ;; Some instructions have size variants, always combined
   ;; with register- and immediate-argument possibilties
   ;; -- although some combinations may be unimplemented
-  ;; or not make sense, such as immediate-arrgument operations
+  ;; or not make sense, such as immediate-argument operations
   ;; on double-precision floating-point numbers
   (define-pb-enum pb-sizes << pb-argument-types
     pb-int8
@@ -3329,6 +3332,7 @@
     [pb-fp-call-arena-in] [pb-fp-call-arena-out]
     [pb-stack-call]
     [pb-fence pb-fences]
+    [pb-chunk] ; dispatch to C-implemented chunks
     [pb-link]) ; used by linker
 
   ;; Only foreign procedures that match specific prototypes are
@@ -3424,6 +3428,7 @@
 
   ;; end pb
   ]
+ #;
  [else (void)])
 
 (define-enumerated-constants
