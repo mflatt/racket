@@ -41,7 +41,7 @@ fi
 Muni=""
 
 case "$M" in
-  pb) Mhost=$Mpbhost ;;
+  pb*|tpb*) Mhost=$Mpbhost ;;
   *) Mhost=$M ;;
 esac
 
@@ -76,7 +76,7 @@ case "$Mhost" in
   ppc32nb) ;;
   ppc32osx) ;;
   arm64osx) ;;
-  tpb) ;;
+  tpbl) ;;
   ta6fb) ;;
   ta6le) ;;
   ta6nb) ;;
@@ -145,7 +145,7 @@ case "$Muni" in
         March=ppc32
         archincludes=ppc32.ss
         ;;
-    pb)
+    pb*)
         March=pb
         archincludes=pb.ss
         ;;

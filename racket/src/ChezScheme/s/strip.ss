@@ -898,9 +898,10 @@
               (let ([op ($open-file-output-port who ofn (file-options replace))])
                 (on-reset (delete-file ofn #f)
                   (on-reset (close-port op)
-                    (write script-header mode entry* op)
-                    (close-port op)
-                    (unless-feature windows (when mode (chmod ofn mode))))))))))
+                    (let ([result (write script-header mode entry* op)])
+                      (close-port op)
+                      (unless-feature windows (when mode (chmod ofn mode)))
+                      result))))))))
       (set-who! $describe-fasl-from-port
         (rec $describe-fasl-from-port
           (case-lambda
@@ -922,6 +923,55 @@
                              (lambda (script-header mode entry* op)
                                (when script-header (put-bytevector op script-header))
                                (for-each (lambda (entry) (write-entry op entry)) entry*)))))
+      (set-who! pbchunk-convert-file
+        (lambda (ifn ofn c-ofn glue-ofn start-index)
+          (unless (string? ifn) ($oops who "~s is not a string" ifn))
+          (unless (string? ofn) ($oops who "~s is not a string" ofn))
+          (unless (string? c-ofn) ($oops who "~s is not a string" c-ofn))
+          (unless (or (not glue-ofn) (string? glue-ofn)) ($oops who "~s is not a string or #f" glue-ofn))
+          (unless (and (fixnum? start-index) (fx>= start-index 0))
+            ($oops who "~s is not a nonnegative fixnum" start-index))
+          (convert-fasl-file who ifn ofn (fasl-strip-options)
+                             (lambda (script-header mode entry* op)
+                               (let ([end-index
+                                      (let ([c-op ($open-file-output-port who c-ofn (file-options replace)
+                                                                          (buffer-mode block)
+                                                                          (native-transcoder))]
+                                            [seen-table (make-eq-hashtable)])
+                                        (on-reset (delete-file c-ofn #f)
+                                                  (on-reset (close-port c-op)
+                                                            (let loop ([entry* entry*] [index start-index])
+                                                              (cond
+                                                                [(null? entry*)
+                                                                 (close-port c-op)
+                                                                 index]
+                                                                [else
+                                                                 (handle-entry
+                                                                  (car entry*)
+                                                                  (lambda (write-k)
+                                                                    (loop (cdr entry*) index))
+                                                                  (lambda (situation x)
+                                                                    (loop (cdr entry*)
+                                                                          ($fasl-chunk! x c-op index seen-table))))])))))])
+                                 (when script-header (put-bytevector op script-header))
+                                 (for-each (lambda (entry) (write-entry op entry)) entry*)
+                                 (when glue-ofn
+                                   (let ([glue-op ($open-file-output-port who glue-ofn (file-options replace)
+                                                                          (buffer-mode block)
+                                                                          (native-transcoder))])
+                                     (on-reset (delete-file glue-ofn #f)
+                                               (on-reset (close-port glue-op)
+                                                         (fprintf glue-op "#define PBCHUNK_COUNT ~a\n" end-index)
+                                                         (fprintf glue-op "static chunk_t chunks[PBCHUNK_COUNT] = {\n")
+                                                         (let loop ([i 0])
+                                                           (unless (fx= i end-index)
+                                                             (fprintf glue-op "  chunk_~a~a\n"
+                                                                      i
+                                                                      (if (fx= (fx+ i 1) end-index) "" ","))
+                                                             (loop (fx+ i 1))))
+                                                         (fprintf glue-op "};\n")
+                                                         (close-port glue-op)))))
+                                 end-index)))))
       (set-who! vfasl-convert-file
         (lambda (ifn ofn bootfile*)
           (convert-fasl-file who ifn ofn (fasl-strip-options)

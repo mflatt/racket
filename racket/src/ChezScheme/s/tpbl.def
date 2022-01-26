@@ -1,0 +1,8 @@
+(define-constant machine-type (constant machine-type-tpbl))
+(features iconv expeditor pthreads)
+
+(define-constant architecture 'pb)
+(define-constant-default native-endianness 'little)
+
+(include "pbcommon.def")
+(include "default.def")
