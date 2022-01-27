@@ -452,6 +452,10 @@
         (export "int"  "Sscheme_program" "(const char *, int, const char *[])")
         (export "void" "Sscheme_deinit" "(void)")
         (export "void" "Sscheme_register_signal_registerer" "(void (*f)(int))")
+        (constant-case architecture
+          [(pb)
+           (export "void" "Sregister_pbchunks" "(void **, int, int)")]
+          [else (void)])
 
         (when-feature pthreads
         (nl) (comment "Thread support.")
