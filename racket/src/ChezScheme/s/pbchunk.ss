@@ -10,6 +10,8 @@
 (let ()
 
 (include "strip-types.ss")
+
+(define one-chunklet-per-chunk? #f)
   
 (define-record-type chunk-info
   (fields (mutable counter)
@@ -19,6 +21,10 @@
 
 (define-record-type label
   (fields to min-from max-from all-from)
+  (nongenerative))
+
+(define-record-type chunklet
+  (fields i start-i end-i uses-flag? mode relocs headers labels)
   (nongenerative))
 
 (define (fasl-chunk! v code-op start-index seen-table)
@@ -105,17 +111,36 @@
 
 (define (instr-i-imm instr) (bitwise-arithmetic-shift-right instr 8))
 
-(define (make-chunk-instr index) (bitwise-ior (constant pb-chunk)
-                                              (bitwise-arithmetic-shift-left index 8)))
+(define (make-chunk-instr index sub-index)
+  (unless (eqv? index (bitwise-and index #xFFFF))
+    ($oops 'pbchunk "chunk index ~a is too large" index))
+  (unless (eqv? sub-index (bitwise-and sub-index #xFF))
+    ($oops 'pbchunk "chunk sub-index ~a is too large" sub-index))
+  (bitwise-ior (constant pb-chunk)
+               (bitwise-arithmetic-shift-left sub-index 8)
+               (bitwise-arithmetic-shift-left index 16)))
+(define MAX-SUB-INDEXES 256)
 
 (define-syntax (instruction-case stx)
   (syntax-case stx ()
     [(_ instr emit [op . shape] ...)
-     #'(constant-case*
-        (instr-op instr)
-        [(op) (emit op . shape)]
-        ...
-        [else ($oops 'chunk "unrecognized instruction ~s" instr)])]))
+     (let ([vec (make-vector 256 0)]
+           [emits (list->vector #'(($oops 'chunk "unrecognized instruction ~s" instr)
+                                   (emit op . shape) ...))])
+       (let loop ([ops (datum (op ...))] [pos 1])
+         (unless (null? ops)
+           (vector-set! vec (lookup-constant (car ops)) pos)
+           (loop (cdr ops) (fx+ pos 1))))
+       #`(let ([pos (vector-ref '#,vec (instr-op instr))])
+           #,(let loop ([start 0] [end (vector-length emits)])
+               (cond
+                 [(fx= (fx+ start 1) end)
+                  (vector-ref emits start)]
+                 [else
+                  (let ([mid (quotient (+ start end) 2)])
+                    #`(if (fx>= pos #,mid)
+                          #,(loop mid end)
+                          #,(loop start mid)))]))))]))
 
 ;; di = destination register and immediate
 ;; dr = destination register and immediate
@@ -269,12 +294,35 @@
         [pb-fp-call-arena-out n]
         [pb-stack-call dr])]))
 
-(define (advance-relocs relocs i)
-  (let loop ([relocs relocs])
+(define (advance l sel i)
+  (let loop ([l l])
     (cond
-      [(null? relocs) '()]
-      [(fx> (car relocs) i) relocs]
-      [else (loop (cdr relocs))])))
+      [(null? l) '()]
+      [(fx>= (sel (car l)) i) l]
+      [else (loop (cdr l))])))
+
+(define (advance-relocs relocs i)
+  (advance relocs values i))
+
+(define (advance-headers headers i)
+  (advance headers car i))
+
+(define (advance-labels labels i)
+  (advance labels label-to i))
+
+(define (ensure-label i labels)
+  (cond
+    [(and (pair? labels)
+          (fx= i (label-to (car labels)) i))
+     (let ([l (car labels)])
+       (cons (make-label i
+                         (fxmin i (label-min-from l))
+                         (fxmax i (label-max-from l))
+                         (cons i (label-all-from l)))
+             (cdr labels)))]
+    [else
+     (cons (make-label i i i (list i))
+           labels)]))
 
 (define (sort-and-combine-labels labels)
   (let ([labels (sort (lambda (a b) (< (label-to a) (label-to b))) labels)])
@@ -296,6 +344,11 @@
                                   (cddr labels)))
                (cons a (remove-dups (cdr labels)))))]))))
 
+(define (empty-chunklet? c)
+  (or (fx= (chunklet-start-i c)
+           (chunklet-end-i c))
+      (eq? 'continue-only (chunklet-mode c))))
+
 (define (chunk-code! name bv vreloc ci)
   (let ([len (bytevector-length bv)]
         [o (chunk-info-code-op ci)]
@@ -312,27 +365,120 @@
         [name (extract-name name)])
     (fprintf o "\n/* code ~a */\n" name)
     (unless (equal? name "winder-dummy") ; hack to avoid special rp header in dounderflow
-      (let-values ([(headers labels) (gather-targets bv len)])
-        (let loop ([i 0] [relocs relocs] [headers headers] [labels labels] [index (chunk-info-counter ci)])
+      (let ([chunklets
+             (let-values ([(headers labels) (gather-targets bv len)])
+               (let loop ([i 0] [relocs relocs] [headers headers] [labels labels])
+                 (cond
+                   [(fx= i len) '()]
+                   [else
+                    (let-values ([(start-i end-i uses-flag? mode)
+                                  (select-instruction-range bv i len relocs headers labels)])
+                      (when (fx= i end-i)
+                        ($oops 'chunk-code "failed to make progress at ~a out of ~a" i len))
+                      (let ([mode (if (fx< (fx- end-i start-i)
+                                           (fx* min-chunk-len instr-bytes))
+                                      ;; the chunk would be too small to save us any time, so don't bother;
+                                      ;; a threshold greater than 1 also avoids code that wouldn't even
+                                      ;; use `tc` or `ip`:
+                                      'continue-only
+                                      mode)])
+                        (cons (make-chunklet i start-i end-i uses-flag? mode relocs headers labels)
+                              (loop end-i
+                                    (advance-relocs relocs end-i)
+                                    (advance-headers headers end-i)
+                                    (advance-labels labels end-i)))))])))]
+            [index (chunk-info-counter ci)])
+        ;; We can either generate each chunklet as its own chunk
+        ;; function or generate one chunk function with multiple
+        ;; chunklets
+        (let ([count (fold-left (lambda (sum c) (if (empty-chunklet? c) sum (fx+ 1 sum)))
+                                0
+                                chunklets)])
           (cond
-            [(fx= i len)
-             (chunk-info-counter-set! ci index)]
+            [(fx> count 256)
+             ;; this many chunklets suggests that compilation is not productive,
+             ;; so just show the disassembly
+             (fprintf o "/* (too many entry points) */\n")
+             (let ([all-chunklets chunklets])
+               (let loop ([chunklets chunklets])
+                 (unless (null? chunklets)
+                   (let ([c (car chunklets)])
+                     (emit-chunk o bv
+                                 (chunklet-i c) 0
+                                 (chunklet-relocs c) (chunklet-headers c) '()
+                                 (chunklet-end-i c) ; => treat as empty
+                                 (chunklet-end-i c)
+                                 all-chunklets
+                                 ;; fallthrough?
+                                 #t)
+                     (loop (cdr chunklets))))))]
+            [(or one-chunklet-per-chunk?
+                 ;; also use this more if there's 0 or 1 chunklets to emit,
+                 ;; or more than `MAX-SUB-INDEXES`:
+                 (let ()
+                   (or (fx< count 2)
+                       (fx> count MAX-SUB-INDEXES))))
+             (let loop ([chunklets chunklets] [index index])
+               (cond
+                 [(null? chunklets)
+                  (chunk-info-counter-set! ci index)]
+                 [else
+                  (let ([c (car chunklets)])
+                    (unless (empty-chunklet? c)
+                      (emit-chunk-header o index #f (chunklet-uses-flag? c)))
+                    (emit-chunk o bv
+                                (chunklet-i c) (chunklet-start-i c)
+                                (chunklet-relocs c) (chunklet-headers c) (chunklet-labels c)
+                                (if (eq? 'continue-only (chunklet-mode c))
+                                    (chunklet-end-i c)
+                                    (chunklet-start-i c))
+                                (chunklet-end-i c)
+                                (list c)
+                                ;; fallthrough?
+                                (empty-chunklet? c))
+                    (unless (empty-chunklet? c)
+                      (emit-chunk-footer o)
+                      (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index 0) (endianness little)))
+                    (loop (cdr chunklets) (if (empty-chunklet? c) index (fx+ index 1))))]))]
             [else
-             (let-values ([(start-i end-i uses-flag?) (select-instruction-range bv i len relocs headers labels)])
-               (when (fx= i end-i)
-                 ($oops 'chunk-code "failed to make progress at ~a out of ~a" i len))
-               (let ([start-i (if (fx< (fx- end-i start-i)
-                                       (fx* min-chunk-len instr-bytes))
-                                  ;; the chunk would be too small to save us any time, so don't bother;
-                                  ;; a threshold greater than 1 also avoids code that wouldn't even
-                                  ;; use `tc` or `code`:
-                                  end-i
-                                  start-i)])
-                 (let-values ([(index relocs headers labels) (emit-chunk! o bv i relocs headers labels
-                                                                          start-i end-i index uses-flag?)])
-                   (unless (fx= start-i end-i)
-                     (bytevector-u32-set! bv start-i (make-chunk-instr (fx- index 1)) (endianness little)))
-                   (loop end-i relocs headers labels index))))]))))))
+             (emit-chunk-header o index #t (ormap chunklet-uses-flag? chunklets))
+             (chunk-info-counter-set! ci (fx+ 1 index))
+             (fprintf o "  switch (sub_index) {\n")
+             (let loop ([chunklets chunklets] [sub-index 0])
+               (unless (null? chunklets)
+                 (let ([c (car chunklets)])
+                   (cond
+                     [(empty-chunklet? c) (loop (cdr chunklets) sub-index)]
+                     [else
+                      (fprintf o "    case ~a:~a ip -= 0x~x; goto label_~x;\n"
+                               sub-index
+                               (if (andmap empty-chunklet? (cdr chunklets))
+                                   " default:"
+                                   "")
+                               (chunklet-start-i c)
+                               (chunklet-start-i c))
+                      (loop (cdr chunklets) (fx+ 1 sub-index))]))))
+             (fprintf o "  }\n")
+             (let ([all-chunklets chunklets])
+               (let loop ([chunklets chunklets] [sub-index 0])
+                 (unless (null? chunklets)
+                   (let ([c (car chunklets)])
+                     (emit-chunk o bv
+                                 (chunklet-i c) 0
+                                 (chunklet-relocs c) (chunklet-headers c)
+                                 (if (empty-chunklet? c)
+                                     (chunklet-labels c)
+                                     (ensure-label (chunklet-start-i c) (chunklet-labels c)))
+                                 (chunklet-start-i c) (chunklet-end-i c)
+                                 all-chunklets
+                                 ;; fallthrough?
+                                 (and (pair? (cdr chunklets))
+                                      (fx= (chunklet-end-i c)
+                                           (chunklet-start-i (cadr chunklets)))))
+                     (unless (empty-chunklet? c)
+                       (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index sub-index) (endianness little)))
+                     (loop (cdr chunklets) (if (empty-chunklet? c) sub-index (fx+ 1 sub-index)))))))
+             (emit-chunk-footer o)]))))))
 
 (define (gather-targets bv len)
   (let loop ([i 0] [headers '()] [labels '()])
@@ -354,34 +500,35 @@
          (define (next/add-label new-label)
            (loop (fx+ i instr-bytes) headers (cons new-label labels)))
 
-         (define (next/adr delta)
-           (cond
-             [(> delta 0)
-              (let* ([after (fx+ i instr-bytes delta)]
-                     [size (if (fx= 1 (fxand 1 (bytevector-u8-ref bv (fx- after 8))))
-                               (constant size-rp-compact-header)
-                               (constant size-rp-header))]
-                     [start (fx- after size)]
-                     [header (cons start size)])
-                (loop (fx+ i instr-bytes)
-                      ;; insert keeping headers sorted
-                      (let loop ([headers headers])
-                        (cond
-                          [(null? headers) (list header)]
-                          [(fx<= start (car headers)) (cons header headers)]
-                          [else (cons (car headers) (loop (cdr headers)))]))
-                      labels))]
-             [else (next)]))
+         (define (next/adr)
+           (let ([delta (fx* instr-bytes (instr-adr-imm instr))])
+             (cond
+               [(> delta 0)
+                (let* ([after (fx+ i instr-bytes delta)]
+                       [size (if (fx= 1 (fxand 1 (bytevector-u8-ref bv (fx- after 8))))
+                                 (constant size-rp-compact-header)
+                                 (constant size-rp-header))]
+                       [start (fx- after size)]
+                       [header (cons start size)])
+                  (loop (fx+ i instr-bytes)
+                        ;; insert keeping headers sorted
+                        (let loop ([headers headers])
+                          (cond
+                            [(null? headers) (list header)]
+                            [(fx<= start (caar headers)) (cons header headers)]
+                            [else (cons (car headers) (loop (cdr headers)))]))
+                        labels))]
+               [else (next)])))
+
+         (define (next-branch)
+           (let* ([delta (instr-i-imm instr)]
+                  [target-label (fx+ i instr-bytes delta)])
+             (next/add-label (make-label target-label i i (list i)))))
 
          (define-syntax (dispatch stx)
            (syntax-case stx (i/b adr)
-             [(_ op i/b test)
-              #'(let* ([delta (instr-i-imm instr)]
-                       [target-label (fx+ i instr-bytes delta)])
-                  (next/add-label (make-label target-label i i (list i))))]
-             [(_ op adr)
-              #'(let ([delta (fx* instr-bytes (instr-adr-imm instr))])
-                  (next/adr delta))]
+             [(_ op i/b test) #'(next-branch)]
+             [(_ op adr) #'(next/adr)]
              [else #'(next)]))
 
          (instruction-cases instr dispatch))])))
@@ -390,13 +537,13 @@
   (let loop ([i i] [relocs relocs] [headers headers] [labels labels] [start-i #f]
              [flag-ready? #f] [uses-flag? #f])
     (cond
-      [(fx= i len) (values (or start-i i) i uses-flag?)]
+      [(fx= i len) (values (or start-i i) i uses-flag? #f)]
       [(and (pair? headers)
             (fx= i (caar headers)))
        (cond
          [start-i
-          ;; we want to start  new chunk after the header, so end this one
-          (values start-i i uses-flag?)]
+          ;; we want to start a new chunk after the header, so end this one
+          (values start-i i uses-flag? #f)]
          [else
           (let* ([size (cdar headers)]
                  [i (+ i size)])
@@ -415,7 +562,7 @@
          [(< (label-min-from (car labels)) (or start-i i))
           ;; target from jump before this chunk
           (if start-i
-              (values start-i i uses-flag?)
+              (values start-i i uses-flag? #f)
               (loop i relocs headers (cdr labels) #f #f uses-flag?))]
          [(< (label-max-from (car labels)) i)
           ;; always a forward jump within this chunk
@@ -425,25 +572,29 @@
           ;; it's within the chunk, then check; THIS MAKES OVERALL
           ;; CHUNKING NOT LINEAR-TIME, but it's probably ok in
           ;; practice
-          (let-values ([(maybe-start-i end-i maybe-uses-flag?)
+          (let-values ([(maybe-start-i end-i maybe-uses-flag? mode)
                         (loop i relocs headers (cdr labels) start-i #f uses-flag?)])
             (cond
               [(fx>= maybe-start-i i)
                ;; chunk here or starts later, anyway
-               (values maybe-start-i end-i maybe-uses-flag?)]
+               (values maybe-start-i end-i maybe-uses-flag? mode)]
               [(fx< (label-max-from (car labels)) end-i)
                ;; backward jumps stay within chunk
-               (values maybe-start-i end-i maybe-uses-flag?)]
+               (values maybe-start-i end-i maybe-uses-flag? mode)]
               [else
                ;; not within chunk
-               (values start-i i uses-flag?)]))])]
+               (values start-i i uses-flag? #f)]))])]
       [(and (pair? relocs)
             (fx= i (car relocs)))
        ;; can't start a chunk at a relocation, since the relocation
-       ;; bytecode can't be rewritten (so don't set `start-i`), but 
-       ;; can continue through a relocation load
-       (loop (fx+ i (fx* reloc-instrs instr-bytes)) (cdr relocs) headers labels start-i
-             #f uses-flag?)]
+       ;; bytecode can't be rewritten, but can continue through a
+       ;; relocation load
+       (let ([next-i (fx+ i (fx* reloc-instrs instr-bytes))])
+         (cond
+           [start-i
+            (loop next-i (cdr relocs) headers labels start-i #f uses-flag?)]
+           [else
+            (values i next-i uses-flag? 'continue-only)]))]
       [else
        ;; if the instruction always has to trampoline back, then the instruction
        ;; after can start a chunk to resume
@@ -459,10 +610,10 @@
            (loop (fx+ i instr-bytes) relocs headers labels (or start-i i) #t uses-flag?))
          (define (stop-before)
            (if start-i
-               (values start-i i uses-flag?)
+               (values start-i i uses-flag? #f)
                (loop (fx+ i instr-bytes) relocs headers labels #f #f uses-flag?)))
          (define (stop-after)
-           (values (or start-i i) (fx+ i instr-bytes) uses-flag?))
+           (values (or start-i i) (fx+ i instr-bytes) uses-flag? #f))
          (define-syntax (dispatch stx)
            (syntax-case stx (dri/x r/x n/x r/b i/b r/f dr/b di/b
                                    dr/f di/f drr/f dri/f)
@@ -483,276 +634,250 @@
              [_ #'(keep #f)]))
          (instruction-cases instr dispatch))])))
 
+(define (emit-chunk-header o index sub-index? uses-flag?)
+  (fprintf o "static uptr chunk_~a(ptr tc, uptr ip~a) {\n"
+           index
+           (if sub-index? ", int sub_index" ""))
+  (when uses-flag?
+    (fprintf o "  int flag;\n")))
+
+(define (emit-chunk-footer o)
+  (fprintf o "}\n"))
+  
 ;; just show decoded instructions from `i` until `start-i`, then
 ;; generate a chunk function from `start-i` to `end-i`
-(define (emit-chunk! o bv i relocs headers labels start-i end-i index uses-flag?)
-  #;
-  (fprintf o "/* 0x~x: 0x~x - 0x~x~a */\n" i start-i end-i
-           (if (pair? labels)
-               (format "; next label 0x~x" (label-to (car labels)))
-               ""))
-  (let loop ([i i] [relocs relocs] [headers headers] [labels labels] [started? #f])
-    (let ([old-started? started?]
-          [started? (or started?
-                        (and (fx= i start-i)
-                             (not (fx= start-i end-i))))])
-      (define (maybe-emit-label)
-        (when (and started?
-                   (fx< i end-i))
-          (let ([a (car labels)])
-            (when (ormap (lambda (from) (< start-i from end-i))
-                         (label-all-from a))
-              (fprintf o "label_~x:\n" i)))))
-      (when (and started? (not old-started?))
-        (fprintf o "static uptr chunk_~a(ptr tc, uptr ip) { /* at code+0x~x~a */\n"
-                 index
-                 i
-                 (apply string-append
-                        (let loop ([from (if (and (pair? labels)
-                                                  (fx= i (label-to (car labels))))
-                                             (label-all-from (car labels))
-                                             '())])
-                          (cond
-                            [(null? from) '()]
-                            [(fx< start-i (car from) end-i) (loop (cdr from))]
-                            [else (cons (format ", from 0x~x" (car from))
-                                        (loop (cdr from)))]))))
-        (when uses-flag?
-          (fprintf o "  int flag;\n")))
-      (cond
-        [(and (pair? headers)
-              (fx= i (caar headers)))
-         (cond
-           [(fx>= i start-i)
-            (unless (fx= i end-i) ($oops 'emit-chunk "should have ended at header ~a/~a" i end-i))
-            (when started?
-              (fprintf o "}\n"))
-            (values (if started? (fx+ index 1) index)
+(define (emit-chunk o bv i base-i relocs headers labels start-i end-i chunklets fallthrough?)
+  (define (in-chunk? target)
+    (ormap (lambda (c)
+             (and (fx>= target (chunklet-start-i c))
+                  (fx< target (chunklet-end-i c))))
+           chunklets))
+  (let loop ([i i] [relocs relocs] [headers headers] [labels labels])
+    (cond
+      [(and (pair? headers)
+            (fx= i (caar headers)))
+       (cond
+         [(fx>= i start-i)
+          (unless (fx= i end-i) ($oops 'emit-chunk "should have ended at header ~a/~a" i end-i))]
+         [else
+          (let ([size (cdar headers)])
+            (fprintf o "/* data: ~a bytes */\n" size)
+            (let ([i (fx+ i size)])
+              (loop i
                     (advance-relocs relocs i)
-                    headers
-                    labels)]
+                    (cdr headers)
+                    labels)))])]
+      [(fx= i end-i)
+       (unless fallthrough?
+         (fprintf o "  return ip+code_rel(0x~x, 0x~x);\n" base-i i))]
+      [(and (pair? labels)
+            (fx= i (label-to (car labels))))
+       (when (fx>= i start-i)
+         (let ([a (car labels)])
+           (when (ormap in-chunk? (label-all-from a))
+             (fprintf o "label_~x:\n" i))))
+       (loop i relocs headers (cdr labels))]
+      [else
+       (let ([instr (bytevector-s32-ref bv i (endianness little))]
+             [uinstr (bytevector-u32-ref bv i (endianness little))])
+         (define (next)
+           (loop (fx+ i instr-bytes) relocs headers labels))
+
+         (define (done)
+           (next))
+
+         (define (pre)
+           (string-append
+            (format "/* 0x~x */ " i)
+            (if (>= i start-i) "  " "/* ")))
+         (define (post)
+           (if (>= i start-i) " " " */ "))
+
+         (define (emit-do _op)
+           (fprintf o "~ado_~a(0x~x);~a" (pre) _op uinstr (post)))
+
+         (define (emit-return)
+           (fprintf o "~areturn ip+code_rel(0x~x, 0x~x);~a" (pre) base-i i (post)))
+
+         (define (r-form _op)
+           (emit-do _op)
+           (fprintf o "/* ~a */\n"
+                    (instr-dr-reg instr))
+           (next))
+         
+         (define (dr-form _op)
+           (emit-do _op)
+           (fprintf o " /* r~a <- r~a */\n"
+                    (instr-dr-dest instr)
+                    (instr-dr-reg instr))
+           (next))
+         
+         (define (di-form _op di-imm)
+           (emit-do _op)
+           (fprintf o "/* r~a <- 0x~x */\n"
+                    (instr-di-dest instr)
+                    di-imm)
+           (next))
+         
+         (define (drr-form _op)
+           (emit-do _op)
+           (fprintf o "/* r~a <- r~a, r~a */\n"
+                    (instr-drr-dest instr)
+                    (instr-drr-reg1 instr)
+                    (instr-drr-reg2 instr))
+           (next))
+         
+         (define (dri-form _op)
+           (emit-do _op)
+           (fprintf o "/* r~a <- r~a, 0x~x */\n"
+                    (instr-dri-dest instr)
+                    (instr-dri-reg1 instr)
+                    (instr-dri-imm instr))
+           (next))
+
+         (define (n-form _op)
+           (emit-do _op)
+           (fprintf o "\n")
+           (next))
+
+         (define-syntax (emit stx)
+           (with-syntax ([_op (syntax-case stx ()
+                                [(_ op . _)
+                                 (datum->syntax #'op
+                                                (list->string
+                                                 (fold-right (lambda (x rest) 
+                                                               (case x
+                                                                 [(#\-) (cons #\_ rest)]
+                                                                 [(#\>) rest]
+                                                                 [(#\*) (cons #\s rest)]
+                                                                 [else (cons x rest)]))
+                                                             '()
+                                                             (string->list (symbol->string (syntax->datum #'op))))))])])
+             (syntax-case stx (di/u
+                               di di/f dr dr/f
+                               drr dri drr/f dri/f
+                               dri/x r r/f r/x i r/b i/b dr/b di/b n n/x adr)
+               [(_ op di/u) #'(di-form '_op (instr-di-imm/unsigned instr))]
+               [(_ op di) #'(di-form '_op (instr-di-imm instr))]
+               [(_ op di/f) #'(di-form '_op (instr-di-imm instr))]
+               [(_ op dr) #'(dr-form '_op)]
+               [(_ op dr/f) #'(dr-form '_op)]
+               [(_ op drr) #'(drr-form '_op)]
+               [(_ op drr/f) #'(drr-form '_op)]
+               [(_ op dri) #'(dri-form '_op)]
+               [(_ op dri/f) #'(dri-form '_op)]
+               [(_ op dri/x)
+                #'(begin
+                    (emit-return)
+                    (fprintf o "/* ~a: r~a <- r~a, 0x~x */\n"
+                             '_op
+                             (instr-dri-dest instr)
+                             (instr-dri-reg1 instr)
+                             (instr-dri-imm instr))
+                    (done))]
+               [(_ op r) #'(r-form '_op)]
+               [(_ op r/f) #'(r-form '_op)]
+               [(_ op r/x)
+                #'(begin
+                    (emit-return)
+                    (fprintf o "/* ~a: ~a */\n"
+                             '_op
+                             (instr-dr-reg instr))
+                    (done))]
+               [(_ op i)
+                #'(begin
+                    (emit-do '_op)
+                    (fprintf o "/* 0x~x */\n"
+                             (instr-i-imm instr))
+                    (next))]
+               [(_ op r/b test)
+                #'(begin
+                    (fprintf o "~a~areturn regs[~a];~a/* ~a */\n"
+                             (pre)
+                             test
+                             (instr-dr-reg instr)
+                             (post)
+                             '_op)
+                    (if (equal? test "")
+                        (done)
+                        (next)))]
+               [(_ op i/b test)
+                #'(let* ([delta (instr-i-imm instr)]
+                         [target-label (fx+ i instr-bytes delta)])
+                    (cond
+                      [(in-chunk? target-label)
+                       (fprintf o "~a~agoto label_~x;~a/* ~a: 0x~x */\n"
+                                (pre)
+                                test
+                                target-label
+                                (post)
+                                '_op
+                                delta)
+                       (next)]
+                      [else
+                       (fprintf o "~a~areturn ip+code_rel(0x~x, 0x~x);~a/* ~a: 0x~x */\n"
+                                (pre)
+                                test
+                                base-i
+                                target-label
+                                (post)
+                                '_op
+                                delta)
+                       (if (equal? test "")
+                           (done)
+                           (next))]))]
+               [(_ op dr/b)
+                #'(begin
+                    (fprintf o "~areturn ~a_addr(0x~x);~a/* r~a + r~a */\n"
+                             (pre)
+                             '_op
+                             uinstr
+                             (post)
+                             (instr-dr-dest instr)
+                             (instr-dr-reg instr))
+                    (done))]
+               [(_ op di/b)
+                #'(let* ([delta (instr-i-imm instr)]
+                         [target-label (fx+ i instr-bytes delta)])
+                    (fprintf o "~areturn ~a_addr(0x~x);~a/* r~a + 0x~x */\n"
+                             (pre)
+                             '_op
+                             uinstr
+                             (post)
+                             (instr-di-dest instr)
+                             (instr-di-imm instr))
+                    (done))]
+               [(_ op n) #'(n-form '_op)]
+               [(_ op n/x)
+                #'(begin
+                    (emit-return)
+                    (fprintf o "/* ~a */\n" '_op)
+                    (done))]
+               [(_ op adr)
+                #'(let ([delta (fx+ i instr-bytes (fx* instr-bytes (instr-adr-imm instr)))])
+                    (fprintf o "~aload_code_relative(~a, ip+code_rel(0x~x, ~a));~a\n"
+                             (pre)
+                             (instr-adr-dest instr)
+                             base-i
+                             (if (fx< delta 0)
+                                 (format "-0x~x" (fx- delta))
+                                 (format "0x~x" delta))
+                             (post))
+                    (next))])))
+
+         (cond
+           [(and (pair? relocs)
+                 (= i (car relocs)))
+            (let ([dest (instr-di-dest instr)])
+              (fprintf o "~aload_from_relocation(~a, ip+code_rel(0x~x, 0x~x));~a\n"
+                       (pre)
+                       dest
+                       base-i
+                       i
+                       (post)))
+            (loop (fx+ i (fx* reloc-instrs instr-bytes)) (cdr relocs) headers labels)]
            [else
-            (let ([size (cdar headers)])
-              (fprintf o "/* data: ~a bytes */\n" size)
-              (let ([i (fx+ i size)])
-                (loop i
-                      (advance-relocs relocs i)
-                      (cdr headers)
-                      labels
-                      started?)))])]
-        [(fx= i end-i)
-         (when (and (pair? labels)
-                    (fx= i (label-to (car labels))))
-           (maybe-emit-label))
-         (when started?
-           (fprintf o "  return ip+code_rel(0x~x, 0x~x);\n}\n" start-i i))
-         (values (if started? (fx+ 1 index) index) relocs headers labels)]
-        [(and (pair? labels)
-              (fx= i (label-to (car labels))))
-         (maybe-emit-label)
-         (loop i relocs headers (cdr labels) started?)]
-        [else
-         (let ([instr (bytevector-s32-ref bv i (endianness little))]
-               [uinstr (bytevector-u32-ref bv i (endianness little))])
-           (define (next)
-             (loop (fx+ i instr-bytes) relocs headers labels started?))
-
-           (define (done)
-             (next))
-
-           (define (pre)
-             (string-append
-              (format "/* 0x~x */ " i)
-              (if (>= i start-i) "  " "/* ")))
-           (define (post)
-             (if (>= i start-i) " " " */ "))
-
-           (define (emit-do _op)
-             (fprintf o "~ado_~a(0x~x);~a" (pre) _op uinstr (post)))
-
-           (define (emit-return)
-             (fprintf o "~areturn ip+code_rel(0x~x, 0x~x);~a" (pre) start-i i (post)))
-
-           (define-syntax (emit stx)
-             (with-syntax ([_op (syntax-case stx ()
-                                  [(_ op . _)
-                                   (datum->syntax #'op
-                                                  (list->string
-                                                   (fold-right (lambda (x rest) 
-                                                                 (case x
-                                                                   [(#\-) (cons #\_ rest)]
-                                                                   [(#\>) rest]
-                                                                   [(#\*) (cons #\s rest)]
-                                                                   [else (cons x rest)]))
-                                                               '()
-                                                               (string->list (symbol->string (syntax->datum #'op))))))])])
-               (define (r-form)
-                 #'(begin
-                     (emit-do '_op)
-                     (fprintf o "/* ~a */\n"
-                              (instr-dr-reg instr))
-                     (next)))
-               (define (dr-form)
-                 #'(begin
-                     (emit-do '_op)
-                     (fprintf o " /* r~a <- r~a */\n"
-                              (instr-dr-dest instr)
-                              (instr-dr-reg instr))
-                     (next)))
-               (define (di-form instr-di-imm-stx)
-                 (with-syntax ([instr-di-imm instr-di-imm-stx])
-                   #'(begin
-                       (emit-do '_op)
-                       (fprintf o "/* r~a <- 0x~x */\n"
-                                (instr-di-dest instr)
-                                (instr-di-imm instr))
-                       (next))))
-               (define (drr-form)
-                 #'(begin
-                     (emit-do '_op)
-                     (fprintf o "/* r~a <- r~a, r~a */\n"
-                              (instr-drr-dest instr)
-                              (instr-drr-reg1 instr)
-                              (instr-drr-reg2 instr))
-                     (next)))
-               (define (dri-form)
-                 #'(begin
-                     (emit-do '_op)
-                     (fprintf o "/* r~a <- r~a, 0x~x */\n"
-                              (instr-dri-dest instr)
-                              (instr-dri-reg1 instr)
-                              (instr-dri-imm instr))
-                     (next)))
-               (syntax-case stx (di/u
-                                 di di/f dr dr/f
-                                 drr dri drr/f dri/f
-                                 dri/x r r/f r/x i r/b i/b dr/b di/b n n/x adr)
-                 [(_ op di/u) (di-form #'instr-di-imm/unsigned)]
-                 [(_ op di) (di-form #'instr-di-imm)]
-                 [(_ op di/f) (di-form #'instr-di-imm)]
-                 [(_ op dr) (dr-form)]
-                 [(_ op dr/f) (dr-form)]
-                 [(_ op drr) (drr-form)]
-                 [(_ op drr/f) (drr-form)]
-                 [(_ op dri) (dri-form)]
-                 [(_ op dri/f) (dri-form)]
-                 [(_ op dri/x)
-                  #'(begin
-                      (emit-return)
-                      (fprintf o "/* ~a: r~a <- r~a, 0x~x */\n"
-                               '_op
-                               (instr-dri-dest instr)
-                               (instr-dri-reg1 instr)
-                               (instr-dri-imm instr))
-                      (done))]
-                 [(_ op r) (r-form)]
-                 [(_ op r/f) (r-form)]
-                 [(_ op r/x)
-                  #'(begin
-                      (emit-return)
-                      (fprintf o "/* ~a: ~a */\n"
-                               '_op
-                               (instr-dr-reg instr))
-                      (done))]
-                 [(_ op i)
-                  #'(begin
-                      (emit-do '_op)
-                      (fprintf o "/* 0x~x */\n"
-                               (instr-i-imm instr))
-                      (next))]
-                 [(_ op r/b test)
-                  #'(begin
-                      (fprintf o "~a~areturn regs[~a];~a/* ~a */\n"
-                               (pre)
-                               test
-                               (instr-dr-reg instr)
-                               (post)
-                               '_op)
-                      (if (equal? test "")
-                          (done)
-                          (next)))]
-                 [(_ op i/b test)
-                  #'(let* ([delta (instr-i-imm instr)]
-                           [target-label (fx+ i instr-bytes delta)])
-                      (cond
-                        [(and (fx>= target-label start-i)
-                              (fx< target-label end-i))
-                         (fprintf o "~a~agoto label_~x;~a/* ~a: 0x~x */\n"
-                                  (pre)
-                                  test
-                                  target-label
-                                  (post)
-                                  '_op
-                                  delta)
-                         (next)]
-                        [else
-                         (fprintf o "~a~areturn ip+code_rel(0x~x, 0x~x);~a/* ~a: 0x~x */\n"
-                                  (pre)
-                                  test
-                                  start-i
-                                  target-label
-                                  (post)
-                                  '_op
-                                  delta)
-                         (if (equal? test "")
-                             (done)
-                             (next))]))]
-                 [(_ op dr/b)
-                  #'(begin
-                      (fprintf o "~areturn ~a_addr(0x~x);~a/* r~a + r~a */\n"
-                               (pre)
-                               '_op
-                               uinstr
-                               (post)
-                               (instr-dr-dest instr)
-                               (instr-dr-reg instr))
-                      (done))]
-                 [(_ op di/b)
-                  #'(let* ([delta (instr-i-imm instr)]
-                           [target-label (fx+ i instr-bytes delta)])
-                      (fprintf o "~areturn ~a_addr(0x~x);~a/* r~a + 0x~x */\n"
-                               (pre)
-                               '_op
-                               uinstr
-                               (post)
-                               (instr-di-dest instr)
-                               (instr-di-imm instr))
-                      (done))]
-                 [(_ op n)
-                  #'(begin
-                      (emit-do '_op)
-                      (fprintf o "\n")
-                      (next))]
-                 [(_ op n/x)
-                  #'(begin
-                      (emit-return)
-                      (fprintf o "/* ~a */\n" '_op)
-                      (done))]
-                 [(_ op adr)
-                  #'(let ([delta (fx+ i instr-bytes (fx* instr-bytes (instr-adr-imm instr)))])
-                      (fprintf o "~aload_code_relative(~a, ip+code_rel(0x~x, ~a));~a\n"
-                               (pre)
-                               (instr-adr-dest instr)
-                               start-i
-                               (if (fx< delta 0)
-                                   (format "-0x~x" (fx- delta))
-                                   (format "0x~x" delta))
-                               (post))
-                      (next))])))
-
-           (cond
-             [(and (pair? relocs)
-                   (= i (car relocs)))
-              (let ([dest (instr-di-dest instr)])
-                (fprintf o "~aload_from_relocation(~a, ip+code_rel(0x~x, 0x~x));~a\n"
-                         (pre)
-                         dest
-                         start-i
-                         i
-                         (post)))
-              (loop (fx+ i (fx* reloc-instrs instr-bytes)) (cdr relocs) headers labels started?)]
-             [else
-              (instruction-cases instr emit)]))]))))
+            (instruction-cases instr emit)]))])))
 
 (define (extract-name name)
   (fasl-case* name

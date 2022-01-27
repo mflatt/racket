@@ -1,9 +1,15 @@
 /* Interpreter for portable bytecode. See "pb.ss". */
 
+/* Machine state is in the thread context: */
 #define regs       (&PBREGS(tc, 0))
 #define fpregs     (&PBFPREGS(tc, 0))
 #define call_arena (&PBCALLARENA(tc, 0)) /* scratch space for libffi-based foreign calls, 
                                             somewhat analogous to the C stack */
+
+/* The flag register doesn't have to be in the thread context, because
+   it set and then used only in the next instruction. */
+
+/* All instructions are 32 bits wide: */
 typedef uint32_t instruction_t;
 
 #define INSTR_op(instr)       ((instr) & 0xFF)
@@ -29,6 +35,9 @@ typedef uint32_t instruction_t;
 #define INSTR_dri_imm(instr)  (((int32_t)(instr)) >> 16)
 
 #define INSTR_i_imm(instr)    (((int32_t)(instr)) >> 8)
+
+#define INSTR_ii_low(instr)   (((instr) >> 8) & 0xFF)
+#define INSTR_ii_high(instr)  ((instr) >> 16)
 
 #define SHIFT_MASK(v) ((v) & (ptr_bits-1))
 
@@ -62,7 +71,6 @@ enum {
 #endif
 
 /* ********************************************************************** */
-
 /* Implementations for instructions that can be used either within the
    interpreter loop or within a generated chunk. */
 
@@ -765,6 +773,7 @@ enum {
 #endif
 
 /* ********************************************************************** */
+/* Support for generated chunks */
 
 #define load_from_relocation(dest, ip) \
   regs[dest] = decode_relocation(((instruction_t *)TO_VOIDP(ip))[0], (instruction_t *)TO_VOIDP(ip))

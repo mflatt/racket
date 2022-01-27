@@ -5,12 +5,16 @@
 /* Interpreter for portable bytecode. See "pb.ss". */
 #include "pb.h"
 
-typedef uptr (*chunk_t)(ptr, uptr);
+typedef uptr (*chunk_t)(ptr, uptr, int);
 
 static chunk_t *chunks;
 static int num_chunks;
 
-void S_machine_init() {}
+#include "/tmp/petite.c"
+
+void S_machine_init() {
+  register_petite_pbchunks();
+}
 
 void Sregister_pbchunks(void **add_chunks, int start_index, int end_index) {
   if (num_chunks < end_index) {
@@ -472,7 +476,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
     case COMMON_INSTR(pb_fp_call_arena_out)
     case COMMON_INSTR(pb_stack_call)
     case pb_chunk:
-      next_ip = TO_VOIDP((chunks[INSTR_i_imm(instr)])(tc, TO_PTR(ip)));
+      next_ip = TO_VOIDP((chunks[INSTR_ii_high(instr)])(tc, TO_PTR(ip), INSTR_ii_low(instr)));
       break;
     default:
       S_error_abort("illegal pb instruction");
