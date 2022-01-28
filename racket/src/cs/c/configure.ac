@@ -182,6 +182,8 @@ cs_auto_flags=--disable-auto-flags
 
 COPY_NEW_CFLAGS_TO_CPPFLAGS=no
 
+PBCHUNK_MODE=plain
+
 ###### Autoconfigure #######
 
 m4_include(../ac/sdk_ios.m4)
@@ -224,6 +226,7 @@ m4_include(../ac/install_name.m4)
 
 MACH_HOST_CPU="${host_cpu}"
 extra_scheme_config_args=
+pb_machine_name=tpbl
 
 case "$host_os" in
   solaris2*)
@@ -703,10 +706,11 @@ if test "${enable_pb}" = "yes" ; then
   enable_libffi=yes
   enable_foreign=yes
   CONFIG_MAIN_SCHEME_MODE="--pb --threads --enable-libffi"
-  TARGET_MACH=tpb
+  TARGET_MACH=${pb_machine_name}
   if test "${CROSS_MODE}" != "cross" ; then
-    MACH=tpb
+    MACH=${pb_machine_name}
   fi
+  PBCHUNK_MODE=pbchunk
 else
   CONFIG_MAIN_SCHEME_MODE=""
 fi
@@ -881,6 +885,7 @@ AC_SUBST(ENABLE_OR_DISABLE_WPO)
 AC_SUBST(COMP_SUBDIR_CONFIGURE_ARGS)
 AC_SUBST(CROSS_COMPILE_TARGET_KIND)
 AC_SUBST(CS_HOST_WORKAREA_PREFIX)
+AC_SUBST(PBCHUNK_MODE)
 AC_SUBST(RUN_RACKET)
 AC_SUBST(INSTALL_SETUP_FLAGS)
 AC_SUBST(INSTALL_SETUP_RACKET_FLAGS)

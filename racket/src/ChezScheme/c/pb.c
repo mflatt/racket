@@ -10,11 +10,7 @@ typedef uptr (*chunk_t)(ptr, uptr, int);
 static chunk_t *chunks;
 static int num_chunks;
 
-#include "/tmp/petite.c"
-
-void S_machine_init() {
-  register_petite_pbchunks();
-}
+void S_machine_init() { }
 
 void Sregister_pbchunks(void **add_chunks, int start_index, int end_index) {
   if (num_chunks < end_index) {

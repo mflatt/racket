@@ -628,6 +628,7 @@ INSTALL_LIBS_ENABLE
 INSTALL_SETUP_RACKET_FLAGS
 INSTALL_SETUP_FLAGS
 RUN_RACKET
+PBCHUNK_MODE
 CS_HOST_WORKAREA_PREFIX
 CROSS_COMPILE_TARGET_KIND
 COMP_SUBDIR_CONFIGURE_ARGS
@@ -3301,6 +3302,8 @@ cs_auto_flags=--disable-auto-flags
 
 COPY_NEW_CFLAGS_TO_CPPFLAGS=no
 
+PBCHUNK_MODE=plain
+
 ###### Autoconfigure #######
 
 if test "${enable_ios}" != "" ; then
@@ -4385,6 +4388,7 @@ fi
 
 MACH_HOST_CPU="${host_cpu}"
 extra_scheme_config_args=
+pb_machine_name=tpbl
 
 case "$host_os" in
   solaris2*)
@@ -5814,10 +5818,11 @@ if test "${enable_pb}" = "yes" ; then
   enable_libffi=yes
   enable_foreign=yes
   CONFIG_MAIN_SCHEME_MODE="--pb --threads --enable-libffi"
-  TARGET_MACH=tpb
+  TARGET_MACH=${pb_machine_name}
   if test "${CROSS_MODE}" != "cross" ; then
-    MACH=tpb
+    MACH=${pb_machine_name}
   fi
+  PBCHUNK_MODE=pbchunk
 else
   CONFIG_MAIN_SCHEME_MODE=""
 fi
@@ -6059,6 +6064,7 @@ done
 
 SCHEME_CONFIG_ARGS="--machine=${KERNEL_MACH} --disable-x11 ${disable_curses_arg} ${cs_auto_flags} ${extra_scheme_config_args}"
 SCHEME_CROSS_CONFIG_ARGS="--machine=${KERNEL_TARGET_MACH} --disable-x11 ${cs_auto_flags} ${disable_curses_arg} ${extra_scheme_config_args}"
+
 
 
 

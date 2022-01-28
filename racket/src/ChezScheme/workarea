@@ -76,6 +76,7 @@ case "$Mhost" in
   ppc32nb) ;;
   ppc32osx) ;;
   arm64osx) ;;
+  pb) ;;
   tpbl) ;;
   ta6fb) ;;
   ta6le) ;;

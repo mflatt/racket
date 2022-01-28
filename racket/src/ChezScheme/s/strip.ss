@@ -924,54 +924,123 @@
                                (when script-header (put-bytevector op script-header))
                                (for-each (lambda (entry) (write-entry op entry)) entry*)))))
       (set-who! pbchunk-convert-file
-        (lambda (ifn ofn c-ofn reg-proc-name start-index)
+        (lambda (ifn ofn c-ofns reg-proc-names start-index)
           (unless (string? ifn) ($oops who "~s is not a string" ifn))
           (unless (string? ofn) ($oops who "~s is not a string" ofn))
-          (unless (string? c-ofn) ($oops who "~s is not a string" c-ofn))
-          (unless (string? reg-proc-name) ($oops who "~s is not a string" reg-proc-name))
+          (unless (and (pair? c-ofns) (list? c-ofns) (andmap string? c-ofns))
+            ($oops who "~s is not a nonempty list of strings" c-ofns))
+          (unless (and (pair? reg-proc-names) (list? reg-proc-names) (andmap string? reg-proc-names))
+            ($oops who "~s is not a nonempty list of strings" reg-proc-names))
           (unless (and (fixnum? start-index) (fx>= start-index 0))
             ($oops who "~s is not a nonnegative fixnum" start-index))
+          (unless (fx= (length c-ofns) (length reg-proc-names))
+            ($oops who "length of file-name list ~s does not match the length of function-name list ~s"
+                   c-ofns
+                   reg-proc-names))
           (convert-fasl-file who ifn ofn (fasl-strip-options)
                              (lambda (script-header mode entry* op)
-                               (let ([end-index
-                                      (let ([c-op ($open-file-output-port who c-ofn (file-options replace)
-                                                                          (buffer-mode block)
-                                                                          (native-transcoder))]
-                                            [seen-table (make-eq-hashtable)])
-                                        (on-reset
-                                         (delete-file c-ofn #f)
-                                         (on-reset
-                                          (close-port c-op)
-                                          (let loop ([entry* entry*] [index start-index])
-                                            (cond
-                                              [(null? entry*)
-                                               (let ([count (fx- index start-index)])
-                                                 (newline c-op)
-                                                 (fprintf c-op "static void *~a_chunks[~a] = {\n" reg-proc-name count)
-                                                 (let loop ([i start-index])
-                                                   (unless (fx= i index)
-                                                     (fprintf c-op "  chunk_~a~a\n"
-                                                              i
-                                                              (if (fx= (fx+ i 1) index) "" ","))
-                                                     (loop (fx+ i 1))))
-                                                 (fprintf c-op "};\n\n")
-                                                 (fprintf c-op "void ~a() {\n" reg-proc-name)
-                                                 (fprintf c-op "  Sregister_pbchunks(~a_chunks, ~a, ~a);\n"
-                                                          reg-proc-name start-index index)
-                                                 (fprintf c-op "}\n"))
-                                               (close-port c-op)
-                                               index]
-                                              [else
-                                               (handle-entry
-                                                (car entry*)
-                                                (lambda (write-k)
-                                                  (loop (cdr entry*) index))
-                                                (lambda (situation x)
-                                                  (loop (cdr entry*)
-                                                        ($fasl-chunk! x c-op index seen-table))))])))))])
-                                 (when script-header (put-bytevector op script-header))
-                                 (for-each (lambda (entry) (write-entry op entry)) entry*)
-                                 end-index)))))
+                               ;; first print everything to a string port, and then we
+                               ;; break up the string port into chunks
+                               (let-values ([(0-op get) (open-string-output-port)])
+                                 (let* ([seen-table (make-eq-hashtable)]
+                                        [end-index
+                                         (let loop ([entry* entry*] [index start-index])
+                                           (cond
+                                             [(null? entry*)
+                                              index]
+                                             [else
+                                              (handle-entry
+                                               (car entry*)
+                                               (lambda (write-k)
+                                                 (loop (cdr entry*) index))
+                                               (lambda (situation x)
+                                                 (loop (cdr entry*)
+                                                       ($fasl-chunk! x 0-op index seen-table))))]))]
+                                        [per-file (fxquotient (fx+ (fx- end-index start-index)
+                                                                   (fx- (length c-ofns) 1))
+                                                              (length c-ofns))]
+                                        [ip (open-string-input-port (get))])
+                                   ;; before continuing, write out updated fasl:
+                                   (when script-header (put-bytevector op script-header))
+                                   (for-each (lambda (entry) (write-entry op entry)) entry*)
+                                   (let ()
+                                     ;; at this point, chunks are in in `0-op`/`ip`, so extract lines and
+                                     ;; farm them out to the destination files;
+                                     ;; start by opening all the destinations:
+                                     (define (call-with-all-files k)
+                                       (let p-loop ([todo-c-ofns c-ofns]
+                                                    [rev-c-ops '()])
+                                         (cond
+                                           [(pair? todo-c-ofns)
+                                            (let* ([c-ofn (car todo-c-ofns)]
+                                                   [c-op ($open-file-output-port who c-ofn (file-options replace)
+                                                                                 (buffer-mode block)
+                                                                                 (native-transcoder))])
+                                              (on-reset
+                                               (delete-file c-ofn #f)
+                                               (on-reset
+                                                (close-port c-op)
+                                                (fprintf c-op "#include \"system.h\"\n")
+                                                (fprintf c-op "#include <math.h>\n")
+                                                (fprintf c-op "#include \"pb.h\"\n")
+                                                (p-loop (cdr todo-c-ofns) (cons c-op rev-c-ops)))))]
+                                           [else (k (reverse rev-c-ops))])))
+                                     ;; helper to write out chunk registration:
+                                     (define (write-registration c-op reg-proc-name start-index index)
+                                       (newline c-op)
+                                       (fprintf c-op "static void *~a_chunks[~a] = {\n" reg-proc-name (fx- index start-index))
+                                       (let loop ([i start-index])
+                                         (unless (fx= i index)
+                                           (fprintf c-op "  chunk_~a~a\n"
+                                                    i
+                                                    (if (fx= (fx+ i 1) index) "" ","))
+                                           (loop (fx+ i 1))))
+                                       (fprintf c-op "};\n\n")
+                                       (fprintf c-op "void ~a() {\n" reg-proc-name)
+                                       (fprintf c-op "  Sregister_pbchunks(~a_chunks, ~a, ~a);\n"
+                                                reg-proc-name start-index index)
+                                       (fprintf c-op "}\n"))
+                                     ;; helper to recognize chunk starts:
+                                     (define (chunk-start-line? line)
+                                       (let ([chunk-start-str "static uptr chunk_"])
+                                         (and (fx> (string-length line) (string-length chunk-start-str))
+                                              (let loop ([i 0])
+                                                (or (fx= i (string-length chunk-start-str))
+                                                    (and (eqv? (string-ref line i)
+                                                               (string-ref chunk-start-str i))
+                                                         (loop (fx+ i 1))))))))
+                                     ;; now loop to read lines and redirect:
+                                     (call-with-all-files
+                                      (lambda (c-ops)
+                                        (let c-loop ([c-ops c-ops]
+                                                     [reg-proc-names reg-proc-names]
+                                                     [index start-index]
+                                                     [line (get-line ip)])
+                                          (unless (null? c-ops)
+                                            (let ([c-op (car c-ops)])
+                                              (let chunk-loop ([fuel per-file] [n 0] [line line])
+                                                (cond
+                                                  [(or (eof-object? line)
+                                                       (and (fxzero? fuel)
+                                                            (chunk-start-line? line)))
+                                                   (write-registration c-op (car reg-proc-names) index (fx+ index n))
+                                                   (close-port c-op)
+                                                   (c-loop (cdr c-ops)
+                                                           (cdr reg-proc-names)
+                                                           (fx+ index n)
+                                                           line)]
+                                                  [else
+                                                   (put-string c-op line)
+                                                   (newline c-op)
+                                                   (let ([next-line (get-line ip)])
+                                                     (cond
+                                                       [(chunk-start-line? line)
+                                                        (chunk-loop (fx- fuel 1) (fx+ n 1) next-line)]
+                                                       [else
+                                                        (chunk-loop fuel n next-line)]))])))))))
+                                     ;; fies written; return index after last chunk
+                                     end-index)))))))
+                                             
       (set-who! vfasl-convert-file
         (lambda (ifn ofn bootfile*)
           (convert-fasl-file who ifn ofn (fasl-strip-options)
