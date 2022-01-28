@@ -271,6 +271,7 @@
 ;; .../u = unsigned immediate
 ;; .../f = sets flag
 ;; .../b = branch, uses flag deending on branch kind
+;; .../c = foreign call
 (define-syntax (instruction-cases stx)
   (syntax-case stx ()
     [(_ instr emit)
@@ -404,7 +405,7 @@
         [pb-return n/x]
         [pb-adr adr]
         [pb-interp r/x]
-        [pb-call dri/x]
+        [pb-call dri/c]
         [pb-inc-pb-register dr/f]
         [pb-inc-pb-immediate di/f]
         [pb-lock r/f]
@@ -874,6 +875,10 @@
            (fprintf o "\n")
            (next))
 
+         (define (call-form _op)
+           (emit-foreign-call o instr)
+           (next))
+
          (define-syntax (emit stx)
            (with-syntax ([_op (syntax-case stx ()
                                 [(_ op . _)
@@ -889,7 +894,7 @@
                                                              (string->list (symbol->string (syntax->datum #'op))))))])])
              (syntax-case stx (di/u
                                di di/f dr dr/f
-                               drr dri drr/f dri/f
+                               drr dri drr/f dri/f dri/c
                                dri/x r r/f r/x i r/b i/b dr/b di/b n n/x adr)
                [(_ op di/u) #'(di-form '_op (instr-di-imm/unsigned instr))]
                [(_ op di) #'(di-form '_op (instr-di-imm instr))]
@@ -900,6 +905,7 @@
                [(_ op drr/f) #'(drr-form '_op)]
                [(_ op dri) #'(dri-form '_op)]
                [(_ op dri/f) #'(dri-form '_op)]
+               [(_ op dri/c) #'(call-form '_op)]
                [(_ op dri/x)
                 #'(begin
                     (emit-return)
@@ -1012,6 +1018,51 @@
             (loop (fx+ i (fx* reloc-instrs instr-bytes)) (cdr relocs) headers labels)]
            [else
             (instruction-cases instr emit)]))])))
+
+(define (emit-foreign-call o instr)
+  (let* ([proto-index (instr-dri-imm instr)]
+         [proto (ormap (lambda (p) (and (eqv? (cdr p) proto-index) (car p)))
+                       (constant pb-prototype-table))])
+    (unless proto ($oops 'pbchunk "could not find foreign-call prototype"))
+    (fprintf o "  ")
+    (case (car proto)
+      [(void) (void)]
+      [(double) (fprintf o "fpregs[Cfpretval] = ")]
+      [(void*) (fprintf o "regs[Cretval] = TO_PTR(")]
+      [else (fprintf o "regs[Cretval] = ")])
+    (fprintf o "((pb~a_t)TO_VOIDP(regs[~a]))("
+             (apply string-append
+                    (map (lambda (t)
+                           (string-append
+                            "_"
+                            (list->string
+                             (fold-right (lambda (x rest) 
+                                           (case x
+                                             [(#\-) (cons #\_ rest)]
+                                             [(#\*) (cons #\s rest)]
+                                             [else (cons x rest)]))
+                                         '()
+                                         (string->list (symbol->string t))))))
+                         proto))
+             (instr-dri-dest instr))
+    (let loop ([proto (cdr proto)] [int 1] [fp 1])
+      (unless (null? proto)
+        (unless (and (fx= int 1) (fx= fp 1))
+          (fprintf o ", "))
+        (case (car proto)
+          [(double)
+           (fprintf o "fpregs[Cfparg~a]" int)
+           (loop (cdr proto) int (fx+ fp 1))]
+          [(void*)
+           (fprintf o "TO_VOIDP(regs[Carg~a])" int)
+           (loop (cdr proto) (fx+ int 1) fp)]
+          [else
+           (fprintf o "regs[Carg~a]" int)
+           (loop (cdr proto) (fx+ int 1) fp)])))
+    (case (car proto)
+      [(void*) (fprintf o ")")] ; close `TO_PTR`
+      [else (void)])
+    (fprintf o "); /* pb_call ~a */\n" proto-index)))
 
 (define (extract-name name)
   (fasl-case* name
