@@ -74,16 +74,18 @@ The `machine-type` name carries three pieces of information:
 
 When you run "configure", it looks for boot and header files as the
 directory "boot/*machine-type*". (If it doesn't find them, then
-configuration cannot continue.)
+configuration cannot continue.) For information on `pb` machine types,
+see "Portable Bytecode" below.
 
 The supported machine types are listed in "cmacros.ss" and reflected
 by a "boot/*machine-type*" directory for boot and headers files and a
 combination of "s/*kind*.def" files to describe the platform. There
 may also be a "s/Mf-*machine-type*" makefile to select relevant files
 in "s", a "c/Mf-*machine-type*" makefile for configration in "c", and
-a "mats/Mf-*machine-type*" makefile to configure testing, but Unix
-machine types are handled by Mf-unix and variables configured in the
-"configure" and "workarea" scripts.
+a "mats/Mf-*machine-type*" makefile to configure testing. Files for
+Unix machine types can be generated from "s/unix.def" or "s/tunix.def"
+and "c/Mf-unix" with variables configured by the "configure" and
+"workarea" scripts.
 
 The "workarea" script in the root of the Chez Scheme project is used
 to generate a subdirectory with the appropriate contents to build for
@@ -1268,6 +1270,28 @@ the right notion of a quantity or property. If you need the host
 value, then there must be some function that provides the value. If
 you need the target machine's value, then it must be accessed using
 `constant`.
+
+# Portable Bytecode
+
+A `machine-type` name for portable bytecode follows a variant of the
+platform-specific convention:
+
+ * *whether the system threaded*: A `t` indicates that it is threaded;
+
+ * `pb`
+
+ * *word side*: `64`, `32`, or blank for basic; and
+
+ * *endianness*: `l` for little-endian, `b` for big-endian, or blank
+    for basic.
+
+The boot files for a basic pb build work on all platforms, while boot
+files for a non-basic pb build have a specific word size and
+endianness for improved performance. Run "configure" with `--pb` for a
+basic build, or run "configure" with `--pbarch` for a non-basic build.
+
+
+
 
 # Changing the Version Number
 

@@ -226,7 +226,6 @@ m4_include(../ac/install_name.m4)
 
 MACH_HOST_CPU="${host_cpu}"
 extra_scheme_config_args=
-pb_machine_name=tpbl
 
 case "$host_os" in
   solaris2*)
@@ -386,22 +385,28 @@ fi
 case "$MACH_HOST_CPU" in
   x86_64)
     MACH="${thread_prefix}a6${MACH_OS}"
+    pb_machine_name="${thread_prefix}pb64l"
     ;;
   x86|i*86)
     MACH="${thread_prefix}i3${MACH_OS}"
+    pb_machine_name="${thread_prefix}pb32l"
     ;;
   aarch64*|arm64*)
     MACH="${thread_prefix}arm64${MACH_OS}"
+    pb_machine_name="${thread_prefix}pb64l"
     ;;
   arm*)
     MACH="${thread_prefix}arm32${MACH_OS}"
+    pb_machine_name="${thread_prefix}pb32l"
     ;;
   powerpc64*)
     MACH=""
+    pb_machine_name="${thread_prefix}pb64b"
     # MACH="${thread_prefix}ppc64${MACH_OS}"
     ;;
   power*)
     MACH="${thread_prefix}ppc32${MACH_OS}"
+    pb_machine_name="${thread_prefix}pb32b"
     ;;
 esac
 
@@ -705,12 +710,16 @@ KERNEL_TARGET_MACH="${TARGET_MACH}"
 if test "${enable_pb}" = "yes" ; then
   enable_libffi=yes
   enable_foreign=yes
-  CONFIG_MAIN_SCHEME_MODE="--pb --threads --enable-libffi"
+  CONFIG_MAIN_SCHEME_MODE="--pbarch --enable-libffi"
   TARGET_MACH=${pb_machine_name}
   if test "${CROSS_MODE}" != "cross" ; then
     MACH=${pb_machine_name}
   fi
   PBCHUNK_MODE=pbchunk
+  if test "${CONFIGURE_RACKET_SO_COMPILE}" = "" ; then
+    CONFIGURE_RACKET_SO_COMPILE="env"
+  fi
+  CONFIGURE_RACKET_SO_COMPILE="${CONFIGURE_RACKET_SO_COMPILE} PLT_CS_MACHINE_TYPE=${KERNEL_TARGET_MACH}"
 else
   CONFIG_MAIN_SCHEME_MODE=""
 fi

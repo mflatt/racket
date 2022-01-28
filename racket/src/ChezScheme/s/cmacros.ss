@@ -375,9 +375,9 @@
 
 (define-machine-types
   any
-  pb
-  pbl       tpbl
-  pbb       tpbb
+  pb        tpb
+  pb64l     tpb64l
+  pb64b     tpb64b
   pb32l     tpb32l
   pb32b     tpb32b
   i3le      ti3le
@@ -3367,6 +3367,7 @@
     [void uptr uint32]
     [void int32 uptr]
     [void int32 int32]
+    [void uint32 uint32]
     [void uptr uptr]
     [void int32 void*]
     [void uptr void*]

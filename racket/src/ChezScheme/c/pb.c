@@ -270,6 +270,9 @@ void S_pb_interp(ptr tc, void *bytecode) {
         case pb_call_void_int32_int32:
           ((pb_void_int32_int32_t)proc)(regs[Carg1], regs[Carg2]);
           break;
+        case pb_call_void_uint32_uint32:
+          ((pb_void_uint32_uint32_t)proc)(regs[Carg1], regs[Carg2]);
+          break;
         case pb_call_void_uptr_uptr:
           ((pb_void_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2]);
           break;

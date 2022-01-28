@@ -497,13 +497,16 @@ repack-no-install-libs:
 # linked and "boot.c" needs to initialize them
 
 PBCHUNK_IN = $(PETITE_BOOT_plain) $(SCHEME_BOOT_plain) $(RACKET_BOOT_plain)
-PBCHUNK_OUT = petite-pbchunk.boot scheme-pbchunk.boot racket-pbchunk.boot \
-              petite0.c petite1.c petite2.c petite3.c petite4.c \
-              petite5.c petite6.c petite7.c petite8.c petite9.c \
-              scheme0.c scheme1.c scheme2.c scheme3.c scheme4.c \
-              scheme5.c scheme6.c scheme7.c scheme8.c scheme9.c \
-              racket0.c racket1.c racket2.c racket3.c racket4.c \
-              racket5.c racket6.c racket7.c racket8.c racket9.c
+
+# Using `%` in place of `.` in `PBCHUNK_OUT` makes it work as a target
+# where a command produces multiple files at the same time
+PBCHUNK_OUT = petite-pbchunk%boot scheme-pbchunk%boot racket-pbchunk%boot \
+              petite0%c petite1%c petite2%c petite3%c petite4%c \
+              petite5%c petite6%c petite7%c petite8%c petite9%c \
+              scheme0%c scheme1%c scheme2%c scheme3%c scheme4%c \
+              scheme5%c scheme6%c scheme7%c scheme8%c scheme9%c \
+              racket0%c racket1%c racket2%c racket3%c racket4%c \
+              racket5%c racket6%c racket7%c racket8%c racket9%c
 
 $(PBCHUNK_OUT): $(PBCHUNK_IN)
 	$(SCHEME) --script $(srcdir)/to-pbchunk.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) $(PBCHUNK_IN)

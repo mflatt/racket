@@ -1,11 +1,4 @@
-;; The initial defaults are 64-bit specific
-
-(define-constant-default ptr-bits 64)
-(define-constant-default typedef-ptr "uint64_t") ; not "void *"
-(define-constant-default typedef-iptr "int64_t")
-(define-constant-default typedef-uptr "uint64_t")
-
-;; The remaining defaults are generic
+(define-constant architecture 'pb)
 
 (define-constant typedef-i8 "int8_t")
 (define-constant typedef-u8 "uint8_t")
