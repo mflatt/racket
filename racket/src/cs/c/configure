@@ -660,6 +660,7 @@ TT_CROSS_MODE
 T_CROSS_MODE
 CROSS_MODE
 DIFF_MACH
+KERNEL_TARGET_MACH
 TARGET_MACH
 MACH
 SCHEME_DIR
@@ -6073,6 +6074,7 @@ done
 
 SCHEME_CONFIG_ARGS="--machine=${KERNEL_MACH} --disable-x11 ${disable_curses_arg} ${cs_auto_flags} ${extra_scheme_config_args}"
 SCHEME_CROSS_CONFIG_ARGS="--machine=${KERNEL_TARGET_MACH} --disable-x11 ${cs_auto_flags} ${disable_curses_arg} ${extra_scheme_config_args}"
+
 
 
 

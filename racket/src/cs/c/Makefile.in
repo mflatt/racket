@@ -16,6 +16,7 @@ SCHEME = $(SCHEME_BIN) -B $(SCHEME_INC)/petite.boot -B $(SCHEME_INC)/scheme.boot
 
 TARGET_MACH = @TARGET_MACH@
 SCHEME_TARGET_INC = $(SCHEME_WORKAREA)/$(TARGET_MACH)/boot/$(TARGET_MACH)
+KERNEL_TARGET_MACH = @KERNEL_TARGET_MACH@
 
 CC = @CC@
 BASE_CFLAGS = @CFLAGS@ @CPPFLAGS@
@@ -670,7 +671,7 @@ common-install:
 SYSTEM_RKTD = $(DESTDIR)$(libpltdir)/system$(CS_INSTALLED).rktd
 
 system-install:
-	$(RACKET) -cu "$(srcdir)/gen-system.rkt" $(SYSTEM_RKTD) $(TARGET_MACH) @CROSS_COMPILE_TARGET_KIND@ "$(srcdir)" "@PLT_CS_SLSP_SUFFIX@"
+	$(RACKET) -cu "$(srcdir)/gen-system.rkt" $(SYSTEM_RKTD) $(TARGET_MACH) $(KERNEL_TARGET_MACH) @CROSS_COMPILE_TARGET_KIND@ "$(srcdir)" "@PLT_CS_SLSP_SUFFIX@"
 
 include-install:
 	$(ICP) $(srcdir)/api.h "$(DESTDIR)$(includepltdir)/racketcs.h"
