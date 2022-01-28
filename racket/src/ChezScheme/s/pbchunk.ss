@@ -1051,7 +1051,7 @@
           (fprintf o ", "))
         (case (car proto)
           [(double)
-           (fprintf o "fpregs[Cfparg~a]" int)
+           (fprintf o "fpregs[Cfparg~a]" fp)
            (loop (cdr proto) int (fx+ fp 1))]
           [(void*)
            (fprintf o "TO_VOIDP(regs[Carg~a])" int)
