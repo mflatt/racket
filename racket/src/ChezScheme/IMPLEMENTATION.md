@@ -1333,16 +1333,16 @@ A `pb-chunk` instruction's payload is two integers: a 16-bit *index*
 and an 8-bit *subindex*. The *index* selects a registered C chunk
 function. The *subindex* is passed as the third argument to that
 function. Meanwhile, the first two arguments to the chunk C function
-are the thread context *tc* and the address *ip* of the `pb-chunk`
-instruction. The pb virtual registers are accessed via *tc*. The *ip*
-argument is useful for constructing relative addresses, such as the
-address of code that contains a relocatable reference. A C chunk
-function returns the address of pb code to jump to. A chunk function
-might return an address of Scheme function code to call that function,
-or it might return the address of code to go back to running in
-interpreted mode for the same code object where it started; that is,
-general jumps and bailing out of chunk mode are implemented in the
-same way.
+are the machine state *ms* that lives in a thread context and the
+address *ip* of the `pb-chunk` instruction. The pb virtual registers
+are accessed via *ms*. The *ip* argument is useful for constructing
+relative addresses, such as the address of code that contains a
+relocatable reference. A C chunk function returns the address of pb
+code to jump to. A chunk function might return an address of Scheme
+function code to call that function, or it might return the address of
+code to go back to running in interpreted mode for the same code
+object where it started; that is, general jumps and bailing out of
+chunk mode are implemented in the same way.
 
 # Changing the Version Number
 

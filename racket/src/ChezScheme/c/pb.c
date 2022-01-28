@@ -44,7 +44,7 @@ static instruction_t *call_from; static void *call_to;
 void S_pb_interp(ptr tc, void *bytecode) {
   machine_state * RESTRICT_PTR ms = (machine_state *)&PBREGS(tc, 0); /* assumes fields are together in `tc` */
   instruction_t *ip = (instruction_t *)bytecode, *next_ip, instr;
-  int flag;
+  int flag = 0;
 
   regs[0] = (uptr)tc;
 
