@@ -34,7 +34,8 @@
 
   (define-values (parse-cond)
     (lambda (e)
-      (if (or (matches? e '(case (machine-type) . _))
+      (if (if (matches? e '(case (machine-type) . _))
+              #t
               (matches? e '(case (reflect-machine-type) . _)))
           (letrec-values ([(loop)
                            (lambda (l)
