@@ -1326,8 +1326,24 @@ index, so the revised compiled Scheme code has to be used with exactly
 the C chunks that are generated at the same time; when multiple sets
 of chunks are used together, each needs to be created with
 non-overlapping index ranges. Orchestrating the generation of chunk
-files and linking/loading them into a kernel executable is outside the
-scope of the Chez Scheme build system.
+files and linking/loading them into a kernel executable is currently
+outside the scope of the Chez Scheme build system.
+
+The `pb-chunk` instruction's payload is two integers: a 16-bit *index*
+and an 8-bit *subindex*. The *index* selects a registered C chunk
+function. The *subindex* is passed as the third argument to that
+function. Meanwhile, the first two arguments to the chunk C function
+are the thread context *tc* and the address *ip* of the `pb-chunk`
+instruction. The pb virtual registers are accessed via *tc*. The *ip*
+argument is useful for construction relative addresses, such as the
+address of code that contains an address that is managed by a
+relocation entry. The result of a C chunk function is the address of
+pb code to jump to. A chunk function might return an address of some
+other code object as part of a Scheme function call to that code, or
+it might return the address of code to go back to running in
+interpreted mode for the same code object where it started; that is,
+general jumps and bailing out of chunk mode is implemented the same
+way.
 
 # Changing the Version Number
 

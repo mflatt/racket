@@ -27,6 +27,7 @@ AC_ARG_ENABLE(scheme,     [  --enable-scheme=<path>  use <path> as host's build 
 AC_ARG_ENABLE(mach,       [  --enable-mach=<mach>    use Chez Scheme machine type <mach>])
 AC_ARG_ENABLE(target,     [  --enable-target=<mach>  cross-build for Chez Scheme machine type <mach>])
 AC_ARG_ENABLE(pb,         [  --enable-pb             build for platform without native-code backend])
+AC_ARG_ENABLE(pbchunk,    [  --enable-pbchunk        enable C chunks for pb boot (enabled by default)])
 m4_include(../ac/portable_arg.m4)
 m4_include(../ac/natipkg_arg.m4)
 m4_include(../ac/sdk_arg.m4)
@@ -86,6 +87,7 @@ show_explicitly_set "${enable_scheme}" "Chez Scheme build directory"
 show_explicitly_set "${enable_mach}" "machine type"
 show_explicitly_set "${enable_target}" "cross-build machine type"
 show_explicitly_set "${enable_pb}" "pb machine type"
+show_explicitly_disabled "${enable_pbchunk}" "pbchunk"
 m4_include(../ac/portable_show.m4)
 m4_include(../ac/natipkg_show.m4)
 show_explicitly_enabled "${enable_libz}" "Installed libz"
@@ -715,11 +717,13 @@ if test "${enable_pb}" = "yes" ; then
   if test "${CROSS_MODE}" != "cross" ; then
     MACH=${pb_machine_name}
   fi
-  PBCHUNK_MODE=pbchunk
   if test "${CONFIGURE_RACKET_SO_COMPILE}" = "" ; then
     CONFIGURE_RACKET_SO_COMPILE="env"
   fi
   CONFIGURE_RACKET_SO_COMPILE="${CONFIGURE_RACKET_SO_COMPILE} PLT_CS_MACHINE_TYPE=${KERNEL_TARGET_MACH}"
+  if test "${enable_pbchunk}" != "no" ; then
+    PBCHUNK_MODE=pbchunk
+  fi
 else
   CONFIG_MAIN_SCHEME_MODE=""
 fi
