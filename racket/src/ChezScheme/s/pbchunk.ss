@@ -506,7 +506,7 @@
                                            (fx* min-chunk-len instr-bytes))
                                       ;; the chunk would be too small to save us any time, so don't bother;
                                       ;; a threshold greater than 1 also avoids code that wouldn't even
-                                      ;; use `tc` or `ip`:
+                                      ;; use `ms` or `ip`:
                                       'continue-only
                                       mode)])
                         (cons (make-chunklet i start-i end-i uses-flag? mode relocs headers labels)
@@ -770,7 +770,7 @@
          (instruction-cases instr dispatch))])))
 
 (define (emit-chunk-header o index sub-index? uses-flag?)
-  (fprintf o "static uptr chunk_~a(ptr tc, uptr ip~a) {\n"
+  (fprintf o "static uptr chunk_~a(MACHINE_STATE ms, uptr ip~a) {\n"
            index
            (if sub-index? ", int sub_index" ""))
   (when uses-flag?

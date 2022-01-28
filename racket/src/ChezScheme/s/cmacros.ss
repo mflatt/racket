@@ -1630,7 +1630,7 @@
    [ptr DSTBV]
    [ptr SRCBV]
    [double fpregs (constant asm-fpreg-max)]
-   [uptr pb-regs (constant pb-reg-count)]
+   [uptr pb-regs (constant pb-reg-count)] ; "pb.c" assumes that `pb-regs` through `pb-call-arena` are together
    [double pb-fpregs (constant pb-fpreg-count)]
    [uptr pb-call-arena (constant pb-call-arena-size)]
    [xptr gc-data]))

@@ -1,10 +1,17 @@
 /* Interpreter for portable bytecode. See "pb.ss". */
 
 /* Machine state is in the thread context: */
-#define regs       (&PBREGS(tc, 0))
-#define fpregs     (&PBFPREGS(tc, 0))
-#define call_arena (&PBCALLARENA(tc, 0)) /* scratch space for libffi-based foreign calls, 
-                                            somewhat analogous to the C stack */
+typedef struct machine_state {
+  ptr machine_regs[pb_reg_count];
+  double machine_fpregs[pb_fpreg_count];
+  /* scratch space for libffi-based foreign calls, 
+     somewhat analogous to the C stack: */
+  ptr machine_call_arena[pb_call_arena_size];
+} machine_state;
+
+#define regs       (ms->machine_regs)
+#define fpregs     (ms->machine_fpregs)
+#define call_arena (ms->machine_call_arena)
 
 /* The flag register doesn't have to be in the thread context, because
    it set and then used only in the next instruction. */
@@ -68,6 +75,13 @@ enum {
 # define USE_OVERFLOW_INTRINSICS 1
 #else
 # define USE_OVERFLOW_INTRINSICS 0
+#endif
+
+/* Use `machine_state * RESTRICT_PTR`, because machine registers won't
+   be modified in any way other than through the machine-state pointer */
+#ifndef RESTRICT_PTR
+/* `restrict` is available in C99 and later */
+# define RESTRICT_PTR restrict
 #endif
 
 /* ********************************************************************** */
@@ -782,3 +796,5 @@ enum {
   regs[dest] = ip
 
 #define code_rel(start_i, i) ((i)-(start_i))
+
+#define MACHINE_STATE machine_state * RESTRICT_PTR

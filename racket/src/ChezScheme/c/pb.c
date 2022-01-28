@@ -6,7 +6,7 @@
    instruction implementations are mostly in "pb.h" */
 #include "pb.h"
 
-typedef uptr (*chunk_t)(ptr, uptr, int);
+typedef uptr (*chunk_t)(machine_state *ms, uptr, int);
 
 static chunk_t *chunks;
 static int num_chunks;
@@ -42,6 +42,7 @@ static instruction_t *call_from; static void *call_to;
 #define COMMON_INSTR(x) x: do_ ## x(instr); break;
 
 void S_pb_interp(ptr tc, void *bytecode) {
+  machine_state * RESTRICT_PTR ms = (machine_state *)&PBREGS(tc, 0); /* assumes fields are together in `tc` */
   instruction_t *ip = (instruction_t *)bytecode, *next_ip, instr;
   int flag;
 
@@ -476,7 +477,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
     case COMMON_INSTR(pb_fp_call_arena_out)
     case COMMON_INSTR(pb_stack_call)
     case pb_chunk:
-      next_ip = TO_VOIDP((chunks[INSTR_ii_high(instr)])(tc, TO_PTR(ip), INSTR_ii_low(instr)));
+      next_ip = TO_VOIDP((chunks[INSTR_ii_high(instr)])(ms, TO_PTR(ip), INSTR_ii_low(instr)));
       break;
     default:
       S_error_abort("illegal pb instruction");
