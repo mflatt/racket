@@ -232,6 +232,18 @@ OWN_LZ4_LIB = $(SCHEME_TARGET_INC)/../../lz4/lib/liblz4.a
 SCHEME_LIB_DEPS = $(SCHEME_TARGET_INC)/libkernel.a @Z_LIB_DEP@ @LZ4_LIB_DEP@
 SCHEME_LIBS = $(SCHEME_TARGET_INC)/libkernel.a @Z_LIB@ @LZ4_LIB@
 
+PETITE_BOOT_plain = $(SCHEME_TARGET_INC)/petite.boot
+PETITE_BOOT_pbchunk = petite-pbchunk.boot
+PETITE_BOOT_IN = $(PETITE_BOOT_@PBCHUNK_MODE@)
+
+SCHEME_BOOT_plain = $(SCHEME_TARGET_INC)/scheme.boot
+SCHEME_BOOT_pbchunk = scheme-pbchunk.boot
+SCHEME_BOOT_IN = $(SCHEME_BOOT_@PBCHUNK_MODE@)
+
+RACKET_BOOT_plain = racket.boot
+RACKET_BOOT_pbchunk = racket-pbchunk.boot
+RACKET_BOOT_IN = $(RACKET_BOOT_@PBCHUNK_MODE@)
+
 BOOT_EXTRA_OBJS_plain =
 BOOT_EXTRA_OBJS_pbchunk = petite0.o petite1.o petite2.o petite3.o petite4.o \
                           petite5.o petite6.o petite7.o petite8.o petite9.o \
@@ -251,14 +263,14 @@ raw_gracketcs: grmain.o boot.o $(BOOT_OBJ_DEPS)
 	$(CC) $(CFLAGS) -o raw_gracketcs grmain.o $(BOOT_OBJS) $(LDFLAGS) $(LIBS) $(LINK_DYNAMIC)
 	@POST_LINKER@ raw_gracketcs
 
-petite-v.boot: $(SCHEME_TARGET_INC)/petite.boot
-	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) $(SCHEME_TARGET_INC)/petite.boot petite-v.boot
+petite-v.boot: $(PETITE_BOOT_IN)
+	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) $(PETITE_BOOT_IN) petite-v.boot
 
-scheme-v.boot: $(SCHEME_TARGET_INC)/scheme.boot
-	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) $(SCHEME_TARGET_INC)/scheme.boot scheme-v.boot petite
+scheme-v.boot: $(SCHEME_BOOT_IN)
+	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) $(SCHEME_BOOT_IN) scheme-v.boot petite
 
-racket-v.boot: racket.boot
-	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) racket.boot racket-v.boot petite scheme
+racket-v.boot: $(RACKET_BOOT_IN)
+	$(SCHEME) --script $(srcdir)/to-vfasl.ss @BOOT_COMPRESS_COMP@ $(XPATCH@CROSS_MODE@) $(RACKET_BOOT_IN) racket-v.boot petite scheme
 
 # ----------------------------------------
 # Mac OS
@@ -295,18 +307,6 @@ $(GRACKET_BIN): grmain.o $(RKTFW) $(GRAPPSKEL)
 
 $(GRAPPSKEL): $(srcdir)/../../mac/osx_appl.rkt  $(srcdir)/../../version/racket_version.h $(srcdir)/../../mac/icon/GRacket.icns
 	$(BOOTSTRAP_RACKET) $(srcdir)/../../mac/osx_appl.rkt $(srcdir)/../.. "CS"
-
-PETITE_BOOT_plain = $(SCHEME_TARGET_INC)/petite.boot
-PETITE_BOOT_pbchunk = petite-pbchunk.boot
-PETITE_BOOT_IN = $(PETITE_BOOT_@PBCHUNK_MODE@)
-
-SCHEME_BOOT_plain = $(SCHEME_TARGET_INC)/scheme.boot
-SCHEME_BOOT_pbchunk = scheme-pbchunk.boot
-SCHEME_BOOT_IN = $(SCHEME_BOOT_@PBCHUNK_MODE@)
-
-RACKET_BOOT_plain = racket.boot
-RACKET_BOOT_pbchunk = racket-pbchunk.boot
-RACKET_BOOT_IN = $(RACKET_BOOT_@PBCHUNK_MODE@)
 
 BOOT_FILES = $(PETITE_BOOT_IN) $(SCHEME_BOOT_IN) $(RACKET_BOOT_IN)
 FW_BOOT_DEST = Racket.framework/Versions/$(FWVERSION)_CS/boot
