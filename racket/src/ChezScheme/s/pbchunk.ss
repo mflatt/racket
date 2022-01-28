@@ -4,30 +4,151 @@
 ;; and then the printer of "strip.ss" is used to write the updated
 ;; fasl content
 
-(constant-case architecture
- [else #;(pb)
+(if-feature pbchunk
 
 (let ()
 
 (include "strip-types.ss")
 
+;; configuration, but `#t` is not practial for the boot files
 (define one-chunklet-per-chunk? #f)
-  
+
+;; state for the chunk writer:
 (define-record-type chunk-info
   (fields (mutable counter)
           seen
           code-op)
   (nongenerative))
 
-(define-record-type label
-  (fields to min-from max-from all-from)
-  (nongenerative))
-
+;; A chunklet represents a potential entry point into a code
+;; object. It may have a prefix before the entry point that
+;; is not generated as in C. A code object can have multiple
 (define-record-type chunklet
-  (fields i start-i end-i uses-flag? mode relocs headers labels)
+  (fields i        ; code offset for this start of this chunklet
+          start-i  ; code offset for the entry point (= end-i if there's no entry)
+          end-i    ; code offset aftet the end of this chunklet
+          uses-flag? ; does the chunklet involve def-use pair of the branch flag
+          mode     ; #f or 'continue-only, where the latter means no entry here
+          relocs   ; list of offset
+          headers  ; list of (cons offset size)
+          labels)  ; list of `label`s
   (nongenerative))
 
-(define (fasl-chunk! v code-op start-index seen-table)
+;; A label within a chunklet, especially for interior branches
+(define-record-type label
+  (fields to        ; the label offset
+          min-from  ; earliest offset that jumps here
+          max-from  ; latest offset that jumps here
+          all-from) ; all offsets that jump here
+  (nongenerative))
+
+(define (fasl-pbchunk! who c-ofns reg-proc-names start-index entry* handle-entry finish-fasl-update)
+  ;; first print everything to a string port, and then we
+  ;; break up the string port into separate files
+  (let-values ([(0-op get) (open-string-output-port)])
+    (let* ([seen-table (make-eq-hashtable)]
+           [end-index
+            (let loop ([entry* entry*] [index start-index])
+              (cond
+                [(null? entry*)
+                 index]
+                [else
+                 (handle-entry
+                  (car entry*)
+                  (lambda (write-k)
+                    (loop (cdr entry*) index))
+                  (lambda (situation x)
+                    (loop (cdr entry*)
+                          (search-pbchunk! x 0-op index seen-table))))]))]
+           [per-file (fxquotient (fx+ (fx- end-index start-index)
+                                      (fx- (length c-ofns) 1))
+                                 (length c-ofns))]
+           [ip (open-string-input-port (get))])
+      ;; before continuing, write out updated fasl:
+      (finish-fasl-update)
+      (let ()
+        ;; at this point, chunks are in in `0-op`/`ip`, so extract lines and
+        ;; farm them out to the destination files;
+        ;; start by opening all the destinations:
+        (define (call-with-all-files k)
+          (let p-loop ([todo-c-ofns c-ofns]
+                       [rev-c-ops '()])
+            (cond
+              [(pair? todo-c-ofns)
+               (let* ([c-ofn (car todo-c-ofns)]
+                      [c-op ($open-file-output-port who c-ofn (file-options replace)
+                                                    (buffer-mode block)
+                                                    (native-transcoder))])
+                 (on-reset
+                  (delete-file c-ofn #f)
+                  (on-reset
+                   (close-port c-op)
+                   (fprintf c-op "#include \"system.h\"\n")
+                   (fprintf c-op "#include <math.h>\n")
+                   (fprintf c-op "#include \"pb.h\"\n")
+                   (p-loop (cdr todo-c-ofns) (cons c-op rev-c-ops)))))]
+              [else (k (reverse rev-c-ops))])))
+        ;; helper to write out chunk registration:
+        (define (write-registration c-op reg-proc-name start-index index)
+          (newline c-op)
+          (fprintf c-op "static void *~a_chunks[~a] = {\n" reg-proc-name (fx- index start-index))
+          (let loop ([i start-index])
+            (unless (fx= i index)
+              (fprintf c-op "  chunk_~a~a\n"
+                       i
+                       (if (fx= (fx+ i 1) index) "" ","))
+              (loop (fx+ i 1))))
+          (fprintf c-op "};\n\n")
+          (fprintf c-op "void ~a() {\n" reg-proc-name)
+          (fprintf c-op "  Sregister_pbchunks(~a_chunks, ~a, ~a);\n"
+                   reg-proc-name start-index index)
+          (fprintf c-op "}\n"))
+        ;; helper to recognize chunk starts:
+        (define (chunk-start-line? line)
+          (let ([chunk-start-str "static uptr chunk_"])
+            (and (fx> (string-length line) (string-length chunk-start-str))
+                 (let loop ([i 0])
+                   (or (fx= i (string-length chunk-start-str))
+                       (and (eqv? (string-ref line i)
+                                  (string-ref chunk-start-str i))
+                            (loop (fx+ i 1))))))))
+        ;; now loop to read lines and redirect:
+        (call-with-all-files
+         (lambda (c-ops)
+           (let c-loop ([c-ops c-ops]
+                        [reg-proc-names reg-proc-names]
+                        [index start-index]
+                        [line (get-line ip)])
+             (unless (null? c-ops)
+               (let ([c-op (car c-ops)])
+                 (let chunk-loop ([fuel per-file] [n 0] [line line])
+                   (cond
+                     [(or (eof-object? line)
+                          (and (fxzero? fuel)
+                               (chunk-start-line? line)))
+                      (write-registration c-op (car reg-proc-names) index (fx+ index n))
+                      (close-port c-op)
+                      (c-loop (cdr c-ops)
+                              (cdr reg-proc-names)
+                              (fx+ index n)
+                              line)]
+                     [else
+                      (put-string c-op line)
+                      (newline c-op)
+                      (let ([next-line (get-line ip)])
+                        (cond
+                          [(chunk-start-line? line)
+                           (chunk-loop (fx- fuel 1) (fx+ n 1) next-line)]
+                          [else
+                           (chunk-loop fuel n next-line)]))])))))))
+        ;; fies written; return index after last chunk
+        end-index))))
+
+;; The main pbchunk handler: takes a fasl object in "strip.ss" form,
+;; find code objects inside, and potentially generates chunks and updates
+;; the code object with references to chunks. Takes the number of
+;; chunks previously written and returns the total number written after.
+(define (search-pbchunk! v code-op start-index seen-table)
   (let ([ci (make-chunk-info start-index
                              seen-table
                              code-op)])
@@ -121,6 +242,7 @@
                (bitwise-arithmetic-shift-left index 16)))
 (define MAX-SUB-INDEXES 256)
 
+;; expands to a binary search for the right case
 (define-syntax (instruction-case stx)
   (syntax-case stx ()
     [(_ instr emit [op . shape] ...)
@@ -154,6 +276,8 @@
     [(_ instr emit)
      #'(instruction-case
         instr emit
+        ;; every instruction implemented in "pb.c" needs to be here,
+        ;; except for the `pb-chunk` instruction
         [pb-mov16-pb-zero-bits-pb-shift0 di/u]
         [pb-mov16-pb-zero-bits-pb-shift1 di/u]
         [pb-mov16-pb-zero-bits-pb-shift2 di/u]
@@ -349,6 +473,7 @@
            (chunklet-end-i c))
       (eq? 'continue-only (chunklet-mode c))))
 
+;; Found a code object, maybe generate a chunk
 (define (chunk-code! name bv vreloc ci)
   (let ([len (bytevector-length bv)]
         [o (chunk-info-code-op ci)]
@@ -366,6 +491,7 @@
     (fprintf o "\n/* code ~a */\n" name)
     (unless (equal? name "winder-dummy") ; hack to avoid special rp header in dounderflow
       (let ([chunklets
+             ;; use `select-instruction-range` to partition the code into chunklets
              (let-values ([(headers labels) (gather-targets bv len)])
                (let loop ([i 0] [relocs relocs] [headers headers] [labels labels])
                  (cond
@@ -403,14 +529,14 @@
                (let loop ([chunklets chunklets])
                  (unless (null? chunklets)
                    (let ([c (car chunklets)])
-                     (emit-chunk o bv
-                                 (chunklet-i c) 0
-                                 (chunklet-relocs c) (chunklet-headers c) '()
-                                 (chunklet-end-i c) ; => treat as empty
-                                 (chunklet-end-i c)
-                                 all-chunklets
-                                 ;; fallthrough?
-                                 #t)
+                     (emit-chunklet o bv
+                                    (chunklet-i c) 0
+                                    (chunklet-relocs c) (chunklet-headers c) '()
+                                    (chunklet-end-i c) ; => treat as empty
+                                    (chunklet-end-i c)
+                                    all-chunklets
+                                    ;; fallthrough?
+                                    #t)
                      (loop (cdr chunklets))))))]
             [(or one-chunklet-per-chunk?
                  ;; also use this more if there's 0 or 1 chunklets to emit,
@@ -424,26 +550,31 @@
                   (chunk-info-counter-set! ci index)]
                  [else
                   (let ([c (car chunklets)])
+                    ;; generate a non-empty chunk as its own function
                     (unless (empty-chunklet? c)
                       (emit-chunk-header o index #f (chunklet-uses-flag? c)))
-                    (emit-chunk o bv
-                                (chunklet-i c) (chunklet-start-i c)
-                                (chunklet-relocs c) (chunklet-headers c) (chunklet-labels c)
-                                (if (eq? 'continue-only (chunklet-mode c))
-                                    (chunklet-end-i c)
-                                    (chunklet-start-i c))
-                                (chunklet-end-i c)
-                                (list c)
-                                ;; fallthrough?
-                                (empty-chunklet? c))
+                    (emit-chunklet o bv
+                                   (chunklet-i c) (chunklet-start-i c)
+                                   (chunklet-relocs c) (chunklet-headers c) (chunklet-labels c)
+                                   (if (eq? 'continue-only (chunklet-mode c))
+                                       (chunklet-end-i c)
+                                       (chunklet-start-i c))
+                                   (chunklet-end-i c)
+                                   (list c) ; `goto` branches contrained to this chunklet
+                                   ;; fallthrough?
+                                   (empty-chunklet? c))
                     (unless (empty-chunklet? c)
                       (emit-chunk-footer o)
                       (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index 0) (endianness little)))
                     (loop (cdr chunklets) (if (empty-chunklet? c) index (fx+ index 1))))]))]
             [else
+             ;; one chunk for the whole code object, where multiple entry points are
+             ;; supported by a sub-index
              (emit-chunk-header o index #t (ormap chunklet-uses-flag? chunklets))
              (chunk-info-counter-set! ci (fx+ 1 index))
+             ;; dispatch to label on entry via sub-index
              (fprintf o "  switch (sub_index) {\n")
+             ;; dispatch to a chunklet 
              (let loop ([chunklets chunklets] [sub-index 0])
                (unless (null? chunklets)
                  (let ([c (car chunklets)])
@@ -463,23 +594,25 @@
                (let loop ([chunklets chunklets] [sub-index 0])
                  (unless (null? chunklets)
                    (let ([c (car chunklets)])
-                     (emit-chunk o bv
-                                 (chunklet-i c) 0
-                                 (chunklet-relocs c) (chunklet-headers c)
-                                 (if (empty-chunklet? c)
-                                     (chunklet-labels c)
-                                     (ensure-label (chunklet-start-i c) (chunklet-labels c)))
-                                 (chunklet-start-i c) (chunklet-end-i c)
-                                 all-chunklets
-                                 ;; fallthrough?
-                                 (and (pair? (cdr chunklets))
-                                      (fx= (chunklet-end-i c)
-                                           (chunklet-start-i (cadr chunklets)))))
+                     ;; emit a chunklet within the function
+                     (emit-chunklet o bv
+                                    (chunklet-i c) 0
+                                    (chunklet-relocs c) (chunklet-headers c)
+                                    (if (empty-chunklet? c)
+                                        (chunklet-labels c)
+                                        (ensure-label (chunklet-start-i c) (chunklet-labels c)))
+                                    (chunklet-start-i c) (chunklet-end-i c)
+                                    all-chunklets ; `goto` branches allowed across chunklets
+                                    ;; fallthrough?
+                                    (and (pair? (cdr chunklets))
+                                         (fx= (chunklet-end-i c)
+                                              (chunklet-start-i (cadr chunklets)))))
                      (unless (empty-chunklet? c)
                        (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index sub-index) (endianness little)))
                      (loop (cdr chunklets) (if (empty-chunklet? c) sub-index (fx+ 1 sub-index)))))))
              (emit-chunk-footer o)]))))))
 
+;; Find all branch targets in the code object
 (define (gather-targets bv len)
   (let loop ([i 0] [headers '()] [labels '()])
     (cond
@@ -533,6 +666,7 @@
 
          (instruction-cases instr dispatch))])))
 
+;; Select next chunklet within a code object
 (define (select-instruction-range bv i len relocs headers labels)
   (let loop ([i i] [relocs relocs] [headers headers] [labels labels] [start-i #f]
              [flag-ready? #f] [uses-flag? #f])
@@ -569,9 +703,9 @@
           (loop i relocs headers (cdr labels) start-i #f uses-flag?)]
          [else
           ;; some backward jump exists, but tenatively assume that
-          ;; it's within the chunk, then check; THIS MAKES OVERALL
-          ;; CHUNKING NOT LINEAR-TIME, but it's probably ok in
-          ;; practice
+          ;; it's within the chunk, then check;
+          ;; WARNING: this makes overall chunking not linear-time, but
+          ;; it's probably ok in practice
           (let-values ([(maybe-start-i end-i maybe-uses-flag? mode)
                         (loop i relocs headers (cdr labels) start-i #f uses-flag?)])
             (cond
@@ -646,7 +780,7 @@
   
 ;; just show decoded instructions from `i` until `start-i`, then
 ;; generate a chunk function from `start-i` to `end-i`
-(define (emit-chunk o bv i base-i relocs headers labels start-i end-i chunklets fallthrough?)
+(define (emit-chunklet o bv i base-i relocs headers labels start-i end-i chunklets fallthrough?)
   (define (in-chunk? target)
     (ormap (lambda (c)
              (and (fx>= target (chunklet-start-i c))
@@ -894,11 +1028,11 @@
     [(indirect g i) (extract-name (vector-ref g i))]
     [else "???"]))
 
-(set! $fasl-chunk! fasl-chunk!)
+(set! $fasl-pbchunk! fasl-pbchunk!)
 
-)]
- #;
- [else
-  (set-who! $fasl-chunk!
-    (lambda args
-      ($oops 'pbchunk-convert-file "not supported for this machine type")))])
+)
+
+;; else not `pbchunk` feature:
+(set-who! $fasl-pbchunk!
+  (lambda args
+    ($oops 'pbchunk-convert-file "not supported for this machine configuration"))))

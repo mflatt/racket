@@ -2,7 +2,8 @@
 #include <string.h>
 #include <math.h>
 
-/* Interpreter for portable bytecode. See "pb.ss". */
+/* Interpreter for portable bytecode. See also "pb.ss", while
+   instruction implementations are mostly in "pb.h" */
 #include "pb.h"
 
 typedef uptr (*chunk_t)(ptr, uptr, int);

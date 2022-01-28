@@ -3140,7 +3140,7 @@
 ;; Portable bytecode - see "pb.ss"
 
 (constant-case architecture
- [else #;(pb)
+ [(pb)
 
   ;; Enumerated constants can be multiplied by the width of another
   ;; enumeration, which is handy for encoding instructions:
@@ -3428,7 +3428,6 @@
 
   ;; end pb
   ]
- #;
  [else (void)])
 
 (define-enumerated-constants

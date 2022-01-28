@@ -1967,7 +1967,7 @@
   ($fasl-base-rtd [flags single-valued])
   ($fasl-bld-graph [flags single-valued])
   ($fasl-can-combine? [flags single-valued])
-  ($fasl-chunk! [flags single-valued])
+  ($fasl-pbchunk! [flags single-valued])
   ($fasl-enter [flags single-valued])
   ($fasl-file-equal? [sig [(pathname pathname) (pathname pathname ptr) -> (boolean)]] [flags discard])
   ($fasl-out [flags single-valued])

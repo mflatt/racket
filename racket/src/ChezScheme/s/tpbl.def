@@ -1,5 +1,5 @@
 (define-constant machine-type (constant machine-type-tpbl))
-(features iconv expeditor pthreads)
+(features iconv expeditor pthreads pbchunk)
 
 (define-constant architecture 'pb)
 (define-constant-default native-endianness 'little)
