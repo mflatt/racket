@@ -1273,25 +1273,61 @@ you need the target machine's value, then it must be accessed using
 
 # Portable Bytecode
 
-A `machine-type` name for portable bytecode follows a variant of the
-platform-specific convention:
+The "portable bytecode" virtual machine uses a 32-bit instruction set
+that is intepreted by a loop defined in "c/pb.c", where many of the
+instruction implementations are in "c/pb.h". The instruction set is
+custom, but inspired by Arm64. Of course, since the instructions are
+interpreted, it does not run nearly as fast a native code that Chez
+Scheme normally generates, but it runs fast enough to be useful for
+bootstraping a Chez Scheme build from one portable set of boot files.
+The pb machine type is also potentially useful in a setting that
+disallows code generation or where there's not yet a machine-code
+backend for Chez Scheme.
+
+A `machine-type` name for a pb build follows a variant of the normal
+conventions:
 
  * *whether the system threaded*: A `t` indicates that it is threaded;
 
- * `pb`
+ * `pb`;
 
  * *word side*: `64`, `32`, or blank for basic; and
 
  * *endianness*: `l` for little-endian, `b` for big-endian, or blank
     for basic.
 
-The boot files for a basic pb build work on all platforms, while boot
-files for a non-basic pb build have a specific word size and
-endianness for improved performance. Run "configure" with `--pb` for a
-basic build, or run "configure" with `--pbarch` for a non-basic build.
+Bool and fasl files for a basic pb build work on all platforms, while
+boot and fasl files for a non-basic pb build have a specific word size
+and endianness (for improved performance). Run "configure" with `--pb`
+for a basic build, or run "configure" with `--pbarch` for a non-basic
+build.
 
+A basic build can work on all platforms because it assumes a 64-bit
+representation of Scheme values, which means that the kernel is
+compiled on a 32-bit platform to use a 64-bit integer type for `ptr`,
+even though the high half of a `ptr` value will always be zeros. The
+`TO_VOIDP` and `TO_PTR` macros used in the kernel tell a C compiler
+that conversions between 64-bit `ptr`s and (potentially) 32-bit
+pointers are intentional. A basic build also avoids a compile-time
+assumption of endianness, turning any such Scheme-level decisions into
+a run-time branch. Bytecode instructions are stored as little endian
+in compiled code, and on a big-endian machine, the kernel rewrites the
+instruction-word order when loading a fasl file.
 
-
+For a non-basic build, fragments of static Scheme code can be turned
+into C code to compile and then plug back into the kernel. These
+fragments are called *pbchunks*. The `pbchunk-convert-file` function
+takes compiled Scheme code (as a boot or fasl file), generates C code
+for the chunks, and generates revised compiled code that contains
+references to the chunks via `pb-chunk` instructions. Calling a
+designated function in the generated C code registers chunks with the
+kernel as targets for `pb-chunk` instructions. Each chunk has a static
+index, so the revised compiled Scheme code has to be used with exactly
+the C chunks that are generated at the same time; when multiple sets
+of chunks are used together, each needs to be created with
+non-overlapping index ranges. Orchestrating the generation of chunk
+files and linking/loading them into a kernel executable is outside the
+scope of the Chez Scheme build system.
 
 # Changing the Version Number
 
