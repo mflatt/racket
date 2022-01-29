@@ -983,6 +983,26 @@
           (print-field-disps "code_info" (let () (include "types.ss") (record-type-descriptor code-info))))
 
         (nl)
+        (comment "derived endianness")
+        (case (constant native-endianness)
+          [(little)
+           (def "native_endianness_is_little" 1)
+           (def "native_endianness_is_big" 0)]
+          [(big)
+           (def "native_endianness_is_little" 0)
+           (def "native_endianness_is_big" 1)]
+          [else
+           (def "native_endianness_is_little" 0)
+           (def "native_endianness_is_big" 0)])
+        (case (constant fasl-endianness)
+          [(little)
+           (def "fasl_endianness_is_little" 1)
+           (def "fasl_endianness_is_big" 0)]
+          [else
+           (def "fasl_endianness_is_little" 0)
+           (def "fasl_endianness_is_big" 1)])
+
+        (nl)
         (comment "predicates")
         (deftypep "Simmediatep" ($ mask-immediate) ($ type-immediate))
         (deftotypep "Sportp" ($ mask-port) ($ type-port))

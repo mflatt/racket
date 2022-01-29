@@ -416,8 +416,8 @@
 (define-constant machine-type-name (cdr (assv (constant machine-type) (constant machine-type-alist))))
 
 (define-constant fasl-endianness
-  (constant-case architecture
-    [(pb) 'little]
+  (constant-case native-endianness
+    [(unknown) 'little] ; determines generic pb fasl endianness
     [else (constant native-endianness)]))
 
 ;; ---------------------------------------------------------------------
