@@ -96,13 +96,13 @@ static ptr s_set_collect_trip_bytes PROTO((ptr n));
 static void c_exit PROTO((I32 status));
 static ptr s_get_reloc PROTO((ptr co, IBOOL with_offsets));
 #ifdef PTHREADS
-static s_thread_rv_t s_backdoor_thread_start PROTO((void *p));
+static s_thread_rv_t s_backdoor_thread_start PROTO((ptr p));
 static iptr s_backdoor_thread PROTO((ptr p));
 static ptr s_threads PROTO((void));
-static void s_mutex_acquire PROTO((scheme_mutex_t *m));
-static ptr s_mutex_acquire_noblock PROTO((scheme_mutex_t *m));
-static void s_condition_broadcast PROTO((s_thread_cond_t *c));
-static void s_condition_signal PROTO((s_thread_cond_t *c));
+static void s_mutex_acquire PROTO((ptr m));
+static ptr s_mutex_acquire_noblock PROTO((ptr m));
+static void s_condition_broadcast PROTO((ptr c));
+static void s_condition_signal PROTO((ptr c));
 static void s_thread_preserve_ownership PROTO((ptr tc));
 #endif
 static void s_byte_copy(ptr src, iptr srcoff, ptr dst, iptr dstoff, iptr cnt);
@@ -1536,16 +1536,16 @@ static void s_putenv(name, value) char *name, *value; {
 #ifdef PTHREADS
 /* backdoor thread is for testing thread creation by Sactivate_thread */
 #define display(s) { const char *S = (s); if (WRITE(1, S, (unsigned int)strlen(S))) {} }
-static s_thread_rv_t s_backdoor_thread_start(p) void *p; {
+static s_thread_rv_t s_backdoor_thread_start(p) ptr p; {
   display("backdoor thread started\n")
   (void) Sactivate_thread();
   display("thread activated\n")
-  Scall0((ptr)Sunbox(TO_PTR(p)));
+  Scall0((ptr)Sunbox(p));
   (void) Sdeactivate_thread();
   display("thread deactivated\n")
   (void) Sactivate_thread();
   display("thread reeactivated\n")
-  Scall0((ptr)Sunbox(TO_PTR(p)));
+  Scall0((ptr)Sunbox(p));
   Sdestroy_thread();
   display("thread destroyed\n")
   s_thread_return;
@@ -1564,7 +1564,8 @@ static ptr s_threads() {
   return ts;
 }
 
-static void s_mutex_acquire(m) scheme_mutex_t *m; {
+static void s_mutex_acquire(m_p) ptr m_p; {
+  scheme_mutex_t *m = TO_VOIDP(m_p);
   ptr tc = get_thread_context();
 
   if (m == &S_tc_mutex) {
@@ -1583,15 +1584,18 @@ static void s_mutex_acquire(m) scheme_mutex_t *m; {
   }
 }
 
-static ptr s_mutex_acquire_noblock(m) scheme_mutex_t *m; {
+static ptr s_mutex_acquire_noblock(m_p) ptr m_p; {
+  scheme_mutex_t *m = TO_VOIDP(m_p);
   return S_mutex_tryacquire(m) == 0 ? Strue : Sfalse;
 }
 
-static void s_condition_broadcast(s_thread_cond_t *c) {
+static void s_condition_broadcast(ptr c_p) {
+  s_thread_cond_t *c = TO_VOIDP(c_p);
   s_thread_cond_broadcast(c);
 }
 
-static void s_condition_signal(s_thread_cond_t *c) {
+static void s_condition_signal(ptr c_p) {
+  s_thread_cond_t *c = TO_VOIDP(c_p);
   s_thread_cond_signal(c);
 }
 
