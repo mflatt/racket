@@ -34,7 +34,7 @@
 #endif
   
 #if !defined(PTHREADS)
-# define CAS_ANY_FENCE(a, old, new) ((*(a) == (old)) ? (*(a) = (new), 1) : 0)
+# define CAS_ANY_FENCE(a, old, new) ((*(ptr *)(a) == (ptr)(old)) ? (*(ptr)(a) = (ptr)(new), 1) : 0)
 #elif defined(__arm64__) || defined(__aarch64__)
 FORCEINLINE int CAS_LOAD_ACQUIRE(volatile void *addr, void *old_val, void *new_val) {
   long ret;
@@ -120,7 +120,7 @@ FORCEINLINE int S_cas_any_fence(volatile void *addr, void *old_val, void *new_va
 }
 # define CAS_ANY_FENCE(a, old, new) S_cas_any_fence(a, old, new)
 #else
-# define CAS_ANY_FENCE(a, old, new) ((*(a) == (old)) ? (*(a) = (new), 1) : 0)
+# define CAS_ANY_FENCE(a, old, new) ((*(ptr *)(a) == (ptr)(old)) ? (*(ptr *)(a) = (ptr)(new), 1) : 0)
 #endif
 
 #ifdef CAS_ANY_FENCE
