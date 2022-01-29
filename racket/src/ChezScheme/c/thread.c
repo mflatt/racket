@@ -254,7 +254,7 @@ static IBOOL destroy_thread(tc) ptr tc; {
       alloc_mutex_acquire();
 
      /* process remembered set before dropping allocation area */
-      S_scan_dirty((ptr *)EAP(tc), (ptr *)REAL_EAP(tc));
+      S_scan_dirty((ptr *)TO_VOIDP(EAP(tc)), (ptr *)TO_VOIDP(REAL_EAP(tc)));
 
      /* close off thread-local allocation */
       S_thread_start_code_write(tc, static_generation, 0, NULL, 0);
@@ -309,7 +309,7 @@ static IBOOL destroy_thread(tc) ptr tc; {
       THREAD_GC(tc)->next = free_thread_gcs;
       free_thread_gcs = THREAD_GC(tc);
 
-      free((void *)tc);
+      free(TO_VOIDP(tc));
       
       THREADTC(thread) = 0; /* mark it dead */
       status = 1;
@@ -523,9 +523,9 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
 
   if (t != Sfalse) {
     /* Keep in sync with ts record in s/date.ss */
-    typeno = Sinteger32_value(Srecord_ref(t,0));
-    sec = Sinteger64_value(Scar(Srecord_ref(t,1)));
-    nsec = Sinteger32_value(Scdr(Srecord_ref(t,1)));
+    typeno = Sinteger32_value(TO_PTR(Srecord_ref(t,0)));
+    sec = Sinteger64_value(Scar(TO_PTR(Srecord_ref(t,1))));
+    nsec = Sinteger32_value(Scdr(TO_PTR(Srecord_ref(t,1))));
   } else {
     typeno = 0;
     sec = 0;
