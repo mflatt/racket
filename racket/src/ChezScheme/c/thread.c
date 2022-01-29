@@ -340,7 +340,7 @@ ptr S_fork_thread(thunk) ptr thunk; {
 }
 
 static s_thread_rv_t start_thread(p) void *p; {
-  ptr tc = (ptr)p; ptr cp;
+  ptr tc = TO_PTR(p); ptr cp;
 
   s_thread_setspecific(S_tc_key, TO_VOIDP(tc));
 
@@ -502,7 +502,7 @@ static inline int s_thread_cond_timedwait(s_thread_cond_t *cond, s_thread_mutex_
 
 #endif /* FEATURE_WINDOWS */
 
-#define Srecord_ref(x,i) (((ptr *)((uptr)(x)+record_data_disp))[i])
+#define Srecord_ref(x,i) (((ptr *)TO_VOIDP(((uptr)(x)+record_data_disp)))[i])
 
 IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
   ptr tc = get_thread_context();
@@ -523,9 +523,9 @@ IBOOL S_condition_wait(c, m, t) s_thread_cond_t *c; scheme_mutex_t *m; ptr t; {
 
   if (t != Sfalse) {
     /* Keep in sync with ts record in s/date.ss */
-    typeno = Sinteger32_value(TO_PTR(Srecord_ref(t,0)));
-    sec = Sinteger64_value(Scar(TO_PTR(Srecord_ref(t,1))));
-    nsec = Sinteger32_value(Scdr(TO_PTR(Srecord_ref(t,1))));
+    typeno = Sinteger32_value(Srecord_ref(t,0));
+    sec = Sinteger64_value(Scar(Srecord_ref(t,1)));
+    nsec = Sinteger32_value(Scdr(Srecord_ref(t,1)));
   } else {
     typeno = 0;
     sec = 0;

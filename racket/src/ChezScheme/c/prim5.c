@@ -1553,7 +1553,7 @@ static s_thread_rv_t s_backdoor_thread_start(p) void *p; {
 
 static iptr s_backdoor_thread(p) ptr p; {
   display("creating thread\n");
-  return s_thread_create(s_backdoor_thread_start, (void *)p);
+  return s_thread_create(s_backdoor_thread_start, TO_VOIDP(p));
 }
 
 static ptr s_threads() {
