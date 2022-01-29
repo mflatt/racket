@@ -163,7 +163,7 @@ case "$Muni" in
                 Mword=64
                 Mend=little
                 ;;
-            *32b)
+            *64b)
                 Mword=64
                 Mend=big
                 ;;

@@ -1806,7 +1806,7 @@ be \scheme{#f} to create a non-boot file.
 
 %----------------------------------------------------------------------------
 \entryheader
-\formdef{pbchunk-convert-file}{\categoryprocedure}{(vfasl-convert-file \var{in-path} \var{out-path} \var{c-paths} \var{c-names} \var{start-index})}
+\formdef{pbchunk-convert-file}{\categoryprocedure}{(pbchunk-convert-file \var{in-path} \var{out-path} \var{c-paths} \var{c-names} \var{start-index})}
 \returns ending index as a nonnegative exact integer
 \listlibraries
 \endentryheader
