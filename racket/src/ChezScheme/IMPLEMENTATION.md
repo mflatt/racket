@@ -1311,14 +1311,15 @@ between 64-bit `ptr`s and (potentially) 32-bit pointers are
 intentional. A basic build also avoids a compile-time assumption of
 endianness, turning any such Scheme-level decisions into a run-time
 branch. Bytecode instructions are stored as little endian in compiled
-code, and on a big-endian machine, the kernel rewrites the
-instruction-word order when loading a fasl file.
+code for a basic build; on a big-endian machine, the kernel rewrites
+instruction bytes to big-endian form while loading a fasl file, so the
+interpreter can decode instructions in native order.
 
 For a non-basic build, fragments of static Scheme code can be turned
-into C code to compile and then plug back into the kernel. These
-fragments are called *pbchunks*. The `pbchunk-convert-file` function
-takes compiled Scheme code (as a boot or fasl file), generates C code
-for the chunks, and generates revised compiled code that contains
+into C code to compile and plug back into the kernel. These fragments
+are called *pbchunks*. The `pbchunk-convert-file` function takes
+compiled Scheme code (as a boot or fasl file), generates C code for
+the chunks, and generates revised compiled code that contains
 references to the chunks via `pb-chunk` instructions. Calling the
 registration function in the generated C code registers chunks with
 the kernel as targets for `pb-chunk` instructions. Each chunk has a
