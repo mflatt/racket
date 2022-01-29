@@ -79,6 +79,15 @@ enum {
 
 /* Use `machine_state * RESTRICT_PTR`, because machine registers won't
    be modified in any way other than through the machine-state pointer */
+
+#if (__GNUC__ >= 4) || defined(__clang__)
+# define RESTRICT_PTR __restrict__
+#endif
+
+#ifdef _MSC_VER
+# define RESTRICT_PTR __restrict
+#endif
+
 #ifndef RESTRICT_PTR
 /* `restrict` is available in C99 and later */
 # define RESTRICT_PTR restrict
@@ -754,16 +763,16 @@ enum {
   RELEASE_FENCE()
 
 #define do_pb_call_arena_in(instr) \
-  *(ptr *)((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr)) = regs[INSTR_di_dest(instr)]
+  *(ptr *)TO_VOIDP(((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr))) = regs[INSTR_di_dest(instr)]
 
 #define do_pb_fp_call_arena_in(instr) \
-  *(double *)((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr)) = fpregs[INSTR_di_dest(instr)]
+  *(double *)TO_VOIDP(((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr))) = fpregs[INSTR_di_dest(instr)]
 
 #define do_pb_call_arena_out(instr) \
-  regs[INSTR_di_dest(instr)] = *(ptr *)((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr))
+  regs[INSTR_di_dest(instr)] = *(ptr *)TO_VOIDP((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr))
 
 #define do_pb_fp_call_arena_out(instr)                                  \
-  fpregs[INSTR_di_dest(instr)] = *(double *)((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr))
+  fpregs[INSTR_di_dest(instr)] = *(double *)TO_VOIDP((uptr)TO_PTR(call_arena) + INSTR_di_imm(instr))
 
 #define do_pb_stack_call(instr) \
   S_ffi_call(regs[INSTR_dr_reg(instr)], regs[INSTR_dr_dest(instr)], (ptr *)call_arena)
