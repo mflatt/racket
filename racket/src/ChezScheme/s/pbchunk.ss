@@ -572,7 +572,7 @@
                                    (empty-chunklet? c))
                     (unless (empty-chunklet? c)
                       (emit-chunk-footer o)
-                      (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index 0) (endianness little)))
+                      (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index 0) (constant fasl-endianness)))
                     (loop (cdr chunklets) (if (empty-chunklet? c) index (fx+ index 1))))]))]
             [else
              ;; one chunk for the whole code object, where multiple entry points are
@@ -615,7 +615,7 @@
                                          (fx= (chunklet-end-i c)
                                               (chunklet-start-i (cadr chunklets)))))
                      (unless (empty-chunklet? c)
-                       (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index sub-index) (endianness little)))
+                       (bytevector-u32-set! bv (chunklet-start-i c) (make-chunk-instr index sub-index) (constant fasl-endianness)))
                      (loop (cdr chunklets) (if (empty-chunklet? c) sub-index (fx+ 1 sub-index)))))))
              (emit-chunk-footer o)]))))))
 
@@ -632,8 +632,8 @@
              (values (cons (car headers) rest-headers)
                      labels))))]
       [else
-       (let ([instr (bytevector-s32-ref bv i (endianness little))]
-             [uinstr (bytevector-u32-ref bv i (endianness little))])
+       (let ([instr (bytevector-s32-ref bv i (constant fasl-endianness))]
+             [uinstr (bytevector-u32-ref bv i (constant fasl-endianness))])
          (define (next)
            (loop (fx+ i instr-bytes) headers labels))
 
@@ -735,7 +735,7 @@
       [else
        ;; if the instruction always has to trampoline back, then the instruction
        ;; after can start a chunk to resume
-       (let ([instr (bytevector-s32-ref bv i (endianness little))])
+       (let ([instr (bytevector-s32-ref bv i (constant fasl-endianness))])
          (define (check-flag)
            (unless flag-ready?
              ($oops 'pbchunk "branch not immediately after signal at 0x~x" i)))
@@ -777,7 +777,7 @@
              [(_ op drr/f) #'(keep-signalling)]
              [(_ op dri/f) #'(keep-signalling)]
              [(_ op literal) #'(keep-literal)]
-             [(_ op nop) #'($oops 'pbchunk "hit pb-nop; misplace relocation?")]
+             [(_ op nop) #'($oops 'pbchunk "hit pb-nop; misplaced relocation or incorrect endianness?")]
              [_ #'(keep #f)]))
          (instruction-cases instr dispatch))])))
 
@@ -825,8 +825,8 @@
              (fprintf o "label_~x:\n" i))))
        (loop i relocs headers (cdr labels))]
       [else
-       (let ([instr (bytevector-s32-ref bv i (endianness little))]
-             [uinstr (bytevector-u32-ref bv i (endianness little))])
+       (let ([instr (bytevector-s32-ref bv i (constant fasl-endianness))]
+             [uinstr (bytevector-u32-ref bv i (constant fasl-endianness))])
          (define (next)
            (loop (fx+ i instr-bytes) relocs headers labels))
 
