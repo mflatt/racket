@@ -1,4 +1,6 @@
 #include "system.h"
+#ifdef PORTABLE_BYTECODE
+
 #include <string.h>
 #include <math.h>
 
@@ -511,5 +513,6 @@ int S_pb_locked_adjust(void *addr, int delta) {
       return newv == 0;
   }
 }
+#endif
 
 #endif
