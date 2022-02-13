@@ -1619,7 +1619,7 @@ static void s_condition_signal(ptr c_p) {
 }
 
 static void s_condition_free(ptr c) {
-  return S_condition_free(TO_VOIDP(c));
+  S_condition_free(TO_VOIDP(c));
 }
 
 static IBOOL s_condition_wait(ptr c, ptr m, ptr t) {

@@ -18,7 +18,7 @@ Cpu ?= I386
 clib=
 o = obj
 mdobj=windows.$o
-mdsrc=windows.c Makefile.$m cs.ico scheme.rc make.bat
+mdsrc=windows.c Makefile.$m Makefile.i3nt Makefile.nt cs.ico scheme.rc make.bat
 mdclean=vs.bat make.bat scheme.res ../bin/$m/*.exp mtscheme.exe* mdscheme.exe*
 cross=f
 
