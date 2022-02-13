@@ -42,12 +42,6 @@ INT S_getpagesize() {
   return si.dwPageSize;
 }
 
-#ifdef FLUSHCACHE
-void S_doflush(uptr start, uptr end) {
-  FlushInstructionCache(GetCurrentProcess(), TO_VOIDP(start), end - start);
-}
-#endif
-
 void *S_ntdlopen(const char *path) {
   wchar_t *pathw = Sutf8_to_wide(path);
   void *r = (void *)LoadLibraryW(pathw);
@@ -66,8 +60,14 @@ ptr S_ntdlerror(void) {
 }
 
 #ifdef FLUSHCACHE
-oops, no S_flushcache_max_gap or S_doflush
-#endif /* FLUSHCACHE */
+void S_doflush(uptr start, uptr end) {
+  FlushInstructionCache(GetCurrentProcess(), TO_VOIDP(start), end - start);
+}
+
+INT S_flushcache_max_gap(void) {
+  return 32;
+}
+#endif
 
 static void SplitRegistryKey(char *who, wchar_t *wholekey, HKEY *key, wchar_t **subkey, wchar_t **last) {
   wchar_t c, *s;
