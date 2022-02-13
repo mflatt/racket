@@ -134,10 +134,10 @@ mdscheme.exe: $(ResFile) $(MDMain) $(MDKernelLib)
 
 ..\zlib\zlib.h ..\zlib\zconf.h $(MDZlibLib) $(MTZlibLib):
 	cd ../zlib
-	nmake /nologo -f win32/Makefile.msc AR="link /lib" CFLAGS="-nologo -MT -O2 $(LOC)"
+	nmake /nologo -f win32/Makefile.msc AR="link /lib" CFLAGS="-nologo -MT -O2 $(LOC)" zlib.lib
 	ren zlib.lib zlibmt.lib
 	nmake /nologo -f win32/Makefile.msc clean
-	nmake /nologo -f win32/Makefile.msc AR="link /lib"
+	nmake /nologo -f win32/Makefile.msc AR="link /lib" zlib.lib
 	cd ../c
 
 $(MDLZ4Lib) $(MTLZ4Lib): ../lz4/lib/lz4.c ../lz4/lib/lz4frame.c ../lz4/lib/lz4hc.c
