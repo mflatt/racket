@@ -19,11 +19,14 @@
 #include <sys/stat.h>
 #include <limits.h>
 #ifdef WIN32
-#include <io.h>
-#include <shlobj.h>
-#if !defined(__MINGW32__)
-#pragma comment(lib, "shell32.lib")
-#endif
+# include <io.h>
+# include <shlobj.h>
+# if !defined(__MINGW32__)
+#  pragma comment(lib, "shell32.lib")
+# endif
+# if defined(PORTABLE_BYTECODE)
+#  include <dirent.h>
+# endif
 #else /* WIN32 */
 #include <sys/file.h>
 #include <dirent.h>

@@ -208,7 +208,7 @@ extern IBOOL S_file_existsp PROTO((const char *inpath, IBOOL followp));
 extern IBOOL S_file_regularp PROTO((const char *inpath, IBOOL followp));
 extern IBOOL S_file_directoryp PROTO((const char *inpath, IBOOL followp));
 extern IBOOL S_file_symbolic_linkp PROTO((const char *inpath));
-#ifdef WIN32
+#if defined(WIN32) && !defined(PORTABLE_BYTECODE)
 extern ptr S_find_files PROTO((const char *wildpath));
 #else
 extern ptr S_directory_list PROTO((const char *inpath));
