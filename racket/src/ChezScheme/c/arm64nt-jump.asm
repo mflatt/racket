@@ -1,0 +1,41 @@
+; See "a6nt-jump.asm" for an explanation of why this implementation exists
+
+        AREA .text, CODE, READONLY
+        
+S_setjmp
+	str  x18, [x0, #0]
+	str  x19, [x0, #8]
+	str  x20, [x0, #16]
+	str  x21, [x0, #24]
+	str  x22, [x0, #32]
+	str  x23, [x0, #40]
+	str  x24, [x0, #48]
+	str  x25, [x0, #56]
+	str  x26, [x0, #64]
+	str  x27, [x0, #72]
+	str  x28, [x0, #80]
+	str  x29, [x0, #88]
+	str  x30, [x0, #96]
+	str  lr, [x0, #104]
+	mov  x0, 0
+	ret
+
+S_longjmp
+	ldr  x18, [x0, #0]
+	ldr  x19, [x0, #8]
+	ldr  x20, [x0, #16]
+	ldr  x21, [x0, #24]
+	ldr  x22, [x0, #32]
+	ldr  x23, [x0, #40]
+	ldr  x24, [x0, #48]
+	ldr  x25, [x0, #56]
+	ldr  x26, [x0, #64]
+	ldr  x27, [x0, #72]
+	ldr  x28, [x0, #80]
+	ldr  x29, [x0, #88]
+	ldr  x30, [x0, #96]
+	ldr  lr, [x0, #104]
+	mov  x0, x1
+	ret
+
+	END

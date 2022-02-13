@@ -200,7 +200,14 @@
                   [(_) (foreign-procedure "(cs)directory_list" (string) scheme-object)]))
               (constant-case architecture
                 [(pb) (if (foreign-entry? "(cs)find_files")
-                          (windows-directory-list)
+                          (let ([wl (windows-directory-list)])
+                            (lambda (path)
+                              (let ([bv* (wl path)])
+                                (if (string? bv*)
+                                    bv*
+                                    (map (lambda (bv)
+                                           (string->utf8 (utf16->string bv 'little #t)))
+                                         bv*)))))
                           (posix-directory-list))]
                 [else (if-feature windows
                         (windows-directory-list)
