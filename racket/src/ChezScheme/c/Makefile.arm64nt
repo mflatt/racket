@@ -1,0 +1,9 @@
+!IFNDEF m
+m = arm64nt
+!ENDIF
+
+MachCFlags = /DAARCH64
+MachLDFlags = /machine:arm64
+MachStackSize = 0x1000000
+
+!INCLUDE Makefile.nt
