@@ -1,4 +1,4 @@
-(define-constant machine-type (constant machine-type-tarm6nt))
+(define-constant machine-type (constant machine-type-tarm64nt))
 (features iconv expeditor pthreads windows)
 (include "arm64.def")
 (include "nt.def")
