@@ -314,10 +314,10 @@ void S_pb_interp(ptr tc, void *bytecode) {
           regs[Cretval] = ((pb_int32_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3]);
           break;
         case pb_call_int32_int32_int32:
-          regs[Cretval] = ((pb_int32_int32_int32_t)proc)(regs[Carg1], regs[Carg2]);
+          regs[Cretval] = ((pb_int32_int32_int32_t)proc)((int32_t)regs[Carg1], (int32_t)regs[Carg2]);
           break;
         case pb_call_int32_voids_int32:
-          regs[Cretval] = ((pb_int32_voids_int32_t)proc)(TO_VOIDP(regs[Carg1]), regs[Carg2]);
+          regs[Cretval] = ((pb_int32_voids_int32_t)proc)(TO_VOIDP(regs[Carg1]), (int32_t)regs[Carg2]);
           break;
         case pb_call_int32_int32_voids:
           regs[Cretval] = ((pb_int32_int32_voids_t)proc)((int32_t)regs[Carg1], TO_VOIDP(regs[Carg2]));

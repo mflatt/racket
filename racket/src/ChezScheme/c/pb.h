@@ -196,14 +196,14 @@ enum {
 #define do_pb_mov_pb_d_s(instr)                                         \
   do {                                                                  \
     float f;                                                            \
-    f = fpregs[INSTR_dr_reg(instr)];                                    \
+    f = (float)fpregs[INSTR_dr_reg(instr)];                             \
     memcpy(FP_REG_FLOAT_START(fpregs[INSTR_dr_dest(instr)]), &f, sizeof(float)); \
   } while (0)
 
 #define do_pb_mov_pb_d_s_d(instr)                 \
   do {                                            \
     float f;                                      \
-    f = fpregs[INSTR_dr_reg(instr)];              \
+    f = (float)fpregs[INSTR_dr_reg(instr)];       \
     fpregs[INSTR_dr_dest(instr)] = (double)f;     \
   } while (0)
 

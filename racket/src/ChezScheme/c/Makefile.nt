@@ -98,7 +98,7 @@ $(KernelLib): $(ResFile) $(csrc) $(jumpobj) $(MDZlibLib) $(MDLZ4Lib)
 	-del /f $(KernelDll)
 	cl /c $(MDCFLAGS) $(csrc)
 	link -dll -out:$(KernelDll) $(DLLLDFLAGS) $(ResFile) $(cobj) $(jumpobj) $(MDZlibLib) $(MDLZ4Lib) $(SystemLib)
-	editbin /nologo /rebase:base=$(MachRebase) $(KernelDll)
+	editbin /nologo $(MachRebase) $(KernelDll)
 
 $(jumpobj_target): a6nt-jump.asm
 	ml64 /c /Cx /Fo $(jumpobj) a6nt-jump.asm

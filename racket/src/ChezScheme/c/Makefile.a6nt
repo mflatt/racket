@@ -5,7 +5,7 @@ m = a6nt
 MachCFlags = /DX86_64
 MachLDFlags = /machine:X64
 MachStackSize = 0x1000000
-MachRebase = 0x67480000
+MachRebase = /rebase:base=0x67480000
 
 jumpobj=a6nt-jump.obj
 
