@@ -1,6 +1,8 @@
 ; See "a6nt-jump.asm" for an explanation of why this implementation exists
 
         AREA .text, CODE, READONLY
+        EXPORT S_setjmp
+        EXPORT S_longjmp
         
 S_setjmp
 	str  x18, [x0, #0]
@@ -16,7 +18,8 @@ S_setjmp
 	str  x28, [x0, #80]
 	str  x29, [x0, #88]
 	str  x30, [x0, #96]
-	str  lr, [x0, #104]
+	mov  x2, sp
+	str  x2, [x0, #104]
 	mov  x0, 0
 	ret
 
@@ -34,7 +37,8 @@ S_longjmp
 	ldr  x28, [x0, #80]
 	ldr  x29, [x0, #88]
 	ldr  x30, [x0, #96]
-	ldr  lr, [x0, #104]
+	ldr  x2, [x0, #104]
+	mov sp, x2
 	mov  x0, x1
 	ret
 

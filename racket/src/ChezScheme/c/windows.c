@@ -42,6 +42,12 @@ INT S_getpagesize() {
   return si.dwPageSize;
 }
 
+#ifdef FLUSHCACHE
+void S_doflush(uptr start, uptr end) {
+  FlushInstructionCache(GetCurrentProcess(), TO_VOIDP(start), end - start);
+}
+#endif
+
 void *S_ntdlopen(const char *path) {
   wchar_t *pathw = Sutf8_to_wide(path);
   void *r = (void *)LoadLibraryW(pathw);
