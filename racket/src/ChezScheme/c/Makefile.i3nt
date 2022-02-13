@@ -5,6 +5,6 @@ m = i3nt
 MachCFlags = /fp:precise /DI386
 MachLDFlags = /machine:ix86
 MachStackSize = 0x800000
-
+MachRebase = 0x67480000
 
 !INCLUDE Makefile.nt
