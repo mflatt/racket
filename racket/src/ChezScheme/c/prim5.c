@@ -1605,7 +1605,7 @@ static ptr s_mutex_acquire_noblock(m_p) ptr m_p; {
 }
 
 static void s_mutex_release(ptr m) {
-  return S_mutex_release(TO_VOIDP(m));
+  S_mutex_release(TO_VOIDP(m));
 }
 
 static void s_condition_broadcast(ptr c_p) {
