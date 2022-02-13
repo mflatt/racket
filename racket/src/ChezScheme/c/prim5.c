@@ -1858,7 +1858,7 @@ void S_prim5_init() {
     Sforeign_symbol("(cs)s_getwd", (void *)s_getwd);
 #endif
     Sforeign_symbol("(cs)s_chdir", (void *)s_chdir);
-#if defined(WIN32) && !defined(PORTABLE_BYTECODE)
+#ifdef WIN32
     Sforeign_symbol("(cs)find_files", (void *)S_find_files);
 #else
     Sforeign_symbol("(cs)directory_list", (void *)S_directory_list);

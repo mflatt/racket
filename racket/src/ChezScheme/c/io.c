@@ -19,14 +19,11 @@
 #include <sys/stat.h>
 #include <limits.h>
 #ifdef WIN32
-# include <io.h>
-# include <shlobj.h>
-# if !defined(__MINGW32__)
-#  pragma comment(lib, "shell32.lib")
-# endif
-# if defined(PORTABLE_BYTECODE)
-#  include <dirent.h>
-# endif
+#include <io.h>
+#include <shlobj.h>
+#if !defined(__MINGW32__)
+#pragma comment(lib, "shell32.lib")
+#endif
 #else /* WIN32 */
 #include <sys/file.h>
 #include <dirent.h>
@@ -229,7 +226,7 @@ IBOOL S_file_symbolic_linkp(const char *inpath) {
 #endif /* WIN32 */
 }
 
-#if defined(WIN32) && !defined(PORTABLE_BYTECODE)
+#ifdef WIN32
 static ptr s_wstring_to_bytevector(const wchar_t *s) {
   iptr n; ptr bv;
   if ((n = wcslen(s)) == 0) return S_G.null_bytevector;
