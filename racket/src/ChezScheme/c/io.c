@@ -226,7 +226,7 @@ IBOOL S_file_symbolic_linkp(const char *inpath) {
 #endif /* WIN32 */
 }
 
-#ifdef WIN32
+#if defined(WIN32) && !defined(PORTABLE_BYTECODE)
 static ptr s_wstring_to_bytevector(const wchar_t *s) {
   iptr n; ptr bv;
   if ((n = wcslen(s)) == 0) return S_G.null_bytevector;
