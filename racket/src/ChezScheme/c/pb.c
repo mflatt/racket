@@ -17,7 +17,9 @@ static int num_chunks;
 extern void pbchunk_register();
 void S_machine_init() { pbchunk_register(); }
 #else
+# ifndef FEATURE_WINDOWS
 void S_machine_init() { }
+# endif
 #endif
 
 void Sregister_pbchunks(void **add_chunks, int start_index, int end_index) {
@@ -254,31 +256,31 @@ void S_pb_interp(ptr tc, void *bytecode) {
           ((pb_void_uptr_t)proc)(regs[Carg1]);
           break;
         case pb_call_void_int32:
-          ((pb_void_int32_t)proc)(regs[Carg1]);
+          ((pb_void_int32_t)proc)((int32_t)regs[Carg1]);
           break;
         case pb_call_void_uint32:
-          ((pb_void_uint32_t)proc)(regs[Carg1]);
+          ((pb_void_uint32_t)proc)((uint32_t)regs[Carg1]);
           break;
         case pb_call_void_voids:
           ((pb_void_voids_t)proc)(TO_VOIDP(regs[Carg1]));
           break;
         case pb_call_void_uptr_uint32:
-          ((pb_void_uptr_uint32_t)proc)(regs[Carg1], regs[Carg2]);
+          ((pb_void_uptr_uint32_t)proc)(regs[Carg1], (uint32_t)regs[Carg2]);
           break;
         case pb_call_void_int32_uptr:
-          ((pb_void_int32_uptr_t)proc)(regs[Carg1], regs[Carg2]);
+          ((pb_void_int32_uptr_t)proc)((int32_t)regs[Carg1], regs[Carg2]);
           break;
         case pb_call_void_int32_voids:
-          ((pb_void_int32_voids_t)proc)(regs[Carg1], TO_VOIDP(regs[Carg2]));
+          ((pb_void_int32_voids_t)proc)((int32_t)regs[Carg1], TO_VOIDP(regs[Carg2]));
           break;
         case pb_call_void_uptr_voids:
           ((pb_void_uptr_voids_t)proc)(regs[Carg1], TO_VOIDP(regs[Carg2]));
           break;
         case pb_call_void_int32_int32:
-          ((pb_void_int32_int32_t)proc)(regs[Carg1], regs[Carg2]);
+          ((pb_void_int32_int32_t)proc)((int32_t)regs[Carg1], (int32_t)regs[Carg2]);
           break;
         case pb_call_void_uint32_uint32:
-          ((pb_void_uint32_uint32_t)proc)(regs[Carg1], regs[Carg2]);
+          ((pb_void_uint32_uint32_t)proc)((uint32_t)regs[Carg1], (uint32_t)regs[Carg2]);
           break;
         case pb_call_void_uptr_uptr:
           ((pb_void_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2]);
@@ -297,13 +299,13 @@ void S_pb_interp(ptr tc, void *bytecode) {
           regs[Cretval] = ((pb_int32_t)proc)();
           break;
         case pb_call_int32_uptr:
-          regs[Cretval] = ((pb_int32_uptr_t)proc)(regs[Carg1]);
+          regs[Cretval] = ((pb_int32_uptr_t)proc)((int32_t)regs[Carg1]);
           break;
         case pb_call_int32_voids:
           regs[Cretval] = ((pb_int32_voids_t)proc)(TO_VOIDP(regs[Carg1]));
           break;
         case pb_call_int32_uptr_int32:
-          regs[Cretval] = ((pb_int32_uptr_int32_t)proc)(regs[Carg1], regs[Carg2]);
+          regs[Cretval] = ((pb_int32_uptr_int32_t)proc)(regs[Carg1], (int32_t)regs[Carg2]);
           break;
         case pb_call_int32_uptr_uptr:
           regs[Cretval] = ((pb_int32_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2]);
@@ -318,7 +320,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
           regs[Cretval] = ((pb_int32_voids_int32_t)proc)(TO_VOIDP(regs[Carg1]), regs[Carg2]);
           break;
         case pb_call_int32_int32_voids:
-          regs[Cretval] = ((pb_int32_int32_voids_t)proc)(regs[Carg1], TO_VOIDP(regs[Carg2]));
+          regs[Cretval] = ((pb_int32_int32_voids_t)proc)((int32_t)regs[Carg1], TO_VOIDP(regs[Carg2]));
           break;
         case pb_call_int32_double_double_double_double_double_double:
           regs[Cretval] = ((pb_int32_double_double_double_double_double_double_t)proc)(fpregs[Cfparg1], fpregs[Cfparg2], fpregs[Cfparg3],
@@ -337,10 +339,10 @@ void S_pb_interp(ptr tc, void *bytecode) {
           fpregs[Cfpretval] = ((pb_double_double_double_t)proc)(fpregs[Cfparg1], fpregs[Cfparg2]);
           break;
         case pb_call_int32_int32:
-          regs[Cretval] = ((pb_int32_int32_t)proc)(regs[Carg1]);
+          regs[Cretval] = ((pb_int32_int32_t)proc)((int32_t)regs[Carg1]);
           break;
         case pb_call_int32_int32_uptr:
-          regs[Cretval] = ((pb_int32_int32_uptr_t)proc)(regs[Carg1], regs[Carg2]);
+          regs[Cretval] = ((pb_int32_int32_uptr_t)proc)((int32_t)regs[Carg1], regs[Carg2]);
           break;
         case pb_call_int32_voids_voids_voids_voids_uptr:
           regs[Cretval] = ((pb_int32_voids_voids_voids_voids_uptr_t)proc)(TO_VOIDP(regs[Carg1]), TO_VOIDP(regs[Carg2]), TO_VOIDP(regs[Carg3]),
@@ -353,7 +355,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
           regs[Cretval] = ((pb_uptr_uptr_t)proc)(regs[Carg1]);
           break;
         case pb_call_uptr_int32:
-          regs[Cretval] = ((pb_uptr_int32_t)proc)(regs[Carg1]);
+          regs[Cretval] = ((pb_uptr_int32_t)proc)((int32_t)regs[Carg1]);
           break;
         case pb_call_uptr_voids:
           regs[Cretval] = ((pb_uptr_voids_t)proc)(TO_VOIDP(regs[Carg1]));
@@ -362,7 +364,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
           regs[Cretval] = ((pb_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2]);
           break;
         case pb_call_uptr_uptr_int32:
-          regs[Cretval] = ((pb_uptr_uptr_int32_t)proc)(regs[Carg1], regs[Carg2]);
+          regs[Cretval] = ((pb_uptr_uptr_int32_t)proc)(regs[Carg1], (int32_t)regs[Carg2]);
           break;
         case pb_call_uptr_uptr_int64:
 #if ptr_bits == 64
@@ -372,7 +374,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
 #endif
           break;
         case pb_call_uptr_int32_uptr:
-          regs[Cretval] = ((pb_uptr_int32_uptr_t)proc)(regs[Carg1], regs[Carg2]);
+          regs[Cretval] = ((pb_uptr_int32_uptr_t)proc)((int32_t)regs[Carg1], regs[Carg2]);
           break;
         case pb_call_uptr_voids_uptr:
           regs[Cretval] = ((pb_uptr_voids_uptr_t)proc)(TO_VOIDP(regs[Carg1]), regs[Carg2]);
@@ -381,31 +383,31 @@ void S_pb_interp(ptr tc, void *bytecode) {
           regs[Cretval] = ((pb_uptr_uptr_voids_t)proc)(regs[Carg1], TO_VOIDP(regs[Carg2]));
           break;
         case pb_call_uptr_voids_int32:
-          regs[Cretval] = ((pb_uptr_voids_int32_t)proc)(TO_VOIDP(regs[Carg1]), regs[Carg2]);
+          regs[Cretval] = ((pb_uptr_voids_int32_t)proc)(TO_VOIDP(regs[Carg1]), (int32_t)regs[Carg2]);
           break;
         case pb_call_uptr_voids_voids:
           regs[Cretval] = ((pb_uptr_voids_voids_t)proc)(TO_VOIDP(regs[Carg1]), TO_VOIDP(regs[Carg2]));
           break;
         case pb_call_uptr_uptr_int32_int32:
-          regs[Cretval] = ((pb_uptr_uptr_int32_int32_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3]);
+          regs[Cretval] = ((pb_uptr_uptr_int32_int32_t)proc)(regs[Carg1], (int32_t)regs[Carg2], (int32_t)regs[Carg3]);
           break;
         case pb_call_uptr_voids_int32_int32:
-          regs[Cretval] = ((pb_uptr_voids_int32_int32_t)proc)(TO_VOIDP(regs[Carg1]), regs[Carg2], regs[Carg3]);
+          regs[Cretval] = ((pb_uptr_voids_int32_int32_t)proc)(TO_VOIDP(regs[Carg1]), (int32_t)regs[Carg2], (int32_t)regs[Carg3]);
           break;
         case pb_call_uptr_voids_uptr_uptr:
           regs[Cretval] = ((pb_uptr_voids_uptr_uptr_t)proc)(TO_VOIDP(regs[Carg1]), regs[Carg2], regs[Carg3]);
           break;
         case pb_call_uptr_uptr_uptr_int32:
-          regs[Cretval] = ((pb_uptr_uptr_uptr_int32_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3]);
+          regs[Cretval] = ((pb_uptr_uptr_uptr_int32_t)proc)(regs[Carg1], regs[Carg2], (int32_t)regs[Carg3]);
           break;
         case pb_call_uptr_uptr_uptr_uptr:
           regs[Cretval] = ((pb_uptr_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3]);
           break;
         case pb_call_uptr_int32_int32_uptr:
-          regs[Cretval] = ((pb_uptr_int32_int32_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3]);
+          regs[Cretval] = ((pb_uptr_int32_int32_uptr_t)proc)((int32_t)regs[Carg1], (int32_t)regs[Carg2], regs[Carg3]);
           break;
         case pb_call_uptr_int32_uptr_uptr_uptr:
-          regs[Cretval] = ((pb_uptr_int32_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
+          regs[Cretval] = ((pb_uptr_int32_uptr_uptr_uptr_t)proc)((int32_t)regs[Carg1], regs[Carg2], regs[Carg3],
                                                                  regs[Carg4]);
           break;
         case pb_call_uptr_uptr_uptr_uptr_uptr:
@@ -413,20 +415,20 @@ void S_pb_interp(ptr tc, void *bytecode) {
                                                                 regs[Carg4]);
           break;
         case pb_call_uptr_int32_int32_uptr_uptr:
-          regs[Cretval] = ((pb_uptr_int32_int32_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
+          regs[Cretval] = ((pb_uptr_int32_int32_uptr_uptr_t)proc)((int32_t)regs[Carg1], (int32_t)regs[Carg2], regs[Carg3],
                                                                   regs[Carg4]);
           break;
         case pb_call_uptr_int32_int32_int32_uptr:
-          regs[Cretval] = ((pb_uptr_int32_int32_int32_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
+          regs[Cretval] = ((pb_uptr_int32_int32_int32_uptr_t)proc)((int32_t)regs[Carg1], (int32_t)regs[Carg2], (int32_t)regs[Carg3],
                                                                    regs[Carg4]);
           break;
         case pb_call_uptr_int32_voids_uptr_uptr:
-          regs[Cretval] = ((pb_uptr_int32_voids_uptr_uptr_t)proc)(regs[Carg1], TO_VOIDP(regs[Carg2]), regs[Carg3],
+          regs[Cretval] = ((pb_uptr_int32_voids_uptr_uptr_t)proc)((int32_t)regs[Carg1], TO_VOIDP(regs[Carg2]), regs[Carg3],
                                                                   regs[Carg4]);
           break;
         case pb_call_uptr_uptr_uptr_uptr_uptr_int32:
           regs[Cretval] = ((pb_uptr_uptr_uptr_uptr_uptr_int32_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
-                                                                      regs[Carg4], regs[Carg5]);
+                                                                      regs[Carg4], (int32_t)regs[Carg5]);
           break;
         case pb_call_uptr_uptr_uptr_uptr_uptr_uptr:
           regs[Cretval] = ((pb_uptr_uptr_uptr_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
@@ -437,7 +439,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
                                                                          TO_VOIDP(regs[Carg4]), regs[Carg5]);
           break;
         case pb_call_uptr_uptr_int32_uptr_uptr_uptr_uptr:
-          regs[Cretval] = ((pb_uptr_uptr_int32_uptr_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
+          regs[Cretval] = ((pb_uptr_uptr_int32_uptr_uptr_uptr_uptr_t)proc)(regs[Carg1], (int32_t)regs[Carg2], regs[Carg3],
                                                                            regs[Carg4], regs[Carg5], regs[Carg6]);
           break;
         case pb_call_uptr_uptr_uptr_uptr_uptr_uptr_uptr:
@@ -447,7 +449,7 @@ void S_pb_interp(ptr tc, void *bytecode) {
         case pb_call_uptr_uptr_uptr_uptr_uptr_uptr_uptr_int32:
           regs[Cretval] = ((pb_uptr_uptr_uptr_uptr_uptr_uptr_uptr_int32_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
                                                                                 regs[Carg4], regs[Carg5], regs[Carg6],
-                                                                                regs[Carg7]);
+                                                                                (int32_t)regs[Carg7]);
           break;
         case pb_call_uptr_uptr_uptr_uptr_uptr_uptr_uptr_uptr:
           regs[Cretval] = ((pb_uptr_uptr_uptr_uptr_uptr_uptr_uptr_uptr_t)proc)(regs[Carg1], regs[Carg2], regs[Carg3],
