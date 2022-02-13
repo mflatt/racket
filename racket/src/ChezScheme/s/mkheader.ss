@@ -192,7 +192,7 @@
         (constant-case architecture
           [(pb)
            (nl)
-           (pr "#ifndef _LARGEFILE64_SOURCE\n")
+           (pr "#if !defined(_LARGEFILE64_SOURCE) && !defined(FEATURE_WINDOWS)\n")
            (pr "# define _LARGEFILE64_SOURCE\n") ; needed on some 32-bit platforms before <stdint.h>
            (pr "#endif\n")
            (pr "#include <stdint.h>\n")]
@@ -464,13 +464,23 @@
           (export "int" "Sdestroy_thread" "(void)")
         )
 
-        (when-feature windows
-        (nl) (comment "Windows support.")
-          (pr "#include <wchar.h>~%")
-          (export "char *" "Sgetenv" "(const char *)")
-          (export "wchar_t *" "Sutf8_to_wide" "(const char *)")
-          (export "char *" "Swide_to_utf8" "(const wchar_t *)")
-        )
+        (let ()
+          (define (gen-windows pre post)
+            (nl) (comment "Windows support.")
+            (pre)
+            (pr "#include <wchar.h>~%")
+            (export "char *" "Sgetenv" "(const char *)")
+            (export "wchar_t *" "Sutf8_to_wide" "(const char *)")
+            (export "char *" "Swide_to_utf8" "(const wchar_t *)")
+            (post))
+          (constant-case architecture
+            [(pb)
+             (gen-windows (lambda ()
+                            (pr "#if defined(FEATURE_WINDOWS)\n"))
+                          (lambda ()
+                            (pr "#endif\n")))]
+            [else
+             (when-feature windows (gen-windows void void))]))
 
         (nl) (comment "Features.")
         (for-each
@@ -898,7 +908,7 @@
                (pr "                        : \"r\" (addr)\\~%")
                (pr "                        : \"cc\", \"memory\", \"x12\", \"x7\");\\~%")
                (pr "  ret = _return_;\\~%")
-               (pr "  } while (0)~%"))]
+               (pr "  } while (0)~%")))]
           [(pb)
            (pr "#define INITLOCK(addr) (*((long *) addr) = 0)~%")
            (pr "#define UNLOCK(addr) (*((long *) addr) = 0)~%")
