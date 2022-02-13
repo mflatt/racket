@@ -1,6 +1,7 @@
 #if !defined(PTHREADS)
 # define STORE_FENCE() do { } while (0)
 #elif defined(_MSC_VER) && defined(_M_ARM64)
+# include <intrin.h>
 # define STORE_FENCE() __faststorefence()
 #elif defined(__arm64__) || defined(__aarch64__)
 # define STORE_FENCE() __asm__ __volatile__ ("dmb ishst" : : : "memory")
