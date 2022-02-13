@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+!IFDEF jumpobj
+jumpobj_target = $(jumpobj)
+!ELSE
+jumpobj_target = no-jumpobj-target
+!ENDIF
+
 # following have to use \ for directory separator
 SchemeInclude = ..\boot\$m
 KernelDll = ..\bin\$m\csv957.dll
@@ -94,7 +100,7 @@ $(KernelLib): $(ResFile) $(csrc) $(jumpobj) $(MDZlibLib) $(MDLZ4Lib)
 	link -dll -out:$(KernelDll) $(DLLLDFLAGS) $(ResFile) $(cobj) $(jumpobj) $(MDZlibLib) $(MDLZ4Lib) $(SystemLib)
 	editbin /nologo /rebase:base=0x67480000 $(KernelDll)
 
-$(jumpobj): a6nt-jump.asm
+$(jumpobj_target): a6nt-jump.asm
 	ml64 /c /Cx /Fo $(jumpobj) a6nt-jump.asm
 
 $(MTMain): main.c $(SchemeInclude)/scheme.h
