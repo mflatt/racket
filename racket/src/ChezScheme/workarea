@@ -280,7 +280,7 @@ else
   (cd $W/c; workln "$upupsrcdir"/c/Mf-$M Mf-$M)
   (cd $W/c; forceworkln Mf-$M Makefile)
   if [ "$Muni" != "" ] ; then
-    (cd $W/c; workln "$upupsrcdir"/c/Mf-$Muni Mf-$Mu<ni)
+    (cd $W/c; workln "$upupsrcdir"/c/Mf-$Muni Mf-$Muni)
   fi
   if [ "$Mos" != "" ] ; then
     (cd $W/c; workln "$upupsrcdir"/c/Mf-$Mos Mf-$Mos)
