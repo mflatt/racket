@@ -186,7 +186,7 @@ case "$Muni" in
         ;;
 esac
 
-case "$Muniarch" in
+case "$Mhost" in
   *nt) Mos=nt ;;
   *) Mos="" ;;
 esac
@@ -293,7 +293,7 @@ fi
 if [ ! -e $W/c/Mf-config ] ; then
   touch $W/c/Mf-config
 fi
-case $M in
+case $Mhost in
   *nt)
     (cd $W/c; workln "$upupsrcdir"/c/vs.bat vs.bat)
     ;;
@@ -374,7 +374,7 @@ if [ "$Mpbhost" != "" ] ; then
 fi
 (cd $W/mats; workln "$upupsrcdir"/mats/Mf-base Mf-base)
 (cd $W/mats; workln "$upupsrcdir"/mats/Mf-exobj Mf-exobj)
-case $M in
+case $Mhost in
   *nt)
     (cd $W/mats; workln "$upupsrcdir"/mats/vs.bat vs.bat)
     ;;
@@ -501,7 +501,7 @@ upupsrcdir=$upupsrcdir
 m=$M
 END
 
-case $M in
+case $Mhost in
   *nt)
     (cd $W/c; make source > /dev/null 2>&1)
     (cd $W/s; make source > /dev/null 2>&1)
