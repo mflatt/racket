@@ -2753,7 +2753,7 @@
                  [load-double-into-int-reg
                   (lambda (reg)
                     (lambda (x) ; unboxed
-                      `(set! ,reg ,(%inline fpcastto x))))]
+                      `(set! ,reg ,(%inline fpcastto ,x))))]
                  [load-single-into-int-reg
                   (lambda (reg)
                     (lambda (x) ; unboxed
