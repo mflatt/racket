@@ -316,7 +316,8 @@ fi
 if [ -e "$srcdir"/s/$M.def ] ; then
   (cd $W/s; workln "$upupsrcdir"/s/$M.def $M.def)
 else
-    # synthesize generic Unix or pb .def file
+    # synthesize generic Unix or pb .def file;
+    # this process is duplicated in "s/make-xpatch.ss"
     if [ -h $W/s/$M.def ] ; then
         rm $W/s/$M.def
     fi
