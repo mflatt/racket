@@ -15,7 +15,7 @@ xcopy /s /i /d /y nanopass xc-%WORKAREA%\nanopass
 xcopy /s /i /d /y unicode xc-%WORKAREA%\unicode
 
 cd xc-%WORKAREA%\s
-..\..\%H%\bin\%H%\scheme.exe --script make-xpatch.ss %M% patch
+..\..\%H%\bin\%H%\scheme.exe --script make-xpatch.ss %M% macro
 ..\..\%H%\bin\%H%\scheme.exe --script make-xpatch.ss %M% build
 cd ..\..
 
