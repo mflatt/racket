@@ -2761,7 +2761,7 @@
                       ;; so ok to use `%Cfparg1`
                       `(seq
                         (set! ,%Cfparg1 ,(%inline double->single ,x))
-                        (set! ,reg ,(%inline double->single ,%Cfparg1)))))]
+                        (set! ,reg ,(%inline fpcastto ,%Cfparg1)))))]
                  [load-boxed-double-reg
                   (lambda (fpreg fp-disp)
                     (lambda (x) ; address (always a var) of a flonum
