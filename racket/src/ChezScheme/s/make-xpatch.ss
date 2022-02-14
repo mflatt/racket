@@ -104,11 +104,13 @@
 (define compilersrcs '())
 
 (define (strip-cr s)
-  (let ([len (string-length s)])
-    (if (and (positive? len)
-             (eqv? #\return (string-ref s (sub1 len))))
-        (substring s 0 (sub1 len))
-        s)))
+  (if (string? s)
+      (let ([len (string-length s)])
+        (if (and (positive? len)
+                 (eqv? #\return (string-ref s (sub1 len))))
+            (substring s 0 (sub1 len))
+            s))
+      s))
 
 (define (read-continued-line in)
   (define str (strip-cr (get-line in)))
