@@ -122,9 +122,10 @@ case "$Mhost" in
 esac
 
 Muni=`echo $M | sed -e 's/^t//'`
+Mhostuni=`echo $M | sed -e 's/^t//'`
 
 # If Mtype is set, then Mf-$Mtype is used,
-# otherwise Mf-$M and Mf-$Muni is used
+# otherwise Mf-$M and Mf-$Muni (or Mf-$Mhost and Mf-$Mhostuni) is used
 case "$Mhost" in
   *nt) ;;
   *) Mtype=unix ;;
@@ -277,10 +278,10 @@ if [ "$Mtype" != "" ] ; then
   (cd $W/c; workln "$upupsrcdir"/c/Mf-$Mtype Mf-$Mtype)
   (cd $W/c; forceworkln Mf-$Mtype Makefile)
 else
-  (cd $W/c; workln "$upupsrcdir"/c/Mf-$M Mf-$M)
-  (cd $W/c; forceworkln Mf-$M Makefile)
-  if [ "$Muni" != "" ] ; then
-    (cd $W/c; workln "$upupsrcdir"/c/Mf-$Muni Mf-$Muni)
+  (cd $W/c; workln "$upupsrcdir"/c/Mf-$Mhost Mf-$Mhost)
+  (cd $W/c; forceworkln Mf-$Mhost Makefile)
+  if [ "$Mhostuni" != "" ] ; then
+    (cd $W/c; workln "$upupsrcdir"/c/Mf-$Mhostuni Mf-$Mhostuni)
   fi
   if [ "$Mos" != "" ] ; then
     (cd $W/c; workln "$upupsrcdir"/c/Mf-$Mos Mf-$Mos)
