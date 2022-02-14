@@ -122,7 +122,7 @@ case "$Mhost" in
 esac
 
 Muni=`echo $M | sed -e 's/^t//'`
-Mhostuni=`echo $M | sed -e 's/^t//'`
+Mhostuni=`echo $Mhost | sed -e 's/^t//'`
 
 # If Mtype is set, then Mf-$Mtype is used,
 # otherwise Mf-$M and Mf-$Muni (or Mf-$Mhost and Mf-$Mhostuni) is used
