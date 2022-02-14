@@ -11,14 +11,15 @@ if "%WORKAREA%"=="" goto needargument
 if "%H%"=="" H=pb
 
 xcopy /s /i /d /y s xc-%WORKAREA%\s
-xcopy /s /i /d /y s xc-%WORKAREA%\nanopass
-xcopy /s /i /d /y s xc-%WORKAREA%\unicode
+xcopy /s /i /d /y nanopass xc-%WORKAREA%\nanopass
+xcopy /s /i /d /y unicode xc-%WORKAREA%\unicode
 
 cd xc-%WORKAREA%\s
 ..\..\%H%\bin\%H%\scheme.exe --script make-xpatch.ss %M% patch
 ..\..\%H%\bin\%H%\scheme.exe --script make-xpatch.ss %M% build
+cd ..\..
 
-xcopy /s /s /d /y xc-%WORKAREA%\boot\%M% boot\%M%
+xcopy /s /i /d /y xc-%WORKAREA%\boot\%M% boot\%M%
 
 goto donebuilding
 
