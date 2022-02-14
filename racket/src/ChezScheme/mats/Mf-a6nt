@@ -1,3 +1,4 @@
 vsmach = amd64
+vsdefs = /DX86_64
 
 include Mf-nt
