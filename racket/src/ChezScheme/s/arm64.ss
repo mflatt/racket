@@ -2507,7 +2507,11 @@
 
     (define categorize-arguments
       (lambda (types varargs-after)
-        (let loop ([types types] [int* int-argument-regs] [fp* fp-argument-regs]
+        (let loop ([types types] [int* int-argument-regs] [fp* (constant-case machine-type-name
+                                                                 [(arm64nt tarm64nt)
+                                                                  ;; Windows: no FP register args if varargs
+                                                                  (if varargs-after '() fp-argument-regs)]
+                                                                 [else fp-argument-regs])]
                    [varargs-after varargs-after]
                    ;; accumulate alignment from previous args so we can compute any
                    ;; needed padding and alignment after this next argument
