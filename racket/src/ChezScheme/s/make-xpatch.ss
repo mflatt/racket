@@ -61,6 +61,7 @@
               (cons s (loop)))))))))
 
 (define (string->file s f)
+  (when (file-exists? f) (delete-file f))
   (call-with-output-file f
     (lambda (o)
       (put-string o s))))
@@ -102,8 +103,15 @@
 (define basesrcs '())
 (define compilersrcs '())
 
+(define (strip-cr s)
+  (let ([len (string-length s)])
+    (if (and (positive? len)
+             (eqv? #\return (string-ref s (sub1 len))))
+        (substring s 0 (sub1 len))
+        s)))
+
 (define (read-continued-line in)
-  (define str (get-line in))
+  (define str (strip-cr (get-line in)))
   (cond
     [(eof-object? str) str]
     [(string=? str "") str]
