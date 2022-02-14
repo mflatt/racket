@@ -1,7 +1,8 @@
 ;; This script is an alternative to using the `Mf-cross` makefile and
 ;; "xpatch" target. It should be run (twice) in the "s" directory of a
 ;; workarea that is set up simply as a copy of the "s", "nanopass",
-;; and "unicode" source directories.
+;; and "unicode" source directories. When run multiple times, it skips
+;; work if things have not changed (in terms of file timestamps).
 
 ;; First run:
 ;;   scheme --script make-xpatch.ss <target> patch
@@ -72,6 +73,12 @@
                 (string->symbol arch-str)))
          '("pb" "a6" "i3" "arm32" "arm64" "ppc32")))
 
+(define newer? #f)
+(define (newer! who)
+  (unless newer?
+    (printf "[newer ~s]\n" who)
+    (set! newer? #t)))
+
 ;; This is duplicated from `workarea`:
 (define (generate-def)
   (define def-str
@@ -96,7 +103,10 @@
                  [s (replace s "$(M)" target-machine)]
                  [s (replace s "$(March)" target-arch)])
             s)])]))
-  (string->file def-str "machine.def"))
+  (unless (and (file-exists? "machine.def")
+               (equal? def-str (file->string "machine.def")))
+    (string->file def-str "machine.def")
+    (newer! "machine.def")))
 
 (define macroobjs '())
 (define patchobjs '())
@@ -148,9 +158,41 @@
 (define (target-boot p)
   (format "../boot/~a/~a" target-machine p))
 
+(define (newer-file? src obj)
+  (or newer?
+      (not (file-exists? obj))
+      (time>? (file-modification-time src)
+              (file-modification-time obj))))
+
+(define (newer-tree?! dir file)
+  (ormap (lambda (f)
+           (let ([f (string-append dir "/" f)])
+             (if (file-directory? f)
+                 (newer-tree?! f file)
+                 (and (newer-file? f file)
+                      (begin
+                        (newer! f)
+                        #t)))))
+         (directory-list dir)))
+
+(define (compile-newer-file src obj)
+  (when (newer-file? src obj)
+    (newer! src)
+    (compile-file src obj)))
+
 (define (compile-and-load obj)
-  (compile-file (replace obj ".so" ".ss") obj)
+  (compile-newer-file (replace obj ".so" ".ss") obj)
   (load obj))
+  
+(define (call-if-newer name dest-file . args)
+  (when (or newer?
+            (not (file-exists? dest-file)))
+    (newer! name)
+    (apply (eval name) dest-file args)))
+
+(define (mkdir-p f)
+  (unless (file-exists? f)
+    (mkdir f)))
 
 (define (configure)
   (reset-handler abort)
@@ -165,12 +207,15 @@
 
 (case (string->symbol phase)
   [(macro)
-   (printf "Creating cross compiler...\n")
+   (printf "Creating cross compiler if needed...\n")
    (generate-def)
 
-   (compile-imported-libraries #t)
-   (library-directories "../nanopass")
-   (compile-library "../nanopass/nanopass.ss" "nanopass.so")
+   (when (newer-tree?! "../nanopass" "nanopass_done")
+     (compile-imported-libraries #t)
+     (library-directories "../nanopass")
+     (compile-library "../nanopass/nanopass.ss" "nanopass.so")
+     (when (file-exists? "nanopass_done") (delete-file "nanopass_done"))
+     (call-with-output-file "nanopass_done" (lambda (out) (void))))
    
    (configure)
 
@@ -180,32 +225,35 @@
    (compile-and-load "mkheader.so")
    (compile-and-load "mkgc.so")
 
-   (mkdir "../boot")
-   (mkdir (target-boot ""))
-   (eval
-    `(begin
-       (mkscheme.h ,(target-boot "scheme.h") ',target-machine)
-       (mkequates.h ,(target-boot "equates.h"))
-       (mkgc-ocd.inc ,(target-boot "gc-ocd.inc"))
-       (mkgc-oce.inc ,(target-boot "gc-oce.inc"))
-       (mkgc-par.inc ,(target-boot "gc-par.inc"))
-       (mkheapcheck.inc ,(target-boot "heapcheck.inc"))))
+   (mkdir-p "../boot")
+   (mkdir-p (target-boot ""))
+   (call-if-newer 'mkscheme.h (target-boot "scheme.h") target-machine)
+   (call-if-newer 'mkequates.h (target-boot "equates.h"))
+   (call-if-newer 'mkgc-ocd.inc (target-boot "gc-ocd.inc"))
+   (call-if-newer 'mkgc-oce.inc (target-boot "gc-oce.inc"))
+   (call-if-newer 'mkgc-par.inc (target-boot "gc-par.inc"))
+   (call-if-newer 'mkheapcheck.inc (target-boot "heapcheck.inc"))
    (compile-and-load "setup.so")
 
    (for-each (lambda (obj)
-               (compile-file (replace obj ".patch" ".ss") obj))
-             patchobjs)]
+               (compile-newer-file (replace obj ".patch" ".ss") obj))
+             patchobjs)
+
+   (when (file-exists? "is_newer") (delete-file "is_newer"))
+   (when newer? (call-with-output-file "is_newer" (lambda (out) (void))))]
   [(build)
-   (printf "Cross-compiling boot files...\n")
-   ;; load patch
-   (for-each load macroobjs)
-   (for-each load patchobjs)
-   (configure)
+   ;; If we compile anything, compile all together to have deterministic record names:
+   (when (file-exists? "is_newer")
+     (printf "Cross-compiling boot files...\n")
+     ;; load patch
+     (for-each load macroobjs)
+     (for-each load patchobjs)
+     (configure)
+     
+     (for-each (lambda (src)
+                 (compile-file src (target-so src)))
+               (append basesrcs
+                       compilersrcs))
 
-   (for-each (lambda (src)
-               (compile-file src (target-so src)))
-             (append basesrcs
-                     compilersrcs))
-
-   (apply #%$make-boot-file (target-boot "petite.boot") target-machine '() (map target-so basesrcs))
-   (apply #%$make-boot-file (target-boot "scheme.boot") target-machine '("petite") (map target-so compilersrcs))])
+     (apply #%$make-boot-file (target-boot "petite.boot") target-machine '() (map target-so basesrcs))
+     (apply #%$make-boot-file (target-boot "scheme.boot") target-machine '("petite") (map target-so compilersrcs)))])
