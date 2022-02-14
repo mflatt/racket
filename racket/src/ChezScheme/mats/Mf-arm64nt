@@ -1,0 +1,4 @@
+
+vsmach = arm64
+
+include Mf-nt

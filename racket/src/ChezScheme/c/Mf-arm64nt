@@ -1,0 +1,7 @@
+
+Cpu ?= AARCH64
+unim = rm64nt
+msvcjump = arm64nt-jump.asm
+vsmach = arm64
+
+include Mf-nt
