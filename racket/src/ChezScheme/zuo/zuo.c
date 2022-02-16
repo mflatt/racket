@@ -148,7 +148,6 @@ static zuo_t *zuo_interp_k;
 static zuo_t *zuo_quote_symbol;
 static zuo_t *zuo_lambda_symbol;
 static zuo_t *zuo_let_symbol;
-static zuo_t *zuo_letrec_symbol;
 static zuo_t *zuo_begin_symbol;
 static zuo_t *zuo_if_symbol;
 
@@ -331,7 +330,6 @@ static void zuo_collect() {
   zuo_update(&zuo_quote_symbol);
   zuo_update(&zuo_lambda_symbol);
   zuo_update(&zuo_let_symbol);
-  zuo_update(&zuo_letrec_symbol);
   zuo_update(&zuo_begin_symbol);
   zuo_update(&zuo_if_symbol);
 
@@ -1532,8 +1530,7 @@ static void check_syntax(zuo_t *e) {
         if ((ad != zuo_null) && (ad->tag != zuo_symbol_tag))
           bad_form(e);
         es = zuo_cons(zuo_car(dd), es);
-      } else if ((rator == zuo_let_symbol)
-                 || (rator == zuo_letrec_symbol)) {
+      } else if (rator == zuo_let_symbol) {
         zuo_t *d = zuo_cdr(e), *dd, *ad, *aad, *daad, *adaad;
         if (d->tag != zuo_cons_tag)
           bad_form(e);
@@ -1550,10 +1547,6 @@ static void check_syntax(zuo_t *e) {
         if ((daad->tag != zuo_cons_tag) || (zuo_cdr(daad) != zuo_null))
           bad_form(e);
         adaad = zuo_car(daad); /* `rhs` */
-        if (rator == zuo_letrec_symbol) {
-          if ((adaad->tag != zuo_cons_tag) || (zuo_car(adaad) != zuo_lambda_symbol))
-            bad_form(e);
-        }
         es = zuo_cons(adaad, es);
         es = zuo_cons(zuo_car(dd), es);
       } else if (rator == zuo_begin_symbol) {
@@ -1620,14 +1613,6 @@ static void interp_step() {
       zuo_interp_k = zuo_cont(zuo_let_cont,
                               d, zuo_interp_env,
                               zuo_interp_k);
-    } else if (rator == zuo_letrec_symbol) {
-      zuo_t *d = zuo_cdr(e);
-      zuo_t *aad = zuo_car(zuo_car(d));
-      zuo_t *cl = zuo_closure(zuo_car(zuo_cdr(aad)), zuo_interp_env);
-      zuo_t *env = env_extend(zuo_interp_env, zuo_car(aad), cl);
-      ((zuo_closure_t *)cl)->env = env;
-      zuo_interp_e = zuo_car(zuo_cdr(d));
-      zuo_interp_env = env;
     } else if (rator == zuo_begin_symbol) {
       zuo_t *d = zuo_cdr(e);
       zuo_t *dd = zuo_cdr(d);
@@ -2225,7 +2210,6 @@ int main(int argc, char **argv) {
   zuo_quote_symbol = zuo_symbol("quote");
   zuo_lambda_symbol = zuo_symbol("lambda");
   zuo_let_symbol = zuo_symbol("let");
-  zuo_letrec_symbol = zuo_symbol("letrec");
   zuo_begin_symbol = zuo_symbol("begin");
   zuo_if_symbol = zuo_symbol("if");
 

@@ -1,4 +1,11 @@
-#lang zuo/qq-and-or
+#lang zuo/boot/qq-and-or
+
+;; This layer implements a basic module and macro layer,
+;; defmacro-style. So, it's hygienic, but it handles binding properly
+;; in the sense that keywords can be shadowed, and module imports
+;; and exports can renaming bindings. The `eval` used here is the
+;; `zuo/kernel` evaluator, so the expansion of this layer doesn't
+;; rely on `zuo/qq-and-or` or `zuo/letrec`.
 
 (hash 'read-and-eval
       (lambda (str start)
@@ -6,7 +13,7 @@
                [binds (letrec ([make-prim-binds (lambda (ht l)
                                                   (if (null? l)
                                                       ht
-                                                      (make-prim-binds (hash-set ht (car l) (car l))
+                                                      (make-prim-binds (hash-set ht (car l) (eval (car l)))
                                                                        (cdr l))))])
                         (make-prim-binds (hash) (namespace-mapped-symbols)))]
                [macro? (lambda (v) (and (pair? v) (eq? 'macro (car v))))]
@@ -20,6 +27,7 @@
                                                                            (cdr l))))])
                         (make-syntax-binds binds '(lambda let letrec quote if begin
                                                           define require provide)))]
+               [top-binds binds]
                [cddr (lambda (p) (cdr (cdr p)))]
                [cadr (lambda (p) (car (cdr p)))]
                [bad-syntax (lambda (s) (error "bad syntax" s))]
@@ -43,7 +51,14 @@
                               (if (and (pair? form)
                                        (eq? (car form) 'lambda))
                                   `(lambda ,(cadr form) ,(~a id) ,(cadr (cdr form)))
-                                  form))])
+                                  form))]
+               [map (lambda (f es)
+                      (letrec ([map (lambda (es)
+                                      (cond
+                                        [(null? es) '()]
+                                        [else (cons (f (car es))
+                                                    (map (cdr es)))]))])
+                        (map es)))])
           (letrec ([rebind
                     (lambda (s binds)
                       (cond
@@ -98,8 +113,12 @@
                                        (letrec ([rebind-clauses
                                                  (lambda (cls new-cls binds seen)
                                                    (cond
-                                                     [(null? cls) `(let* ,(reverse new-cls)
-                                                                     ,(rebind (maybe-begin (cddr s)) binds))]
+                                                     [(null? cls) (letrec ([nest-bindings (lambda (new-cls)
+                                                                                            (if (null? new-cls)
+                                                                                                (rebind (maybe-begin (cddr s)) binds)
+                                                                                                `(let (,(car new-cls))
+                                                                                                   ,(nest-bindings (cdr new-cls)))))])
+                                                                    (nest-bindings (reverse new-cls)))]
                                                      [else
                                                       (let* ([cl (car cls)])
                                                         (unless (list? cl) (bad-syntax s))
@@ -122,108 +141,71 @@
                                      (let* ([cls (cadr s)]
                                             [orig-binds binds])
                                        (unless (list? cls) (bad-syntax s))
-                                       (cond
-                                         [(and (= 1 (length cls))
-                                               (let ([cl (car cls)])
-                                                 (and (list? cl)
-                                                      (= 2 (length cl))
-                                                      (symbol? (car cl))
-                                                      (let ([rhs (cadr cl)])
-                                                        (and (pair? rhs)
-                                                             (symbol? (car rhs))
-                                                             (eq? 'lambda (hash-ref binds (car rhs) #f)))))))
-                                          ;; expand to the lower-level `letrec`
-                                          (let* ([cl (car cls)]
-                                                 [id (car cl)]
-                                                 [rhs (cadr cl)]
-                                                 [new-id (gensym id)]
-                                                 [binds (hash-set binds id (make-local new-id))])
-                                            `(letrec ([,new-id ,(name-lambda (rebind rhs binds) id)])
-                                               ,(rebind (maybe-begin (cddr s)) binds)))]
-                                         [else
-                                          ;; expand to use variables to tie a knot
-                                          (letrec ([bind-all (lambda (x-cls new-ids binds seen)
-                                                               (cond
-                                                                 [(null? x-cls)
-                                                                  `(let* ,(letrec ([var-clauses
-                                                                                    (lambda (new-ids)
-                                                                                      (cond
-                                                                                        [(null? new-ids) '()]
-                                                                                        [else
-                                                                                         (cons
-                                                                                          `[(car new-ids) (make-variable ',(car new-ids))]
-                                                                                          (var-clauses (cdr new-ids)))]))])
-                                                                            (var-clauses new-ids))
-                                                                     (begin
-                                                                       (begin . ,(letrec ([rebind-clauses
-                                                                                           (lambda (cls new-ids)
-                                                                                             (cond
-                                                                                               [(null? cls) '()]
-                                                                                               [else
-                                                                                                (cons
-                                                                                                 `(variable-set! ,(car new-ids)
-                                                                                                                 ,(name-lambda
-                                                                                                                   (rebind (cadr (car cls)) binds)
-                                                                                                                   (car (car cls))))
-                                                                                                 (rebind-clauses (cdr cls) (cdr new-ids)))]))])
-                                                                                   (rebind-clauses clss (reverse new-ids))))
-                                                                       ,(rebind (maybe-begin (cddr s)) binds)))]
-                                                                 [else
-                                                                  (let* ([cl (car x-cls)])
-                                                                    (unless (list? cl) (bad-syntax s))
-                                                                    (unless (= 2 (length cl)) (bad-syntax s))
-                                                                    (let* ([id (car cl)])
-                                                                      (unless (symbol? id) (bad-syntax s))
-                                                                      (when (member id seen) (duplicate-identifier id s))
-                                                                      (let ([new-id (gensym id)])
-                                                                        (bind-all (cdr x-cls)
-                                                                                  (cons new-ids new-ids)
-                                                                                  (hash-set binds id new-id (make-local-variable new-id))
-                                                                                  (cons id seen)))))]))])
-                                            (bind-all cls '() binds '()))]))]
+                                       ;; use mutable variables to tie knots
+                                       (letrec ([bind-all (lambda (x-cls new-ids binds seen)
+                                                            (cond
+                                                              [(null? x-cls)
+                                                               `(let ,(letrec ([var-clauses
+                                                                                (lambda (new-ids)
+                                                                                  (cond
+                                                                                    [(null? new-ids) '()]
+                                                                                    [else
+                                                                                     (cons
+                                                                                      `[,(car new-ids) (,variable ',(car new-ids))]
+                                                                                      (var-clauses (cdr new-ids)))]))])
+                                                                        (var-clauses new-ids))
+                                                                  (begin
+                                                                    (begin . ,(letrec ([rebind-clauses
+                                                                                        (lambda (cls new-ids)
+                                                                                          (cond
+                                                                                            [(null? cls) '()]
+                                                                                            [else
+                                                                                             (cons
+                                                                                              `(,variable-set! ,(car new-ids)
+                                                                                                               ,(name-lambda
+                                                                                                                 (rebind (cadr (car cls)) binds)
+                                                                                                                 (car (car cls))))
+                                                                                              (rebind-clauses (cdr cls) (cdr new-ids)))]))])
+                                                                                (rebind-clauses cls (reverse new-ids))))
+                                                                    ,(rebind (maybe-begin (cddr s)) binds)))]
+                                                              [else
+                                                               (let* ([cl (car x-cls)])
+                                                                 (unless (list? cl) (bad-syntax s))
+                                                                 (unless (= 2 (length cl)) (bad-syntax s))
+                                                                 (let* ([id (car cl)])
+                                                                   (unless (symbol? id) (bad-syntax s))
+                                                                   (when (member id seen) (duplicate-identifier id s))
+                                                                   (let ([new-id (gensym id)])
+                                                                     (bind-all (cdr x-cls)
+                                                                               (cons new-id new-ids)
+                                                                               (hash-set binds id (make-local-variable new-id))
+                                                                               (cons id seen)))))]))])
+                                         (bind-all cls '() binds '())))]
                                     [(eq? bind 'quote)
                                      (unless (= 2 (length s)) (bad-syntax s))
                                      `(quote ,(cadr s))]
                                     [(eq? bind 'if)
                                      (unless (= 4 (length s)) (bad-syntax s))
                                      `(if ,(rebind (cadr s) binds) ,(rebind (cadr (cdr s)) binds) ,(rebind (cadr (cddr s)) binds))]
+                                    [(eq? bind 'begin)
+                                     (cons bind (map (lambda (e) (rebind e binds)) (cdr s)))]
                                     [else
-                                     ;; includes `begin` and value bindings
-                                     (cons bind
-                                           (letrec ([rebind-all (lambda (es)
-                                                                  (cond
-                                                                    [(null? es) '()]
-                                                                    [else (cons (rebind (car es) binds)
-                                                                                (rebind-all (cdr es)))]))])
-                                             (rebind-all (cdr s))))]))]
-                               [else (letrec ([rebind-all (lambda (es)
-                                                            (cond
-                                                              [(null? es) '()]
-                                                              [else (cons (rebind (car es) binds)
-                                                                          (rebind-all (cdr es)))]))])
-                                       (rebind-all s))])))]
+                                     (map (lambda (e) (rebind e binds)) s)]))]
+                               [else (map (lambda (e) (rebind e binds)) s)])))]
                         [(symbol? s)
                          (let ([bind (hash-ref binds s #f)])
                            (cond
                              [(syntax? bind) (bad-syntax s)]
                              [(local? bind) (local-id bind)]
-                             [(local-variable? bind) `(variable-ref ,(local-variable-id bind))]
-                             [(symbol? bind) bind]
+                             [(local-variable? bind) `(,variable-ref ,(local-variable-id bind))]
+                             [bind (if (eq? bind eval)
+                                       ;; substitute our evalutation
+                                       (lambda (e) (eval (rebind s top-binds)))
+                                       bind)]
                              [else (error "unbound identifier" s)]))]
                         [(pair? s)
                          (unless (list? s) (bad-syntax s))
-                         (letrec ([rebind-all (lambda (es)
-                                                (cond
-                                                  [(null? es) '()]
-                                                  [else (cons (rebind (car es) binds)
-                                                              (rebind-all (cdr es)))]))])
-                           (rebind-all s))]
+                         (map (lambda (e) (rebind e binds)) s)]
                         [(null? s) (bad-syntax s)]
                         [else s]))])
-            (letrec ([rebind-all (lambda (es)
-                                   (cond
-                                     [(null? es) '()]
-                                     [else (cons (rebind (car es) binds)
-                                                 (rebind-all (cdr es)))]))])
-
-              (eval (cons 'begin (rebind-all es))))))))
+            (eval (cons 'begin (map (lambda (e) (rebind e binds)) es)))))))

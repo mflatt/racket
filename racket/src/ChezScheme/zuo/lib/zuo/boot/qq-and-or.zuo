@@ -1,8 +1,8 @@
-#lang zuo/kernel
+#lang zuo/boot/letrec
 
-;; Implements a less minimal language by adding `and`, `or`, `cond`, and `quasiauote`.
+;; Implements a less minimal language by adding `and`, `or`, `cond`, and `quasiauote` preprocessing.
 ;; These will be replaced with variants that cooerate better with bindings after
-;; the defmacro layer, but implementing the defmacro layer is a path without these.
+;; the `zuo/defmacromod` layer (but implementing the defmacro layer is a path without these).
 
 (hash 'read-and-eval
       (lambda (str start)
@@ -108,9 +108,8 @@
                                                                     s
                                                                     (cons (convert (car s))
                                                                           (convert (cdr s)))))))))))
-                                    (if (eq? s 'eval) ; this is how we make our `eval` work at the next layer
-                                        (lambda (e) (eval (convert e)))
-                                        s)))])
+                                    ;; not propagating `eval` like `letrec` does
+                                    s))])
               (let ([es (convert es)])
                 (letrec ([eval-all (lambda (es)
                                      (if (null? es)
