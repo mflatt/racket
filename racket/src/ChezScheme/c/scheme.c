@@ -116,10 +116,9 @@ static void main_init(void) {
     CODEFREE(p) = 0;
     CODEINFO(p) = Sfalse;
     CODEPINFOS(p) = Snil;
-    RPHEADERFRAMESIZE(TO_PTR(&CODEIT(p, 0))) = 0;
-    RPHEADERLIVEMASK(TO_PTR(&CODEIT(p, 0))) = 0;
-    RPHEADERTOPLINK(TO_PTR(&CODEIT(p, 0))) =
-        (uptr)TO_PTR(&RPHEADERTOPLINK(TO_PTR(&CODEIT(p, 0)))) - (uptr)p;
+    STORE_UNALIGNED_UPTR(&RPHEADERFRAMESIZEVAL(TO_PTR(&CODEIT(p, 0))), 0);
+    STORE_UNALIGNED_UPTR(&RPHEADERLIVEMASKVAL(TO_PTR(&CODEIT(p, 0))), 0);
+    STORE_UNALIGNED_UPTR(&RPHEADERTOPLINKVAL(TO_PTR(&CODEIT(p, 0))), (uptr)TO_PTR(&RPHEADERTOPLINKVAL(TO_PTR(&CODEIT(p, 0)))) - (uptr)p);
     S_protect(&S_G.dummy_code_object);
     S_G.dummy_code_object = p;
     S_thread_end_code_write(tc, 0, 0, NULL, 0);

@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x09050707)
+(define-constant scheme-version #x09050708)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -3322,6 +3322,7 @@
     [pb-rev-op pb-sizes pb-argument-types]
     [pb-ld-op pb-sizes pb-argument-types]
     [pb-st-op pb-sizes pb-argument-types]
+    [pb-ld-unaligned-op pb-argument-types]
     [pb-b-op pb-branches pb-argument-types]
     [pb-b*-op pb-argument-types]
     [pb-call]

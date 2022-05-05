@@ -1048,7 +1048,9 @@
             (cond
               [(! (-> n_si old_space))]
               [(SEGMENT_IS_LOCAL n_si num)
-               (trace-pure (* (ENTRYNONCOMPACTLIVEMASKADDR oldret)))
+               (let* ([mask : ptr (cast ptr (LOAD_UNALIGNED_UPTR (ENTRYNONCOMPACTLIVEMASKADDR oldret)))])
+                 (trace-pure (just mask))
+                 (STORE_UNALIGNED_UPTR (ENTRYNONCOMPACTLIVEMASKADDR oldret) (cast uptr mask)))
                (set! num  (ENTRYLIVEMASK oldret))]
               [else
                (case-mode

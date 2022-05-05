@@ -334,12 +334,12 @@ typedef struct _dirtycardinfo {
                         ? RPCOMPACTHEADERTOPLINK((uptr)(x) - size_rp_compact_header) \
                         : RPHEADERTOPLINK((uptr)(x) - size_rp_header))
 #define ENTRYOFFSETADDR(x) (ISENTRYCOMPACT(x)                               \
-                            ? &RPCOMPACTHEADERTOPLINK((uptr)(x) - size_rp_compact_header) \
-                            : &RPHEADERTOPLINK((uptr)(x) - size_rp_header))
+                            ? &RPCOMPACTHEADERTOPLINKVAL((uptr)(x) - size_rp_compact_header) \
+                            : &RPHEADERTOPLINKVAL((uptr)(x) - size_rp_header))
 #define ENTRYLIVEMASK(x) (ISENTRYCOMPACT(x)                             \
                           ? FIX(COMPACTENTRYFIELD(x, compact_frame_mask_offset)) \
                           : RPHEADERLIVEMASK((uptr)(x) - size_rp_header))
-#define ENTRYNONCOMPACTLIVEMASKADDR(x) (&RPHEADERLIVEMASK((uptr)(x) - size_rp_header))
+#define ENTRYNONCOMPACTLIVEMASKADDR(x) (&RPHEADERLIVEMASKVAL((uptr)(x) - size_rp_header))
 
 #define PORTFD(x) ((iptr)PORTHANDLER(x))
 #define PORTGZFILE(x) ((gzFile)(PORTHANDLER(x)))

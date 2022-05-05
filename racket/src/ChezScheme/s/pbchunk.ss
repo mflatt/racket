@@ -381,6 +381,8 @@
         [pb-ld-op-pb-uint32-pb-immediate dri]
         [pb-ld-op-pb-int64-pb-register drr]
         [pb-ld-op-pb-int64-pb-immediate dri]
+        [pb-ld-unaligned-op-pb-register drr]
+        [pb-ld-unaligned-op-pb-immediate dri]
         [pb-ld-op-pb-double-pb-register drr]
         [pb-ld-op-pb-double-pb-immediate dri]
         [pb-ld-op-pb-single-pb-register drr]

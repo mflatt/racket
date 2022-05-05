@@ -692,6 +692,7 @@
 
   (define-op ld    load-op)
   (define-op st    store-op)
+  (define-op ld/u  load-unaligned-op)
 
   (define-op fadd  fp-bin-op (constant pb-add))
   (define-op fsub  fp-bin-op (constant pb-sub))
@@ -875,7 +876,7 @@
     (lambda (op size dest src0 src1 code*)
       (cond
         [(ax-reg? src1)
-         (emit-code (op size dest src0 src1 code*)
+         (emit-code (op size dest <src0 src1 code*)
            (fx+ (constant pb-ld-op)
                 size
                 (constant pb-register))
@@ -910,6 +911,24 @@
            (ax-ea-reg-code src)
            (ax-ea-reg-code dest0)
            (ax-imm-data dest1))])))
+
+  (define load-unaligned-op
+    (lambda (op dest src0 src1 code*)
+      (cond
+        [(ax-reg? src1)
+         (emit-code (op size dest <src0 src1 code*)
+           (fx+ (constant pb-ld-unaligned-op)
+                (constant pb-register))
+           (ax-ea-reg-code dest)
+           (ax-ea-reg-code src0)
+           (ax-ea-reg-code src1))]
+        [else
+         (emit-code (op size dest src0 src1 code*)
+           (fx+ (constant pb-ld-unaligned-op)
+                (constant pb-immediate))
+           (ax-ea-reg-code dest)
+           (ax-ea-reg-code src0)
+           (ax-imm-data src1))])))
 
   (define fp-bin-op
     (lambda (op opcode dest src0 src1 code*)
@@ -1248,6 +1267,7 @@
         (Trivit (dest base index/offset)
           (case type
             [(integer-64 unsigned-64) (emit ld (constant pb-int64) dest base index/offset code*)]
+            [(unaligned-64) (emit ld/u dest base index/offset code*)]
             [(integer-32) (emit ld (constant pb-int32) dest base index/offset code*)]
             [(unsigned-32) (emit ld (constant pb-uint32) dest base index/offset code*)]
             [(integer-16) (emit ld (constant pb-int16) dest base index/offset code*)]

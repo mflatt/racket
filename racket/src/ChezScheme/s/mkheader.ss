@@ -72,7 +72,7 @@
     (lambda (cast x disp)
       (format "(*~a)" (&ref cast x disp))))
   (define defref-help
-    (lambda (ref name struct field)
+    (lambda (ref name struct field unaligned?)
       (cond
         [(assq field (getprop struct '*fields* '())) =>
          (lambda (a)
@@ -86,7 +86,9 @@
                         (format (if (eq? ref &ref) "(~a+i)" "(~a[i])")
                                 (&ref (format "(~a *)" (sanitize-type type)) "x" disp)))
                    (def (format "~s(x)" name)
-                        (ref (format "(~a *)" (sanitize-type type)) "x" disp))))
+                        (if unaligned?
+                            (format "((~a)LOAD_UNALIGNED_UPTR~a)" (sanitize-type type) (&ref "" "x" disp))
+                            (ref (format "(~a *)" (sanitize-type type)) "x" disp)))))
              a))]
         [else ($oops 'defref-help "undefined field ~s-~s" struct field)])))
   (define defset-help
@@ -110,7 +112,11 @@
   (define-syntax defref
     (syntax-rules ()
       [(_ name struct field)
-       (defref-help ref 'name 'struct 'field)]))
+       (defref-help ref 'name 'struct 'field #f)]))
+  (define-syntax defref-unaligned
+    (syntax-rules ()
+      [(_ name struct field)
+       (defref-help ref 'name 'struct 'field #t)]))
   (define-syntax definit ; presently same as defref
     (syntax-rules ()
       [(_ name struct field)
@@ -1215,12 +1221,16 @@
         (defref CACHEDSTACKSIZE cached-stack size)
         (defref CACHEDSTACKLINK cached-stack link)
 
-        (defref RPHEADERFRAMESIZE rp-header frame-size)
-        (defref RPHEADERLIVEMASK rp-header livemask)
-        (defref RPHEADERTOPLINK rp-header toplink)
+        (defref-unaligned RPHEADERFRAMESIZE rp-header frame-size)
+        (defref-unaligned RPHEADERLIVEMASK rp-header livemask)
+        (defref-unaligned RPHEADERTOPLINK rp-header toplink)
+        (defref RPHEADERFRAMESIZEVAL rp-header frame-size)
+        (defref RPHEADERLIVEMASKVAL rp-header livemask)
+        (defref RPHEADERTOPLINKVAL rp-header toplink)
 
-        (defref RPCOMPACTHEADERMASKANDSIZE rp-compact-header mask+size+mode)
-        (defref RPCOMPACTHEADERTOPLINK rp-compact-header toplink)
+        (defref-unaligned RPCOMPACTHEADERMASKANDSIZE rp-compact-header mask+size+mode)
+        (defref-unaligned RPCOMPACTHEADERTOPLINK rp-compact-header toplink)
+        (defref RPCOMPACTHEADERTOPLINKVAL rp-compact-header toplink)
 
         (defref VFASLHEADER_DATA_SIZE vfasl-header data-size)
         (defref VFASLHEADER_TABLE_SIZE vfasl-header table-size)

@@ -629,7 +629,13 @@ enum {
   regs[INSTR_drr_dest(instr)] = *(uptr *)TO_VOIDP(regs[INSTR_drr_reg1(instr)] + regs[INSTR_drr_reg2(instr)])
 
 #define do_pb_ld_op_pb_int64_pb_immediate(instr) \
-  regs[INSTR_dri_dest(instr)] = *(uptr *)TO_VOIDP(regs[INSTR_dri_reg(instr)] + INSTR_dri_imm(instr))
+  regs[INSTR_dri_dest(instr)] = *(uptr *)(TO_VOIDP(regs[INSTR_dri_reg(instr)] + INSTR_dri_imm(instr)))
+
+#define do_pb_ld_unaligned_op_pb_register(instr) \
+  regs[INSTR_drr_dest(instr)] = LOAD_UNALIGNED_UPTR((uptr *)TO_VOIDP(regs[INSTR_drr_reg1(instr)] + regs[INSTR_drr_reg2(instr)]))
+
+#define do_pb_ld_unaligned_op_pb_immediate(instr) \
+  regs[INSTR_dri_dest(instr)] = LOAD_UNALIGNED_UPTR(TO_VOIDP(regs[INSTR_dri_reg(instr)] + INSTR_dri_imm(instr)))
 
 #define do_pb_ld_op_pb_double_pb_register(instr) \
   fpregs[INSTR_drr_dest(instr)] = *(double *)TO_VOIDP(regs[INSTR_drr_reg1(instr)] + regs[INSTR_drr_reg2(instr)])

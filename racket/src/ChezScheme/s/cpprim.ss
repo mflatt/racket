@@ -7465,11 +7465,18 @@
         (%mref ,(%mref ,e-k ,(constant continuation-stack-disp))
                ,(translate e-i (constant fixnum-offset) (constant log2-ptr-bytes))
                0))
-      
+
+      (define-syntax (%mref/unaligned stx)
+        (syntax-case stx ()
+          [(_ ra disp)
+           (if (constant unaligned-integers)
+               #`(%mref ra disp)
+               #``(inline ,(make-info-load 'unaligned-64 #f) ,%load ra ,%zero (immediate disp)))]))
+
       (define build-return-code
         (lambda (e-ra)
           (bind #t ([ra e-ra])
-            (bind #t ([t `(if ,(%inline logtest ,(%mref ,ra ,(constant compact-return-address-mask+size+mode-disp))
+            (bind #t ([t `(if ,(%inline logtest ,(%mref/unaligned ,ra ,(constant compact-return-address-mask+size+mode-disp))
                                         ,(%constant compact-header-mask))
                               ,(%inline + ,ra ,(%constant compact-return-address-toplink-disp))
                               ,(%inline + ,ra ,(%constant return-address-toplink-disp)))])
@@ -7478,20 +7485,20 @@
         (lambda (e-ra)
           (bind #t ([ra e-ra])
             (build-fix
-             `(if ,(%inline logtest ,(%mref ,ra ,(constant compact-return-address-mask+size+mode-disp))
+             `(if ,(%inline logtest ,(%mref/unaligned ,ra ,(constant compact-return-address-mask+size+mode-disp))
                             ,(%constant compact-header-mask))
-                  ,(%inline - ,(%mref ,ra ,(constant compact-return-address-toplink-disp))
+                  ,(%inline - ,(%mref/unaligned ,ra ,(constant compact-return-address-toplink-disp))
                             ,(%constant compact-return-address-toplink-disp))
-                  ,(%inline - ,(%mref ,ra ,(constant return-address-toplink-disp))
+                  ,(%inline - ,(%mref/unaligned ,ra ,(constant return-address-toplink-disp))
                             ,(%constant return-address-toplink-disp)))))))
       (define build-return-livemask
         (lambda (e-ra)
           (bind #t ([ra e-ra])
-            (bind #t ([mask+size+mode (%mref ,ra ,(constant compact-return-address-mask+size+mode-disp))])
+            (bind #t ([mask+size+mode (%mref/unaligned ,ra ,(constant compact-return-address-mask+size+mode-disp))])
               `(if ,(%inline logtest ,mask+size+mode ,(%constant compact-header-mask))
                    ,(%inline sll ,(%inline srl ,mask+size+mode ,(%constant compact-frame-mask-offset))
                              ,(%constant fixnum-offset))
-                   ,(%mref ,ra ,(constant return-address-livemask-disp)))))))
+                   ,(%mref/unaligned ,ra ,(constant return-address-livemask-disp)))))))
       (define build-return-frame-words
         (lambda (e-ra)
           (bind #t ([ra e-ra])
