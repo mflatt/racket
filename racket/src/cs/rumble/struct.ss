@@ -10,11 +10,117 @@
 ;;  - `total*-count` means `init*-count` plus `auto*-count`
 ;;  - `prefab-key+count` has a `total*-count`
 
-(define-record struct-type-prop (name guard supers))
+;; ----------------------------------------
 
-;; Record the properties that are implemented by each rtd; used
-;; without a lock
-(define rtd-props (make-ephemeron-eq-hashtable))
+(define struct-base-rtd (make-record-type-descriptor 'struct-base-rtd #!base-rtd '#{struct-base-rtd-0} #t #f
+                                                     '#((mutable kind) ; #f, 'named, or a pair for prefab
+                                                        (mutable props)
+                                                        (mutable prop-equal+hash)
+                                                        (mutable prop-procedure)
+                                                        (mutable inspector)))) ; #f, inspector, or 'prefab
+(define struct-base-rtd? (record-predicate struct-base-rtd))
+(define struct-base-rtd-kind (record-accessor struct-base-rtd 0))
+(define struct-base-rtd-kind-set! (record-mutator struct-base-rtd 0))
+(define struct-base-rtd-props (record-accessor struct-base-rtd 1))
+(define struct-base-rtd-props-set! (record-mutator struct-base-rtd 1))
+(define struct-base-rtd-prop-equal+hash (record-accessor struct-base-rtd 2))
+(define struct-base-rtd-prop-equal+hash-set! (record-mutator struct-base-rtd 2))
+(define struct-base-rtd-prop-procedure (record-accessor struct-base-rtd 3))
+(define struct-base-rtd-prop-procedure-set! (record-mutator struct-base-rtd 3))
+(define struct-base-rtd-inspector (record-accessor struct-base-rtd 4))
+(define struct-base-rtd-inspector-set! (record-mutator struct-base-rtd 4))
+
+(define (make-struct-type-descriptor name parent-rtd uid sealed? opaque? count muts)
+  (#%$make-record-type-descriptor* struct-base-rtd name parent-rtd uid sealed? opaque? count muts 'make-rtd
+                                   #f '() #f #f #f))
+
+;; similar to `define-record-type`, but generates a type with a `struct-base-rtd` descriptor:
+(define-syntax define-struct-type
+  (lambda (stx)
+    (define (make-make id)
+      (#%datum->syntax id (string->symbol (format "make-~a" (syntax->datum id)))))
+    (define (make-? id)
+      (#%datum->syntax id (string->symbol (format "~a?" (syntax->datum id)))))
+    (define (make-rtd id)
+      (#%datum->syntax id (string->symbol (format "rtd:~a" (syntax->datum id)))))
+    (define (make-rcd id)
+      (#%datum->syntax id (string->symbol (format "rcd:~a" (syntax->datum id)))))
+    (define (make-ref type-id field-id)
+      (#%datum->syntax field-id (string->symbol (format "~a-~a" (syntax->datum type-id) (syntax->datum field-id)))))
+    (define (make-set type-id field-id)
+      (#%datum->syntax field-id (string->symbol (format "~a-~a-set!" (syntax->datum type-id) (syntax->datum field-id)))))
+    (define (generate type-id constructor-id pred-id parent-id fields sealed?)
+      (let ([field-names (map (lambda (field)
+                                (syntax-case field (mutable immutable)
+                                  [(mutable id) #'id]
+                                  [(mutable id ref acc) #'id]
+                                  [(immutable id ref acc) #'id]
+                                  [_ field]))
+                              fields)]
+            [acc-ids (map (lambda (field)
+                            (syntax-case field (mutable immutable)
+                              [(mutable id) (make-ref type-id #'id)]
+                              [(mutable id ref mut) #'ref]
+                              [(immutable id ref) #'ref]
+                              [_ (make-ref type-id field)]))
+                          fields)]
+            [mut-ids (map (lambda (field)
+                            (syntax-case field (mutable immutable)
+                              [(mutable id) (make-set type-id #'id)]
+                              [(mutable id ref mut) #'mut]
+                              [_ #f]))
+                          fields)]
+            [uid (datum->syntax #'here ((current-generate-id) (syntax->datum type-id)))])
+        #`(begin
+            (define #,(make-rtd type-id)
+              (make-struct-type-descriptor '#,type-id #,(and parent-id (make-rtd parent-id)) '#,uid #,sealed? #f #,(length fields)
+                                           #,(let loop ([muts 0] [i 1] [fields fields])
+                                               (cond
+                                                 [(null? fields) muts]
+                                                 [else
+                                                  (loop (syntax-case (car fields) (mutable)
+                                                          [(mutable . _) (#%bitwise-ior muts i)]
+                                                          [_ muts])
+                                                        (#%bitwise-arithmetic-shift-left i 1)
+                                                        (cdr fields))]))))
+            (define #,pred-id (record-predicate #,(make-rtd type-id)))
+            (define #,(make-rcd type-id) (make-record-constructor-descriptor #,(make-rtd type-id)
+                                                                             #,(and parent-id
+                                                                                    (make-rcd parent-id))
+                                                                             #f))
+            (define #,constructor-id (record-constructor #,(make-rcd type-id)))
+            #,@(let loop ([acc-ids acc-ids] [i 0])
+                 (cond
+                   [(null? acc-ids) '()]
+                   [else (cons #`(define #,(car acc-ids) (record-accessor #,(make-rtd type-id) #,i))
+                               (loop (cdr acc-ids) (add1 i)))]))
+            #,@(let loop ([mut-ids mut-ids] [i 0])
+                 (cond
+                   [(null? mut-ids) '()]
+                   [(not (car mut-ids)) (loop (cdr mut-ids) (add1 i))]
+                   [else (cons #`(define #,(car mut-ids) (record-mutator #,(make-rtd type-id) #,i))
+                               (loop (cdr mut-ids) (add1 i)))])))))
+    (syntax-case stx (parent fields sealed)
+      [(_ (type-id constructor-id pred-id) (fields fld ...))
+       (generate #'type-id #'constructor-id #'pred-id #f #'(fld ...) #f)]
+      [(_ type-id (fields fld ...))
+       (generate #'type-id (make-make #'type-id) (make-? #'type-id) #f #'(fld ...) #f)]
+      [(_ (type-id constructor-id pred-id) (parent parent-id) (fields fld ...))
+       (generate #'type-id #'constructor-id #'pred-id #'parent-id #'(fld ...) #f)]
+      [(_ type-id (parent parent-id) (fields fld ...))
+       (generate #'type-id (make-make #'type-id) (make-? #'type-id) #'parent-id #'(fld ...) #f)]
+      [(_ type-id (fields fld ...) (sealed #t))
+       (generate #'type-id (make-make #'type-id) (make-? #'type-id) #f #'(fld ...) #t)])))
+
+(define-syntax struct-type-descriptor
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ id)
+       (#%datum->syntax #'id (string->symbol (format "rtd:~a" (syntax->datum #'id))))])))
+                                                            
+;; ----------------------------------------
+
+(define-record struct-type-prop (name guard supers))
 
 ;; Maps a property-accessor function to `(cons predicate-proc can-impersonate)`;
 ;; used without a lock
@@ -146,10 +252,36 @@
   (cdr (eq-hashtable-ref property-accessors v #f)))
 
 (define (struct-property-ref prop rtd default)
-  (getprop (record-type-uid rtd) prop default))
+  (if (struct-base-rtd? rtd)
+      (let loop ([props (struct-base-rtd-props rtd)])
+        (cond
+          [(null? props) default]
+          [(eq? prop (caar props)) (cdar props)]
+          [else (loop (cdr props))]))
+      default))
 
 (define (struct-property-set! prop rtd val)
-  (putprop (record-type-uid rtd) prop val))
+  (#%$record-type-fasl-as-ref! rtd) ; because properties cannot be serialized
+  (let loop ([props (struct-base-rtd-props rtd)])
+    (cond
+      [(null? props)
+       (struct-base-rtd-props-set! rtd (cons (cons prop val) (struct-base-rtd-props rtd)))]
+      [(eq? prop (caar props))
+       (set-car! props (cons prop val))]
+      [else (loop (cdr props))]))
+  (cond
+    [(eq? prop prop:equal+hash)
+     (struct-base-rtd-prop-equal+hash-set! rtd val)]
+    [(eq? prop prop:procedure)
+     (struct-base-rtd-prop-procedure-set! rtd val)]))
+
+(define (struct-prop-equal+hash rtd)
+  (and (struct-base-rtd? rtd)
+       (struct-base-rtd-prop-equal+hash rtd)))
+
+(define (struct-prop-procedure rtd)
+  (and (struct-base-rtd? rtd)
+       (struct-base-rtd-prop-procedure rtd)))
 
 ;; Must be consistent with `procedure-rename` in "procedure.ss",
 ;; but needed before that one is defined:
@@ -193,10 +325,14 @@
 ;; result can be 'prefab, #f, an inspector, or `none`, where
 ;; `none` is the result for opaque "system" records
 (define (inspector-ref rtd)
-  (getprop (record-type-uid rtd) 'inspector none))
+  (if (and (struct-base-rtd? rtd)
+           (struct-base-rtd-kind rtd))
+      (struct-base-rtd-inspector rtd)
+      none))
 
 (define (inspector-set! rtd insp)
-  (putprop (record-type-uid rtd) 'inspector insp))
+  (#%$record-type-fasl-as-ref! rtd) ; because properties cannot be serialized
+  (struct-base-rtd-inspector-set! rtd insp))
 
 ;; ----------------------------------------
 
@@ -264,31 +400,21 @@
 
      ;; The rest has to be delayed until we have an rtd:
      (lambda (rtd)
+       (unless system?
+         (struct-base-rtd-kind-set! rtd 'named))
        (let* ([parent-rtd* (strip-impersonator parent-rtd)]
-              [parent-props
-               (if parent-rtd*
-                   (eq-hashtable-ref rtd-props parent-rtd* '())
-                   '())]
               [all-immutables (if (integer? proc-spec)
                                   (cons proc-spec immutables)
                                   immutables)])
-         ;; Record properties implemented by this type:
-         (let ([props (let ([props (append (map car props) parent-props)])
-                        (if proc-spec
-                            (cons prop:procedure props)
-                            props))])
-           (add-to-table! rtd-props rtd props))
-         ;; Copy parent properties for this type:
-         (for-each (lambda (prop)
-                     (let loop ([prop prop])
-                       (struct-property-set! prop rtd (struct-property-ref prop parent-rtd* #f))
-                       (for-each (lambda (super)
-                                   (loop (car super)))
-                                 (struct-type-prop-supers prop))))
-                   parent-props)
-         ;; set default comparison
-         (unless (struct-property-ref prop:equal+hash rtd #f)
-           (struct-set-default-equal+hash! rtd))
+         (cond
+           [parent-rtd*
+            ;; Copy parent properties for this type:
+            (struct-base-rtd-props-set! rtd (map (lambda (p) p) (struct-base-rtd-props parent-rtd*)))
+            (struct-base-rtd-prop-equal+hash-set! rtd (struct-base-rtd-prop-equal+hash parent-rtd*))
+            (struct-base-rtd-prop-procedure-set! rtd (struct-base-rtd-prop-procedure parent-rtd*))]
+           [else
+            ;; set default comparison
+            (struct-set-default-equal+hash! rtd)])
 
          ;; Finish checking and install new property values:
          (let ([props-ht
@@ -441,10 +567,6 @@
                         (list (or eql?
                                   (lambda (a b eql? mode) (eq? a b)))
                               hash-code)))
-(define struct-set-default-equal+hash!
-  (let ([l (list default-struct-equal? default-struct-hash default-struct-hash)])
-    (lambda (rtd)
-      (struct-property-set! prop:equal+hash rtd l))))
 (define (inherit-equal+hash! rtd parent-rtd)
   (struct-property-set! prop:equal+hash rtd (struct-property-ref prop:equal+hash parent-rtd #f)))
 
@@ -479,8 +601,10 @@
 (define struct-proc-tables-need-resize? #f)
 
 ;; Accessors and mutators that need a position are wrapped in these records:
-(define-record position-based-accessor (rtd offset field-count))
-(define-record position-based-mutator (rtd offset field-count))
+(define-struct-type position-based-accessor
+  (fields rtd offset field-count))
+(define-struct-type position-based-mutator
+  (fields rtd offset field-count))
 
 (define (position-based-accessor-name f)
   (let ([rtd (position-based-accessor-rtd f)])
@@ -506,8 +630,7 @@
                        (eq-hashtable-delete! ht p)))])
       (resize! property-accessors)
       (resize! property-predicates)
-      (resize! rtd-mutables)
-      (resize! rtd-props))))
+      (resize! rtd-mutables))))
 
 (define (|#%struct-constructor| p arity-mask)
   (make-wrapper-procedure p arity-mask #\c))
@@ -658,20 +781,20 @@
             [parent-fi (if parent-rtd*
                            (struct-type-field-info parent-rtd*)
                            empty-field-info)]
-            [rtd (make-record-type-descriptor* name
-                                               parent-rtd*
-                                               prefab-uid
-                                               (#%ormap (lambda (p) (eq? prop:sealed (car p))) props)
-                                               #f
-                                               (+ init-count auto-count)
-                                               (let ([mask (sub1 (general-arithmetic-shift 1 (+ init-count auto-count)))])
-                                                 (if (eq? insp 'prefab)
-                                                     mask
-                                                     (let loop ([imms (if (exact-nonnegative-integer? proc-spec)
-                                                                          (cons proc-spec immutables)
-                                                                          immutables)]
-                                                                [mask mask])
-                                                       (cond
+            [rtd (make-struct-type-descriptor name
+                                              parent-rtd*
+                                              prefab-uid
+                                              (#%ormap (lambda (p) (eq? prop:sealed (car p))) props)
+                                              #f
+                                              (+ init-count auto-count)
+                                              (let ([mask (sub1 (general-arithmetic-shift 1 (+ init-count auto-count)))])
+                                                (if (eq? insp 'prefab)
+                                                    mask
+                                                    (let loop ([imms (if (exact-nonnegative-integer? proc-spec)
+                                                                         (cons proc-spec immutables)
+                                                                         immutables)]
+                                                               [mask mask])
+                                                      (cond
                                                         [(null? imms) mask]
                                                         [else
                                                          (let ([m (bitwise-not (arithmetic-shift 1 (car imms)))])
@@ -772,13 +895,13 @@
                                  (cdr parent-prefab-key+count)
                                  0))]
              [uid (encode-prefab-key+count-as-symbol prefab-key+count)]
-             [rtd (make-record-type-descriptor* name
-                                                parent-rtd
-                                                uid #f #f
-                                                total-count
-                                                ;; All fields must be reported as mutable, because
-                                                ;; we might need to mutate to create cyclic data:
-                                                (sub1 (bitwise-arithmetic-shift-left 1 total-count)))]
+             [rtd (make-struct-type-descriptor name
+                                               parent-rtd
+                                               uid #f #f
+                                               total-count
+                                               ;; All fields must be reported as mutable, because
+                                               ;; we might need to mutate to create cyclic data:
+                                               (sub1 (bitwise-arithmetic-shift-left 1 total-count)))]
              [mutables (prefab-key-mutables prefab-key total-count)])
         (with-global-lock
          (cond
@@ -794,6 +917,7 @@
              (struct-set-default-equal+hash! rtd)
              (register-mutables! mutables rtd parent-rtd)
              (inspector-set! rtd 'prefab)
+             (struct-base-rtd-kind-set! rtd 'named)
              rtd)])))])))
 
 (define (register-mutables! mutables rtd parent-rtd)
@@ -1427,6 +1551,11 @@
           (vector (string->symbol (format "struct:~a" ((inspect/object s*) 'type))) dots)))]
    [(s) (struct->vector s '...)]))
 
+(define struct-set-default-equal+hash!
+  (let ([l (list default-struct-equal? default-struct-hash default-struct-hash)])
+    (lambda (rtd)
+      (struct-property-set! prop:equal+hash rtd l))))
+
 ;; ----------------------------------------
 ;; Convenience for Rumble implementation:
 
@@ -1464,7 +1593,7 @@
                                          #'mk))]
                          [uid (datum->syntax #'name ((current-generate-id) (syntax->datum #'name)))])
              #'(begin
-                 (define struct:name (make-record-type-descriptor* 'name  struct:parent 'uid #f #f field-count 0))
+                 (define struct:name (make-struct-type-descriptor 'name  struct:parent 'uid #f #f field-count 0))
                  (define unsafe-make-name (record-constructor (make-record-constructor-descriptor struct:name #f #f)))
                  (define name ctr-expr)
                  (define authentic-name? (record-predicate struct:name))
@@ -1489,8 +1618,7 @@
                  (define dummy
                    (begin
                      (register-struct-named! struct:name)
-                     (struct-set-equal+hash! struct:name default-struct-equal? default-struct-hash)
-                     (inspector-set! struct:name #f)))))))])))
+                     (struct-set-equal+hash! struct:name default-struct-equal? default-struct-hash)))))))])))
 
 (define-syntax define-struct
   (lambda (stx)
@@ -1504,4 +1632,4 @@
              (define make-name name)))])))
 
 (define (register-struct-named! rtd)
-  (add-to-table! rtd-props rtd '()))
+  (struct-base-rtd-kind-set! rtd 'named))

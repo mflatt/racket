@@ -896,7 +896,7 @@
    #f
    'rx:alts))
 (define struct:rx:alts
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:alts
    #f
    (|#%nongenerative-uid| rx:alts)
@@ -950,7 +950,7 @@
    #f
    'rx:sequence))
 (define struct:rx:sequence
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:sequence
    #f
    (|#%nongenerative-uid| rx:sequence)
@@ -1014,7 +1014,7 @@
    #f
    'rx:group))
 (define struct:rx:group
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:group
    #f
    (|#%nongenerative-uid| rx:group)
@@ -1069,7 +1069,7 @@
    #f
    'rx:repeat))
 (define struct:rx:repeat
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:repeat
    #f
    (|#%nongenerative-uid| rx:repeat)
@@ -1151,7 +1151,7 @@
    #f
    'rx:maybe))
 (define struct:rx:maybe
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:maybe
    #f
    (|#%nongenerative-uid| rx:maybe)
@@ -1211,7 +1211,7 @@
    #f
    'rx:conditional))
 (define struct:rx:conditional
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:conditional
    #f
    (|#%nongenerative-uid| rx:conditional)
@@ -1342,7 +1342,7 @@
    #f
    'rx:lookahead))
 (define struct:rx:lookahead
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:lookahead
    #f
    (|#%nongenerative-uid| rx:lookahead)
@@ -1436,7 +1436,7 @@
    #f
    'rx:lookbehind))
 (define struct:rx:lookbehind
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:lookbehind
    #f
    (|#%nongenerative-uid| rx:lookbehind)
@@ -1599,7 +1599,7 @@
    #f
    'rx:cut))
 (define struct:rx:cut
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:cut
    #f
    (|#%nongenerative-uid| rx:cut)
@@ -1678,7 +1678,7 @@
    #f
    'rx:reference))
 (define struct:rx:reference
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:reference
    #f
    (|#%nongenerative-uid| rx:reference)
@@ -1744,7 +1744,7 @@
    #f
    'rx:range))
 (define struct:rx:range
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:range
    #f
    (|#%nongenerative-uid| rx:range)
@@ -1790,7 +1790,7 @@
    #f
    'rx:unicode-categories))
 (define struct:rx:unicode-categories
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rx:unicode-categories
    #f
    (|#%nongenerative-uid| rx:unicode-categories)
@@ -2059,7 +2059,7 @@
    #f
    'parse-config))
 (define struct:parse-config
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parse-config
    #f
    (|#%nongenerative-uid| parse-config)
@@ -4627,7 +4627,7 @@
    #f
    'lazy-bytes))
 (define struct:lazy-bytes
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'lazy-bytes
    #f
    (|#%nongenerative-uid| lazy-bytes)
@@ -7152,7 +7152,7 @@
    #f
    'rx:regexp))
 (define struct:rx:regexp
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'regexp
    #f
    (|#%nongenerative-uid| regexp)

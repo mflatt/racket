@@ -208,7 +208,7 @@
                   scheme-args
                   "--disable-library-timestamps"
                   "--libdirs" (at-dir ".")
-                  "--script" main.so
+                  "--script" (at-source "run-main.ss")
                   racket-init-args
                   args
                   (hash 'env (cons (cons "RACKET_IO_SOURCE_DIR" (at-source "."))

@@ -1,4 +1,4 @@
-(define-record-type mpair
+(define-struct-type mpair
   (fields (mutable car mpair-car set-mpair-car!)
           (mutable cdr mpair-cdr set-mpair-cdr!))
   (sealed #t))
@@ -35,7 +35,7 @@
   (set-mpair-cdr! m v))
 
 (define (set-mpair-hash!)
-  (struct-set-equal+hash! (record-type-descriptor mpair)
+  (struct-set-equal+hash! (struct-type-descriptor mpair)
                           (lambda (a b eql?)
                             (and (eql? (mcar a) (mcar b))
                                  (eql? (mcdr a) (mcdr b))))

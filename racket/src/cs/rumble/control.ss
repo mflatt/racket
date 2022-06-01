@@ -111,7 +111,7 @@
                                        cc-guard      ; for impersonated tag, initially #f
                                        avail-cache)) ; cache for `continuation-prompt-available?`
 
-(define-record-type (continuation-prompt-tag create-continuation-prompt-tag authentic-continuation-prompt-tag?)
+(define-struct-type (continuation-prompt-tag create-continuation-prompt-tag authentic-continuation-prompt-tag?)
   (fields (mutable name))) ; mutable => constructor generates fresh instances
 
 (define the-default-continuation-prompt-tag (create-continuation-prompt-tag 'default))
@@ -485,11 +485,20 @@
 ;; ----------------------------------------
 ;; Capturing and applying continuations
 
-(define-record continuation (mc))
-(define-record full-continuation continuation (k winders mark-stack mark-splice tag))
-(define-record composable-continuation full-continuation (wind?))
-(define-record non-composable-continuation full-continuation ())
-(define-record escape-continuation continuation (tag))
+(define-struct-type continuation
+  (fields mc))
+(define-struct-type full-continuation
+  (parent continuation)
+  (fields k winders mark-stack mark-splice tag))
+(define-struct-type composable-continuation
+  (parent full-continuation)
+  (fields wind?))
+(define-struct-type non-composable-continuation
+  (parent full-continuation)
+  (fields))
+(define-struct-type escape-continuation
+  (parent continuation)
+  (fields tag))
 
 (define/who call-with-current-continuation
   (case-lambda
@@ -773,16 +782,16 @@
   ;; These procedure registrations may be short-circuited by a special
   ;; case that dispatches directly to `apply-continuation`
   (struct-property-set! prop:procedure
-                        (record-type-descriptor composable-continuation)
+                        (struct-type-descriptor composable-continuation)
                         (lambda (c . args) (apply-composable-continuation c args)))
   (struct-property-set! prop:procedure
-                        (record-type-descriptor non-composable-continuation)
+                        (struct-type-descriptor non-composable-continuation)
                         (lambda (c . args) (apply-non-composable-continuation c args)))
   (struct-property-set! prop:procedure
-                        (record-type-descriptor escape-continuation)
+                        (struct-type-descriptor escape-continuation)
                         (lambda (c . args) (apply-escape-continuation c args)))
   (struct-property-set! prop:object-name
-                        (record-type-descriptor continuation-prompt-tag)
+                        (struct-type-descriptor continuation-prompt-tag)
                         0))
 
 ;; ----------------------------------------
@@ -1571,8 +1580,12 @@
 (define-record-type (continuation-mark-key create-continuation-mark-key authentic-continuation-mark-key?)
   (fields (mutable name))) ; `mutable` ensures that `create-...` allocates
 
-(define-record continuation-mark-key-impersonator impersonator (get set))
-(define-record continuation-mark-key-chaperone chaperone (get set))
+(define-struct-type continuation-mark-key-impersonator
+  (parent impersonator)
+  (fields get set))
+(define-struct-type continuation-mark-key-chaperone
+  (parent chaperone)
+  (fields get set))
 
 (define make-continuation-mark-key
   (case-lambda
@@ -1686,8 +1699,12 @@
       (and (impersonator? v)
            (authentic-continuation-prompt-tag? (impersonator-val v)))))
 
-(define-record continuation-prompt-tag-impersonator impersonator (procs))
-(define-record continuation-prompt-tag-chaperone chaperone (procs))
+(define-struct-type continuation-prompt-tag-impersonator
+  (parent impersonator)
+  (fields procs))
+(define-struct-type continuation-prompt-tag-chaperone
+  (parent chaperone)
+  (fields procs))
 
 (define-record continuation-prompt-tag-procs (handler abort cc-guard cc-impersonate))
 

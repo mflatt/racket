@@ -3,16 +3,19 @@
 
 ;; Mutable hash tables need a lock
 ;; and an iteration vector
-(define-record locked-iterable-hash (lock
-                                     cells    ; vector of cells for iteration
-                                     retry?)) ; is `cells` maybe incomplete?
+(define-struct-type locked-iterable-hash
+  (fields (mutable lock)
+          (mutable cells)    ; vector of cells for iteration
+          (mutable retry?))) ; is `cells` maybe incomplete?
 
 ;; To support iteration and locking, we wrap Chez's mutable hash
 ;; tables in a `mutable-hash` record
-(define-record mutable-hash locked-iterable-hash
-  (ht)) ; Chez Scheme hashtable
-(define-record eq-mutable-hash mutable-hash
-  ())
+(define-struct-type mutable-hash
+  (parent locked-iterable-hash)
+  (fields ht)) ; Chez Scheme hashtable
+(define-struct-type eq-mutable-hash
+  (parent mutable-hash)
+  (fields))
 
 (define (create-mutable-hash ht kind) (make-mutable-hash (make-lock kind) #f #t ht))
 (define (create-eq-mutable-hash ht) (make-eq-mutable-hash (make-lock 'eq?) #f #t ht))
@@ -151,7 +154,7 @@
 (define (mutable-hash-set! ht k v)
   (lock-acquire (mutable-hash-lock ht))
   (hashtable-set! (mutable-hash-ht ht) k v)
-  (set-locked-iterable-hash-retry?! ht #t)
+  (locked-iterable-hash-retry?-set! ht #t)
   (lock-release (mutable-hash-lock ht)))
 
 (define (hash-remove! ht k)
@@ -177,7 +180,7 @@
       ;; Clear cell, because it may be in `(locked-iterable-hash-cells ht)`
       (set-car! cell #!bwp)
       (set-cdr! cell #!bwp)
-      (set-locked-iterable-hash-retry?! ht #t)]
+      (locked-iterable-hash-retry?-set! ht #t)]
      [else
       (hashtable-delete! (mutable-hash-ht ht) k)]))
   (lock-release (mutable-hash-lock ht)))
@@ -203,7 +206,7 @@
 
 (define (mutable-hash-clear! ht)
   (lock-acquire (mutable-hash-lock ht))
-  (set-locked-iterable-hash-cells! ht #f)
+  (locked-iterable-hash-cells-set! ht #f)
   (hashtable-clear! (mutable-hash-ht ht))
   (lock-release (mutable-hash-lock ht)))
 
@@ -281,7 +284,7 @@
 (define/who (unsafe-hash-seal! ht)
   (check who eq-mutable-hash? ht)
   (prepare-iterate! ht (hash-count ht))
-  (set-locked-iterable-hash-lock! ht #f))
+  (locked-iterable-hash-lock-set! ht #f))
 
 (define/who (hash-eq? ht)
   (cond
@@ -730,9 +733,9 @@
                              32))])
         (let ([len (#%vector-length new-vec)])
           (when (fx= len (hash-count ht))
-            (set-locked-iterable-hash-retry?! ht #f)))
+            (locked-iterable-hash-retry?-set! ht #f)))
         (let ([vec (cells-merge vec new-vec)])
-          (set-locked-iterable-hash-cells! ht vec)
+          (locked-iterable-hash-cells-set! ht vec)
           (lock-release (locked-iterable-hash-lock ht))
           vec))])))
 
@@ -981,13 +984,16 @@
 ;; ----------------------------------------
 
 (define (set-hash-hash!)
-  (struct-set-equal+hash! (record-type-descriptor mutable-hash)
+  (struct-set-equal+hash! (struct-type-descriptor mutable-hash)
                           hash=?
                           hash-hash-code)
-  (struct-set-equal+hash! (record-type-descriptor hash-impersonator)
+  (struct-set-equal+hash! (struct-type-descriptor eq-mutable-hash)
+                          hash=?
+                          hash-hash-code)
+  (struct-set-equal+hash! (struct-type-descriptor hash-impersonator)
                           #f
                           hash-hash-code)
-  (struct-set-equal+hash! (record-type-descriptor hash-chaperone)
+  (struct-set-equal+hash! (struct-type-descriptor hash-chaperone)
                           #f
                           hash-hash-code))
 
@@ -997,8 +1003,12 @@
 ;; `impersonator-of?` and `chaperone-of?`:
 (define-record hash-procs (ref set remove key clear equal-key))
 
-(define-record hash-impersonator impersonator (procs))
-(define-record hash-chaperone chaperone (procs))
+(define-struct-type hash-impersonator
+  (parent impersonator)
+  (fields procs))
+(define-struct-type hash-chaperone
+  (parent chaperone)
+  (fields procs))
 
 (define/who (impersonate-hash ht ref set remove key . args)
   (check who

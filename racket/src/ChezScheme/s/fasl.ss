@@ -518,7 +518,8 @@
            ($oops 'fasl "mismatch"))
          (unless (eq-hashtable-ref (table-hash t) x #f)
            ($oops 'fasl "not in table!?"))
-         (if (and a? (fxlogtest a? (constant fasl-omit-rtds)))
+         (if (or (and a? (fxlogtest a? (constant fasl-omit-rtds)))
+                 ($record-type-fasl-as-ref? x))
              (put-uptr p 0) ; => must be registered already at load time
              (wrf-fields (maybe-remake-rtd x t) p t a?))]
         [else

@@ -4151,7 +4151,7 @@
    #f
    'region))
 (define struct:region
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'region
    #f
    (|#%nongenerative-uid| region)
@@ -4319,7 +4319,7 @@
    #f
    'stat))
 (define struct:stat
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'stat
    #f
    (|#%nongenerative-uid| stat)
@@ -5605,7 +5605,7 @@
    #f
    'weak-intern-table))
 (define struct:weak-intern-table
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'weak-intern-table
    #f
    (|#%nongenerative-uid| weak-intern-table)
@@ -5638,7 +5638,7 @@
    #f
    'table))
 (define struct:table
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'table
    #f
    (|#%nongenerative-uid| table)
@@ -5869,7 +5869,7 @@
    #f
    'resolved-module-path))
 (define struct:resolved-module-path
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'resolved-module-path
    #f
    (|#%nongenerative-uid| resolved-module-path)
@@ -6133,7 +6133,7 @@
    #f
    'module-path-index))
 (define struct:module-path-index
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-path-index
    #f
    (|#%nongenerative-uid| module-path-index)
@@ -6717,7 +6717,7 @@
    #f
    'promise))
 (define struct:promise
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'promise
    #f
    (|#%nongenerative-uid| promise)
@@ -6826,7 +6826,7 @@
    #f
    'serialize-state))
 (define struct:serialize-state
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'serialize-state
    #f
    (|#%nongenerative-uid| serialize-state)
@@ -7304,7 +7304,7 @@
    #f
    'preserved-property-value))
 (define struct:preserved-property-value
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'preserved-property-value
    #f
    (|#%nongenerative-uid| preserved-property-value)
@@ -7503,7 +7503,7 @@
    #f
    'modified-content))
 (define struct:modified-content
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'modified-content
    #f
    (|#%nongenerative-uid| modified-content)
@@ -7801,7 +7801,7 @@
    #f
    'syntax))
 (define struct:syntax
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syntax
    #f
    (|#%nongenerative-uid| syntax)
@@ -8169,7 +8169,7 @@
    #f
    'syntax-state))
 (define struct:syntax-state
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syntax-state
    #f
    (|#%nongenerative-uid| syntax-state)
@@ -8296,7 +8296,7 @@
    #f
    'full-binding))
 (define struct:full-binding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'full-binding
    #f
    (|#%nongenerative-uid| full-binding)
@@ -8565,7 +8565,7 @@
    #f
    'full-module-binding))
 (define struct:full-module-binding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'full-module-binding
    struct:full-binding
    (|#%nongenerative-uid| full-module-binding)
@@ -8642,7 +8642,7 @@
    #f
    'simple-module-binding))
 (define struct:simple-module-binding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'simple-module-binding
    #f
    (|#%nongenerative-uid| simple-module-binding)
@@ -8768,7 +8768,7 @@
    #f
    'like-ambiguous-binding))
 (define struct:like-ambiguous-binding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'like-ambiguous-binding
    #f
    (|#%nongenerative-uid| like-ambiguous-binding)
@@ -8810,7 +8810,7 @@
    #f
    'table-with-bulk-bindings))
 (define struct:table-with-bulk-bindings
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'table-with-bulk-bindings
    #f
    (|#%nongenerative-uid| table-with-bulk-bindings)
@@ -8870,7 +8870,7 @@
    #f
    'bulk-binding-at))
 (define struct:bulk-binding-at
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bulk-binding-at
    #f
    (|#%nongenerative-uid| bulk-binding-at)
@@ -8908,7 +8908,7 @@
    #f
    'bulk-binding-class))
 (define struct:bulk-binding-class
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bulk-binding-class
    #f
    (|#%nongenerative-uid| bulk-binding-class)
@@ -10067,7 +10067,7 @@
    #f
    'fallback))
 (define struct:fallback
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fallback
    #f
    (structure-type-lookup-prefab-uid 'fallback #f 1 0 #f '(0))
@@ -10188,7 +10188,7 @@
    #f
    'entry))
 (define struct:entry
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'entry
    #f
    (|#%nongenerative-uid| entry)
@@ -10250,7 +10250,7 @@
    #f
    'shifted-entry))
 (define struct:shifted-entry
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'shifted-entry
    #f
    (|#%nongenerative-uid| shifted-entry)
@@ -10509,7 +10509,7 @@
    #f
    'scope))
 (define struct:scope
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'scope
    #f
    (|#%nongenerative-uid| scope)
@@ -10572,7 +10572,7 @@
    #f
    'interned-scope))
 (define struct:interned-scope
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'interned-scope
    struct:scope
    (|#%nongenerative-uid| interned-scope)
@@ -10710,7 +10710,7 @@
    #f
    'multi-scope))
 (define struct:multi-scope
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'multi-scope
    #f
    (|#%nongenerative-uid| multi-scope)
@@ -10793,7 +10793,7 @@
    #f
    'representative-scope))
 (define struct:representative-scope
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'representative-scope
    struct:scope
    (|#%nongenerative-uid| representative-scope)
@@ -10882,7 +10882,7 @@
    #f
    'shifted-multi-scope))
 (define struct:shifted-multi-scope
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'shifted-multi-scope
    #f
    (|#%nongenerative-uid| shifted-multi-scope)
@@ -10967,7 +10967,7 @@
    #f
    'shifted-to-label-phase))
 (define struct:shifted-to-label-phase
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'shifted-to-label-phase
    #f
    (structure-type-lookup-prefab-uid 'shifted-to-label-phase #f 1 0 #f '(0))
@@ -11861,7 +11861,7 @@
    #f
    'propagation))
 (define struct:propagation
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'propagation
    #f
    (|#%nongenerative-uid| propagation)
@@ -13237,7 +13237,7 @@
    #f
    'full-local-binding))
 (define struct:full-local-binding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'full-local-binding
    struct:full-binding
    (|#%nongenerative-uid| full-local-binding)
@@ -13364,7 +13364,7 @@
    #f
    'id-rename-transformer))
 (define struct:id-rename-transformer
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rename-transformer
    #f
    (|#%nongenerative-uid| rename-transformer)
@@ -13623,7 +13623,7 @@
    #f
    'non-source-shift))
 (define struct:non-source-shift
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'non-source-shift
    #f
    (structure-type-lookup-prefab-uid 'non-source-shift #f 2 0 #f '(0 1))
@@ -14184,7 +14184,7 @@
    #f
    'provided))
 (define struct:provided
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'provided
    #f
    (|#%nongenerative-uid| provided)
@@ -14363,7 +14363,7 @@
    #f
    'bulk-binding))
 (define struct:bulk-binding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bulk-binding
    #f
    (|#%nongenerative-uid| bulk-binding)
@@ -14496,7 +14496,7 @@
    #f
    'bulk-provide))
 (define struct:bulk-provide
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bulk-provide
    #f
    (|#%nongenerative-uid| bulk-provide)
@@ -14565,7 +14565,7 @@
    #f
    'bulk-binding-registry))
 (define struct:bulk-binding-registry
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bulk-binding-registry
    #f
    (|#%nongenerative-uid| bulk-binding-registry)
@@ -14638,7 +14638,7 @@
    #f
    'root-expand-context/outer))
 (define struct:root-expand-context/outer
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'root-expand-context
    #f
    (|#%nongenerative-uid| root-expand-context)
@@ -14688,7 +14688,7 @@
    #f
    'root-expand-context/inner))
 (define struct:root-expand-context/inner
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'root-expand-context/inner
    #f
    (|#%nongenerative-uid| root-expand-context/inner)
@@ -15250,7 +15250,7 @@
    #f
    'module-registry))
 (define struct:module-registry
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-registry
    #f
    (|#%nongenerative-uid| module-registry)
@@ -15396,7 +15396,7 @@
    #f
    'namespace))
 (define struct:namespace
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'namespace
    #f
    (|#%nongenerative-uid| namespace)
@@ -15466,7 +15466,7 @@
    #f
    'definitions))
 (define struct:definitions
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'definitions
    #f
    (|#%nongenerative-uid| definitions)
@@ -16023,7 +16023,7 @@
    #f
    'syntax-binding-set))
 (define struct:syntax-binding-set
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syntax-binding-set
    #f
    (|#%nongenerative-uid| syntax-binding-set)
@@ -16079,7 +16079,7 @@
    #f
    'bind))
 (define struct:bind
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bind
    #f
    (|#%nongenerative-uid| bind)
@@ -16667,7 +16667,7 @@
    #f
    'module-use))
 (define struct:module-use
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-use
    #f
    (|#%nongenerative-uid| module-use)
@@ -16734,7 +16734,7 @@
    #f
    'portal-syntax))
 (define struct:portal-syntax
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'portal-syntax
    #f
    (|#%nongenerative-uid| portal-syntax)
@@ -16798,7 +16798,7 @@
    #f
    'module))
 (define struct:module
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module
    #f
    (|#%nongenerative-uid| module)
@@ -16874,7 +16874,7 @@
    #f
    'module-linklet-info))
 (define struct:module-linklet-info
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-linklet-info
    #f
    (|#%nongenerative-uid| module-linklet-info)
@@ -16997,7 +16997,7 @@
    #f
    'module-instance))
 (define struct:module-instance
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-instance
    #f
    (|#%nongenerative-uid| module-instance)
@@ -18714,7 +18714,7 @@
           #f
           'set!-transformer)))
     (let ((struct:set!-transformer_0
-           (make-record-type-descriptor* 'set!-transformer #f #f #f #f 1 0)))
+           (make-struct-type-descriptor 'set!-transformer #f #f #f #f 1 0)))
       (let ((effect791 (finish790 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
@@ -18800,7 +18800,7 @@
    #f
    'local-variable))
 (define struct:local-variable
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'local-variable
    #f
    (|#%nongenerative-uid| local-variable)
@@ -18861,7 +18861,7 @@
    #f
    'core-form))
 (define struct:core-form
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-form
    #f
    (|#%nongenerative-uid| core-form)
@@ -19162,7 +19162,7 @@
    #f
    'expand-context/outer))
 (define struct:expand-context/outer
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'expand-context
    struct:root-expand-context/outer
    (|#%nongenerative-uid| expand-context)
@@ -19235,7 +19235,7 @@
    #f
    'expand-context/inner))
 (define struct:expand-context/inner
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'expand-context/inner
    struct:root-expand-context/inner
    (|#%nongenerative-uid| expand-context/inner)
@@ -21088,7 +21088,7 @@
    #f
    'compile-context))
 (define struct:compile-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'compile-context
    #f
    (|#%nongenerative-uid| compile-context)
@@ -23597,7 +23597,7 @@
    #f
    'mpi-intern-table))
 (define struct:mpi-intern-table
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'mpi-intern-table
    #f
    (|#%nongenerative-uid| mpi-intern-table)
@@ -23853,7 +23853,7 @@
    #f
    'module-path-index-table))
 (define struct:module-path-index-table
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-path-index-table
    #f
    (|#%nongenerative-uid| module-path-index-table)
@@ -28042,7 +28042,7 @@
    #f
    'parsed))
 (define struct:parsed
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed
    #f
    (|#%nongenerative-uid| parsed)
@@ -28071,7 +28071,7 @@
    #f
    'parsed-id))
 (define struct:parsed-id
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-id
    struct:parsed
    (|#%nongenerative-uid| parsed-id)
@@ -28103,7 +28103,7 @@
    #f
    'parsed-primitive-id))
 (define struct:parsed-primitive-id
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-primitive-id
    struct:parsed-id
    (|#%nongenerative-uid| parsed-primitive-id)
@@ -28134,7 +28134,7 @@
    #f
    'parsed-top-id))
 (define struct:parsed-top-id
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-top-id
    struct:parsed-id
    (|#%nongenerative-uid| parsed-top-id)
@@ -28163,7 +28163,7 @@
    #f
    'parsed-lambda))
 (define struct:parsed-lambda
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-lambda
    struct:parsed
    (|#%nongenerative-uid| parsed-lambda)
@@ -28196,7 +28196,7 @@
    #f
    'parsed-case-lambda))
 (define struct:parsed-case-lambda
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-case-lambda
    struct:parsed
    (|#%nongenerative-uid| parsed-case-lambda)
@@ -28229,7 +28229,7 @@
    #f
    'parsed-app))
 (define struct:parsed-app
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-app
    struct:parsed
    (|#%nongenerative-uid| parsed-app)
@@ -28262,7 +28262,7 @@
    #f
    'parsed-if))
 (define struct:parsed-if
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-if
    struct:parsed
    (|#%nongenerative-uid| parsed-if)
@@ -28296,7 +28296,7 @@
    #f
    'parsed-set!))
 (define struct:parsed-set!
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-set!
    struct:parsed
    (|#%nongenerative-uid| parsed-set!)
@@ -28329,7 +28329,7 @@
    #f
    'parsed-with-continuation-mark))
 (define struct:parsed-with-continuation-mark
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-with-continuation-mark
    struct:parsed
    (|#%nongenerative-uid| parsed-with-continuation-mark)
@@ -28375,7 +28375,7 @@
    #f
    '|parsed-#%variable-reference|))
 (define |struct:parsed-#%variable-reference|
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    '|parsed-#%variable-reference|
    struct:parsed
    (|#%nongenerative-uid| |parsed-#%variable-reference|)
@@ -28413,7 +28413,7 @@
    #f
    'parsed-begin))
 (define struct:parsed-begin
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-begin
    struct:parsed
    (|#%nongenerative-uid| parsed-begin)
@@ -28444,7 +28444,7 @@
    #f
    'parsed-begin0))
 (define struct:parsed-begin0
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-begin0
    struct:parsed
    (|#%nongenerative-uid| parsed-begin0)
@@ -28475,7 +28475,7 @@
    #f
    'parsed-quote))
 (define struct:parsed-quote
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-quote
    struct:parsed
    (|#%nongenerative-uid| parsed-quote)
@@ -28506,7 +28506,7 @@
    #f
    'parsed-quote-syntax))
 (define struct:parsed-quote-syntax
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-quote-syntax
    struct:parsed
    (|#%nongenerative-uid| parsed-quote-syntax)
@@ -28541,7 +28541,7 @@
    #f
    'parsed-let_-values))
 (define struct:parsed-let_-values
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-let_-values
    struct:parsed
    (|#%nongenerative-uid| parsed-let_-values)
@@ -28582,7 +28582,7 @@
    #f
    'parsed-let-values))
 (define struct:parsed-let-values
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-let-values
    struct:parsed-let_-values
    (|#%nongenerative-uid| parsed-let-values)
@@ -28611,7 +28611,7 @@
    #f
    'parsed-letrec-values))
 (define struct:parsed-letrec-values
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-letrec-values
    struct:parsed-let_-values
    (|#%nongenerative-uid| parsed-letrec-values)
@@ -28642,7 +28642,7 @@
    #f
    'parsed-define-values))
 (define struct:parsed-define-values
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-define-values
    struct:parsed
    (|#%nongenerative-uid| parsed-define-values)
@@ -28685,7 +28685,7 @@
    #f
    'parsed-define-syntaxes))
 (define struct:parsed-define-syntaxes
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-define-syntaxes
    struct:parsed
    (|#%nongenerative-uid| parsed-define-syntaxes)
@@ -28728,7 +28728,7 @@
    #f
    'parsed-begin-for-syntax))
 (define struct:parsed-begin-for-syntax
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-begin-for-syntax
    struct:parsed
    (|#%nongenerative-uid| parsed-begin-for-syntax)
@@ -28766,7 +28766,7 @@
    #f
    '|parsed-#%declare|))
 (define |struct:parsed-#%declare|
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    '|parsed-#%declare|
    struct:parsed
    (|#%nongenerative-uid| |parsed-#%declare|)
@@ -28795,7 +28795,7 @@
    #f
    'parsed-require))
 (define struct:parsed-require
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-require
    struct:parsed
    (|#%nongenerative-uid| parsed-require)
@@ -28824,7 +28824,7 @@
    #f
    '|parsed-#%module-begin|))
 (define |struct:parsed-#%module-begin|
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    '|parsed-#%module-begin|
    struct:parsed
    (|#%nongenerative-uid| |parsed-#%module-begin|)
@@ -28866,7 +28866,7 @@
    #f
    'parsed-module))
 (define struct:parsed-module
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parsed-module
    struct:parsed
    (|#%nongenerative-uid| parsed-module)
@@ -29016,7 +29016,7 @@
    #f
    'requires+provides))
 (define struct:requires+provides
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'requires+provides
    #f
    (|#%nongenerative-uid| requires+provides)
@@ -29097,7 +29097,7 @@
    #f
    'required))
 (define struct:required
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'required
    #f
    (|#%nongenerative-uid| required)
@@ -29132,7 +29132,7 @@
    #f
    'bulk-required))
 (define struct:bulk-required
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bulk-required
    #f
    (|#%nongenerative-uid| bulk-required)
@@ -30861,7 +30861,7 @@
    #f
    'adjust-only))
 (define struct:adjust-only
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'adjust-only
    #f
    (|#%nongenerative-uid| adjust-only)
@@ -30913,7 +30913,7 @@
    #f
    'adjust-prefix))
 (define struct:adjust-prefix
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'adjust-prefix
    #f
    (|#%nongenerative-uid| adjust-prefix)
@@ -30967,7 +30967,7 @@
    #f
    'adjust-all-except))
 (define struct:adjust-all-except
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'adjust-all-except
    #f
    (|#%nongenerative-uid| adjust-all-except)
@@ -31040,7 +31040,7 @@
    #f
    'adjust-rename))
 (define struct:adjust-rename
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'adjust-rename
    #f
    (|#%nongenerative-uid| adjust-rename)
@@ -34563,7 +34563,7 @@
    #f
    'compiled-in-memory))
 (define struct:compiled-in-memory
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'compiled-in-memory
    #f
    (|#%nongenerative-uid| compiled-in-memory)
@@ -34905,7 +34905,7 @@
    #f
    'correlated-linklet))
 (define struct:correlated-linklet
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'correlated-linklet
    #f
    (|#%nongenerative-uid| correlated-linklet)
@@ -34979,7 +34979,7 @@
    #f
    'faslable-correlated))
 (define struct:faslable-correlated
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'faslable-correlated
    #f
    (structure-type-lookup-prefab-uid
@@ -35145,7 +35145,7 @@
    #f
    'faslable-correlated-linklet))
 (define struct:faslable-correlated-linklet
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'faslable-correlated-linklet
    #f
    (structure-type-lookup-prefab-uid
@@ -35711,7 +35711,7 @@
    #f
    'linklet-directory))
 (define struct:linklet-directory
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'linklet-directory
    #f
    (|#%nongenerative-uid| linklet-directory)
@@ -35773,7 +35773,7 @@
    #f
    'linklet-bundle))
 (define struct:linklet-bundle
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'linklet-bundle
    #f
    (|#%nongenerative-uid| linklet-bundle)
@@ -36000,7 +36000,7 @@
    #f
    'namespace-scopes))
 (define struct:namespace-scopes
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'namespace-scopes
    #f
    (structure-type-lookup-prefab-uid 'namespace-scopes #f 2 0 #f '(0 1))
@@ -36140,7 +36140,7 @@
    #f
    'syntax-literals))
 (define struct:syntax-literals
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syntax-literals
    #f
    (|#%nongenerative-uid| syntax-literals)
@@ -36247,7 +36247,7 @@
    #f
    'header))
 (define struct:header
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'header
    #f
    (|#%nongenerative-uid| header)
@@ -36447,7 +36447,7 @@
    #f
    'variable-use))
 (define struct:variable-use
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'variable-use
    #f
    (|#%nongenerative-uid| variable-use)
@@ -38054,7 +38054,7 @@
    #f
    'module-use*))
 (define struct:module-use*
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-use*
    struct:module-use
    (|#%nongenerative-uid| module-use*)
@@ -38485,7 +38485,7 @@
    #f
    'link-info))
 (define struct:link-info
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'link-info
    #f
    (|#%nongenerative-uid| link-info)
@@ -40625,7 +40625,7 @@
    #f
    'known-defined/delay))
 (define struct:known-defined/delay
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-defined/delay
    #f
    (structure-type-lookup-prefab-uid 'known-defined/delay #f 1 0 #f '(0))
@@ -40683,7 +40683,7 @@
    #f
    'known-property))
 (define struct:known-property
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-property
    #f
    (structure-type-lookup-prefab-uid 'known-property #f 0 0 #f '())
@@ -40722,7 +40722,7 @@
    #f
    'known-property-of-function))
 (define struct:known-property-of-function
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-property-of-function
    #f
    (structure-type-lookup-prefab-uid
@@ -40789,7 +40789,7 @@
    #f
    'known-function))
 (define struct:known-function
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-function
    #f
    (structure-type-lookup-prefab-uid 'known-function #f 2 0 #f '(0 1))
@@ -40858,7 +40858,7 @@
    #f
    'known-function-of-satisfying))
 (define struct:known-function-of-satisfying
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-function-of-satisfying
    #f
    (structure-type-lookup-prefab-uid
@@ -40942,7 +40942,7 @@
    #f
    'known-predicate))
 (define struct:known-predicate
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-predicate
    #f
    (structure-type-lookup-prefab-uid 'known-predicate #f 1 0 #f '(0))
@@ -40996,7 +40996,7 @@
    #f
    'known-satisfies))
 (define struct:known-satisfies
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-satisfies
    #f
    (structure-type-lookup-prefab-uid 'known-satisfies #f 1 0 #f '(0))
@@ -41052,7 +41052,7 @@
    #f
    'known-struct-op))
 (define struct:known-struct-op
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-op
    #f
    (structure-type-lookup-prefab-uid 'known-struct-op #f 2 0 #f '(0 1))
@@ -44521,7 +44521,7 @@
    #f
    'protected-core))
 (define struct:protected-core
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'protected-core
    #f
    (|#%nongenerative-uid| protected-core)
@@ -46220,7 +46220,7 @@
    #f
    'instance-data))
 (define struct:instance-data
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'instance-data
    #f
    (|#%nongenerative-uid| instance-data)
@@ -48837,7 +48837,7 @@
    #f
    'recompiled))
 (define struct:recompiled
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'recompiled
    #f
    (|#%nongenerative-uid| recompiled)
@@ -50408,7 +50408,7 @@
    #f
    'lift-context))
 (define struct:lift-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'lift-context
    #f
    (|#%nongenerative-uid| lift-context)
@@ -50443,7 +50443,7 @@
    #f
    'lifted-bind))
 (define struct:lifted-bind
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'lifted-bind
    #f
    (|#%nongenerative-uid| lifted-bind)
@@ -50700,7 +50700,7 @@
    #f
    'module-lift-context))
 (define struct:module-lift-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'module-lift-context
    #f
    (|#%nongenerative-uid| module-lift-context)
@@ -50782,7 +50782,7 @@
    #f
    'require-lift-context))
 (define struct:require-lift-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'require-lift-context
    #f
    (|#%nongenerative-uid| require-lift-context)
@@ -50854,7 +50854,7 @@
    #f
    'to-module-lift-context))
 (define struct:to-module-lift-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'to-module-lift-context
    #f
    (|#%nongenerative-uid| to-module-lift-context)
@@ -50924,7 +50924,7 @@
    #f
    'already-expanded))
 (define struct:already-expanded
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'expanded-syntax
    #f
    (|#%nongenerative-uid| expanded-syntax)
@@ -51000,7 +51000,7 @@
    #f
    'make-liberal-define-context))
 (define struct:liberal-define-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'liberal-define-context
    #f
    (|#%nongenerative-uid| liberal-define-context)
@@ -51137,7 +51137,7 @@
    #f
    'reference-record))
 (define struct:reference-record
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'reference-record
    #f
    (|#%nongenerative-uid| reference-record)
@@ -51304,7 +51304,7 @@
    #f
    'expanded+parsed))
 (define struct:expanded+parsed
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'expanded+parsed
    #f
    (|#%nongenerative-uid| expanded+parsed)
@@ -51337,7 +51337,7 @@
    #f
    'semi-parsed-define-values))
 (define struct:semi-parsed-define-values
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'semi-parsed-define-values
    #f
    (|#%nongenerative-uid| semi-parsed-define-values)
@@ -51387,7 +51387,7 @@
    #f
    'semi-parsed-begin-for-syntax))
 (define struct:semi-parsed-begin-for-syntax
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'semi-parsed-begin-for-syntax
    #f
    (|#%nongenerative-uid| semi-parsed-begin-for-syntax)
@@ -53439,7 +53439,7 @@
    #f
    'internal-definition-context))
 (define struct:internal-definition-context
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'internal-definition-context
    #f
    (|#%nongenerative-uid| internal-definition-context)
@@ -53602,7 +53602,7 @@
    #f
    'env-mixin))
 (define struct:env-mixin
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'env-mixin
    #f
    (|#%nongenerative-uid| env-mixin)
@@ -58727,7 +58727,7 @@
    #f
    'lifted-parsed-begin))
 (define struct:lifted-parsed-begin
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'lifted-parsed-begin
    #f
    (|#%nongenerative-uid| lifted-parsed-begin)
@@ -61166,7 +61166,7 @@
    #f
    'shadow-directory))
 (define struct:shadow-directory
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'shadow-directory
    #f
    (|#%nongenerative-uid| shadow-directory)
@@ -62279,7 +62279,7 @@
    #f
    'read-config/outer))
 (define struct:read-config/outer
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'read-config
    #f
    (|#%nongenerative-uid| read-config)
@@ -62326,7 +62326,7 @@
    #f
    'read-config/inner))
 (define struct:read-config/inner
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'read-config/inner
    #f
    (|#%nongenerative-uid| read-config/inner)
@@ -62490,7 +62490,7 @@
    #f
    'read-config-state))
 (define struct:read-config-state
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'read-config-state
    #f
    (|#%nongenerative-uid| read-config-state)
@@ -63044,7 +63044,7 @@
    #f
    'make-special-comment))
 (define struct:special-comment
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'special-comment
    #f
    (|#%nongenerative-uid| special-comment)
@@ -63075,7 +63075,7 @@
    #f
    'readtable))
 (define struct:readtable
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'readtable
    #f
    (|#%nongenerative-uid| readtable)
@@ -63461,7 +63461,7 @@
    #f
    'special))
 (define struct:special
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'special
    #f
    (|#%nongenerative-uid| special)
@@ -64004,7 +64004,7 @@
    #f
    'accum-string))
 (define struct:accum-string
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'accum-string
    #f
    (|#%nongenerative-uid| accum-string)
@@ -64128,7 +64128,7 @@
    #f
    'indentation))
 (define struct:indentation
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'indentation
    #f
    (|#%nongenerative-uid| indentation)
@@ -65148,7 +65148,7 @@
    #f
    'parse-state))
 (define struct:parse-state
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'parse-state
    #f
    (|#%nongenerative-uid| parse-state)
@@ -65189,7 +65189,7 @@
    #f
    'rect-prefix))
 (define struct:rect-prefix
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rect-prefix
    #f
    (|#%nongenerative-uid| rect-prefix)
@@ -65224,7 +65224,7 @@
    #f
    'polar-prefix))
 (define struct:polar-prefix
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'polar-prefix
    #f
    (|#%nongenerative-uid| polar-prefix)
@@ -65347,7 +65347,7 @@
    #f
    'lazy-expt))
 (define struct:lazy-expt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'lazy-expt
    #f
    (|#%nongenerative-uid| lazy-expt)
@@ -65381,7 +65381,7 @@
    #f
    'lazy-rational))
 (define struct:lazy-rational
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'lazy-rational
    #f
    (|#%nongenerative-uid| lazy-rational)
@@ -74788,7 +74788,7 @@
    #f
    'serialized-syntax))
 (define struct:serialized-syntax
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'serialized-syntax
    #f
    (structure-type-lookup-prefab-uid 'serialized-syntax #f 5 0 #f '(0 1 2 3 4))

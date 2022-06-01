@@ -8,6 +8,7 @@
   [impersonator-val (known-constant)]
   [impersonate-ref (known-constant)]
   [impersonate-set! (known-constant)]
+  [make-struct-type-descriptor (known-constant)]
   [make-struct-type-install-properties (known-constant)]
   [structure-type-lookup-prefab-uid (known-constant)]
   [struct-type-constructor-add-guards (known-constant)]

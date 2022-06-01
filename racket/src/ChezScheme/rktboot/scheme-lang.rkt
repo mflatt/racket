@@ -82,6 +82,7 @@
          record-rtd
          record-type-sealed?
          record-type-opaque?
+         $record-type-fasl-as-ref?
          record-type-parent
          record-type-field-names
          record-type-field-indices
@@ -675,6 +676,9 @@
                    (list (if (bitwise-bit-set? mutability-mask i) 'mutable 'immutable)
                          (string->symbol (format "f~a" i)))))
   (apply $make-record-type-descriptor base-rtd name parent uid sealed? opaque? fields who extras))
+
+(define ($record-type-fasl-as-ref? rtd)
+  #f)
 
 (define-syntax-rule (s:module (id ...) body ...)
   (begin

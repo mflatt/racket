@@ -1060,7 +1060,7 @@
    #f
    'queue))
 (define struct:queue
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'queue
    #f
    (|#%nongenerative-uid| queue)
@@ -1094,7 +1094,7 @@
    #f
    'node))
 (define struct:node$2
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'node
    #f
    (|#%nongenerative-uid| node)
@@ -1330,7 +1330,7 @@
    #f
    'node))
 (define struct:node$1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'node
    #f
    (|#%nongenerative-uid| node)
@@ -1599,7 +1599,7 @@
    #f
    'sandman))
 (define struct:sandman
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'sandman
    #f
    (structure-type-lookup-prefab-uid
@@ -2050,7 +2050,7 @@
    #f
    'selector-prop-evt-value))
 (define struct:selector-prop-evt-value
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'selector-prop-evt-value
    #f
    (|#%nongenerative-uid| selector-prop-evt-value)
@@ -2098,7 +2098,7 @@
    #f
    'poller))
 (define struct:poller
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'poller
    #f
    (|#%nongenerative-uid| poller)
@@ -2127,7 +2127,7 @@
    #f
    'poll-ctx))
 (define struct:poll-ctx
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'poll-ctx
    #f
    (|#%nongenerative-uid| poll-ctx)
@@ -2168,7 +2168,7 @@
    #f
    'never-evt))
 (define struct:never-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'never-evt
    #f
    (|#%nongenerative-uid| never-evt)
@@ -2209,7 +2209,7 @@
    #f
    'always-evt))
 (define struct:always-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'always-evt
    #f
    (|#%nongenerative-uid| always-evt)
@@ -2250,7 +2250,7 @@
    #f
    'async-evt))
 (define struct:async-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'async-evt
    #f
    (|#%nongenerative-uid| async-evt)
@@ -2291,7 +2291,7 @@
    #f
    'wrap-evt))
 (define struct:wrap-evt
-  (make-record-type-descriptor* 'evt #f (|#%nongenerative-uid| evt) #f #f 2 0))
+  (make-struct-type-descriptor 'evt #f (|#%nongenerative-uid| evt) #f #f 2 0))
 (define effect_2815 (finish_3384 struct:wrap-evt))
 (define wrap-evt7.1
   (|#%name|
@@ -2340,7 +2340,7 @@
    #f
    'handle-evt))
 (define struct:handle-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'handle-evt
    struct:wrap-evt
    (|#%nongenerative-uid| handle-evt)
@@ -2382,7 +2382,7 @@
    #f
    'control-state-evt))
 (define struct:control-state-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'control-state-evt
    #f
    (|#%nongenerative-uid| control-state-evt)
@@ -2509,7 +2509,7 @@
    #f
    'poll-guard-evt))
 (define struct:poll-guard-evt
-  (make-record-type-descriptor* 'evt #f (|#%nongenerative-uid| evt) #f #f 1 0))
+  (make-struct-type-descriptor 'evt #f (|#%nongenerative-uid| evt) #f #f 1 0))
 (define effect_2169 (finish_2343 struct:poll-guard-evt))
 (define poll-guard-evt10.1
   (|#%name|
@@ -2559,7 +2559,7 @@
    #f
    'choice-evt))
 (define struct:choice-evt
-  (make-record-type-descriptor* 'evt #f (|#%nongenerative-uid| evt) #f #f 1 0))
+  (make-struct-type-descriptor 'evt #f (|#%nongenerative-uid| evt) #f #f 1 0))
 (define effect_2613 (finish_2902 struct:choice-evt))
 (define choice-evt11.1
   (|#%name|
@@ -2629,7 +2629,7 @@
    #f
    'delayed-poll))
 (define struct:delayed-poll
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'delayed-poll
    #f
    (|#%nongenerative-uid| delayed-poll)
@@ -2660,7 +2660,7 @@
    #f
    'poller-evt))
 (define struct:poller-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'poller-evt
    #f
    (|#%nongenerative-uid| poller-evt)
@@ -2715,7 +2715,7 @@
    #f
    'waiter-methods))
 (define struct:waiter-methods
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'waiter-methods
    #f
    (|#%nongenerative-uid| waiter-methods)
@@ -2767,7 +2767,7 @@
    #f
    'select-waiter))
 (define struct:select-waiter
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'select-waiter
    #f
    (|#%nongenerative-uid| select-waiter)
@@ -2821,7 +2821,7 @@
    #f
    'custodian))
 (define struct:custodian
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'custodian
    #f
    (|#%nongenerative-uid| custodian)
@@ -2954,7 +2954,7 @@
    #f
    'message-ized))
 (define struct:message-ized
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'message-ized
    #f
    (|#%nongenerative-uid| message-ized)
@@ -3820,7 +3820,7 @@
    #f
    'place))
 (define struct:place
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'place
    #f
    (|#%nongenerative-uid| place)
@@ -3991,7 +3991,7 @@
    #f
    'semaphore))
 (define struct:semaphore
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'semaphore
    struct:queue
    (|#%nongenerative-uid| semaphore)
@@ -4030,7 +4030,7 @@
    #f
    'semaphore-peek-evt))
 (define struct:semaphore-peek-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'semaphore-peek-evt
    #f
    (|#%nongenerative-uid| semaphore-peek-evt)
@@ -4086,7 +4086,7 @@
    #f
    'semaphore-peek-select-waiter))
 (define struct:semaphore-peek-select-waiter
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'semaphore-peek-select-waiter
    struct:select-waiter
    (|#%nongenerative-uid| semaphore-peek-select-waiter)
@@ -4335,7 +4335,7 @@
    #f
    'node))
 (define struct:node
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'node
    #f
    (|#%nongenerative-uid| node)
@@ -4371,7 +4371,7 @@
    #f
    'thread-group))
 (define struct:thread-group
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'thread-group
    struct:node
    (|#%nongenerative-uid| thread-group)
@@ -4543,7 +4543,7 @@
    #f
    'schedule-info))
 (define struct:schedule-info
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'schedule-info
    #f
    (|#%nongenerative-uid| schedule-info)
@@ -4674,7 +4674,7 @@
    #f
    'plumber))
 (define struct:plumber
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'plumber
    #f
    (|#%nongenerative-uid| plumber)
@@ -4722,7 +4722,7 @@
    #f
    'plumber-flush-handle))
 (define struct:plumber-flush-handle
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'plumber-flush-handle
    #f
    (|#%nongenerative-uid| plumber-flush-handle)
@@ -4956,7 +4956,7 @@
    #f
    'custodian-box))
 (define struct:custodian-box
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'custodian-box
    #f
    (|#%nongenerative-uid| custodian-box)
@@ -5037,7 +5037,7 @@
    #f
    'willed-callback))
 (define struct:willed-callback
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'willed-callback
    #f
    (|#%nongenerative-uid| willed-callback)
@@ -5072,7 +5072,7 @@
    #f
    'at-exit-callback))
 (define struct:at-exit-callback
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'at-exit-callback
    struct:willed-callback
    (|#%nongenerative-uid| at-exit-callback)
@@ -5101,7 +5101,7 @@
    #f
    'late-callback))
 (define struct:late-callback
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'late-callback
    #f
    (|#%nongenerative-uid| late-callback)
@@ -5132,7 +5132,7 @@
    #f
    'custodian-reference))
 (define struct:custodian-reference
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'custodian-reference
    #f
    (|#%nongenerative-uid| custodian-reference)
@@ -6521,7 +6521,7 @@
    #f
    'thread))
 (define struct:thread
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'thread
    struct:node
    (|#%nongenerative-uid| thread)
@@ -7015,7 +7015,7 @@
    #f
    'dead-evt))
 (define struct:dead-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'thread-dead-evt
    #f
    (|#%nongenerative-uid| thread-dead-evt)
@@ -7351,7 +7351,7 @@
    #f
    'transitive-resume))
 (define struct:transitive-resume
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'transitive-resume
    #f
    (|#%nongenerative-uid| transitive-resume)
@@ -7488,7 +7488,7 @@
    #f
    'suspend-resume-evt))
 (define struct:suspend-resume-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'suspend-resume-evt
    #f
    (|#%nongenerative-uid| suspend-resume-evt)
@@ -7580,7 +7580,7 @@
    #f
    'suspend-evt))
 (define struct:suspend-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'thread-suspend-evt
    struct:suspend-resume-evt
    (|#%nongenerative-uid| thread-suspend-evt)
@@ -7617,7 +7617,7 @@
    #f
    'resume-evt))
 (define struct:resume-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'thread-resume-evt
    struct:suspend-resume-evt
    (|#%nongenerative-uid| thread-resume-evt)
@@ -8118,7 +8118,7 @@
    #f
    'thread-receiver-evt))
 (define struct:thread-receiver-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'thread-receive-evt
    #f
    (|#%nongenerative-uid| thread-receive-evt)
@@ -8190,7 +8190,7 @@
    #f
    'channel))
 (define struct:channel
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'channel
    #f
    (|#%nongenerative-uid| channel)
@@ -8266,7 +8266,7 @@
    #f
    'channel-put-evt*))
 (define struct:channel-put-evt*
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'channel-put-evt
    #f
    (|#%nongenerative-uid| channel-put-evt)
@@ -8335,7 +8335,7 @@
    #f
    'channel-select-waiter))
 (define struct:channel-select-waiter
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'channel-select-waiter
    struct:select-waiter
    (|#%nongenerative-uid| channel-select-waiter)
@@ -8868,7 +8868,7 @@
    #f
    'syncing))
 (define struct:syncing
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syncing
    #f
    (|#%nongenerative-uid| syncing)
@@ -9054,7 +9054,7 @@
    #f
    'syncer))
 (define struct:syncer
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syncer
    #f
    (|#%nongenerative-uid| syncer)
@@ -10543,7 +10543,7 @@
    #f
    'replacing-evt))
 (define struct:replacing-evt
-  (make-record-type-descriptor* 'evt #f (|#%nongenerative-uid| evt) #f #f 1 0))
+  (make-struct-type-descriptor 'evt #f (|#%nongenerative-uid| evt) #f #f 1 0))
 (define effect_2704 (finish_2891 struct:replacing-evt))
 (define replacing-evt34.1
   (|#%name|
@@ -10593,7 +10593,7 @@
    #f
    'nested-sync-evt))
 (define struct:nested-sync-evt
-  (make-record-type-descriptor* 'evt #f (|#%nongenerative-uid| evt) #f #f 3 0))
+  (make-struct-type-descriptor 'evt #f (|#%nongenerative-uid| evt) #f #f 3 0))
 (define effect_2461 (finish_2391 struct:nested-sync-evt))
 (define nested-sync-evt35.1
   (|#%name|
@@ -10804,7 +10804,7 @@
    #f
    'system-idle-evt))
 (define struct:system-idle-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'system-idle-evt
    #f
    (|#%nongenerative-uid| system-idle-evt)
@@ -10865,7 +10865,7 @@
    #f
    'future*))
 (define struct:future*
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'future
    #f
    (|#%nongenerative-uid| future)
@@ -10968,7 +10968,7 @@
    #f
    'future-event))
 (define struct:future-event
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'future-event
    #f
    (structure-type-lookup-prefab-uid 'future-event #f 6 0 #f '(0 1 2 3 4 5))
@@ -11268,7 +11268,7 @@
    #f
    'future-evt))
 (define struct:future-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'future-evt
    #f
    (|#%nongenerative-uid| future-evt)
@@ -11701,7 +11701,7 @@
    #f
    'scheduler))
 (define struct:scheduler
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'scheduler
    #f
    (|#%nongenerative-uid| scheduler)
@@ -11747,7 +11747,7 @@
    #f
    'worker))
 (define struct:worker
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'worker
    #f
    (|#%nongenerative-uid| worker)
@@ -12630,7 +12630,7 @@
    #f
    'alarm-evt))
 (define struct:alarm-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'alarm-evt
    #f
    (|#%nongenerative-uid| alarm-evt)
@@ -13201,7 +13201,7 @@
    #f
    'will-executor))
 (define struct:will-executor
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'will-executor
    #f
    (|#%nongenerative-uid| will-executor)
@@ -13539,7 +13539,7 @@
    #f
    'place-event))
 (define struct:place-event
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'place-event
    #f
    (structure-type-lookup-prefab-uid 'place-event #f 4 0 #f '(0 1 2 3))
@@ -14239,7 +14239,7 @@
    #f
    'place-done-evt))
 (define struct:place-done-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'place-dead-evt
    #f
    (|#%nongenerative-uid| place-dead-evt)
@@ -14320,7 +14320,7 @@
    #f
    'message-queue))
 (define struct:message-queue
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'message-queue
    #f
    (|#%nongenerative-uid| message-queue)
@@ -14494,7 +14494,7 @@
    #f
    'pchannel))
 (define struct:pchannel
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'place-channel
    #f
    (|#%nongenerative-uid| place-channel)
@@ -14760,7 +14760,7 @@
    #f
    'fsemaphore))
 (define struct:fsemaphore
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fsemaphore
    #f
    (|#%nongenerative-uid| fsemaphore)
@@ -14809,7 +14809,7 @@
    #f
    'fsemaphore-box-evt))
 (define struct:fsemaphore-box-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fsemaphore-box-evt
    #f
    (|#%nongenerative-uid| fsemaphore-box-evt)
@@ -15008,7 +15008,7 @@
    #f
    'os-semaphore))
 (define struct:os-semaphore
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'os-semaphore
    #f
    (|#%nongenerative-uid| os-semaphore)

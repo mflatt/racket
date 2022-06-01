@@ -616,7 +616,7 @@
                  (unless (eq? (rtd-parent rtd) parent) (squawk "different parent"))
                  (unless (same-fields? (rtd-flds rtd) (if (pair? flds) (cdr flds) (fx- flds 1))) (squawk "different fields"))
                  (unless (= (rtd-mpm rtd) mpm) (squawk "different mutability"))
-                 (unless (fx= (rtd-flags rtd) flags) (squawk "different flags"))
+                 (unless (fx= (fxand (rtd-flags rtd) (fxnot (constant rtd-fasl-as-ref))) flags) (squawk "different flags"))
                  (unless (eq? (rtd-size rtd) size) (squawk "different size")))
                rtd)]
             [else
@@ -936,6 +936,20 @@
       (unless (record-type-descriptor? rtd)
         ($oops who "~s is not a record type descriptor" rtd))
       (#3%$record-type-act-sealed? rtd)))
+
+  (set-who! $record-type-fasl-as-ref!
+    (lambda (rtd)
+      (unless (record-type-descriptor? rtd)
+        ($oops who "~s is not a record type descriptor" rtd))
+      (unless ($record-type-fasl-as-ref? rtd)
+        ($object-set! 'scheme-object rtd (constant record-type-flags-disp)
+                      (fxior (rtd-flags rtd) (constant rtd-fasl-as-ref))))))
+
+  (set-who! $record-type-fasl-as-ref?
+    (lambda (rtd)
+      (unless (record-type-descriptor? rtd)
+        ($oops who "~s is not a record type descriptor" rtd))
+      (#3%$record-type-fasl-as-ref? rtd)))
 
   (set! record-type-generative?
     (lambda (rtd)

@@ -10,9 +10,9 @@
 ;; A cpointer record's `memory` is either a raw foreign address (i.e., a
 ;; number), bytevector, or flvector. A reference bytevector is used for
 ;; non-atomic memory.
-(define-record-type (cpointer make-cpointer authentic-cpointer?)
+(define-struct-type (cpointer make-cpointer authentic-cpointer?)
   (fields memory (mutable tags)))
-(define-record-type cpointer+offset
+(define-struct-type cpointer+offset
   (parent cpointer)
   (fields (mutable offset)))
 
@@ -749,7 +749,7 @@
   (check who ffi-lib? lib)
   (ffi-unload-lib (ffi-lib-handle lib))) 
 
-(define-record-type (cpointer/ffi-obj make-ffi-obj ffi-obj?)
+(define-struct-type (cpointer/ffi-obj make-ffi-obj ffi-obj?)
   (parent cpointer)
   (fields lib name))
 
@@ -1331,7 +1331,7 @@
   (when (authentic-cpointer? p)
     (unlock-object (cpointer-memory p))))
 
-(define-record-type (cpointer/cell make-cpointer/cell cpointer/cell?)
+(define-struct-type (cpointer/cell make-cpointer/cell cpointer/cell?)
   (parent cpointer)
   (fields))
 
@@ -2036,7 +2036,7 @@
 ;; ----------------------------------------
 
 (define (set-cpointer-hash!)
-  (struct-set-equal+hash! (record-type-descriptor cpointer)
+  (struct-set-equal+hash! (struct-type-descriptor cpointer)
                           (lambda (a b eql?)
                             (ptr-equal? a b))
                           (lambda (a hc)
@@ -2044,5 +2044,9 @@
                                 (hc (+ (cpointer-memory a)
                                        (ptr-offset* a)))
                                 (eq-hash-code (cpointer-memory a)))))
-  (inherit-equal+hash! (record-type-descriptor cpointer+offset)
-                       (record-type-descriptor cpointer)))
+  (inherit-equal+hash! (struct-type-descriptor cpointer+offset)
+                       (struct-type-descriptor cpointer))
+  (inherit-equal+hash! (struct-type-descriptor cpointer/ffi-obj)
+                       (struct-type-descriptor cpointer))
+  (inherit-equal+hash! (struct-type-descriptor cpointer/cell)
+                       (struct-type-descriptor cpointer)))

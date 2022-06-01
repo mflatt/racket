@@ -193,9 +193,9 @@
   (do-equal? a b 'equal-always? eql?))
 
 (define (struct-common-equal+hash a b)
-  (let ([av (struct-property-ref prop:equal+hash (#%$record-type-descriptor a) #f)])
+  (let ([av (struct-prop-equal+hash (#%$record-type-descriptor a))])
     (and av
-         (let ([bv (struct-property-ref prop:equal+hash (#%$record-type-descriptor b) #f)])
+         (let ([bv (struct-prop-equal+hash (#%$record-type-descriptor b))])
            (and (eq? av bv)
                 av)))))
 

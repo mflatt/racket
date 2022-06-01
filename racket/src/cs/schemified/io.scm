@@ -2589,7 +2589,7 @@
    #f
    'sandman))
 (define struct:sandman
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'sandman
    #f
    (structure-type-lookup-prefab-uid
@@ -3565,7 +3565,7 @@
    #f
    'exts))
 (define struct:exts
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'exts
    #f
    (|#%nongenerative-uid| exts)
@@ -3852,7 +3852,7 @@
    #f
    'create-core-port))
 (define struct:core-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-port
    #f
    (|#%nongenerative-uid| core-port)
@@ -3904,7 +3904,7 @@
    #f
    'core-port-methods))
 (define struct:core-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-port-methods
    #f
    (|#%nongenerative-uid| core-port-methods)
@@ -4035,7 +4035,7 @@
    #f
    'direct))
 (define struct:direct
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'direct
    #f
    (|#%nongenerative-uid| direct)
@@ -4072,7 +4072,7 @@
    #f
    'location))
 (define struct:location
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'location
    #f
    (|#%nongenerative-uid| location)
@@ -4209,7 +4209,7 @@
    #f
    'create-core-input-port))
 (define struct:core-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-input-port
    struct:core-port
    (|#%nongenerative-uid| core-input-port)
@@ -4254,7 +4254,7 @@
    #f
    'core-input-port-methods))
 (define struct:core-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-input-port-methods
    struct:core-port-methods.1
    (|#%nongenerative-uid| core-input-port-methods)
@@ -4509,7 +4509,7 @@
    #f
    'create-core-output-port))
 (define struct:core-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-output-port
    struct:core-port
    (|#%nongenerative-uid| core-output-port)
@@ -4568,7 +4568,7 @@
    #f
    'core-output-port-methods))
 (define struct:core-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'core-output-port-methods
    struct:core-port-methods.1
    (|#%nongenerative-uid| core-output-port-methods)
@@ -4741,7 +4741,7 @@
    #f
    'write-evt))
 (define struct:write-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'write-evt
    #f
    (|#%nongenerative-uid| write-evt)
@@ -4801,7 +4801,7 @@
    #f
    'utf-8-state))
 (define struct:utf-8-state
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'utf-8-state
    #f
    (|#%nongenerative-uid| utf-8-state)
@@ -6703,7 +6703,7 @@
    #f
    'commit-manager))
 (define struct:commit-manager
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'commit-manager
    #f
    (|#%nongenerative-uid| commit-manager)
@@ -6791,7 +6791,7 @@
    #f
    'commit-request))
 (define struct:commit-request
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'commit-request
    #f
    (|#%nongenerative-uid| commit-request)
@@ -6911,7 +6911,7 @@
    #f
    'commit-response))
 (define struct:commit-response
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'commit-response
    #f
    (|#%nongenerative-uid| commit-response)
@@ -7227,7 +7227,7 @@
    #f
    'create-commit-input-port))
 (define struct:commit-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'commit-input-port
    struct:core-input-port
    (|#%nongenerative-uid| commit-input-port)
@@ -7272,7 +7272,7 @@
    #f
    'commit-input-port-methods))
 (define struct:commit-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'commit-input-port-methods
    struct:core-input-port-methods.1
    (|#%nongenerative-uid| commit-input-port-methods)
@@ -7447,7 +7447,7 @@
    #f
    'create-pipe-data))
 (define struct:pipe-data
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-data
    #f
    (|#%nongenerative-uid| pipe-data)
@@ -7549,7 +7549,7 @@
    #f
    'pipe-data-methods))
 (define struct:pipe-data-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-data-methods
    #f
    (|#%nongenerative-uid| pipe-data-methods)
@@ -7683,7 +7683,7 @@
    #f
    'create-pipe-input-port))
 (define struct:pipe-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-input-port
    struct:commit-input-port
    (|#%nongenerative-uid| pipe-input-port)
@@ -7716,7 +7716,7 @@
    #f
    'pipe-input-port-methods))
 (define struct:pipe-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-input-port-methods
    struct:commit-input-port-methods.1
    (|#%nongenerative-uid| pipe-input-port-methods)
@@ -8079,7 +8079,7 @@
    #f
    'create-pipe-output-port))
 (define struct:pipe-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-output-port
    struct:core-output-port
    (|#%nongenerative-uid| pipe-output-port)
@@ -8114,7 +8114,7 @@
    #f
    'pipe-output-port-methods))
 (define struct:pipe-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-output-port-methods
    struct:core-output-port-methods.1
    (|#%nongenerative-uid| pipe-output-port-methods)
@@ -8737,7 +8737,7 @@
    #f
    'pipe-write-poller))
 (define struct:pipe-write-poller
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-write-poller
    #f
    (|#%nongenerative-uid| pipe-write-poller)
@@ -8821,7 +8821,7 @@
    #f
    'pipe-read-poller))
 (define struct:pipe-read-poller
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'pipe-read-poller
    #f
    (|#%nongenerative-uid| pipe-read-poller)
@@ -8875,7 +8875,7 @@
    #f
    'create-peek-via-read-input-port))
 (define struct:peek-via-read-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'peek-via-read-input-port
    struct:commit-input-port
    (|#%nongenerative-uid| peek-via-read-input-port)
@@ -8949,7 +8949,7 @@
    #f
    'peek-via-read-input-port-methods))
 (define struct:peek-via-read-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'peek-via-read-input-port-methods
    struct:commit-input-port-methods.1
    (|#%nongenerative-uid| peek-via-read-input-port-methods)
@@ -9730,7 +9730,7 @@
    #f
    'create-fd-input-port))
 (define struct:fd-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fd-input-port
    struct:peek-via-read-input-port
    (|#%nongenerative-uid| fd-input-port)
@@ -9787,7 +9787,7 @@
    #f
    'fd-input-port-methods))
 (define struct:fd-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fd-input-port-methods
    struct:peek-via-read-input-port-methods.1
    (|#%nongenerative-uid| fd-input-port-methods)
@@ -10150,7 +10150,7 @@
    #f
    'create-fd-output-port))
 (define struct:fd-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fd-output-port
    struct:core-output-port
    (|#%nongenerative-uid| fd-output-port)
@@ -10233,7 +10233,7 @@
    #f
    'fd-output-port-methods))
 (define struct:fd-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fd-output-port-methods
    struct:core-output-port-methods.1
    (|#%nongenerative-uid| fd-output-port-methods)
@@ -10893,7 +10893,7 @@
    #f
    'fd-evt))
 (define struct:fd-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'fd-evt
    #f
    (|#%nongenerative-uid| fd-evt)
@@ -10997,7 +10997,7 @@
    #f
    'rktio-fd-flushed-evt))
 (define struct:rktio-fd-flushed-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rktio-fd-flushed-evt
    #f
    (|#%nongenerative-uid| rktio-fd-flushed-evt)
@@ -11776,7 +11776,7 @@
    #f
    'progress-evt))
 (define struct:progress-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'progress-evt
    #f
    (|#%nongenerative-uid| progress-evt)
@@ -15132,7 +15132,7 @@
    #f
    'utf-8-converter))
 (define struct:utf-8-converter
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'utf-8-converter
    #f
    (|#%nongenerative-uid| utf-8-converter)
@@ -16076,7 +16076,7 @@
    #f
    'bytes-converter))
 (define struct:bytes-converter
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bytes-converter
    #f
    (|#%nongenerative-uid| bytes-converter)
@@ -16949,7 +16949,7 @@
    #f
    'cache))
 (define struct:cache
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'cache
    #f
    (|#%nongenerative-uid| cache)
@@ -17351,7 +17351,7 @@
    #f
    'path))
 (define struct:path
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'path
    #f
    (|#%nongenerative-uid| path)
@@ -18626,7 +18626,7 @@
    #f
    'create-bytes-input-port))
 (define struct:bytes-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bytes-input-port
    struct:commit-input-port
    (|#%nongenerative-uid| bytes-input-port)
@@ -18675,7 +18675,7 @@
    #f
    'bytes-input-port-methods))
 (define struct:bytes-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bytes-input-port-methods
    struct:commit-input-port-methods.1
    (|#%nongenerative-uid| bytes-input-port-methods)
@@ -18908,7 +18908,7 @@
    #f
    'create-bytes-output-port))
 (define struct:bytes-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bytes-output-port
    struct:core-output-port
    (|#%nongenerative-uid| bytes-output-port)
@@ -18961,7 +18961,7 @@
    #f
    'bytes-output-port-methods))
 (define struct:bytes-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'bytes-output-port-methods
    struct:core-output-port-methods.1
    (|#%nongenerative-uid| bytes-output-port-methods)
@@ -19412,7 +19412,7 @@
    #f
    'create-max-output-port))
 (define struct:max-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'max-output-port
    struct:core-output-port
    (|#%nongenerative-uid| max-output-port)
@@ -19453,7 +19453,7 @@
    #f
    'max-output-port-methods))
 (define struct:max-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'max-output-port-methods
    struct:core-output-port-methods.1
    (|#%nongenerative-uid| max-output-port-methods)
@@ -20375,7 +20375,7 @@
    #f
    'create-nowhere-output-port))
 (define struct:nowhere-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'nowhere-output-port
    struct:core-output-port
    (|#%nongenerative-uid| nowhere-output-port)
@@ -20406,7 +20406,7 @@
    #f
    'nowhere-output-port-methods))
 (define struct:nowhere-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'nowhere-output-port-methods
    struct:core-output-port-methods.1
    (|#%nongenerative-uid| nowhere-output-port-methods)
@@ -20672,7 +20672,7 @@
    #f
    'as-constructor))
 (define struct:as-constructor
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'as-constructor
    #f
    (|#%nongenerative-uid| as-constructor)
@@ -23846,7 +23846,7 @@
    #f
    'starting-point))
 (define struct:starting-point
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'starting-point
    #f
    (|#%nongenerative-uid| starting-point)
@@ -25841,7 +25841,7 @@
    #f
    'security-guard))
 (define struct:security-guard
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'security-guard
    #f
    (|#%nongenerative-uid| security-guard)
@@ -30629,7 +30629,7 @@
    #f
    'environment-variables))
 (define struct:environment-variables
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'environment-variables
    #f
    (|#%nongenerative-uid| environment-variables)
@@ -32414,7 +32414,7 @@
    #f
    'logger))
 (define struct:logger
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'logger
    #f
    (|#%nongenerative-uid| logger)
@@ -32859,7 +32859,7 @@
    #f
    'queue))
 (define struct:queue
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'queue
    #f
    (|#%nongenerative-uid| queue)
@@ -32893,7 +32893,7 @@
    #f
    'node))
 (define struct:node
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'node
    #f
    (|#%nongenerative-uid| node)
@@ -32957,7 +32957,7 @@
    #f
    'log-receiver))
 (define struct:log-receiver
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'log-receiver
    #f
    (|#%nongenerative-uid| log-receiver)
@@ -33068,7 +33068,7 @@
    #f
    'queue-log-receiver))
 (define struct:queue-log-receiver
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'log-receiver
    struct:log-receiver
    (|#%nongenerative-uid| log-receiver)
@@ -33227,7 +33227,7 @@
    #f
    'stdio-log-receiver))
 (define struct:stdio-log-receiver
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'stdio-log-receiver
    struct:log-receiver
    (|#%nongenerative-uid| stdio-log-receiver)
@@ -33361,7 +33361,7 @@
    #f
    'syslog-log-receiver))
 (define struct:syslog-log-receiver
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'syslog-log-receiver
    struct:log-receiver
    (|#%nongenerative-uid| syslog-log-receiver)
@@ -34327,7 +34327,7 @@
    #f
    'fs-change-evt))
 (define struct:fs-change-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'filesystem-change-evt
    #f
    (|#%nongenerative-uid| filesystem-change-evt)
@@ -34830,7 +34830,7 @@
    #f
    'make-subprocess))
 (define struct:subprocess
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'subprocess
    #f
    (|#%nongenerative-uid| subprocess)
@@ -35780,7 +35780,7 @@
    #f
    'create-tcp-input-port))
 (define struct:tcp-input-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'tcp-input-port
    struct:fd-input-port
    (|#%nongenerative-uid| tcp-input-port)
@@ -35815,7 +35815,7 @@
    #f
    'tcp-input-port-methods))
 (define struct:tcp-input-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'tcp-input-port-methods
    struct:fd-input-port-methods.1
    (|#%nongenerative-uid| tcp-input-port-methods)
@@ -35962,7 +35962,7 @@
    #f
    'create-tcp-output-port))
 (define struct:tcp-output-port
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'tcp-output-port
    struct:fd-output-port
    (|#%nongenerative-uid| tcp-output-port)
@@ -35999,7 +35999,7 @@
    #f
    'tcp-output-port-methods))
 (define struct:tcp-output-port-methods.1
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'tcp-output-port-methods
    struct:fd-output-port-methods.1
    (|#%nongenerative-uid| tcp-output-port-methods)
@@ -36170,7 +36170,7 @@
    #f
    'rktio-evt))
 (define struct:rktio-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'rktio-evt
    #f
    (|#%nongenerative-uid| rktio-evt)
@@ -36347,7 +36347,7 @@
    #f
    'connect-progress))
 (define struct:connect-progress
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'connect-progress
    #f
    (|#%nongenerative-uid| connect-progress)
@@ -36723,7 +36723,7 @@
    #f
    'tcp-listener))
 (define struct:tcp-listener
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'tcp-listener
    #f
    (|#%nongenerative-uid| tcp-listener)
@@ -37169,7 +37169,7 @@
    #f
    'accept-evt))
 (define struct:accept-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'tcp-accept-evt
    #f
    (|#%nongenerative-uid| tcp-accept-evt)
@@ -37272,7 +37272,7 @@
    #f
    'udp))
 (define struct:udp
-  (make-record-type-descriptor* 'udp #f (|#%nongenerative-uid| udp) #f #f 3 7))
+  (make-struct-type-descriptor 'udp #f (|#%nongenerative-uid| udp) #f #f 3 7))
 (define effect_2743 (finish_2217 struct:udp))
 (define udp1.1
   (|#%name|
@@ -38454,7 +38454,7 @@
    #f
    'udp-sending-evt))
 (define struct:udp-sending-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'udp-send-evt
    #f
    (|#%nongenerative-uid| udp-send-evt)
@@ -38487,7 +38487,7 @@
    #f
    'udp-sending-ready-evt))
 (define struct:udp-sending-ready-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'udp-send-ready-evt
    struct:rktio-evt
    (|#%nongenerative-uid| udp-send-ready-evt)
@@ -38849,7 +38849,7 @@
    #f
    'udp-receiving-evt))
 (define struct:udp-receiving-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'udp-receive-evt
    #f
    (|#%nongenerative-uid| udp-receive-evt)
@@ -38882,7 +38882,7 @@
    #f
    'udp-receiving-ready-evt))
 (define struct:udp-receiving-ready-evt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'udp-receive-ready-evt
    struct:rktio-evt
    (|#%nongenerative-uid| udp-receive-ready-evt)

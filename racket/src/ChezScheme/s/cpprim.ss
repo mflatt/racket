@@ -7722,6 +7722,8 @@
         [(e) (go e (constant rtd-sealed))])
       (define-inline 3 $record-type-act-sealed?
         [(e) (go e (fxior (constant rtd-sealed) (constant rtd-act-sealed)))])
+      (define-inline 3 $record-type-fasl-as-ref?
+        [(e) (go e (constant rtd-fasl-as-ref))])
       (define-inline 3 record-type-generative?
         [(e) (go e (constant rtd-generative))]))
     (let ()

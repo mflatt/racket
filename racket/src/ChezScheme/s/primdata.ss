@@ -2343,6 +2343,8 @@
   ($record-type-act-sealed! [sig [(ptr) -> (void)]] [flags single-valued true])
   ($record-type-act-sealed? [sig [(ptr) -> (boolean)]] [flags single-valued])
   ($record-type-descriptor [flags single-valued pure mifoldable discard true])
+  ($record-type-fasl-as-ref! [sig [(ptr) -> (void)]] [flags single-valued true])
+  ($record-type-fasl-as-ref? [sig [(ptr) -> (boolean)]] [flags single-valued])
   ($record-type-field-offsets [flags single-valued pure mifoldable discard true])
   ($record-type-field-count [sig [(ptr) -> (fixnum)]] [flags single-valued pure mifoldable discard true])
   ($record-type-field-indices [sig [(rtd) -> (list)]] [flags pure mifoldable discard true])

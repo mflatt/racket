@@ -6,8 +6,12 @@
 
 ;; ----------------------------------------
 
-(define-record box-chaperone chaperone (ref set))
-(define-record box-impersonator impersonator (ref set))
+(define-struct-type box-chaperone
+  (parent chaperone)
+  (fields ref set))
+(define-struct-type box-impersonator
+  (parent impersonator)
+  (fields ref set))
 
 (define (box? v)
   (or (#%box? v)
@@ -140,14 +144,18 @@
            [else (loop next val)]))]))]))
 
 (define (set-box-impersonator-hash!)
-  (struct-set-equal+hash! (record-type-descriptor box-chaperone)
-                          #f
-                          (lambda (i hash-code)
-                            (hash-code (box (unbox i)))))
-  (struct-set-equal+hash! (record-type-descriptor box-impersonator)
-                          #f
-                          (lambda (i hash-code)
-                            (hash-code (box (unbox i))))))
+  (struct-set-equal-mode+hash! (struct-type-descriptor box-chaperone)
+                               #f
+                               (lambda (i hash-code mode)
+                                 (if mode
+                                     (hash-code (box (unbox i)))
+                                     (hash-code (impersonator-val i)))))
+  (struct-set-equal-mode+hash! (struct-type-descriptor box-impersonator)
+                               #f
+                               (lambda (i hash-code mode)
+                                 (if mode
+                                     (hash-code (box (unbox i)))
+                                     (hash-code (impersonator-val i))))))
 
 ;; ----------------------------------------
 

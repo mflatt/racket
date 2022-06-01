@@ -159,7 +159,7 @@
    #f
    'known-constant))
 (define struct:known-constant
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-constant
    #f
    (structure-type-lookup-prefab-uid 'known-constant #f 0 0 #f '())
@@ -200,7 +200,7 @@
    #f
    'known-consistent))
 (define struct:known-consistent
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-consistent
    (if (struct-type? struct:known-constant)
      struct:known-constant
@@ -251,7 +251,7 @@
    #f
    'known-authentic))
 (define struct:known-authentic
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-authentic
    (if (struct-type? struct:known-constant)
      struct:known-constant
@@ -302,7 +302,7 @@
    #f
    'known-copy))
 (define struct:known-copy
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-copy
    (if (struct-type? struct:known-constant)
      struct:known-constant
@@ -361,7 +361,7 @@
    #f
    'known-literal))
 (define struct:known-literal
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-literal
    (if (struct-type? struct:known-consistent)
      struct:known-consistent
@@ -427,7 +427,7 @@
    #f
    'known-procedure))
 (define struct:known-procedure
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure
    (if (struct-type? struct:known-consistent)
      struct:known-consistent
@@ -495,7 +495,7 @@
    #f
    'known-procedure/single-valued))
 (define struct:known-procedure/single-valued
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/single-valued
    (if (struct-type? struct:known-procedure)
      struct:known-procedure
@@ -551,7 +551,7 @@
    #f
    'known-procedure/no-prompt))
 (define struct:known-procedure/no-prompt
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/no-prompt
    (if (struct-type? struct:known-procedure/single-valued)
      struct:known-procedure/single-valued
@@ -607,7 +607,7 @@
    #f
    'known-procedure/no-prompt/multi))
 (define struct:known-procedure/no-prompt/multi
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/no-prompt/multi
    (if (struct-type? struct:known-procedure)
      struct:known-procedure
@@ -663,7 +663,7 @@
    #f
    'known-procedure/no-return))
 (define struct:known-procedure/no-return
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/no-return
    (if (struct-type? struct:known-procedure/single-valued)
      struct:known-procedure/single-valued
@@ -719,7 +719,7 @@
    #f
    'known-procedure/can-inline))
 (define struct:known-procedure/can-inline
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/can-inline
    (if (struct-type? struct:known-procedure)
      struct:known-procedure
@@ -792,7 +792,7 @@
    #f
    'known-procedure/can-inline/need-imports))
 (define struct:known-procedure/can-inline/need-imports
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/can-inline/need-imports
    (if (struct-type? struct:known-procedure/can-inline)
      struct:known-procedure/can-inline
@@ -866,7 +866,7 @@
    #f
    'known-procedure/folding))
 (define struct:known-procedure/folding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/folding
    (if (struct-type? struct:known-procedure/no-prompt)
      struct:known-procedure/no-prompt
@@ -922,7 +922,7 @@
    #f
    'known-procedure/folding/limited))
 (define struct:known-procedure/folding/limited
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/folding/limited
    (if (struct-type? struct:known-procedure/folding)
      struct:known-procedure/folding
@@ -995,7 +995,7 @@
    #f
    'known-procedure/succeeds))
 (define struct:known-procedure/succeeds
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/succeeds
    (if (struct-type? struct:known-procedure/no-prompt)
      struct:known-procedure/no-prompt
@@ -1051,7 +1051,7 @@
    #f
    'known-procedure/then-pure))
 (define struct:known-procedure/then-pure
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/then-pure
    (if (struct-type? struct:known-procedure/succeeds)
      struct:known-procedure/succeeds
@@ -1107,7 +1107,7 @@
    #f
    'known-procedure/then-pure/folding-unsafe))
 (define struct:known-procedure/then-pure/folding-unsafe
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/then-pure/folding-unsafe
    (if (struct-type? struct:known-procedure/then-pure)
      struct:known-procedure/then-pure
@@ -1181,7 +1181,7 @@
    #f
    'known-procedure/allocates))
 (define struct:known-procedure/allocates
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/allocates
    (if (struct-type? struct:known-procedure/succeeds)
      struct:known-procedure/succeeds
@@ -1237,7 +1237,7 @@
    #f
    'known-procedure/pure))
 (define struct:known-procedure/pure
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/pure
    (if (struct-type? struct:known-procedure/allocates)
      struct:known-procedure/allocates
@@ -1290,7 +1290,7 @@
    #f
    'known-procedure/pure/folding))
 (define struct:known-procedure/pure/folding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/pure/folding
    (if (struct-type? struct:known-procedure/pure)
      struct:known-procedure/pure
@@ -1346,7 +1346,7 @@
    #f
    'known-procedure/has-unsafe))
 (define struct:known-procedure/has-unsafe
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/has-unsafe
    (if (struct-type? struct:known-procedure/no-prompt)
      struct:known-procedure/no-prompt
@@ -1419,7 +1419,7 @@
    #f
    'known-procedure/has-unsafe/folding))
 (define struct:known-procedure/has-unsafe/folding
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/has-unsafe/folding
    (if (struct-type? struct:known-procedure/has-unsafe)
      struct:known-procedure/has-unsafe
@@ -1475,7 +1475,7 @@
    #f
    'known-procedure/has-unsafe/folding/limited))
 (define struct:known-procedure/has-unsafe/folding/limited
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-procedure/has-unsafe/folding/limited
    (if (struct-type? struct:known-procedure/has-unsafe/folding)
      struct:known-procedure/has-unsafe/folding
@@ -1550,7 +1550,7 @@
    #f
    'known-struct-type))
 (define struct:known-struct-type
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-type
    (if (struct-type? struct:known-consistent)
      struct:known-consistent
@@ -1669,7 +1669,7 @@
    #f
    'known-constructor))
 (define struct:known-constructor
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-constructor
    (if (struct-type? struct:known-procedure/allocates)
      struct:known-procedure/allocates
@@ -1737,7 +1737,7 @@
    #f
    'known-predicate))
 (define struct:known-predicate
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-predicate
    (if (struct-type? struct:known-procedure/pure)
      struct:known-procedure/pure
@@ -1803,7 +1803,7 @@
    #f
    'known-accessor))
 (define struct:known-accessor
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-accessor
    (if (struct-type? struct:known-procedure/single-valued)
      struct:known-procedure/single-valued
@@ -1869,7 +1869,7 @@
    #f
    'known-mutator))
 (define struct:known-mutator
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-mutator
    (if (struct-type? struct:known-procedure/single-valued)
      struct:known-procedure/single-valued
@@ -1935,7 +1935,7 @@
    #f
    'known-struct-constructor))
 (define struct:known-struct-constructor
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-constructor
    (if (struct-type? struct:known-constructor)
      struct:known-constructor
@@ -2008,7 +2008,7 @@
    #f
    'known-struct-predicate))
 (define struct:known-struct-predicate
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-predicate
    (if (struct-type? struct:known-predicate)
      struct:known-predicate
@@ -2112,7 +2112,7 @@
    #f
    'known-field-accessor))
 (define struct:known-field-accessor
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-field-accessor
    (if (struct-type? struct:known-accessor)
      struct:known-accessor
@@ -2233,7 +2233,7 @@
    #f
    'known-field-mutator))
 (define struct:known-field-mutator
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-field-mutator
    (if (struct-type? struct:known-mutator)
      struct:known-mutator
@@ -2337,7 +2337,7 @@
    #f
    'known-struct-constructor/need-imports))
 (define struct:known-struct-constructor/need-imports
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-constructor/need-imports
    (if (struct-type? struct:known-struct-constructor)
      struct:known-struct-constructor
@@ -2410,7 +2410,7 @@
    #f
    'known-struct-predicate/need-imports))
 (define struct:known-struct-predicate/need-imports
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-predicate/need-imports
    (if (struct-type? struct:known-struct-predicate)
      struct:known-struct-predicate
@@ -2483,7 +2483,7 @@
    #f
    'known-field-accessor/need-imports))
 (define struct:known-field-accessor/need-imports
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-field-accessor/need-imports
    (if (struct-type? struct:known-field-accessor)
      struct:known-field-accessor
@@ -2556,7 +2556,7 @@
    #f
    'known-field-mutator/need-imports))
 (define struct:known-field-mutator/need-imports
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-field-mutator/need-imports
    (if (struct-type? struct:known-field-mutator)
      struct:known-field-mutator
@@ -2627,7 +2627,7 @@
    #f
    'known-struct-type-property/immediate-guard))
 (define struct:known-struct-type-property/immediate-guard
-  (make-record-type-descriptor*
+  (make-struct-type-descriptor
    'known-struct-type-property/immediate-guard
    #f
    (structure-type-lookup-prefab-uid

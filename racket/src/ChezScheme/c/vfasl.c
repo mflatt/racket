@@ -58,7 +58,7 @@ typedef uptr vfoff;
    spaces: */
 static ISPC vspace_spaces[] = {
   space_symbol,
-  space_pure, /* rtd */
+  space_impure, /* rtd */
   space_pure, /* closure */
   space_impure,
   space_pure_typed_object,

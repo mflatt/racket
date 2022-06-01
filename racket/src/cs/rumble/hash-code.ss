@@ -113,7 +113,7 @@
       (char? x)
       (symbol? x)
       (and (#%$record? x)
-           (not (struct-property-ref prop:equal+hash (#%$record-type-descriptor x) #f)))))
+           (not (struct-prop-equal+hash (#%$record-type-descriptor x))))))
 
 (define (equal-secondary-hash-code x)
   (let-values ([(hc burn) (equal-secondary-hash-loop x 0 0 'equal?)])
@@ -189,7 +189,7 @@
        (let ([hc (fx+/wraparound hc (fx+/wraparound hc0 5))])
          (equal-hash-loop (mcdr x) burn (mix-hash-code hc) mode)))]
     [(and (#%$record? x)
-          (let ([eq+hash (struct-property-ref prop:equal+hash (#%$record-type-descriptor x) #f)])
+          (let ([eq+hash (struct-prop-equal+hash (#%$record-type-descriptor x))])
             (and eq+hash
                  (or (eq? mode 'equal?)
                      (not (struct-type-mutable? (#%$record-type-descriptor x)))
@@ -273,7 +273,7 @@
        (let ([hc (fx+/wraparound hc hc0)])
          (equal-secondary-hash-loop (mcdr x) burn (mix-hash-code hc) mode)))]
     [(and (#%$record? x)
-          (let ([eq+hash (struct-property-ref prop:equal+hash (#%$record-type-descriptor x) #f)])
+          (let ([eq+hash (struct-prop-equal+hash (#%$record-type-descriptor x))])
             (and eq+hash
                  (or (eq? mode 'equal?)
                      (not (struct-type-mutable? (#%$record-type-descriptor x)))

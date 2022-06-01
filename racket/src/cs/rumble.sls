@@ -103,6 +103,7 @@
           current-code-inspector
           root-inspector ; not exported to Racket
 
+          make-struct-type-descriptor
           struct:exn exn exn? exn-message exn-continuation-marks
           struct:exn:break exn:break exn:break? exn:break-continuation
           struct:exn:break:hang-up exn:break:hang-up exn:break:hang-up?
