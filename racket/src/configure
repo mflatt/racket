@@ -133,7 +133,7 @@ echo "upsrcdir=$upsrcdir" >> Makefile
 echo "default_vm=${default_vm}" >> Makefile
 echo "use_cs=${use_cs}" >> Makefile
 echo "use_bc=${use_bc}" >> Makefile
-echo "HOSTCC="'$(CC) $(CFLAGS) -O2' >> Makefile
+echo "CC_FOR_BUILD="'$(CC) $(CFLAGS) -O2' >> Makefile
 cat "$dir/Makefile.in" >> Makefile
 
 cp "$dir/buildmain.zuo" main.zuo
