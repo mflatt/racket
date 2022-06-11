@@ -179,6 +179,9 @@
 ;; No need for pixman demos and tests
 (define-runtime-path pixman-notest-patch "patches/pixman-notest.patch")
 
+;; Disable pthread use for pixman on Windows
+(define-runtime-path pixman-nopthread-patch "patches/pixman-nopthread.patch")
+
 ;; Disable libtool's management of standard libs so that
 ;; MinGW's -static-libstdc++ works:
 (define-runtime-path libtool-link-patch "patches/libtool-link.patch")
@@ -291,7 +294,7 @@
         
         [properties]
         c_args = ['-I@|dest|/include']
-        c_link_args = ['-L@|dest|/lib']
+        c_link_args = ['-static-libgcc', '-L@|dest|/lib']
         
         [binaries]
         c = '@|cpu|-w64-mingw32-gcc'
@@ -618,6 +621,9 @@
                                      [(and win? (not m32?)) (list noforceinline-patch)]
                                      [ppc? (list pixman-altivec-patch)]
                                      [else null])
+                                   (cond
+                                     [win? (list pixman-nopthread-patch)]
+                                     [else (list)])
                                    (list pixman-notest-patch)))]
     [("cairo")
      (when mac?
