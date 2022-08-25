@@ -9024,10 +9024,10 @@
      (begin
        (if (table-with-bulk-bindings? bt6_0)
          (let ((new-syms_0
-                (let ((temp28_0 (table-with-bulk-bindings-syms bt6_0)))
+                (let ((temp35_0 (table-with-bulk-bindings-syms bt6_0)))
                   (remove-matching-bindings.1
                    shadow-except4_0
-                   temp28_0
+                   temp35_0
                    scopes7_0
                    bulk8_0))))
            (let ((new-syms/serialize_0
@@ -9035,11 +9035,11 @@
                        (table-with-bulk-bindings-syms bt6_0)
                        (table-with-bulk-bindings-syms/serialize bt6_0))
                     new-syms_0
-                    (let ((temp32_0
+                    (let ((temp39_0
                            (table-with-bulk-bindings-syms/serialize bt6_0)))
                       (remove-matching-bindings.1
                        shadow-except4_0
-                       temp32_0
+                       temp39_0
                        scopes7_0
                        bulk8_0)))))
              (table-with-bulk-bindings1.1
@@ -9048,8 +9048,8 @@
               (cons
                (bulk-binding-at2.1 scopes7_0 bulk8_0)
                (table-with-bulk-bindings-bulk-bindings bt6_0)))))
-         (let ((temp36_0 (table-with-bulk-bindings1.1 bt6_0 bt6_0 null)))
-           (binding-table-add-bulk.1 #f temp36_0 scopes7_0 bulk8_0)))))))
+         (let ((temp43_0 (table-with-bulk-bindings1.1 bt6_0 bt6_0 null)))
+           (binding-table-add-bulk.1 #f temp43_0 scopes7_0 bulk8_0)))))))
 (define remove-matching-bindings.1
   (|#%name|
    remove-matching-bindings
@@ -9159,153 +9159,177 @@
              sym-ht_0
              (hash-iterate-next sym-ht_0 sym-i_0)))))
       '(#f . #f))))
-(define binding-table-symbols
-  (lambda (table_0 scs_0 s_0 extra-shifts_0)
-    (call-with-values
-     (lambda ()
-       (if (hash? table_0)
-         (values table_0 null)
-         (values
-          (table-with-bulk-bindings-syms table_0)
-          (table-with-bulk-bindings-bulk-bindings table_0))))
-     (case-lambda
-      ((ht_0 bulk-bindings_0)
-       (let ((app_0
-              (begin
-                (letrec*
-                 ((for-loop_0
-                   (|#%name|
-                    for-loop
-                    (lambda (table_1 i_0)
-                      (begin
-                        (if i_0
-                          (call-with-values
-                           (lambda () (hash-iterate-key+value ht_0 i_0))
-                           (case-lambda
-                            ((sym_0 at-sym_0)
-                             (let ((table_2
-                                    (if (begin
+(define binding-table-symbols.1
+  (|#%name|
+   binding-table-symbols
+   (lambda (only-interned?23_0 table25_0 scs26_0 s27_0 extra-shifts28_0)
+     (begin
+       (call-with-values
+        (lambda ()
+          (if (hash? table25_0)
+            (values table25_0 null)
+            (values
+             (table-with-bulk-bindings-syms table25_0)
+             (table-with-bulk-bindings-bulk-bindings table25_0))))
+        (case-lambda
+         ((ht_0 bulk-bindings_0)
+          (let ((app_0
+                 (begin
+                   (letrec*
+                    ((for-loop_0
+                      (|#%name|
+                       for-loop
+                       (lambda (table_0 i_0)
+                         (begin
+                           (if i_0
+                             (call-with-values
+                              (lambda () (hash-iterate-key+value ht_0 i_0))
+                              (case-lambda
+                               ((sym_0 at-sym_0)
+                                (let ((table_1
+                                       (if (let ((or-part_0
+                                                  (not only-interned?23_0)))
+                                             (if or-part_0
+                                               or-part_0
+                                               (symbol-interned? sym_0)))
+                                         (if (begin
+                                               (letrec*
+                                                ((for-loop_1
+                                                  (|#%name|
+                                                   for-loop
+                                                   (lambda (result_0 i_1)
+                                                     (begin
+                                                       (if i_1
+                                                         (let ((an-scs_0
+                                                                (hash-iterate-key
+                                                                 at-sym_0
+                                                                 i_1)))
+                                                           (let ((result_1
+                                                                  (let ((result_1
+                                                                         (begin-unsafe
+                                                                          (hash-keys-subset?
+                                                                           an-scs_0
+                                                                           scs26_0))))
+                                                                    (values
+                                                                     result_1))))
+                                                             (if (if (not
+                                                                      (let ((x_0
+                                                                             (list
+                                                                              an-scs_0)))
+                                                                        result_1))
+                                                                   #t
+                                                                   #f)
+                                                               (for-loop_1
+                                                                result_1
+                                                                (hash-iterate-next
+                                                                 at-sym_0
+                                                                 i_1))
+                                                               result_1)))
+                                                         result_0))))))
+                                                (for-loop_1
+                                                 #f
+                                                 (hash-iterate-first
+                                                  at-sym_0))))
+                                           (let ((table_1
+                                                  (call-with-values
+                                                   (lambda ()
+                                                     (values sym_0 #t))
+                                                   (case-lambda
+                                                    ((key_0 val_0)
+                                                     (hash-set
+                                                      table_0
+                                                      key_0
+                                                      val_0))
+                                                    (args
+                                                     (raise-binding-result-arity-error
+                                                      2
+                                                      args))))))
+                                             (values table_1))
+                                           table_0)
+                                         table_0)))
+                                  (for-loop_0
+                                   table_1
+                                   (hash-iterate-next ht_0 i_0))))
+                               (args
+                                (raise-binding-result-arity-error 2 args))))
+                             table_0))))))
+                    (for-loop_0 hash2610 (hash-iterate-first ht_0))))))
+            (set-union
+             app_0
+             (begin
+               (letrec*
+                ((for-loop_0
+                  (|#%name|
+                   for-loop
+                   (lambda (table_0 lst_0)
+                     (begin
+                       (if (pair? lst_0)
+                         (let ((bba_0 (unsafe-car lst_0)))
+                           (let ((rest_0 (unsafe-cdr lst_0)))
+                             (let ((table_1
+                                    (if (let ((s1_0
+                                               (bulk-binding-at-scopes bba_0)))
+                                          (begin-unsafe
+                                           (hash-keys-subset? s1_0 scs26_0)))
+                                      (let ((ht_1
+                                             (bulk-binding-symbols
+                                              (bulk-binding-at-bulk bba_0)
+                                              s27_0
+                                              extra-shifts28_0)))
+                                        (begin
                                           (letrec*
                                            ((for-loop_1
                                              (|#%name|
                                               for-loop
-                                              (lambda (result_0 i_1)
+                                              (lambda (table_1 i_0)
                                                 (begin
-                                                  (if i_1
-                                                    (let ((an-scs_0
+                                                  (if i_0
+                                                    (let ((sym_0
                                                            (hash-iterate-key
-                                                            at-sym_0
-                                                            i_1)))
-                                                      (let ((result_1
-                                                             (let ((result_1
-                                                                    (begin-unsafe
-                                                                     (hash-keys-subset?
-                                                                      an-scs_0
-                                                                      scs_0))))
-                                                               (values
-                                                                result_1))))
-                                                        (if (if (not
-                                                                 (let ((x_0
-                                                                        (list
-                                                                         an-scs_0)))
-                                                                   result_1))
-                                                              #t
-                                                              #f)
-                                                          (for-loop_1
-                                                           result_1
-                                                           (hash-iterate-next
-                                                            at-sym_0
-                                                            i_1))
-                                                          result_1)))
-                                                    result_0))))))
+                                                            ht_1
+                                                            i_0)))
+                                                      (let ((table_2
+                                                             (if (let ((or-part_0
+                                                                        (not
+                                                                         only-interned?23_0)))
+                                                                   (if or-part_0
+                                                                     or-part_0
+                                                                     (symbol-interned?
+                                                                      sym_0)))
+                                                               (let ((table_2
+                                                                      (call-with-values
+                                                                       (lambda ()
+                                                                         (values
+                                                                          sym_0
+                                                                          #t))
+                                                                       (case-lambda
+                                                                        ((key_0
+                                                                          val_0)
+                                                                         (hash-set
+                                                                          table_1
+                                                                          key_0
+                                                                          val_0))
+                                                                        (args
+                                                                         (raise-binding-result-arity-error
+                                                                          2
+                                                                          args))))))
+                                                                 (values
+                                                                  table_2))
+                                                               table_1)))
+                                                        (for-loop_1
+                                                         table_2
+                                                         (hash-iterate-next
+                                                          ht_1
+                                                          i_0))))
+                                                    table_1))))))
                                            (for-loop_1
-                                            #f
-                                            (hash-iterate-first at-sym_0))))
-                                      (let ((table_2
-                                             (call-with-values
-                                              (lambda () (values sym_0 #t))
-                                              (case-lambda
-                                               ((key_0 val_0)
-                                                (hash-set table_1 key_0 val_0))
-                                               (args
-                                                (raise-binding-result-arity-error
-                                                 2
-                                                 args))))))
-                                        (values table_2))
-                                      table_1)))
-                               (for-loop_0
-                                table_2
-                                (hash-iterate-next ht_0 i_0))))
-                            (args (raise-binding-result-arity-error 2 args))))
-                          table_1))))))
-                 (for-loop_0 hash2610 (hash-iterate-first ht_0))))))
-         (set-union
-          app_0
-          (begin
-            (letrec*
-             ((for-loop_0
-               (|#%name|
-                for-loop
-                (lambda (table_1 lst_0)
-                  (begin
-                    (if (pair? lst_0)
-                      (let ((bba_0 (unsafe-car lst_0)))
-                        (let ((rest_0 (unsafe-cdr lst_0)))
-                          (let ((table_2
-                                 (if (let ((s1_0
-                                            (bulk-binding-at-scopes bba_0)))
-                                       (begin-unsafe
-                                        (hash-keys-subset? s1_0 scs_0)))
-                                   (let ((ht_1
-                                          (bulk-binding-symbols
-                                           (bulk-binding-at-bulk bba_0)
-                                           s_0
-                                           extra-shifts_0)))
-                                     (begin
-                                       (letrec*
-                                        ((for-loop_1
-                                          (|#%name|
-                                           for-loop
-                                           (lambda (table_2 i_0)
-                                             (begin
-                                               (if i_0
-                                                 (let ((sym_0
-                                                        (hash-iterate-key
-                                                         ht_1
-                                                         i_0)))
-                                                   (let ((table_3
-                                                          (let ((table_3
-                                                                 (call-with-values
-                                                                  (lambda ()
-                                                                    (values
-                                                                     sym_0
-                                                                     #t))
-                                                                  (case-lambda
-                                                                   ((key_0
-                                                                     val_0)
-                                                                    (hash-set
-                                                                     table_2
-                                                                     key_0
-                                                                     val_0))
-                                                                   (args
-                                                                    (raise-binding-result-arity-error
-                                                                     2
-                                                                     args))))))
-                                                            (values table_3))))
-                                                     (for-loop_1
-                                                      table_3
-                                                      (hash-iterate-next
-                                                       ht_1
-                                                       i_0))))
-                                                 table_2))))))
-                                        (for-loop_1
-                                         table_1
-                                         (hash-iterate-first ht_1)))))
-                                   table_1)))
-                            (for-loop_0 table_2 rest_0))))
-                      table_1))))))
-             (for-loop_0 hash2610 bulk-bindings_0))))))
-      (args (raise-binding-result-arity-error 2 args))))))
+                                            table_0
+                                            (hash-iterate-first ht_1)))))
+                                      table_0)))
+                               (for-loop_0 table_1 rest_0))))
+                         table_0))))))
+                (for-loop_0 hash2610 bulk-bindings_0))))))
+         (args (raise-binding-result-arity-error 2 args))))))))
 (define binding-table-prune-to-reachable
   (lambda (bt_0 state_0)
     (let ((or-part_0
@@ -9465,13 +9489,13 @@
                                                         (cons
                                                          (if (bulk-binding-at?
                                                               bba_0)
-                                                           (let ((scopes49_0
+                                                           (let ((scopes56_0
                                                                   (intern-scopes
                                                                    (bulk-binding-at-scopes
                                                                     bba_0)
                                                                    state_0)))
                                                              (bulk-binding-at2.1
-                                                              scopes49_0
+                                                              scopes56_0
                                                               (bulk-binding-at-bulk
                                                                bba_0)))
                                                            (raise-argument-error
@@ -12429,6 +12453,36 @@
                                                      (gf_0 #f s_2)))))))))))))
                                 (loop_1 #f s_1 0)))))))))
                     (loop_0 s_0))))))))))))
+(define shifted-multi-scope-add-binding-phases
+  (lambda (sms_0 phases_0)
+    (let ((ms_0 (shifted-multi-scope-multi-scope sms_0)))
+      (let ((phase_0 (shifted-multi-scope-phase sms_0)))
+        (if (shifted-to-label-phase? phase_0)
+          (begin-unsafe (hash-set phases_0 #f #t))
+          (let ((ht_0 (unbox (multi-scope-scopes ms_0))))
+            (begin
+              (letrec*
+               ((for-loop_0
+                 (|#%name|
+                  for-loop
+                  (lambda (phases_1 i_0)
+                    (begin
+                      (if i_0
+                        (let ((ph_0 (hash-iterate-key ht_0 i_0)))
+                          (let ((phases_2
+                                 (let ((phases_2
+                                        (if (begin-unsafe (not ph_0))
+                                          (begin-unsafe
+                                           (hash-set phases_1 #f #t))
+                                          (let ((e_0 (phase- phase_0 ph_0)))
+                                            (begin-unsafe
+                                             (hash-set phases_1 e_0 #t))))))
+                                   (values phases_2))))
+                            (for-loop_0
+                             phases_2
+                             (hash-iterate-next ht_0 i_0))))
+                        phases_1))))))
+               (for-loop_0 phases_0 (hash-iterate-first ht_0))))))))))
 (define syntax-swap-scopes
   (lambda (s_0 src-scopes_0 dest-scopes_0)
     (if (equal? src-scopes_0 dest-scopes_0)
@@ -18659,7 +18713,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish795
+  (let ((finish802
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -18673,7 +18727,7 @@
           'set!-transformer)))
     (let ((struct:set!-transformer_0
            (make-record-type-descriptor* 'set!-transformer #f #f #f #f 1 0)))
-      (let ((effect796 (finish795 struct:set!-transformer_0)))
+      (let ((effect803 (finish802 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -28934,36 +28988,68 @@
               (expand-context/inner-declared-submodule-names
                (root-expand-context/outer-inner ctx_0)))))
         (module-path->mpi.1 temp8_0 mod-path_0 temp7_0)))))
-(define syntax-mapped-names
-  (lambda (s_0 phase_0)
-    (let ((s-scs_0 (syntax-scope-set s_0 phase_0)))
+(define syntax-mapped-names.1
+  (|#%name|
+   syntax-mapped-names
+   (lambda (only-interned?1_0 s3_0 phase4_0)
+     (begin
+       (let ((s-scs_0 (syntax-scope-set s3_0 phase4_0)))
+         (begin
+           (letrec*
+            ((for-loop_0
+              (|#%name|
+               for-loop
+               (lambda (syms_0 i_0)
+                 (begin
+                   (if i_0
+                     (let ((sc_0
+                            (unsafe-immutable-hash-iterate-key s-scs_0 i_0)))
+                       (let ((syms_1
+                              (let ((syms_1
+                                     (set-union
+                                      syms_0
+                                      (let ((temp6_0
+                                             (scope-binding-table sc_0)))
+                                        (binding-table-symbols.1
+                                         only-interned?1_0
+                                         temp6_0
+                                         s-scs_0
+                                         s3_0
+                                         null)))))
+                                (values syms_1))))
+                         (for-loop_0
+                          syms_1
+                          (unsafe-immutable-hash-iterate-next s-scs_0 i_0))))
+                     syms_0))))))
+            (let ((app_0 (seteq)))
+              (for-loop_0
+               app_0
+               (unsafe-immutable-hash-iterate-first s-scs_0))))))))))
+(define syntax-mapped-phases
+  (lambda (s_0)
+    (let ((smss_0 (fallback-first (syntax-shifted-multi-scopes s_0))))
       (begin
         (letrec*
          ((for-loop_0
            (|#%name|
             for-loop
-            (lambda (syms_0 i_0)
+            (lambda (phases_0 i_0)
               (begin
                 (if i_0
-                  (let ((sc_0 (unsafe-immutable-hash-iterate-key s-scs_0 i_0)))
-                    (let ((syms_1
-                           (let ((syms_1
-                                  (set-union
-                                   syms_0
-                                   (binding-table-symbols
-                                    (scope-binding-table sc_0)
-                                    s-scs_0
-                                    s_0
-                                    null))))
-                             (values syms_1))))
+                  (let ((sms_0 (unsafe-immutable-hash-iterate-key smss_0 i_0)))
+                    (let ((phases_1
+                           (let ((phases_1
+                                  (shifted-multi-scope-add-binding-phases
+                                   sms_0
+                                   phases_0)))
+                             (values phases_1))))
                       (for-loop_0
-                       syms_1
-                       (unsafe-immutable-hash-iterate-next s-scs_0 i_0))))
-                  syms_0))))))
-         (let ((app_0 (seteq)))
-           (for-loop_0
-            app_0
-            (unsafe-immutable-hash-iterate-first s-scs_0))))))))
+                       phases_1
+                       (unsafe-immutable-hash-iterate-next smss_0 i_0))))
+                  phases_0))))))
+         (for-loop_0
+          (begin-unsafe the-empty-hasheqv)
+          (unsafe-immutable-hash-iterate-first smss_0)))))))
 (define finish_2070
   (make-struct-type-install-properties
    '(requires+provides)
@@ -29315,7 +29401,7 @@
                (let ((shortcut-table_0
                       (if check-and-remove?36_0
                         (if (> (hash-count provides52_0) 64)
-                          (syntax-mapped-names s-at-space_0 phase_0)
+                          (syntax-mapped-names.1 #f s-at-space_0 phase_0)
                           #f)
                         #f)))
                  (let ((mpi_0
@@ -29409,7 +29495,7 @@
                                                                               id_0
                                                                               phase_0
                                                                               space_0)
-                                                                             (let ((temp115_0
+                                                                             (let ((temp117_0
                                                                                     (lambda ()
                                                                                       (provide-binding-to-require-binding.1
                                                                                        mpi_0
@@ -29424,7 +29510,7 @@
                                                                                 #t
                                                                                 in34_0
                                                                                 #t
-                                                                                temp115_0
+                                                                                temp117_0
                                                                                 who38_0
                                                                                 r+p47_0
                                                                                 id_0
@@ -29591,22 +29677,22 @@
                                                                                                  phase+space-shift_0
                                                                                                  sym_0)
                                                                                                 reqd/maybe-bulk_1))))
-                                                                                        (let ((temp126_0
+                                                                                        (let ((temp128_0
                                                                                                (syntax-shift-phase-level$1
-                                                                                                (let ((temp132_0
+                                                                                                (let ((temp134_0
                                                                                                        (required-id
                                                                                                         reqd_0)))
-                                                                                                  (let ((temp133_0
+                                                                                                  (let ((temp135_0
                                                                                                          (requires+provides-self
                                                                                                           enclosing-requires+provides55_0)))
                                                                                                     (syntax-module-path-index-shift.1
                                                                                                      #f
-                                                                                                     temp132_0
-                                                                                                     temp133_0
+                                                                                                     temp134_0
+                                                                                                     temp135_0
                                                                                                      enclosing-mod58_0
                                                                                                      #f)))
                                                                                                 phase-level59_0)))
-                                                                                          (let ((temp127_0
+                                                                                          (let ((temp129_0
                                                                                                  (let ((p+s_0
                                                                                                         (required-phase+space
                                                                                                          reqd_0)))
@@ -29615,21 +29701,21 @@
                                                                                                      (phase+space+$1
                                                                                                       p+s_0
                                                                                                       phase-level59_0))))))
-                                                                                            (let ((temp131_0
+                                                                                            (let ((temp133_0
                                                                                                    (required-as-transformer?
                                                                                                     reqd_0)))
-                                                                                              (let ((temp127_1
-                                                                                                     temp127_0)
-                                                                                                    (temp126_1
-                                                                                                     temp126_0))
+                                                                                              (let ((temp129_1
+                                                                                                     temp129_0)
+                                                                                                    (temp128_1
+                                                                                                     temp128_0))
                                                                                                 (add-defined-or-required-id-at-nominal!.1
-                                                                                                 temp131_0
+                                                                                                 temp133_0
                                                                                                  #t
                                                                                                  enclosing-mod58_0
                                                                                                  phase-level59_0
                                                                                                  r+p57_0
-                                                                                                 temp126_1
-                                                                                                 temp127_1))))))
+                                                                                                 temp128_1
+                                                                                                 temp129_1))))))
                                                                                       (for-loop_3
                                                                                        rest_0)))))
                                                                               (values)))))))
@@ -29680,7 +29766,7 @@
     (let ((remove!_0
            (|#%name|
             remove!
-            (lambda (bind-as-ambiguous?135_0 id137_0)
+            (lambda (bind-as-ambiguous?137_0 id139_0)
               (begin
                 (let ((b_0
                        (resolve+shift.1
@@ -29689,7 +29775,7 @@
                         null
                         unsafe-undefined
                         #f
-                        id137_0
+                        id139_0
                         phase_0)))
                   (if (if (module-binding? b_0)
                         (not
@@ -29698,9 +29784,9 @@
                           (module-binding-module b_0)))
                         #f)
                     (begin
-                      (if bind-as-ambiguous?135_0
-                        (let ((temp144_0 (like-ambiguous-binding1.1)))
-                          (add-binding!.1 #f #f id137_0 temp144_0 phase_0))
+                      (if bind-as-ambiguous?137_0
+                        (let ((temp146_0 (like-ambiguous-binding1.1)))
+                          (add-binding!.1 #f #f id139_0 temp146_0 phase_0))
                         (void))
                       (let ((mpi_0
                              (let ((mpi_0 (module-binding-nominal-module b_0)))
@@ -29723,7 +29809,7 @@
                                       nominal-phase+space-shift_0
                                       #f)))
                                 (if sym-to-reqds_0
-                                  (let ((sym_0 (syntax-e$1 id137_0)))
+                                  (let ((sym_0 (syntax-e$1 id139_0)))
                                     (let ((l_0
                                            (hash-ref
                                             sym-to-reqds_0
@@ -29736,7 +29822,7 @@
                                          sym_0
                                          (remove-non-matching-requireds
                                           l_0
-                                          id137_0
+                                          id139_0
                                           phase_0
                                           mpi_0
                                           nominal-phase+space-shift_0
@@ -29757,8 +29843,8 @@
                     (if i_0
                       (let ((space_0 (hash-iterate-key ht_0 i_0)))
                         (begin
-                          (let ((temp146_0 (add-space-scope id_0 space_0)))
-                            (remove!_0 #t temp146_0))
+                          (let ((temp148_0 (add-space-scope id_0 space_0)))
+                            (remove!_0 #t temp148_0))
                           (for-loop_0 (hash-iterate-next ht_0 i_0))))
                       (values)))))))
              (for-loop_0 (hash-iterate-first ht_0)))))
@@ -29853,7 +29939,7 @@
                              (not check-not-required?61_0)))
                        #f
                        (let ((default-b_0
-                              (let ((temp151_0
+                              (let ((temp153_0
                                      (remove-space-scope id76_0 space78_0)))
                                 (resolve+shift.1
                                  #f
@@ -29861,7 +29947,7 @@
                                  null
                                  unsafe-undefined
                                  #f
-                                 temp151_0
+                                 temp153_0
                                  phase77_0))))
                          (let ((defined?_0
                                 (if default-b_0
@@ -29871,12 +29957,12 @@
                                   #f)))
                            (if defined?_0
                              (begin
-                               (let ((temp155_0 (like-ambiguous-binding1.1)))
+                               (let ((temp157_0 (like-ambiguous-binding1.1)))
                                  (add-binding!.1
                                   #f
                                   #f
                                   id76_0
-                                  temp155_0
+                                  temp157_0
                                   phase77_0))
                                'defined)
                              #f)))))))))
@@ -29977,15 +30063,15 @@
                                              update!
                                              (lambda ()
                                                (begin
-                                                 (let ((temp159_0
-                                                        (let ((temp162_0
+                                                 (let ((temp161_0
+                                                        (let ((temp164_0
                                                                (cons
                                                                 b_0
                                                                 (module-binding-extra-nominal-bindings
                                                                  b_0))))
                                                           (module-binding-update.1
                                                            unsafe-undefined
-                                                           temp162_0
+                                                           temp164_0
                                                            unsafe-undefined
                                                            unsafe-undefined
                                                            unsafe-undefined
@@ -30000,7 +30086,7 @@
                                                     #f
                                                     #t
                                                     id76_0
-                                                    temp159_0
+                                                    temp161_0
                                                     phase77_0)))))))
                                        (if accum-update-nominals66_0
                                          (set-box!
@@ -30244,13 +30330,13 @@
                                                   mpi_0
                                                   nominal-phase+space-shift_0
                                                   (syntax-e$1 id_0))))
-                                              (let ((temp167_0
+                                              (let ((temp169_0
                                                      (like-ambiguous-binding1.1)))
                                                 (add-binding!.1
                                                  #f
                                                  #f
                                                  space-id_0
-                                                 temp167_0
+                                                 temp169_0
                                                  phase_0)))
                                             (void)))))))
                                 (void))))
@@ -30624,9 +30710,9 @@
                 (let ((phase-to-mpis-in-order_0
                        (requires+provides-require-mpis-in-order r+p_0)))
                   (let ((phases-in-order_0
-                         (let ((temp171_0
+                         (let ((temp173_0
                                 (hash-keys phase-to-mpis-in-order_0)))
-                           (sort.1 #f #f temp171_0 phase<?))))
+                           (sort.1 #f #f temp173_0 phase<?))))
                     (reverse$1
                      (begin
                        (letrec*
@@ -57216,12 +57302,22 @@
                      'syntax-bound-symbols
                      "syntax?"
                      stx42_0))
-                  (set->list (syntax-mapped-names stx42_0 phase_0)))))))))
+                  (set->list (syntax-mapped-names.1 #t stx42_0 phase_0)))))))))
     (|#%name|
      syntax-bound-symbols
      (case-lambda
       ((stx_0) (begin (syntax-bound-symbols_0 stx_0 unsafe-undefined)))
       ((stx_0 phase41_0) (syntax-bound-symbols_0 stx_0 phase41_0))))))
+(define 1/syntax-bound-phases
+  (|#%name|
+   syntax-bound-phases
+   (lambda (stx_0)
+     (begin
+       (begin
+         (if (syntax?$1 stx_0)
+           (void)
+           (raise-argument-error 'syntax-bound-phases "syntax?" stx_0))
+         (set->list (syntax-mapped-phases stx_0)))))))
 (define 1/namespace-attach-module
   (let ((namespace-attach-module_0
          (|#%name|
@@ -58461,15 +58557,18 @@
                      ns_0))
                   (set->list
                    (let ((app_0
-                          (let ((app_0
+                          (let ((temp109_0
                                  (let ((v_0
                                         (namespace-get-root-expand-ctx ns_0)))
                                    (begin-unsafe
                                     (root-expand-context/inner-all-scopes-stx
                                      (root-expand-context/outer-inner v_0))))))
-                            (syntax-mapped-names
-                             app_0
-                             (namespace-phase ns_0)))))
+                            (let ((temp110_0 (namespace-phase ns_0)))
+                              (let ((temp109_1 temp109_0))
+                                (syntax-mapped-names.1
+                                 #f
+                                 temp109_1
+                                 temp110_0))))))
                      (set-union
                       app_0
                       (list->set
@@ -75525,6 +75624,7 @@
    'syntax-source-module
    'identifier-prune-to-source-module
    'syntax-bound-symbols
+   'syntax-bound-phases
    'syntax-srcloc
    'syntax-source
    'syntax-line
@@ -75655,7 +75755,7 @@
    'variable-reference->module-declaration-inspector
    'read-syntax
    'read-syntax/recursive))
-(define effect_2562
+(define effect_2372
   (begin
     (void
      (begin
@@ -75718,6 +75818,7 @@
         'identifier-prune-to-source-module
         1/identifier-prune-to-source-module)
        (add-core-primitive!.1 #f 'syntax-bound-symbols 1/syntax-bound-symbols)
+       (add-core-primitive!.1 #f 'syntax-bound-phases 1/syntax-bound-phases)
        (add-core-primitive!.1 #f 'syntax-srcloc 1/syntax-srcloc)
        (add-core-primitive!.1 #f 'syntax-source 1/syntax-source)
        (add-core-primitive!.1 #f 'syntax-line 1/syntax-line)
