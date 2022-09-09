@@ -7259,6 +7259,12 @@
     (lambda (id datum)
       (d->s id datum who))))
 
+(set! $datum->environment-syntax
+  (lambda (sym env)
+    (make-syntax-object sym (make-wrap (wrap-marks top-wrap)
+                                       (cons (env-top-ribcage env)
+                                             (wrap-subst top-wrap))))))
+
 (set! syntax->list
   (lambda (orig-ls)
     (let f ([ls orig-ls])
