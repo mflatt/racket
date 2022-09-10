@@ -42,7 +42,7 @@
 
 (define-record-type syntax-object
   (fields (immutable expression) (immutable wrap))
-  (nongenerative #{syntax-object bdehkef6almh6ypbz-a})
+  (nongenerative #{syntax-object bdehkef6almh6ypb-a})
   (sealed #t))
 
 (define-syntax syntax-object-rtd

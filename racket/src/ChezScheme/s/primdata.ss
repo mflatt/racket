@@ -1952,6 +1952,7 @@
   ($current-attachments [flags single-valued])
   ($current-stack-link [flags single-valued])
   ($current-winders [flags single-valued])
+  ($datum->environment-syntax [flags single-valued])
   ($dequeue-scheme-signals [flags])
   ($describe-fasl-from-port [sig [(input-port) (input-port vector) -> (ptr)]] [flags])
   ($distinct-bound-ids? [sig [(list) -> (boolean)]] [flags discard])
