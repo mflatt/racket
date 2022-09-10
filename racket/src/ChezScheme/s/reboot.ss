@@ -725,8 +725,10 @@
 
 (define (compile-s-file s)
   (let ([start (cpu-time)])
-    (compile-file (path-build "s" s)
-                  (path-build xc-dir (string-append (path-root s) ".so")))
+    (parameterize ([optimize-level 3]
+                   [debug-level 0])
+      (compile-file (path-build "s" s)
+                    (path-build xc-dir (string-append (path-root s) ".so"))))
     (status (format "  ~a secs cpu time" (/ (- (cpu-time) start) 1000.0)))))
 
 (for-each compile-s-file
