@@ -238,7 +238,14 @@
 (define-primitive $fasl-strip-options #%$fasl-strip-options)
 (define-primitive $make-fasl-strip-options #%$make-fasl-strip-options)
 
-(define-primitive $immediate? #%$immediate?)
+(define-primitive symbol? (lambda (x) (and (#%symbol? x)
+                                            (not (eq? x $the-unbound-object)))))
+(define-primitive gensym? (lambda (x) (and (#%gensym? x)
+                                           (not (eq? x $the-unbound-object)))))
+
+(define-primitive $immediate? (lambda (x)
+                                (or (#%$immediate? x)
+                                    (eq? x $the-unbound-object))))
 (define-primitive $flonum->digits #%$flonum->digits)
 (define-primitive $flonum-sign #%$flonum-sign)
 (define-primitive $integer-32? #%$integer-32?)
