@@ -110,17 +110,27 @@
 ;;   - Run `compile-file` on all of the sources. Run `$make-boot-file`
 ;;     to create "petite.boot" and "scheme.boot".
 
-(define xc-dir
+(define-values (xc-dir host-dir)
   (let ([l (command-line-arguments)])
-    (if (= 1 (length l))
-        (car l)
-        (error 'reboot "expected <target-dir> as only argument"))))
+    (if (= 2 (length l))
+        (apply values l)
+        (error 'reboot "expected <xc-dir> <host-dir>"))))
+
+(meta-cond
+ [(top-level-bound? 'path-build) (begin)]
+ [else
+  (define path-build
+    (lambda (a b)
+      (let ([sep (if (eqv? (string-ref a (sub1 (string-length a))) #\/) "" "/")])
+        (string-append a sep b))))])
 
 (let ([machine.def (path-build xc-dir "machine.def")])
   (unless (file-exists? machine.def)
     (error 'reboot "~a not found" machine.def)))
 
-(source-directories (list xc-dir "s" "unicode"))
+(define (select-config config-dir)
+  (source-directories (list config-dir "s" "unicode")))
+(select-config xc-dir)
 (library-directories '(("." . ".") ("nanopass" . "nanopass")))
 
 (define (status s)
@@ -224,8 +234,6 @@
        (not (real? x))
        (exact? x)))
 
-; (define-primitive $make-thread-parameter make-thread-parameter)
-
 (define-primitive $enum-set-members #%$enum-set-members)
 (define-primitive $make-file-options #%$make-file-options)
 (define-primitive $file-options #%$file-options)
@@ -251,8 +259,8 @@
 (define-primitive $integer-32? #%$integer-32?)
 (define-primitive $integer-64? #%$integer-64?)
 (define-primitive $fxu< #%$fxu<)
-(define-primitive $stencil-vector? #%$stencil-vector?)
-(define-primitive $system-stencil-vector? #%$system-stencil-vector?)
+(define-primitive $stencil-vector? (lambda (v) #f))
+(define-primitive $system-stencil-vector? (lambda (v) #f))
 (define-primitive $symbol-name #%$symbol-name)
 
 (define-primitive $char-grapheme-other-state #%$char-grapheme-other-state)
@@ -270,12 +278,17 @@
 (define-primitive $record-type-field-indices #%$record-type-field-indices)
 (define-primitive $object-ref #%$object-ref)
 (define-primitive $sealed-record? #%$sealed-record?)
+(define-primitive $remake-rtd (lambda (rtd compute-field-offsets)
+                                (parameterize ([#%$target-machine ($target-machine)])
+                                  (#%$remake-rtd rtd compute-field-offsets))))
 
 (define-primitive $thread-list #%$thread-list)
 
 (define-primitive $c-bufsiz #%$c-bufsiz)
 
-(define-primitive $separator-character #%$separator-character)
+(define-primitive $separator-character (meta-cond
+                                        [(#%$top-level-bound? '$separator-character) #%$separator-character]
+                                        [else #\/]))
 
 (define-primitive $filter-foreign-type #%$filter-foreign-type)
 
@@ -318,7 +331,7 @@
           (set-top-level-value! sym val  primitive-environment)
           (define-top-level-value sym val primitive-environment)))))
 
-(define $tc-mutex (make-mutex))
+(define $tc-mutex (and (threaded?) (make-mutex)))
 
 (define tc-table (make-eq-hashtable))
 (define ($tc) tc-table)
@@ -424,28 +437,37 @@
     (compile-to-port (file->exps (path-build "s" s)) p)
     (load-compiled-from-port (open-bytevector-input-port (get)))))
 
-(for-each noisy-compile-and-load
-          '("cmacros.ss" "priminfo.ss" "primvars.ss"))
+(define (load-machine-config)
+  (for-each noisy-compile-and-load
+            '("cmacros.ss" "priminfo.ss" "primvars.ss")))
+(load-machine-config)
 
 ;; Loading "cmacros.ss" defined `constant`:
-($target-machine (constant machine-type-name))
-(status (format ">> Target machine: ~a" ($target-machine)))
+(define (set-target-machine mach)
+  ($target-machine mach)
+  (status (format "Configured for machine: ~a" ($target-machine))))
+(set-target-machine (constant machine-type-name))
 
 (define out-dir (path-build "boot" (symbol->string ($target-machine))))
 (unless (file-directory? out-dir)
   (mkdir out-dir))
 
-(noisy-load "mkheader.ss")
 (status "== Generate headers")
+(noisy-load "mkheader.ss")
 (mkscheme.h (path-build out-dir "scheme.h") (constant machine-type-name))
 (mkequates.h (path-build out-dir "equates.h"))
 
-(noisy-load "mkgc.ss")
 (status "== Generate GC traversals")
+(noisy-load "mkgc.ss")
 (mkgc-ocd.inc (path-build out-dir "gc-ocd.inc"))
 (mkgc-oce.inc (path-build out-dir "gc-oce.inc"))
 (mkgc-par.inc (path-build out-dir "gc-par.inc"))
 (mkheapcheck.inc (path-build out-dir "heapcheck.inc"))
+
+(status "== Switching to host mode")
+(select-config host-dir)
+(load-machine-config)
+(set-target-machine (constant machine-type-name))
 
 ;; The expander implementation needs nanopass loaded
 (status "== Load nanopass")
@@ -533,7 +555,7 @@
 
 ;; Load rest of expander with the new expander, but the interpreter
 ;; still uses the language of the old expander
-(define (eval-with-expand s mode)
+(define (eval-with-expand s mode eval-mode)
   (let ([e (parameterize ([$current-expand
                            (let ([orig ($current-expand)])
                              (lambda (e . args)
@@ -548,14 +570,17 @@
                                        (eq? (car s) 'define-syntax)))
                               ;; Define macros in the system environment
                               ($system-environment)
-                              (interaction-environment))))])
+                              (interaction-environment))
+                        #f (eq? eval-mode 'expand)))])
     #;(printf "=> ~s\n" e)
-    (let ([r (eval e)])
-      #;(printf "= ~s\n" r)
-      r)))
+    (if (eq? eval-mode 'expand)
+        e
+        (let ([r (eval e)])
+          #;(printf "= ~s\n" r)
+          r))))
 
 (define (evalx s)
-  (eval-with-expand s 'system-macros))
+  (eval-with-expand s 'system-macros 'eval))
 
 (for-each (lambda (sym)
             (let ([val ($top-level-value sym)])
@@ -630,11 +655,25 @@
              ($guard #t (lambda (var p) (cond clause1 clause2 ... [else (p)]))
                      (lambda () b1 b2 ...))])))
 
+(define (expand/then-load s mode)
+  (status (format "Loading ~a" s))
+  (let ([es
+         ;; expand in order (so don't use `map`):
+         (let loop ([es (file->exps s)])
+           (if (null? es)
+               '()
+               (let ([v (let ([e (car es)])
+                          #;(printf "~s\n" e)
+                          (eval-with-expand e mode 'expand))])
+                 (cons v
+                       (loop (cdr es))))))])
+    (for-each eval es)))
+
 (define (expand-and-load s mode)
   (status (format "Loading ~a" s))
   (for-each (lambda (e)
               #;(printf "~s\n" e)
-              (eval-with-expand e mode))
+              (eval-with-expand e mode 'eval))
             (file->exps s)))
 
 (status "== Setup for using expander")
@@ -656,7 +695,8 @@
                                         (eval-with-expand (if (pair? (cadr e))
                                                               `(lambda ,(cdadr e) . ,(cddr e))
                                                               (caddr e))
-                                                          'system))]
+                                                          'system
+                                                          'eval))]
                 [(and (pair? e)
                       (eq? 'begin (car e)))
                  (for-each loop (cdr e))])))
@@ -679,6 +719,13 @@
 (load-nano "nanopass/language-helpers.ss")
 (load-nano "nanopass/language.ss")
 (load-nano "nanopass.ss")
+
+(status "== Set configuration to target")
+(select-config xc-dir)
+(expand/then-load "s/cmacros.ss" 'system) ; compile as host, load to set target
+(expand-and-load "s/priminfo.ss" 'system)
+(expand-and-load "s/primvars.ss" 'system)
+(set-target-machine (constant machine-type-name))
 
 (status "== Load compiler")
 (for-each (lambda (s)

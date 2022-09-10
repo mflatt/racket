@@ -1,0 +1,38 @@
+#lang zuo
+(require "../makefiles/lib.zuo"
+         "machine.zuo")
+
+(command-line
+ :once-each
+ [flags ("--scheme") command "Run Scheme as <command>"
+        (hash-set flags 'command command)]
+ [flags ("--target") machine "Create bootfiles for <target>"
+        (hash-set flags 'target machine)]
+ :args
+ ()
+ (lambda (flags)
+   (define command (hash-ref flags 'command "scheme -q"))
+   (define host
+     (let ([r (shell command "-q" (hash 'stdin 'pipe 'stdout 'pipe))])
+       (fd-write (hash-ref r 'stdin) "(machine-type)\n")
+       (fd-close (hash-ref r 'stdin))
+       (define line (fd-read (hash-ref r 'stdout) eof))
+       (car (string-split line "\n"))))
+   (define target (hash-ref flags 'target host))
+   (alert (~a "Host: " host))
+   (alert (~a "Target: " target))
+
+   (define xc (~a "xc-" target))
+   (alert (~a "Working in: " xc))
+
+   (mkdir-p (build-path xc "s"))
+   (mkdir-p (build-path xc "host"))
+
+   (define host-config (get-machine-files host (m->arch host)))
+   (define target-config (get-machine-files target (m->arch target)))
+
+   ((cdar host-config) (build-path xc "host" "machine.def") #f)
+   ((cdar target-config) (build-path xc "s" "machine.def") #f)
+   
+   (shell command "--script" "s/reboot.ss" (build-path xc "s") (build-path xc "host"))
+   (void)))
