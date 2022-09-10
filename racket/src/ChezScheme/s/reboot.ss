@@ -1,3 +1,115 @@
+;; This script automates bootstrapping of the latest implementation of
+;; Chez Scheme from a substantially incompatible version --- for
+;; example, one with different C entries, or fewer foreign procedures
+;; exported from the kernel, or a different base-lanuage AST, a
+;; different representation of syntax objects, or a different
+;; representation of some preimitive datatype, or simply a version
+;; number.
+;;
+;; This script doesn't yet support the possibility differently shaped
+;; `#!base-rtd`, but the general strategy here should support that
+;; when it becomes needed by defining replacement structure procedures,
+;; including `csv7:record-field-accessor`.
+;;
+;; The script is specific to the implementation being bootstapped. If
+;; the implementation changes by, say, moving functionality to
+;; different files, then this script likely needs updates. The script
+;; will also need updates if the compiler starts using new primitives
+;; at compile time. The host Scheme used to bootstrap needs to be new
+;; enough to load the current nanopass implementation and to define
+;; any macro used in "cmacros.ss" or "syntax.ss"; if something is
+;; missing from the host Scheme, then hopefully you can define it here
+;; (similar to temporarily adding to "patch.ss").
+
+;; To run:
+;;
+;;   - create a directory that has a suitable "machine.def", and
+;;
+;;   - run this script as `scheme --script reboot.ss <dir>` in
+;;     the Chez Scheme source directory with `<dir>` as the
+;;     directory containing "machine.def".
+;;
+;; These steps are intended to be performed by a `reboot` makefile
+;; target.
+;;
+;; Output is written to "boot/<machine>", where "<machine>" is
+;; determined by the "<dir>/machine.def" file.
+
+;; Implementation:
+;;
+;; The overall strategy is to load the Chez Scheme macro expander and
+;; compiler as user-level programs, where `$primitive` no longer
+;; necessarily gets the primitive versions of procedures. Instead,
+;; `$primitive` is redefined to look in the top-level environment.
+;; This redirect primitives only need to work well enough to run the
+;; expander and compiler.
+;;
+;; Since `$primitive` no longer accesses primitives, we need to define
+;; here any `$`-prefixed name that is used by the expander and
+;; compiler. Mostly, we just define them to be the primitive functions
+;; (before `$primitive` is redefined), but they could instead be
+;; implemented using other functions.
+;;
+;; The trickiest part is loading the macro expander, which defines the
+;; layout of syntax objects, but also has literal syntax objects in
+;; its implementation. Both the expander and predefined macros are
+;; defined using syntax objects and many of the same macros that will
+;; be defined. So, it takes a few passes:
+;;
+;;   - Start by loading "cmacros.ss" and similar so that data about
+;;     the target platform, etc., is available. Currently, we assume
+;;     that the host Scheme can run "mkheader.ss" and similar, so
+;;     we run that first to get ".h" and ".inc" files generated.
+;;
+;;   - The expander needs nanopass, so load that. The host Scheme
+;;     needs to be new enough to run the current nanopass.
+;;
+;;   - Next, load just the expander implementation, which is defined
+;;     as the first big S-expression in "syntax.ss".
+;;
+;;   - For each subsequent term in "syntax.ss", expand the expression
+;;     part with the host Scheme's macro expander. Then, rewrite
+;;     syntax-object literals in the expansion into new-expander
+;;     literals, using the `$datum->environment-syntax` procedure
+;;     exported by the expander for this purpose. Finally, send the
+;;     definition through the just-loaded new expander, which
+;;     registers the definitions in its system environment.
+;;
+;;     At this point, we now have the expander and predefined macros
+;;     all working with the new expander's representation for syntax
+;;     objects and base-language AST. This expander is *not* wired
+;;     into `eval` or installed to the real `current-expand` (but it
+;;     is installed to a new, user-level `current-expand`). Instead,
+;;     the expander it must be called directly as `sc-expand`.
+;;
+;;     When `sc-expand` is running, it may need to evalute via `eval`.
+;;     The new expander's AST form is converted by to an S-expression
+;;     using the new expander's `$uncprep`. Syntax-object literals are
+;;     not converted back, however; the evaluated/compiled code should
+;;     operate on new-expander syntax objects.
+;;
+;;   - Take it from the top by loading "cmacro.ss", etc., using the
+;;     new expander, which defines macros to work with the new
+;;     expander.
+;;
+;;   - Load nanopass again, too. The nanopass implementation shouldn't
+;;     be any different this second time around, but now it's defined
+;;     and registered in the new expander's table of modules.
+;;
+;;   - Load the compiler. The compiler implementation is a
+;;     hand-crafted list of files that cover everything needed to run
+;;     `compile-file` and `$make-boot-file`.
+;;
+;;   - The the user-level `current-expand` to the new expander, since
+;;     the just-loaded `compile-file` will reach it via a new
+;;     user-level `expand`. While the new expander is running via
+;;     `current-expand`, set the real `current-expand` to perform the
+;;     same dance as before to handle the times when the expander
+;;     calls `eval`.
+;;
+;;   - Run `compile-file` on all of the sources. Run `$make-boot-file`
+;;     to create "petite.boot" and "scheme.boot".
+
 (define xc-dir
   (let ([l (command-line-arguments)])
     (if (= 1 (length l))
@@ -15,6 +127,8 @@
   (printf "~a\n" s)
   (flush-output-port))
 
+;; Read "s/build.zuo" to get the set of sources for "petite.boot"
+;; and "scheme.boot", so we don't have a separate copy here.
 (define-values (base-srcs compiler-srcs)
   (call-with-input-file
    "s/build.zuo"
@@ -44,8 +158,12 @@
        (values (extract-list 'base-src-names)
                (extract-list 'compiler-names))))))
 
+;; In case of debugging printfs:
 (print-graph #t)
 
+;; We need to keep track of all the user-level "primitives" that we
+;; define, so we can carry them over to a new namespace that is
+;; created by the new expander.
 (define primitive-environment (interaction-environment))
 (define primitives '())
 (define-syntax define-primitive
@@ -58,6 +176,8 @@
      (begin
        (set! primitives (cons 'id primitives))
        (define id rhs))]))
+
+;; Start defining "primitives" here vv ----------------------------------------
 
 (define-primitive ($make-record-type base-rtd parent name fields sealed? opaque? . extras)
   (apply #%$make-record-type base-rtd parent name fields sealed? opaque? extras))
@@ -275,6 +395,8 @@
 (define $current-expand current-expand)
 (define current-expand (make-parameter #f))
 
+;; End of "primitives" here ^^ ----------------------------------------
+
 (define (noisy-load s)
   (status (format "Loading ~a" s))
   (load s))
@@ -298,6 +420,7 @@
 (for-each noisy-compile-and-load
           '("cmacros.ss" "priminfo.ss" "primvars.ss"))
 
+;; Loading "cmacros.ss" defined `constant`:
 ($target-machine (constant machine-type-name))
 (status (format ">> Target machine: ~a" ($target-machine)))
 
@@ -317,6 +440,7 @@
 (mkgc-par.inc (path-build out-dir "gc-par.inc"))
 (mkheapcheck.inc (path-build out-dir "heapcheck.inc"))
 
+;; The expander implementation needs nanopass loaded
 (status "== Load nanopass")
 (load "./nanopass/nanopass.ss")
 
@@ -332,12 +456,14 @@
 (define ($make-base-modules) (void))
 (define ($make-rnrs-libraries) (void))
 
+;; Configure as usual for loading implementaton files
 (for-each noisy-load
           '("setup.ss" "env.ss"))
 
+;; ... but use the compiler instead of the interpreter
 (current-eval compile)
 
-(status "== Install new expander")
+;; Set up a syntax-object bridge between the old and new worlds
 
 (define ($make-system-syntax datum)
   ($datum->environment-syntax datum ($system-environment)))
@@ -372,6 +498,8 @@
       [else s]))
   (requote-syntax (expand s primitive-environment)))
 
+(status "== Install new expander")
+
 ;; first form is the expander's implementation:
 (status "Load expander implementation")
 (eval (expand-to-non-syntax/system
@@ -388,7 +516,7 @@
   ($make-base-modules)
   ($make-rnrs-libraries))
 (init-syntax-libraries)
-;; Forward reference of sorts:
+;; Forward reference, of sorts:
 (set! $annotation-options (make-enumeration '(debug profile)))
 (set! $make-annotation-options (enum-set-constructor $annotation-options))
 
@@ -396,8 +524,8 @@
 ;; syntax-object constructors
 (noisy-load "cprep.ss")
 
-;; Expander with the new expander, but the interpreter still uses the language
-;; of the old expander.
+;; Load rest of expander with the new expander, but the interpreter
+;; still uses the language of the old expander
 (define (eval-with-expand s mode)
   (let ([e (parameterize ([$current-expand
                            (let ([orig ($current-expand)])
@@ -431,11 +559,11 @@
 ;; Forward reference
 (evalx `(define $syntax-match? #f))
 
-;; Expand the implementations of macro using the host Scheme,
-;; so that macro implementations can use macros that are not
-;; yet defined. This constrains the implementation of macros
-;; defined in "syntax.ss" to use only constructs in the host
-;; Scheme implementation.
+;; Prepare to expand the implementations of macros using the host
+;; Scheme, so that macro implementations can use macros that are not
+;; yet defined. This constrains the implementation of macros defined
+;; in "syntax.ss" to use only constructs in the host Scheme
+;; implementation.
 (define (expand-to-non-syntax s)
   (define (requote-syntax s)
     (cond
@@ -518,7 +646,7 @@
                                (eq? (caadr e) '$compiled-file-header?))))
                  (status "Loading part of s/7.ss")
                  ($set-top-level-value! '$compiled-file-header?
-                                        (eval-with-expand (if (pair? (ca<dr e))
+                                        (eval-with-expand (if (pair? (cadr e))
                                                               `(lambda ,(cdadr e) . ,(cddr e))
                                                               (caddr e))
                                                           'system))]
@@ -528,24 +656,22 @@
           (file->exps "s/7.ss"))
 
 (status "== Load nanopass using expander")
-(define (load-nanopass)
-  (define (load-nano s)
-    (expand-and-load (path-build "nanopass" s) #f))
-  (load-nano "nanopass/implementation-helpers.chezscheme.sls")
-  (load-nano "nanopass/helpers.ss")
-  (load-nano "nanopass/syntaxconvert.ss")
-  (load-nano "nanopass/records.ss")
-  (load-nano "nanopass/nano-syntax-dispatch.ss")
-  (load-nano "nanopass/parser.ss")
-  (load-nano "nanopass/unparser.ss")
-  (load-nano "nanopass/meta-syntax-dispatch.ss")
-  (load-nano "nanopass/meta-parser.ss")
-  (load-nano "nanopass/pass.ss")
-  (load-nano "nanopass/language-node-counter.ss")
-  (load-nano "nanopass/language-helpers.ss")
-  (load-nano "nanopass/language.ss")
-  (load-nano "nanopass.ss"))
-(load-nanopass)
+(define (load-nano s)
+  (expand-and-load (path-build "nanopass" s) #f))
+(load-nano "nanopass/implementation-helpers.chezscheme.sls")
+(load-nano "nanopass/helpers.ss")
+(load-nano "nanopass/syntaxconvert.ss")
+(load-nano "nanopass/records.ss")
+(load-nano "nanopass/nano-syntax-dispatch.ss")
+(load-nano "nanopass/parser.ss")
+(load-nano "nanopass/unparser.ss")
+(load-nano "nanopass/meta-syntax-dispatch.ss")
+(load-nano "nanopass/meta-parser.ss")
+(load-nano "nanopass/pass.ss")
+(load-nano "nanopass/language-node-counter.ss")
+(load-nano "nanopass/language-helpers.ss")
+(load-nano "nanopass/language.ss")
+(load-nano "nanopass.ss")
 
 (status "== Load compiler")
 (for-each (lambda (s)
