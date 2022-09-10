@@ -1281,7 +1281,7 @@
   (sealed #t))
 (define-record-type env
   (fields (immutable top-ribcage) (immutable wrap))
-  (nongenerative #{env f2zvr2zlvyfdhyoz-a})
+  (nongenerative #{env f2zvr2zlvyfdhyo-a})
   (sealed #t))
 
 (define get-indirect-interface
@@ -6827,7 +6827,7 @@
                           (source-file-descriptor-name sfd)))]
             [(path line char)
              (format "[line ~a, char ~a of ~a]" line char path)]))))
-    (display "#<syntax! " p)
+    (display "#<syntax " p)
     (wr (syntax->datum x) p)
     (let f ([x x])
       (if (syntax-object? x)
@@ -7259,6 +7259,7 @@
     (lambda (id datum)
       (d->s id datum who))))
 
+;; for bootstrapping:
 (set! $datum->environment-syntax
   (lambda (sym env)
     (make-syntax-object sym (make-wrap (wrap-marks top-wrap)
