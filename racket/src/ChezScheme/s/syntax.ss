@@ -4711,6 +4711,7 @@
         [(root) (list-paths root)]))
     (define loaded-libraries-root
       (lambda () root))
+    ;; for bootstrapping via "reboot.ss":
     (set! $loaded-libraries
       (case-lambda
         [() root]
@@ -7263,7 +7264,7 @@
     (lambda (id datum)
       (d->s id datum who))))
 
-;; for bootstrapping:
+;; for bootstrapping via "reboot.ss":
 (set! $datum->environment-syntax
   (lambda (sym env)
     (make-syntax-object sym (make-wrap (wrap-marks top-wrap)
