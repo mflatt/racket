@@ -11,29 +11,36 @@
 ;; when it becomes needed by defining replacement structure procedures,
 ;; including `csv7:record-field-accessor`.
 ;;
-;; The script is specific to the implementation being bootstapped. If
-;; the implementation changes by, say, moving functionality to
-;; different files, then this script likely needs updates. The script
-;; will also need updates if the compiler starts using new primitives
-;; at compile time. The host Scheme used to bootstrap needs to be new
-;; enough to load the current nanopass implementation and to define
-;; any macro used in "cmacros.ss" or "syntax.ss"; if something is
-;; missing from the host Scheme, then hopefully you can define it here
-;; (similar to temporarily adding to "patch.ss").
+;; The script is specific to the implementation being bootstapped, and
+;; it relies on details of the expander, which cooperates slightly
+;; with boostrapping. If the implementation changes by, say, moving
+;; functionality to different files, then this script likely needs
+;; updates. The script will also need updates if the compiler starts
+;; using new primitives at compile time. The host Scheme used to
+;; bootstrap needs to be new enough to load the current nanopass
+;; implementation and to define any macro used in "cmacros.ss" or
+;; "syntax.ss"; if something is missing from the host Scheme, then
+;; hopefully you can define it here (similar to temporarily adding to
+;; "patch.ss").
 
 ;; To run:
 ;;
-;;   - create a directory that has a suitable "machine.def", and
+;;   - create a directory that has a suitable "machine.def" to the
+;;     target machine, and
 ;;
-;;   - run this script as `scheme --script reboot.ss <dir>` in
-;;     the Chez Scheme source directory with `<dir>` as the
-;;     directory containing "machine.def".
+;;   - create a directory that has a suitable "machine.def" for the
+;;     host machine, and
+;;
+;;   - run this script as `scheme --script reboot.ss <target-dir>
+;;     <host-dir>` in the Chez Scheme source directory with each given
+;;     directory as one containing a "machine.def".
 ;;
 ;; These steps are intended to be performed by a `reboot` makefile
-;; target.
+;; target, and the "reboot.zuo" script can set up the directories and
+;; call this one.
 ;;
 ;; Output is written to "boot/<machine>", where "<machine>" is
-;; determined by the "<dir>/machine.def" file.
+;; determined by the "<target-dir>/machine.def" file.
 
 ;; Implementation:
 ;;
@@ -96,13 +103,27 @@
 ;;     be any different this second time around, but now it's defined
 ;;     and registered in the new expander's table of modules.
 ;;
-;;   - Load the compiler. The compiler implementation is a
+;;   - Compile the compiler. The compiler implementation is a
 ;;     hand-crafted list of files that cover everything needed to run
-;;     `compile-file` and `$make-boot-file`.
+;;     `compile-file` and `$make-boot-file`. Note that this includes
+;;     the expander, but this time configured for the target platform
+;;     instead of the host platform.
 ;;
-;;   - The the user-level `current-expand` to the new expander, since
-;;     the just-loaded `compile-file` will reach it via a new
-;;     user-level `expand`. While the new expander is running via
+;;     "Compile" just means to expand the compiler's files. Loading
+;;     (expansion + eval) in one pass wouldn't work, because that
+;;     would redefine some macros that are used in the implementation,
+;;     and it would also load a new expander half-way through!
+;;
+;;   - Initialize the new copy of the macro expander, which is
+;;     configured for the target. That include reloading "cmacros.ss"
+;;     to get its macros, as well as reloading nanopass. The reloaded
+;;     nanopass needs to be the previously saved version, though as
+;;     "compiled" for the host platform. And then load the "compiled"
+;;     compiler, which includes defining additional macros.
+;;
+;;   - Set the user-level `current-expand` to the new expander, so the
+;;     just-loaded `compile-file` will reach it via a new user-level
+;;     `expand`. While the new expander is running via
 ;;     `current-expand`, set the real `current-expand` to perform the
 ;;     same dance as before to handle the times when the expander
 ;;     calls `eval`.
