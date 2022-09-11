@@ -304,6 +304,9 @@
                                         [(#%$top-level-bound? '$separator-character) #%$separator-character]
                                         [else #\/]))
 
+(define-primitive $expand-fp-ftype #%$expand-fp-ftype)
+(define-primitive $ftd? #%$ftd?)
+(define-primitive $ftd-as-box? #%$ftd-as-box?)
 (define-primitive $filter-foreign-type #%$filter-foreign-type)
 
 (define-primitive $set-collect-trip-bytes #%$set-collect-trip-bytes)
@@ -667,57 +670,94 @@
             (cddr (file->exps (path-build "s" "syntax.ss")))))
 (load-syntax-macro-definitions evale)
 
+;; like `map`, but in order:
+(define (map* f l)
+  (let loop ([l l])
+    (if (null? l)
+        '()
+        (let ([v (f (car l))])
+          (cons v (loop (cdr l)))))))
+
 ;; Not defined in "syntax.ss", but needed to load nanopass:
-(evale '(define-syntax guard
-          (syntax-rules (else)
-            [(_ (var clause ... [else e1 e2 ...]) b1 b2 ...)
-             ($guard #f (lambda (var) (cond clause ... [else e1 e2 ...]))
-                     (lambda () b1 b2 ...))]
-            [(_ (var clause1 clause2 ...) b1 b2 ...)
-             ($guard #t (lambda (var p) (cond clause1 clause2 ... [else (p)]))
-                     (lambda () b1 b2 ...))])))
+(define guard-macro
+  '(define-syntax guard
+     (syntax-rules (else)
+       [(_ (var clause ... [else e1 e2 ...]) b1 b2 ...)
+        ($guard #f (lambda (var) (cond clause ... [else e1 e2 ...]))
+                (lambda () b1 b2 ...))]
+       [(_ (var clause1 clause2 ...) b1 b2 ...)
+        ($guard #t (lambda (var p) (cond clause1 clause2 ... [else (p)]))
+                (lambda () b1 b2 ...))])))
+(evale guard-macro)
+
+(define (eval-now v eval-mode)
+  (let loop ([v v] [eval-mode eval-mode])
+    (cond
+      [(and (pair? v) (eq? (car v) 'begin))
+       (for-each (lambda (v) (loop v eval-mode)) (cdr v))]
+      [(and (pair? v) (eq? (car v) 'eval-when))
+       (when (eq? eval-mode 'eval)
+         (for-each (lambda (v) (loop v 'eval))
+                   (cddr v)))]
+      [(and (pair? v) (eq? (car v) 'recompile-requirements))
+       (void)]
+      [(and (pair? v) (memq (car v) '(library/ct-info library/rt-info)))
+       (when (eq? eval-mode 'eval)
+         (let ([uid (cadr v)])
+           (client-$sputprop uid '*library* ($sgetprop uid '*library* #f))))]
+      [(eq? eval-mode 'eval)
+       #;(printf "~s\n" v)
+       (eval v)]
+      [else (void)])))
 
 (define (expand/then-load s mode skip)
   (status (format "Loading ~a" s))
-  (let ([vs
-         ;; expand in order (so don't use `map`):
-         (let loop ([es (skip (file->exps s))])
-           (if (null? es)
-               '()
-               (let* ([v (let ([e (car es)])
-                           #;(printf "~s\n" e)
-                           (eval-with-expand e mode 'expand))])
-                 #;(printf "~s\n" v)
-                 (cons v
-                       (loop (cdr es))))))])
-    (let loop ([v (cons 'begin vs)])
-      (cond
-        [(and (pair? v) (eq? (car v) 'begin))
-         (for-each loop (cdr v))]
-        [(and (pair? v) (eq? (car v) 'eval-when))
-         (for-each loop (cddr v))]
-        [else
-         #;(printf "~s\n" v)
-         (eval v)]))))
+  (let ([vs (map* (lambda (e)
+                    #;(printf "~s\n" e)
+                    (let ([v (eval-with-expand e mode 'expand)])
+                      #;(printf "~s\n" v)
+                      v))
+                  (file->exps s))])
+    (eval-now (cons 'begin vs) 'eval)))
 
-(define (expand-and-load s mode)
-  (status (format "Loading ~a" s))
-  (for-each (lambda (e)
-              #;(printf "~s\n" e)
-              (eval-with-expand e mode 'eval))
-            (file->exps s)))
+(define expanded (make-hashtable equal-hash equal?))
+
+(define (expand-and-load* s mode eval-mode)
+  (status (format "~a ~a" (if (eq? eval-mode 'compile) "Expanding" "Loading") s))
+  (map* (lambda (e)
+          #;(printf "~s\n" e)
+          (let ([v (eval-with-expand e mode 'expand)])
+            #;(printf "~s\n" v)
+            (eval-now v eval-mode)
+            v))
+        (file->exps s)))
+
+(define (expand-and-load s mode eval-mode)
+  (expand-and-load* s mode eval-mode)
+  (void))
+
+(define (expand-once-and-load s mode eval-mode)
+  (cond
+    [(hashtable-ref expanded s #f)
+     => (lambda (es)
+          (when (eq? eval-mode 'eval)
+            (status (format "Loading expanded ~a" s))
+            (eval-now (cons 'begin es) 'eval)))]
+    [else
+     (let ([es (expand-and-load* s mode eval-mode)])
+       (hashtable-set! expanded s es))]))
 
 (status "== Setup for using expander")
 (define (configure-compile-time same-host-and-target?)
   (for-each (lambda (s) (unless (eq? s 'ptr-bits) (remprop s '*constant*))) (oblist))
   (if same-host-and-target?
-      (expand-and-load "s/cmacros.ss" 'system)
+      (expand-and-load "s/cmacros.ss" 'system 'eval)
       ;; 'user mode means that newly created macros are hidden
       ;; from system code, and we just get the side effect of
       ;; updating symbol properties
       (expand-and-load "s/cmacros.ss" 'user))
-  (expand-and-load "s/priminfo.ss" 'system)
-  (expand-and-load "s/primvars.ss" 'system))
+  (expand-and-load "s/priminfo.ss" 'system 'eval)
+  (expand-and-load "s/primvars.ss" 'system 'eval))
 (configure-compile-time #t)
 
 ;; Need just `$compiled-file-header?` from "7.ss":
@@ -742,22 +782,24 @@
           (file->exps "s/7.ss"))
 
 (status "== Load nanopass using expander")
-(define (load-nano s)
-  (expand-and-load (path-build "nanopass" s) #f))
-(load-nano "nanopass/implementation-helpers.chezscheme.sls")
-(load-nano "nanopass/helpers.ss")
-(load-nano "nanopass/syntaxconvert.ss")
-(load-nano "nanopass/records.ss")
-(load-nano "nanopass/nano-syntax-dispatch.ss")
-(load-nano "nanopass/parser.ss")
-(load-nano "nanopass/unparser.ss")
-(load-nano "nanopass/meta-syntax-dispatch.ss")
-(load-nano "nanopass/meta-parser.ss")
-(load-nano "nanopass/pass.ss")
-(load-nano "nanopass/language-node-counter.ss")
-(load-nano "nanopass/language-helpers.ss")
-(load-nano "nanopass/language.ss")
-(load-nano "nanopass.ss")
+(define (load-nanopass)
+  (define (load-nano s)
+    (expand-once-and-load (path-build "nanopass" s) 'user 'eval))
+  (load-nano "nanopass/implementation-helpers.chezscheme.sls")
+  (load-nano "nanopass/helpers.ss")
+  (load-nano "nanopass/syntaxconvert.ss")
+  (load-nano "nanopass/records.ss")
+  (load-nano "nanopass/nano-syntax-dispatch.ss")
+  (load-nano "nanopass/parser.ss")
+  (load-nano "nanopass/unparser.ss")
+  (load-nano "nanopass/meta-syntax-dispatch.ss")
+  (load-nano "nanopass/meta-parser.ss")
+  (load-nano "nanopass/pass.ss")
+  (load-nano "nanopass/language-node-counter.ss")
+  (load-nano "nanopass/language-helpers.ss")
+  (load-nano "nanopass/language.ss")
+  (load-nano "nanopass.ss"))
+(load-nanopass)
 
 (status "== Set configuration to target")
 (eval-with-expand `(define-syntax $sputprop (identifier-syntax client-$sputprop)) 'user 'eval)
@@ -766,35 +808,43 @@
 (hashtable-set! primitive-substs '$sgetprop 'client-$sgetprop)
 (hashtable-set! primitive-substs '$sremprop 'client-$sremprop)
 (select-config xc-dir)
-(configure-compile-time #f) ; compile as host, load to set target
+(configure-compile-time #t) ; compile as host, load to set target
+
+(status "== Compile compiler")
+(define (load-compiler eval-mode)
+  (for-each (lambda (s)
+              (expand-once-and-load (path-build "s" s) 'system eval-mode))
+            '("patch.ss"
+              "ftype.ss"
+              "fasl.ss"
+              "reloc.ss"
+              "format.ss"
+              "cp0.ss"
+              "cpvalid.ss"
+              "cpcheck.ss"
+              "cpletrec.ss"
+              "cpcommonize.ss"
+              "cpnanopass.ss"
+              "cpprim.ss"
+              "compile.ss"
+              "back.ss")))
+(load-compiler 'compile)
+(expand-once-and-load "s/syntax.ss" 'system 'compile)
 
 (status "== Load compiler")
-(for-each (lambda (s)
-            (expand-and-load (path-build "s" s) 'system))
-          '("ftype.ss"
-            "fasl.ss"
-            "reloc.ss"
-            "format.ss"
-            "cp0.ss"
-            "cpvalid.ss"
-            "cpcheck.ss"
-            "cpletrec.ss"
-            "cpcommonize.ss"
-            "cpnanopass.ss"
-            "cpprim.ss"
-            "compile.ss"
-            "back.ss"))
 
-(status "== Switch to target compilation")
+(define saved-libraries ($loaded-libraries))
 
-;; "syntax.ss" may define different macros for the taregt platform, so
-;; load those now while we have macros defined for the host but
-;; configuration for the target; we are assuming that the expander
-;; does not itself work differently when the target changes
-(expand/then-load "s/syntax.ss" 'system cdr)
-
-(configure-compile-time #t) ; set compile-time macros for target
+(expand-once-and-load "s/syntax.ss" 'system 'eval)
 (init-syntax-libraries) ; target may have different primitives
+(configure-compile-time #t) ; load macros yet again
+
+(load-compiler 'eval)
+(load-nanopass) ; declare nanopass yet again
+
+($loaded-libraries saved-libraries)
+
+(eval-with-expand guard-macro 'system 'eval)
 
 (set-target-machine (constant machine-type-name))
 

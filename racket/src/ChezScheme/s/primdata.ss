@@ -2238,6 +2238,7 @@
   ($list-bits-set! [flags single-valued])
   ($list-length [flags single-valued])
   ($load-library [flags single-valued])
+  ($loaded-libraries [flags single-valued])
   ($locate-source [flags])
   ($logand [flags single-valued])
   ($logbit0 [flags single-valued])
