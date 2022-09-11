@@ -196,22 +196,36 @@
 (define-primitive ($make-record-constructor-descriptor rts parent protocol name)
   (#%$make-record-constructor-descriptor rts parent protocol name))
 
-(define-primitive ($sputprop sym key val)
-  (putprop sym 'reboot (cons (cons key val) (getprop sym 'reboot '()))))
+(define (make-$sputprop meta-key)
+  (lambda (sym key val)
+    (putprop sym meta-key (cons (cons key val) (getprop sym meta-key '())))))
 
-(define-primitive ($sgetprop sym key def-val)
-  (let ([a (assq key (getprop sym 'reboot '()))])
-    (if a
-        (cdr a)
-        def-val)))
+(define (make-$sgetprop meta-key)
+  (lambda (sym key def-val)
+    (let ([a (assq key (getprop sym meta-key '()))])
+      (if a
+          (cdr a)
+          def-val))))
 
-(define-primitive ($sremprop sym key)
-  (let ([a (assq key (getprop sym 'reboot '()))])
-    (when a
-      (putprop sym 'reboot (filter
-                            (lambda (p)
-                              (not (eq? (car p) key)))
-                            (getprop sym 'reboot '()))))))
+(define-primitive (make-$sremprop meta-key)
+  (lambda (sym key)
+    (let ([a (assq key (getprop sym meta-key '()))])
+      (when a
+        (putprop sym 'reboot (filter
+                              (lambda (p)
+                                (not (eq? (car p) key)))
+                              (getprop sym meta-key '())))))))
+
+(define-primitive $sputprop (make-$sputprop 'reboot-host))
+(define-primitive $sgetprop (make-$sgetprop 'reboot-host))
+(define-primitive $sremprop (make-$sremprop 'reboot-host))
+
+;; We'll use these when we're ready to compile/expand for the client,
+;; and that way information about primitives for host and client are
+;; kept separate
+(define client-$sputprop (make-$sputprop 'reboot-client))
+(define client-$sgetprop (make-$sgetprop 'reboot-client))
+(define client-$sremprop (make-$sremprop 'reboot-client))
 
 (define-primitive ($intern3 s x y)
   (#%$intern3 s x y))
@@ -312,24 +326,28 @@
 (define-primitive ($unbound-object? v)
   (eq? v $the-unbound-object))
 
+(define primitive-substs (make-eq-hashtable))
+
 (define-primitive $top-level-value
   (let ([orig-top-level-bound? top-level-bound?]
         [orig-top-level-value top-level-value])
     (lambda (s)
-      (if (orig-top-level-bound? s primitive-environment)
-          (orig-top-level-value s primitive-environment)
-          (begin
-            (unless (eq? s '$capture-fasl-target)
-              (printf "  [unbound: ~s]\n" s))
-            ($unbound-object))))))
+      (let ([s (hashtable-ref primitive-substs s s)])
+        (if (orig-top-level-bound? s primitive-environment)
+            (orig-top-level-value s primitive-environment)
+            (begin
+              (unless (eq? s '$capture-fasl-target)
+                (printf "  [unbound: ~s]\n" s))
+              ($unbound-object)))))))
 (define-primitive $set-top-level-value!
   (let ([top-level-bound? top-level-bound?]
         [set-top-level-value! set-top-level-value!]
         [define-top-level-value define-top-level-value])
     (lambda (sym val)
-      (if (top-level-bound? sym  primitive-environment)
-          (set-top-level-value! sym val  primitive-environment)
-          (define-top-level-value sym val primitive-environment)))))
+      (let ([sym (hashtable-ref primitive-substs sym sym)])
+        (if (top-level-bound? sym  primitive-environment)
+            (set-top-level-value! sym val  primitive-environment)
+            (define-top-level-value sym val primitive-environment))))))
 
 (define $tc-mutex (and (threaded?) (make-mutex)))
 
@@ -367,13 +385,15 @@
   (let ([orig-top-level-bound? top-level-bound?])
     (lambda (stx)
       (define (top id)
-        (if (orig-top-level-bound? (syntax->datum id) primitive-environment)
-            ;; This works as long as primitives are never locally shadowed,
-            ;; (which won't be the case for expanded code, at least):
-            id
-            ;; If it's not yet there, defer the lookup, and maybe we
-            ;; won't have to fill in the primitive:
-            #`($primitive-value (quote #,id))))
+        (let* ([sym (syntax->datum id)]
+               [sym (hashtable-ref primitive-substs sym sym)])
+          (if (orig-top-level-bound? sym primitive-environment)
+              ;; This works as long as primitives are never locally shadowed,
+              ;; (which won't be the case for expanded code, at least):
+              (datum->syntax id sym)
+              ;; If it's not yet there, defer the lookup, and maybe we
+              ;; won't have to fill in the primitive:
+              #`($primitive-value (quote #,(datum->syntax id sym))))))
       (syntax-case stx ()
         [(_ id) (top #'id)]
         [(_ level id) (top #'id)]))))
@@ -642,8 +662,10 @@
 ;; Load the macro implementations from "syntax.ss", which is
 ;; everything after the expander's implementation
 (status "Load expander macros")
-(for-each evale
-          (cddr (file->exps (path-build "s" "syntax.ss"))))
+(define (load-syntax-macro-definitions eval)
+  (for-each eval
+            (cddr (file->exps (path-build "s" "syntax.ss")))))
+(load-syntax-macro-definitions evale)
 
 ;; Not defined in "syntax.ss", but needed to load nanopass:
 (evale '(define-syntax guard
@@ -655,19 +677,28 @@
              ($guard #t (lambda (var p) (cond clause1 clause2 ... [else (p)]))
                      (lambda () b1 b2 ...))])))
 
-(define (expand/then-load s mode)
+(define (expand/then-load s mode skip)
   (status (format "Loading ~a" s))
-  (let ([es
+  (let ([vs
          ;; expand in order (so don't use `map`):
-         (let loop ([es (file->exps s)])
+         (let loop ([es (skip (file->exps s))])
            (if (null? es)
                '()
-               (let ([v (let ([e (car es)])
-                          #;(printf "~s\n" e)
-                          (eval-with-expand e mode 'expand))])
+               (let* ([v (let ([e (car es)])
+                           #;(printf "~s\n" e)
+                           (eval-with-expand e mode 'expand))])
+                 #;(printf "~s\n" v)
                  (cons v
                        (loop (cdr es))))))])
-    (for-each eval es)))
+    (let loop ([v (cons 'begin vs)])
+      (cond
+        [(and (pair? v) (eq? (car v) 'begin))
+         (for-each loop (cdr v))]
+        [(and (pair? v) (eq? (car v) 'eval-when))
+         (for-each loop (cddr v))]
+        [else
+         #;(printf "~s\n" v)
+         (eval v)]))))
 
 (define (expand-and-load s mode)
   (status (format "Loading ~a" s))
@@ -677,9 +708,13 @@
             (file->exps s)))
 
 (status "== Setup for using expander")
-(expand-and-load "s/cmacros.ss" 'system)
-(expand-and-load "s/priminfo.ss" 'system)
-(expand-and-load "s/primvars.ss" 'system)
+(define (configure-compile-time same-host-and-target?)
+  (if same-host-and-target?
+      (expand-and-load "s/cmacros.ss" 'system)
+      (expand/then-load "s/cmacros.ss" 'system values))
+  (expand-and-load "s/priminfo.ss" 'system)
+  (expand-and-load "s/primvars.ss" 'system))
+(configure-compile-time #t)
 
 ;; Need just `$compiled-file-header?` from "7.ss":
 (for-each (lambda (e)
@@ -702,6 +737,10 @@
                  (for-each loop (cdr e))])))
           (file->exps "s/7.ss"))
 
+(define-primitive $sputprop (make-$sputprop 'reboot-host))
+(define-primitive $sgetprop (make-$sgetprop 'reboot-host))
+(define-primitive $sremprop (make-$sremprop 'reboot-host))
+
 (status "== Load nanopass using expander")
 (define (load-nano s)
   (expand-and-load (path-build "nanopass" s) #f))
@@ -721,10 +760,11 @@
 (load-nano "nanopass.ss")
 
 (status "== Set configuration to target")
+(hashtable-set! primitive-substs '$sputprop 'client-$sputprop)
+(hashtable-set! primitive-substs '$sgetprop 'client-$sgetprop)
+(hashtable-set! primitive-substs '$sremprop 'client-$sremprop)
 (select-config xc-dir)
-(expand/then-load "s/cmacros.ss" 'system) ; compile as host, load to set target
-(expand-and-load "s/priminfo.ss" 'system)
-(expand-and-load "s/primvars.ss" 'system)
+(configure-compile-time #f) ; compile as host, load to set target
 (set-target-machine (constant machine-type-name))
 
 (status "== Load compiler")
@@ -743,6 +783,17 @@
             "cpprim.ss"
             "compile.ss"
             "back.ss"))
+
+(status "== Switch to target compilation")
+
+;; "syntax.ss" may define different macros for the taregt platform, so
+;; load those now while we have macros defined for the host but
+;; configuration for the target; we are assuming that the expander
+;; does not itself work differently when the target changes
+(expand/then-load "s/syntax.ss" 'system cdr)
+
+(configure-compile-time #t) ; set compile-time macros for target
+(init-syntax-libraries) ; target may have different primitives
 
 (status "== Compile bootfiles")
 (status " [At this point, `compile-file` is from the loaded compiler]")
