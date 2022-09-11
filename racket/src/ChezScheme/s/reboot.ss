@@ -404,8 +404,7 @@
 (define-syntax ($foreign-procedure stx)
   (syntax-case stx ()
     [(_ _ name . _)
-     (printf " [assuming no call to foreign function ~s]\n" (syntax->datum #'name))
-     #'name]))
+     #'(lambda args (error 'reboot "expander not expected to call foreign procedure ~s" name))]))
 
 (define-primitive ($oops . args)
   (apply error args))
@@ -710,16 +709,6 @@
        (eval v)]
       [else (void)])))
 
-(define (expand/then-load s mode skip)
-  (status (format "Loading ~a" s))
-  (let ([vs (map* (lambda (e)
-                    #;(printf "~s\n" e)
-                    (let ([v (eval-with-expand e mode 'expand)])
-                      #;(printf "~s\n" v)
-                      v))
-                  (file->exps s))])
-    (eval-now (cons 'begin vs) 'eval)))
-
 (define expanded (make-hashtable equal-hash equal?))
 
 (define (expand-and-load* s mode eval-mode)
@@ -748,17 +737,12 @@
        (hashtable-set! expanded s es))]))
 
 (status "== Setup for using expander")
-(define (configure-compile-time same-host-and-target?)
+(define (configure-compile-time)
   (for-each (lambda (s) (unless (eq? s 'ptr-bits) (remprop s '*constant*))) (oblist))
-  (if same-host-and-target?
-      (expand-and-load "s/cmacros.ss" 'system 'eval)
-      ;; 'user mode means that newly created macros are hidden
-      ;; from system code, and we just get the side effect of
-      ;; updating symbol properties
-      (expand-and-load "s/cmacros.ss" 'user))
+  (expand-and-load "s/cmacros.ss" 'system 'eval)
   (expand-and-load "s/priminfo.ss" 'system 'eval)
   (expand-and-load "s/primvars.ss" 'system 'eval))
-(configure-compile-time #t)
+(configure-compile-time)
 
 ;; Need just `$compiled-file-header?` from "7.ss":
 (for-each (lambda (e)
@@ -808,14 +792,27 @@
 (hashtable-set! primitive-substs '$sgetprop 'client-$sgetprop)
 (hashtable-set! primitive-substs '$sremprop 'client-$sremprop)
 (select-config xc-dir)
-(configure-compile-time #t) ; compile as host, load to set target
+(configure-compile-time)
+
+;; "cmacros.ss" may define macros for pthreads that make sense
+;; for compiling the target bootfiles, but not the host compiler;
+;; in a normal cross build, that's taken care of by "patch.ss",
+;; but that doesn't quite work here
+(unless (threaded?)
+    (when (eq? 'yes (eval-with-expand '(if-feature pthreads 'yes 'no) 'system 'eval))
+      (map* (lambda (e)
+              ($sputprop (cadr e) 'no-unbound-warning #t)
+              (eval-with-expand e 'system 'eval))
+            `((define make-thread-parameter make-parameter)
+              (define mutex-acquire (lambda (m) (void)))
+              (define mutex-release (lambda (m) (void)))
+              (define $tc-mutex (void))))))
 
 (status "== Compile compiler")
 (define (load-compiler eval-mode)
   (for-each (lambda (s)
               (expand-once-and-load (path-build "s" s) 'system eval-mode))
-            '("patch.ss"
-              "ftype.ss"
+            '("ftype.ss"
               "fasl.ss"
               "reloc.ss"
               "format.ss"
@@ -837,7 +834,7 @@
 
 (expand-once-and-load "s/syntax.ss" 'system 'eval)
 (init-syntax-libraries) ; target may have different primitives
-(configure-compile-time #t) ; load macros yet again
+(configure-compile-time) ; load macros yet again
 
 (load-compiler 'eval)
 (load-nanopass) ; declare nanopass yet again
