@@ -211,10 +211,10 @@
   (lambda (sym key)
     (let ([a (assq key (getprop sym meta-key '()))])
       (when a
-        (putprop sym 'reboot (filter
-                              (lambda (p)
-                                (not (eq? (car p) key)))
-                              (getprop sym meta-key '())))))))
+        (putprop sym meta-key (filter
+                               (lambda (p)
+                                 (not (eq? (car p) key)))
+                               (getprop sym meta-key '())))))))
 
 (define-primitive $sputprop (make-$sputprop 'reboot-host))
 (define-primitive $sgetprop (make-$sgetprop 'reboot-host))
@@ -709,9 +709,13 @@
 
 (status "== Setup for using expander")
 (define (configure-compile-time same-host-and-target?)
+  (for-each (lambda (s) (unless (eq? s 'ptr-bits) (remprop s '*constant*))) (oblist))
   (if same-host-and-target?
       (expand-and-load "s/cmacros.ss" 'system)
-      (expand/then-load "s/cmacros.ss" 'system values))
+      ;; 'user mode means that newly created macros are hidden
+      ;; from system code, and we just get the side effect of
+      ;; updating symbol properties
+      (expand-and-load "s/cmacros.ss" 'user))
   (expand-and-load "s/priminfo.ss" 'system)
   (expand-and-load "s/primvars.ss" 'system))
 (configure-compile-time #t)
@@ -737,10 +741,6 @@
                  (for-each loop (cdr e))])))
           (file->exps "s/7.ss"))
 
-(define-primitive $sputprop (make-$sputprop 'reboot-host))
-(define-primitive $sgetprop (make-$sgetprop 'reboot-host))
-(define-primitive $sremprop (make-$sremprop 'reboot-host))
-
 (status "== Load nanopass using expander")
 (define (load-nano s)
   (expand-and-load (path-build "nanopass" s) #f))
@@ -760,12 +760,13 @@
 (load-nano "nanopass.ss")
 
 (status "== Set configuration to target")
+(eval-with-expand `(define-syntax $sputprop (identifier-syntax client-$sputprop)) 'user 'eval)
+(eval-with-expand `(define-syntax $sgetprop (identifier-syntax client-$sgetprop)) 'user 'eval)
 (hashtable-set! primitive-substs '$sputprop 'client-$sputprop)
 (hashtable-set! primitive-substs '$sgetprop 'client-$sgetprop)
 (hashtable-set! primitive-substs '$sremprop 'client-$sremprop)
 (select-config xc-dir)
 (configure-compile-time #f) ; compile as host, load to set target
-(set-target-machine (constant machine-type-name))
 
 (status "== Load compiler")
 (for-each (lambda (s)
@@ -794,6 +795,8 @@
 
 (configure-compile-time #t) ; set compile-time macros for target
 (init-syntax-libraries) ; target may have different primitives
+
+(set-target-machine (constant machine-type-name))
 
 (status "== Compile bootfiles")
 (status " [At this point, `compile-file` is from the loaded compiler]")
