@@ -2795,10 +2795,10 @@
                        (set! ,(%mref ,t ,%zero ,(fx+ i (constant flvector-data-disp)) fp) ,(car e*))
                        ,(loop (cdr e*) (fx+ i (constant flonum-bytes))))))))))
       (define-inline 2 flvector
-        [() `(quote #vfl())]
+        [() `(quote ,(flvector))]
         [e* (and (andmap (lambda (x) (constant? flonum? x)) e*) (go e*))])
       (define-inline 3 flvector
-        [() `(quote #vfl())]
+        [() `(quote ,(flvector))]
         [e* (go e*)]))
     (let ()
       (define (go e*)
@@ -3898,7 +3898,7 @@
               (bwp-object? obj)
               ($unbound-object? obj)
               (eqv? obj '#vfx())
-              (eqv? obj '#vfl()))))
+              (eqv? obj (flvector)))))
       (define eqvok-help? number?)
       (define eqvnever-help? (lambda (obj) (not (number? obj))))
       (define e*ok?

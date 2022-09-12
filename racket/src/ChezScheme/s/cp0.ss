@@ -207,7 +207,7 @@
     (define empty-string-rec `(quote ""))
     (define empty-bytevector-rec `(quote #vu8()))
     (define empty-fxvector-rec `(quote #vfx()))
-    (define empty-flvector-rec `(quote #vfl()))
+    (define empty-flvector-rec `(quote ,(flvector)))
 
     ;;; environments
     (module (empty-env with-extended-env lookup)
@@ -976,7 +976,7 @@
             (eqv? obj (bytevector->immutable-bytevector '#vu8()))
             (eqv? obj '#vfx())
             ; no null-immutable-fxvector
-            (eqv? obj '#vfl())
+            (eqv? obj (flvector))
             ; no null-immutable-flvector
             (eq? obj (void))
             (eof-object? obj)

@@ -214,14 +214,12 @@
        (set! primitives (cons 'id primitives))
        (define id rhs))]))
 
-;; Start defining "primitives" here vv ----------------------------------------
+;; Recognize host syntax objects:
+(define syntax-object? (record-predicate (record-rtd (syntax x))))
 
-(define-primitive ($make-record-type base-rtd parent name fields sealed? opaque? . extras)
-  (apply #%$make-record-type base-rtd parent name fields sealed? opaque? extras))
-(define-primitive ($make-record-type-descriptor base-rtd parent name uid sealed? opaque? fields . extras)
-  (apply #%$make-record-type-descriptor base-rtd parent name uid sealed? opaque? fields extras))
-(define-primitive ($make-record-constructor-descriptor rts parent protocol name)
-  (#%$make-record-constructor-descriptor rts parent protocol name))
+(define orig-make-compile-time-value make-compile-time-value)
+
+;; Start defining "primitives" here vv ----------------------------------------
 
 (define (make-$sputprop meta-key)
   (lambda (sym key val)
@@ -288,9 +286,9 @@
 (define-primitive $make-fasl-strip-options #%$make-fasl-strip-options)
 
 (define-primitive symbol? (lambda (x) (and (#%symbol? x)
-                                            (not (eq? x $the-unbound-object)))))
-(define-primitive gensym? (lambda (x) (and (#%gensym? x)
-                                           (not (eq? x $the-unbound-object)))))
+                                           (not (eq? x $the-unbound-object))
+                                           (not (eq? x $the-empty-flvector)))))
+(define-primitive gensym? (lambda (x) (and (symbol? x) (#%gensym? x))))
 
 (define-primitive $immediate? (lambda (x)
                                 (or (#%$immediate? x)
@@ -304,24 +302,34 @@
 (define-primitive $system-stencil-vector? (lambda (v) #f))
 (define-primitive $symbol-name #%$symbol-name)
 
-(define-primitive $char-grapheme-other-state #%$char-grapheme-other-state)
+(define-primitive $char-grapheme-other-state 1) ; FIXME
 
 (define-primitive $ht-minlen #%$ht-minlen)
 (define-primitive $ht-veclen #%$ht-veclen)
 
 (define-primitive $rtd-counts? #%$rtd-counts?)
 
-(define-primitive $record #%$record)
-(define-primitive $record? #%$record?)
-(define-primitive $record-type-descriptor #%$record-type-descriptor)
-(define-primitive $make-record-type-descriptor* #%$make-record-type-descriptor*)
-(define-primitive $make-record-constructor-descriptor #%$make-record-constructor-descriptor)
-(define-primitive $record-type-field-indices #%$record-type-field-indices)
-(define-primitive $object-ref #%$object-ref)
-(define-primitive $sealed-record? #%$sealed-record?)
-(define-primitive $remake-rtd (lambda (rtd compute-field-offsets)
-                                (parameterize ([#%$target-machine ($target-machine)])
-                                  (#%$remake-rtd rtd compute-field-offsets))))
+(meta-cond
+ [#t
+  (include "reboot-record-wrap.ss")]
+ [else
+  (define-primitive ($make-record-type base-rtd parent name fields sealed? opaque? . extras)
+    (apply #%$make-record-type base-rtd parent name fields sealed? opaque? extras))
+  (define-primitive ($make-record-type-descriptor base-rtd parent name uid sealed? opaque? fields . extras)
+    (apply #%$make-record-type-descriptor base-rtd parent name uid sealed? opaque? fields extras))
+  (define-primitive ($make-record-constructor-descriptor rts parent protocol name)
+    (#%$make-record-constructor-descriptor rts parent protocol name))
+  (define-primitive $record #%$record)
+  (define-primitive $record? #%$record?)
+  (define-primitive $record-type-descriptor #%$record-type-descriptor)
+  (define-primitive $make-record-type-descriptor* (lambda args (error '$make-record-type-descriptor* "not ready")))
+  (define-primitive $make-record-constructor-descriptor #%$make-record-constructor-descriptor)
+  (define-primitive $record-type-field-indices (lambda (args) (error '$record-type-field-indices "not ready")))
+  (define-primitive $object-ref #%$object-ref)
+  (define-primitive $sealed-record? #%$sealed-record?)
+  (define-primitive $remake-rtd (lambda (rtd compute-field-offsets)
+                                  (parameterize ([#%$target-machine ($target-machine)])
+                                    (#%$remake-rtd rtd compute-field-offsets))))])
 
 (define-primitive $thread-list #%$thread-list)
 
@@ -329,7 +337,10 @@
 
 (define-primitive $separator-character (meta-cond
                                         [(#%$top-level-bound? '$separator-character) #%$separator-character]
-                                        [else #\/]))
+                                        [else
+                                         (case (machine-type)
+                                           [(i3nt a6nt arm64nt ti3nt ta6nt tarm64nt) #\\]
+                                           [else #\/])]))
 
 (define-primitive $expand-fp-ftype #%$expand-fp-ftype)
 (define-primitive $ftd? #%$ftd?)
@@ -341,9 +352,22 @@
 
 (define-primitive $set-collect-trip-bytes #%$set-collect-trip-bytes)
 
-  (define-syntax $lambda/lift-barrier
-    (syntax-rules ()
-      [(_ fmls body ...) (lambda fmls body ...)]))
+(define-primitive enable-unsafe-application (lambda () #f))
+(define-primitive current-generate-id (make-parameter (lambda (sym) (gensym (symbol->string sym)))))
+
+(meta-cond
+ [(#%$top-level-bound? 'flvector?)
+  (define $the-empty-flvector (make-flvector 0))]
+ [else
+  (define $the-empty-flvector (gensym "empty-flvector"))
+  (define-primitive (flvector) $the-empty-flvector)
+  (define-primitive (flvector? v) (eq? v $the-empty-flvector))
+  (define-primitive (flvector-length v) 0)
+  (define-primitive (flvector-ref v i) (error 'flvector-ref "not possible"))])
+
+(define-syntax $lambda/lift-barrier
+  (syntax-rules ()
+    [(_ fmls body ...) (lambda fmls body ...)]))
 
 (define-primitive $fasl-target (make-parameter #f))
 (define-primitive $current-mso (make-parameter #f))
@@ -365,13 +389,15 @@
   (let ([orig-top-level-bound? top-level-bound?]
         [orig-top-level-value top-level-value])
     (lambda (s)
-      (let ([s (hashtable-ref primitive-substs s s)])
-        (if (orig-top-level-bound? s primitive-environment)
-            (orig-top-level-value s primitive-environment)
-            (begin
-              (unless (eq? s '$capture-fasl-target)
-                (printf "  [unbound: ~s]\n" s))
-              ($unbound-object)))))))
+      (if (gensym? s)
+          (#%$top-level-value s)
+          (let ([s (hashtable-ref primitive-substs s s)])
+            (if (orig-top-level-bound? s primitive-environment)
+                (orig-top-level-value s primitive-environment)
+                (begin
+                  (unless (eq? s '$capture-fasl-target)
+                    (printf "  [unbound: ~s]\n" s))
+                  ($unbound-object))))))))
 (define-primitive $set-top-level-value!
   (let ([top-level-bound? top-level-bound?]
         [set-top-level-value! set-top-level-value!]
@@ -400,6 +426,8 @@
   (lambda (name thunk)
     (thunk)))
 (define-primitive $guard #%$guard)
+
+(define-primitive $invoke-library #%$invoke-library)
 
 (define orig-$uncprep #%$uncprep)
 
@@ -560,7 +588,6 @@
      (vector-map $make-interaction-syntax datum)]
     [else datum]))
 
-(define syntax-object? (record-predicate (record-rtd (syntax x))))
 (define orig-identifier? identifier?)
 (define orig-free-identifier=? free-identifier=?)
 (define orig-datum->syntax datum->syntax)
@@ -669,7 +696,7 @@
 (define (evalxm s)
   (let ([rhs (expand-to-non-syntax (caddr s))])
     (evalx `(,(car s) ,(cadr s)
-                      ;; `values` wrapper avoids deferring evaluation:
+                      ;; `values` avoids deferring evaluation:
                       (values ,rhs)))))
 
 (define (evale s)
