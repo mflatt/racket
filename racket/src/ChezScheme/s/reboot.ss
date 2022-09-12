@@ -160,7 +160,7 @@
 
 ;; Read "s/build.zuo" to get the set of sources for "petite.boot"
 ;; and "scheme.boot", so we don't have a separate copy here.
-(define-values (base-srcs compiler-srcs)
+(define-values (patch-srcs base-srcs compiler-srcs)
   (call-with-input-file
    "s/build.zuo"
    (lambda (i)
@@ -186,7 +186,13 @@
              [(list? c)
               (ormap loop c)]
              [else #f])))
-       (values (extract-list 'base-src-names)
+       (values (fold-left (lambda (srcs src)
+                            (remove src srcs))
+                          (map (lambda (s) (string-append (path-root s) ".ss"))
+                               (extract-list 'patch-names))
+                          ;; not for this cross-compile mode:
+                          '("read.ss" "interpret.ss" "cptypes.ss" "ubify.ss" "patch.ss"))
+               (extract-list 'base-src-names)
                (extract-list 'compiler-names))))))
 
 ;; In case of debugging printfs:
@@ -329,6 +335,9 @@
 (define-primitive $ftd? #%$ftd?)
 (define-primitive $ftd-as-box? #%$ftd-as-box?)
 (define-primitive $filter-foreign-type #%$filter-foreign-type)
+
+(define-primitive $make-fmt->expr #%$make-fmt->expr)
+(define-primitive $parse-format-string #%$parse-format-string)
 
 (define-primitive $set-collect-trip-bytes #%$set-collect-trip-bytes)
 
@@ -833,36 +842,19 @@
 (define (load-compiler eval-mode)
   (for-each (lambda (s)
               (expand-once-and-load (path-build "s" s) 'system eval-mode))
-            '("ftype.ss"
-              "fasl.ss"
-              "reloc.ss"
-              "format.ss"
-              "cp0.ss"
-              "cpvalid.ss"
-              "cpcheck.ss"
-              "cpletrec.ss"
-              "cpcommonize.ss"
-              "cpnanopass.ss"
-              "cpprim.ss"
-              "compile.ss"
-              "back.ss")))
+            patch-srcs))
 (load-compiler 'compile)
-(expand-once-and-load "s/syntax.ss" 'system 'compile)
 
 (status "== Load compiler")
 
 (define saved-libraries ($loaded-libraries))
 
-(expand-once-and-load "s/syntax.ss" 'system 'eval)
-(init-syntax-libraries) ; target may have different primitives
-(configure-compile-time) ; load macros yet again
-
 (load-compiler 'eval)
-(load-nanopass) ; declare nanopass yet again
-
-($loaded-libraries saved-libraries)
-
+(load-nanopass) ; declare nanopass, yet again
+(configure-compile-time) ; load cmacros, yet again
 (eval-with-expand guard-macro 'system 'eval)
+
+($loaded-libraries saved-libraries) ; attach nanopass declarations to newest expander
 
 (set-target-machine (constant machine-type-name))
 
