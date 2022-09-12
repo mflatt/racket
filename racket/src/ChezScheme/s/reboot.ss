@@ -485,7 +485,7 @@
             '("cmacros.ss" "priminfo.ss" "primvars.ss")))
 (load-machine-config)
 
-;; Loading "cmacros.ss" defined `constant`:
+;; Loading "cmacros.ss"-defined `constant`s:
 (define (set-target-machine mach)
   ($target-machine mach)
   (status (format "Configured for machine: ~a" ($target-machine))))
@@ -905,7 +905,7 @@
                    [debug-level 0])
       (compile-file (path-build "s" s)
                     (path-build xc-dir (string-append (path-root s) ".so"))))
-    (status (format "  ~a secs cpu time" (/ (- (cpu-time) start) 1000.0)))))
+    (status (format "  ~as elapsed cpu time" (/ (- (cpu-time) start) 1000.0)))))
 
 (for-each compile-s-file
           base-srcs)
