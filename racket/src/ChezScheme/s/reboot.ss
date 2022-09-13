@@ -217,6 +217,12 @@
 ;; Recognize host syntax objects:
 (define syntax-object? (record-predicate (record-rtd (syntax x))))
 
+(define orig-syntax->datum syntax->datum)
+(define orig-identifier? identifier?)
+(define orig-free-identifier=? free-identifier=?)
+(define orig-datum->syntax datum->syntax)
+(define syntax->datum #%syntax->datum) ; to be replaced by expander
+
 (define orig-make-compile-time-value make-compile-time-value)
 
 ;; Start defining "primitives" here vv ----------------------------------------
@@ -342,7 +348,8 @@
                                            [(i3nt a6nt arm64nt ti3nt ta6nt tarm64nt) #\\]
                                            [else #\/])]))
 
-(define-primitive $expand-fp-ftype #%$expand-fp-ftype)
+(define-primitive $expand-fp-ftype (lambda (who what r ftype)
+                                     (#%$expand-fp-ftype who what r (syntax->datum ftype))))
 (define-primitive $ftd? #%$ftd?)
 (define-primitive $ftd-as-box? #%$ftd-as-box?)
 (define-primitive $filter-foreign-type #%$filter-foreign-type)
@@ -389,15 +396,15 @@
   (let ([orig-top-level-bound? top-level-bound?]
         [orig-top-level-value top-level-value])
     (lambda (s)
-      (if (gensym? s)
-          (#%$top-level-value s)
-          (let ([s (hashtable-ref primitive-substs s s)])
-            (if (orig-top-level-bound? s primitive-environment)
-                (orig-top-level-value s primitive-environment)
-                (begin
-                  (unless (eq? s '$capture-fasl-target)
-                    (printf "  [unbound: ~s]\n" s))
-                  ($unbound-object))))))))
+      (let ([s (hashtable-ref primitive-substs s s)])
+        (cond
+          [(orig-top-level-bound? s primitive-environment)
+           (orig-top-level-value s primitive-environment)]
+          [(gensym? s) (#%$top-level-value s)]
+          [else
+           (unless (eq? s '$capture-fasl-target)
+             (printf "  [unbound: ~s]\n" s))
+           ($unbound-object)])))))
 (define-primitive $set-top-level-value!
   (let ([top-level-bound? top-level-bound?]
         [set-top-level-value! set-top-level-value!]
@@ -446,11 +453,11 @@
   (let ([orig-top-level-bound? top-level-bound?])
     (lambda (stx)
       (define (top id)
-        (let* ([sym (syntax->datum id)]
+        (let* ([sym (orig-syntax->datum id)]
                [sym (hashtable-ref primitive-substs sym sym)])
           (if (orig-top-level-bound? sym primitive-environment)
               ;; This works as long as primitives are never locally shadowed,
-              ;; (which won't be the case for expanded code, at least):
+              ;; (which w<on't be the case for expanded code, at least):
               (datum->syntax id sym)
               ;; If it's not yet there, defer the lookup, and maybe we
               ;; won't have to fill in the primitive:
@@ -588,11 +595,6 @@
      (vector-map $make-interaction-syntax datum)]
     [else datum]))
 
-(define orig-identifier? identifier?)
-(define orig-free-identifier=? free-identifier=?)
-(define orig-datum->syntax datum->syntax)
-(define orig-syntax->datum syntax->datum)
-
 (define (expand-to-non-syntax/system s)
   (define (requote-syntax s)
     (cond
@@ -600,7 +602,7 @@
        (if (and (eq? (car s) 'quote)
                 (pair? (cdr s))
                 (syntax-object? (cadr s)))
-           `($make-system-syntax ',(syntax->datum (cadr s)))
+           `($make-system-syntax ',(orig-syntax->datum (cadr s)))
            (cons (requote-syntax (car s))
                  (requote-syntax (cdr s))))]
       [else s]))

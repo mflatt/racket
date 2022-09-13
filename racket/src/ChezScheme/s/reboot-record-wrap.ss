@@ -13,9 +13,12 @@
           record-type-opaque?
           record-type-parent
           make-record-type-descriptor
+          record-type-descriptor?
           
           make-record-constructor-descriptor
+          record-constructor-descriptor?
           record-constructor
+          r6rs:record-constructor
           record-predicate
           record-accessor
           record-mutator
@@ -31,6 +34,7 @@
           $make-record-type
           $make-record-type-descriptor
           $make-record-type-descriptor*
+          $make-record-constructor-descriptor
           make-record-type
           $remake-rtd
           $record
@@ -55,10 +59,13 @@
                   record-type-opaque?
                   record-type-parent
                   make-record-type-descriptor
+                  record-type-descriptor?
                   define-record
                   
                   make-record-constructor-descriptor
+                  record-constructor-descriptor?
                   record-constructor
+                  r6rs:record-constructor
                   record-predicate
                   record-accessor
                   record-mutator
@@ -95,6 +102,7 @@
                           record-type-opaque?
                           record-type-parent
                           make-record-type-descriptor
+                          record-type-descriptor?
 
                           make-record-constructor-descriptor
                           record-constructor
@@ -118,9 +126,12 @@
                           record-type-opaque?
                           record-type-parent
                           make-record-type-descriptor
+                          record-type-descriptor?
 
                           make-record-constructor-descriptor
+                          record-constructor-descriptor?
                           record-constructor
+                          r6rs:record-constructor
                           record-predicate
                           record-accessor
                           record-mutator

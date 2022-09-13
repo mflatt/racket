@@ -10,9 +10,9 @@
   (fields rtd parent-rcd protocol)
   (nongenerative #{re:rcd bxw8uzjdge5u6o5xp0kovyiun-3}))
 
-(define $record? #%$record?)
+(define-primitive $record? #%$record?)
 
-(define record?
+(define-primitive record?
   (case-lambda
    [(v) (and (re:record? v)
              (not (re:rtd-opaque? (re:record-rtd v))))]
@@ -23,11 +23,11 @@
                          (and p
                               (loop p))))))]))
 
-(define ($sealed-record? v rtd)
+(define-primitive ($sealed-record? v rtd)
   (and (re:record? v)
        (eq? rtd (re:record-rtd v))))
 
-(define ($record-type-descriptor v)
+(define-primitive ($record-type-descriptor v)
   (cond
     [(eq? v #!base-rtd)
      #!base-rtd]
@@ -36,13 +36,13 @@
     [else
      (re:record-rtd v)]))
 
-(define record-rtd re:record-rtd)
+(define-primitive record-rtd re:record-rtd)
 
-(define record-type-uid re:rtd-uid)
-(define record-type-name re:rtd-name)
-(define record-type-sealed? re:rtd-sealed?)
-(define record-type-opaque? re:rtd-opaque?)
-(define record-type-parent re:rtd-parent)
+(define-primitive record-type-uid re:rtd-uid)
+(define-primitive record-type-name re:rtd-name)
+(define-primitive record-type-sealed? re:rtd-sealed?)
+(define-primitive record-type-opaque? re:rtd-opaque?)
+(define-primitive record-type-parent re:rtd-parent)
 
 (define (parent-rtd-count parent)
   (cond
@@ -52,9 +52,10 @@
 
 (define all-rtds (make-eq-hashtable))
 
-(define ($make-record-type-descriptor base-rtd name parent uid sealed? opaque? fields . extras)
+(define-primitive ($make-record-type-descriptor base-rtd name parent uid sealed? opaque? fields . extras)
   (unless (or (not parent) (re:rtd? parent)) (error '$make-record-type-descriptor "bad parent ~s" parent))
-  (let ([uid (or uid (gensym))])
+  (let ([uid (or uid (gensym))]
+        [fields (vector->list fields)])
     (or (hashtable-ref all-rtds uid #f)
         (let ([rtd (make-re:rtd base-rtd name parent uid
                                 (map (lambda (f) (list (cadr f) (car f) 'scheme-object)) fields)
@@ -63,16 +64,18 @@
           (hashtable-set! all-rtds uid rtd)
           rtd))))
 
-(define ($make-record-type base-rtd parent name fields sealed? opaque? . extras)
-  (apply $make-record-type-descriptor base-rtd name parent (gensym) sealed? opaque? fields extras))
+(define-primitive ($make-record-type base-rtd parent name fields sealed? opaque? . extras)
+  (apply $make-record-type-descriptor base-rtd name parent (gensym) sealed? opaque? (list->vector fields) extras))
 
-(define (make-record-type-descriptor name parent uid sealed? opaque? fields)
-  ($make-record-type-descriptor #!base-rtd name parent uid sealed? opaque? (vector->list fields)))
+(define-primitive (make-record-type-descriptor name parent uid sealed? opaque? fields)
+  ($make-record-type-descriptor #!base-rtd name parent uid sealed? opaque? fields))
 
-(define ($make-record-type-descriptor* . args)
+(define-primitive ($make-record-type-descriptor* . args)
   (error '$make-record-type-descriptor* "not yet ready"))
 
-(define make-record-type
+(define-primitive record-type-descriptor? re:rtd?)
+
+(define-primitive make-record-type
   (case-lambda
    [(name fields) (make-record-type #f name fields)]
    [(parent name fields)
@@ -85,18 +88,23 @@
                        (+ (length fields) (parent-rtd-count parent))
                        #f #f)]))
 
-(define ($remake-rtd rtd compute-field-offsets)
+(define-primitive ($remake-rtd rtd compute-field-offsets)
   (error '$remake-rtd "not yet ready"))
 
-(define ($record rtd . args)
+(define-primitive ($record rtd . args)
   (if (eq? rtd #!base-rtd)
       (error 'base-rtd "fixme")
       (make-re:record rtd (list->vector args))))
 
-(define (make-record-constructor-descriptor rtd parent-rcd protocol)
+(define-primitive (make-record-constructor-descriptor rtd parent-rcd protocol)
   (make-re:rcd rtd parent-rcd protocol))
 
-(define (record-constructor rcd)
+(define-primitive ($make-record-constructor-descriptor rtd parent-rcd protocol who)
+  (make-record-constructor-descriptor rtd parent-rcd protocol))
+
+(define-primitive record-constructor-descriptor? re:rcd?)
+
+(define-primitive (record-constructor rcd)
   (cond
     [(re:rtd? rcd)
      (lambda fields
@@ -118,20 +126,22 @@
                 [else rc]))
              rc)))]))
 
-(define (record-predicate rtd)
+(define-primitive r6rs:record-constructor record-constructor)
+
+(define-primitive (record-predicate rtd)
   (lambda (v) (record? v rtd)))
 
-(define (record-accessor rtd idx)
+(define-primitive (record-accessor rtd idx)
   (let ([idx (+ idx (parent-rtd-count (re:rtd-parent rtd)))])
     (lambda (v)
       (vector-ref (re:record-vec v) idx))))
 
-(define (record-mutator rtd idx)
+(define-primitive (record-mutator rtd idx)
   (let ([idx (+ idx (parent-rtd-count (re:rtd-parent rtd)))])
     (lambda (v val)
       (vector-set! (re:record-vec v) idx val))))
 
-(define (field-name->index rtd name)
+(define-primitive (field-name->index rtd name)
   (+ (let loop ([fs (re:rtd-fields rtd)] [idx 0])
        (cond
          [(null? fs) (error 'csv7-record "field not found ~s" name)]
@@ -139,21 +149,21 @@
          [else (loop (cdr fs) (add1 idx))]))
      (parent-rtd-count (re:rtd-parent rtd))))
 
-(define (csv7:record-field-accessor rtd name/idx)
+(define-primitive (csv7:record-field-accessor rtd name/idx)
   (let ([idx (if (symbol? name/idx)
                  (field-name->index rtd name/idx)
                  name/idx)])
     (lambda (v)
       (vector-ref (re:record-vec v) idx))))
 
-(define (csv7:record-field-mutator rtd name/idx)
+(define-primitive (csv7:record-field-mutator rtd name/idx)
   (let ([idx (if (symbol? name/idx)
                  (field-name->index rtd name/idx)
                  name/idx)])
     (lambda (v val)
       (vector-set! (re:record-vec v) idx val))))
 
-(define (csv7:record-field-mutable? rtd name/idx)
+(define-primitive (csv7:record-field-mutable? rtd name/idx)
   (let ([idx (if (symbol? name/idx)
                  (field-name->index rtd name/idx)
                  name/idx)])
@@ -163,16 +173,16 @@
             (loop (re:rtd-parent rtd))
             (eq? (cadr (list-ref (re:rtd-fields rtd) (- idx c))) 'immutable))))))
 
-(define (csv7:record-field-accessible? rtd name/idx)
+(define-primitive (csv7:record-field-accessible? rtd name/idx)
   #t)
 
-(define (record-type-field-names rtd)
+(define-primitive (record-type-field-names rtd)
   (list->vector (map car (re:rtd-fields rtd))))
 
-(define (record-type-field-indices rtd)
+(define-primitive (record-type-field-indices rtd)
   (list->vector (iota (- (re:rtd-count rtd) (parent-rtd-count (re:rtd-parent rtd))))))
 
-(define (csv7:record-type-field-names rtd)
+(define-primitive (csv7:record-type-field-names rtd)
   (let loop ([rtd rtd] [accum '()])
     (let ([accum (append (map car (re:rtd-fields rtd))
                          accum)]
@@ -181,10 +191,10 @@
           accum
           (loop p accum)))))
 
-(define ($record-type-field-indices rtd)
+(define-primitive ($record-type-field-indices rtd)
   (iota (re:rtd-count rtd)))
 
-(define (csv7:record-type-field-decls rtd)
+(define-primitive (csv7:record-type-field-decls rtd)
   (let loop ([rtd rtd] [accum '()])
     (let ([accum (append (map (lambda (f)
                                 (list (cadr f) (caddr f) (cadr f)))
@@ -195,10 +205,10 @@
           accum
           (loop p accum)))))
 
-(define (record-writer rtd proc) (void))
+(define-primitive (record-writer rtd proc) (void))
 
 ;; assumes that records has only pointer-sized fields
-(define ($object-ref type v offset)
+(define-primitive ($object-ref type v offset)
   (cond
     [(flonum? v)
      (error '$object-ref "flonum")
@@ -272,7 +282,7 @@
                                         (apply string-append
                                                (map (lambda (piece)
                                                       (cond
-                                                        [(identifier? piece) (symbol->string (syntax->datum piece))]
+                                                        [(identifier? piece) (symbol->string (#%syntax->datum piece))]
                                                         [(string? piece) piece]
                                                         [(symbol? piece) (symbol->string piece)]
                                                         [else (error 'build-name "oops")]))
@@ -285,7 +295,7 @@
                (or (ormap (lambda (spec)
                             (syntax-case spec ()
                               [(spec-key . _)
-                               (eq? key (syntax->datum #'spec-key))
+                               (eq? key (#%syntax->datum #'spec-key))
                                spec]
                               [_ #f]))
                           #'(spec ...))
