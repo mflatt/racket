@@ -295,6 +295,7 @@
                                            (not (eq? x $the-unbound-object))
                                            (not (eq? x $the-empty-flvector)))))
 (define-primitive gensym? (lambda (x) (and (symbol? x) (#%gensym? x))))
+(define-primitive uninterned-symbol? (lambda (x) #f)) ; assuming not used in compiler
 
 (define-primitive $immediate? (lambda (x)
                                 (or (#%$immediate? x)
@@ -308,12 +309,40 @@
 (define-primitive $system-stencil-vector? (lambda (v) #f))
 (define-primitive $symbol-name #%$symbol-name)
 
-(define-primitive $char-grapheme-other-state 1) ; FIXME
+(define-primitive ($char-grapheme-other-state) 1) ; probably correct, shouldn't matter for compiler
 
 (define-primitive $ht-minlen #%$ht-minlen)
 (define-primitive $ht-veclen #%$ht-veclen)
 
-(define-primitive $rtd-counts? #%$rtd-counts?)
+(define-primitive $rtd-counts? (lambda (x) #f))
+
+(define (fxwraparound v)
+  (cond
+    [(fixnum? v)
+     v]
+    [(zero? (bitwise-and v (add1 (most-positive-fixnum))))
+     (bitwise-ior v (- -1 (most-positive-fixnum)))]
+    [else
+     (bitwise-and v (most-positive-fixnum))]))
+
+(define-primitive (fx+/wraparound a b) (fxwraparound (+ a b)))
+(define-primitive (fx-/wraparound a b) (fxwraparound (- a b)))
+(define-primitive (fx*/wraparound a b) (fxwraparound (* a b)))
+(define-primitive (fxsll/wraparound a b) (fxwraparound (bitwise-arithmetic-shift-left a b)))
+
+(define-primitive (fxpopcount32 x)
+  (let* ([x (- x (bitwise-and (arithmetic-shift x -1) #x55555555))]
+         [x (+ (bitwise-and x #x33333333) (bitwise-and (arithmetic-shift x -2) #x33333333))]
+         [x (bitwise-and (+ x (arithmetic-shift x -4)) #x0f0f0f0f)]
+         [x (+ x (arithmetic-shift x -8) (arithmetic-shift x -16) (arithmetic-shift x -24))])
+    (bitwise-and x #x3f)))
+
+(define-primitive (fxpopcount x)
+  (fx+ (fxpopcount32 (bitwise-and x #xffffffff))
+       (fxpopcount32 (arithmetic-shift x -32))))
+
+(define-primitive (fxpopcount16 x)
+  (fxpopcount32 (bitwise-and x #xffff)))
 
 (meta-cond
  [#t
@@ -337,6 +366,112 @@
                                   (parameterize ([#%$target-machine ($target-machine)])
                                     (#%$remake-rtd rtd compute-field-offsets))))])
 
+;;;;;;;;;;;;;;;;;;
+#;(
+(define $the-unbound-object 'oooooooooooops)
+(define $the-empty-flvector 'oooooooooooops)
+(let ()
+  (define-syntax rtd/fptr
+    (let ([rtd ($make-record-type #!base-rtd #f
+                 '#{ftype-pointer a9pth58056u34h517jsrqv-0}
+                 '((immutable uptr address))
+                 #f
+                 #f)])
+      (lambda (x) #`'#,rtd)))
+  (define $fptr? (record-predicate rtd/fptr))
+  (define $ftype-pointer-address (record-accessor rtd/fptr 0))
+  (define-syntax rtd/ftd
+    (let ([rtd ($make-record-type #!base-rtd #!base-rtd
+                 '#{rtd/ftd a9pth58056u34h517jsrqv-1}
+                 '((immutable ptr stype)
+                   (immutable ptr size)
+                   (immutable ptr alignment))
+                 #f
+                 #f)])
+      (lambda (x) #`'#,rtd)))
+  (define ftd? (record-predicate rtd/ftd))
+  (define ftd-stype (record-accessor rtd/ftd 0))
+  (define ftd-size (record-accessor rtd/ftd 1))
+  (define ftd-alignment (record-accessor rtd/ftd 2))
+  (define-syntax define-ftd-record-type
+    (lambda (x)
+      (define construct-name
+        (lambda (template-identifier . args)
+          (datum->syntax
+            template-identifier
+            (string->symbol
+              (apply string-append
+                     (map (lambda (x)
+                            (if (string? x)
+                                x
+                                (symbol->string (syntax->datum x))))
+                          args))))))
+      (define ftd-field
+        (lambda (field)
+          (syntax-case field (mutable)
+            [field-name
+             (identifier? #'field-name)
+             #'field-name]
+            [(mutable field-name)
+             (identifier? #'field-name)
+             #'field-name])))
+      (define ftd-accessors
+        (lambda (record-name field*)
+          (define accessor
+            (lambda (field-name ordinal)
+              #`(define #,(construct-name field-name "ftd-" record-name "-" field-name)
+                  (record-accessor rtd #,ordinal))))
+          (define mutator
+            (lambda (field-name ordinal)
+              #`(define #,(construct-name field-name "ftd-" record-name "-" field-name "-set!")
+                  (record-mutator rtd #,ordinal))))
+          (let f ([field* field*] [ordinal 0])
+            (if (null? field*)
+                '()
+                (syntax-case (car field*) (mutable)
+                  [field-name
+                   (identifier? #'field-name)
+                   (cons (accessor #'field-name ordinal)
+                     (f (cdr field*) (+ ordinal 1)))]
+                  [(mutable field-name)
+                   (identifier? #'field-name)
+                   (cons (mutator #'field-name ordinal)
+                     (cons (accessor #'field-name ordinal)
+                       (f (cdr field*) (+ ordinal 1))))])))))
+      (syntax-case x ()
+        [(_ record-name ?uid field ...)
+         (with-syntax ([(field-name ...) (map ftd-field #'(field ...))]
+                       [constructor-name (construct-name #'record-name "make-ftd-" #'record-name)])
+           #`(begin
+               (define-syntax rtd
+                 (let ([rtd ($make-record-type #!base-rtd rtd/ftd
+                              '?uid
+                              '(field ...)
+                              #t
+                              #f)])
+                   (lambda (x) #`'#,rtd)))
+               (define constructor-name
+                 (lambda (parent uid stype size alignment field-name ...)
+                   ($make-record-type rtd parent (or uid #,(symbol->string (datum record-name))) '() #f #f stype size alignment field-name ...)))
+               (define #,(construct-name #'record-name "ftd-" #'record-name "?")
+                 (record-predicate rtd))
+               #,@(ftd-accessors #'record-name #'(field ...))))])))
+
+  (define-ftd-record-type base #{rtd/ftd-base a9pth58056u34h517jsrqv-18} eness type)
+  (define-ftd-record-type struct #{rtd/ftd-struct a9pth58056u34h517jsrqv-3} field*)
+  (define-ftd-record-type union #{rtd/ftd-union a9pth58056u34h517jsrqv-4} field*)
+  (define-ftd-record-type array #{rtd/ftd-array a9pth58056u34h517jsrqv-5} length ftd)
+  (define-ftd-record-type pointer #{rtd/ftd-pointer a9pth58056u34h517jsrqv-6} (mutable ftd))
+  (define-ftd-record-type bits #{rtd/ftd-ibits a9pth58056u34h517jsrqv-19} eness field*)
+  (define-ftd-record-type function #{rtd/ftd-function a9pth58056u34h517jsrqv-11} conv* arg-type* result-type)
+
+  (printf "~s\n" (ftd-function? (make-ftd-base 'integer-64 8 8 'native 'int 1 2)))
+  
+  'ok)
+(exit)
+)
+;;;;;;;;
+
 (define-primitive $thread-list #%$thread-list)
 
 (define-primitive $c-bufsiz #%$c-bufsiz)
@@ -355,12 +490,19 @@
 (define-primitive $filter-foreign-type #%$filter-foreign-type)
 
 (define-primitive $make-fmt->expr #%$make-fmt->expr)
-(define-primitive $parse-format-string #%$parse-format-string)
+(define-primitive $parse-format-string (lambda args #f))
 
 (define-primitive $set-collect-trip-bytes #%$set-collect-trip-bytes)
 
-(define-primitive enable-unsafe-application (lambda () #f))
+;; Parameters added since the oldest host verson that we want to support:
+(define-primitive enable-unsafe-application (make-parameter #f))
+(define-primitive enable-unsafe-variable-reference (make-parameter #f))
 (define-primitive current-generate-id (make-parameter (lambda (sym) (gensym (symbol->string sym)))))
+(define-primitive enable-type-recovery (make-parameter #f))
+(define-primitive enable-error-source-expression (make-parameter #f))
+(define-primitive compile-procedure-realm (make-parameter #f))
+(define-primitive compile-omit-concatenate-support (make-parameter #f))
+(define-primitive enable-arithmetic-left-associative (make-parameter #f))
 
 (meta-cond
  [(#%$top-level-bound? 'flvector?)
@@ -457,7 +599,7 @@
                [sym (hashtable-ref primitive-substs sym sym)])
           (if (orig-top-level-bound? sym primitive-environment)
               ;; This works as long as primitives are never locally shadowed,
-              ;; (which w<on't be the case for expanded code, at least):
+              ;; (which won't be the case for expanded code, at least):
               (datum->syntax id sym)
               ;; If it's not yet there, defer the lookup, and maybe we
               ;; won't have to fill in the primitive:
@@ -891,7 +1033,6 @@
 (status " [At this point, `compile-file` is from the loaded compiler]")
 
 (fasl-compressed #f)
-(enable-type-recovery #f)
 
 (current-expand (lambda args
                   (parameterize ([$current-expand

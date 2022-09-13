@@ -566,7 +566,7 @@ Notes:
           (eqv? obj (bytevector->immutable-bytevector '#vu8()))
           (eqv? obj '#vfx())
           ; no null-immutable-fxvector
-          (eqv? obj '#vfl())
+          (eqv? obj (flvector))
           ; no null-immutable-flvector
           (eq? obj (void))
           (eof-object? obj)

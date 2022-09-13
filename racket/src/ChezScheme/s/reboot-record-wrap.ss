@@ -86,6 +86,9 @@
   (define-syntax define-primitive
     (syntax-rules ()
       [(_ . rest) (define . rest)]))
+  (define lookup-constant
+    (lambda (sym)
+      (error sym "should not try to use contant here")))
   (include "reboot-record.ss"))
 
 (library (rnrs-no-records)
