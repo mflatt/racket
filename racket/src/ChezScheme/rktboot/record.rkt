@@ -344,7 +344,7 @@
             (if (base-rtd? rtd)
                 null
                 (hash-ref rtd-fields rtd)))))]
-       [(ancestors)
+       [(ancestry)
         (assert-accessor)
         (lambda (rtd)
           (cond

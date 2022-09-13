@@ -314,7 +314,7 @@
 (define-primitive $ht-minlen #%$ht-minlen)
 (define-primitive $ht-veclen #%$ht-veclen)
 
-(define-primitive $rtd-counts? (lambda (x) #f))
+(define-primitive $rtd-counts? #%$rtd-counts?)
 
 (define (fxwraparound v)
   (cond
@@ -359,7 +359,7 @@
   (define-primitive $record-type-descriptor #%$record-type-descriptor)
   (define-primitive $make-record-type-descriptor* (lambda args (error '$make-record-type-descriptor* "not ready")))
   (define-primitive $make-record-constructor-descriptor #%$make-record-constructor-descriptor)
-  (define-primitive $record-type-field-indices (lambda (args) (error '$record-type-field-indices "not ready")))
+  (define-primitive $record-type-field-indices #%$record-type-field-indices)
   (define-primitive $object-ref #%$object-ref)
   (define-primitive $sealed-record? #%$sealed-record?)
   (define-primitive $remake-rtd (lambda (rtd compute-field-offsets)

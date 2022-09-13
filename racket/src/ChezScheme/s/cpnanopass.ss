@@ -2834,13 +2834,15 @@
         [(call ,info ,mdcl ,pr ,e1 ,[e2 #f -> * fp?2] ,[e3 #f -> * fp?3] ,e4)
          (guard (and (eq? '$object-set! (primref-name pr))
                      (nanopass-case (L7 Expr) e1
-                       [(quote ,d) (eq? d 'double)])))
+                       [(quote ,d) (eq? d 'double)]
+                       [else #f])))
          (Expr e4 #t)
          #f]
         [(call ,info ,mdcl ,pr ,e1 ,[e2 #f -> * fp?2] ,[e3 #f -> * fp?3])
          (guard (and (eq? '$object-ref (primref-name pr))
                      (nanopass-case (L7 Expr) e1
-                       [(quote ,d) (eq? d 'double)])))
+                       [(quote ,d) (eq? d 'double)]
+                       [else #f])))
          #t]
         [(call ,info ,mdcl ,pr ,[e1 #f -> * fp?1] ,[e2 #f -> * fp?2] ,e3)
          (guard (eq? 'bytevector-ieee-double-native-set! (primref-name pr)))

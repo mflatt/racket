@@ -80,6 +80,8 @@
                   csv7:record-type-field-names
                   csv7:record-type-field-decls
 
+                  record-type-field-indices ; SOMETIMES
+
                   record-writer
                   make-record-type
                   type-descriptor))
@@ -150,6 +152,8 @@
                           csv7:record-field-accessible?
                           csv7:record-type-field-names
                           csv7:record-type-field-decls
+
+                          record-type-field-indices ; SOMETIMES
 
                           record-writer
                           make-record-type

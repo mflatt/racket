@@ -91,7 +91,7 @@
                           [else (loop (re:rtd-parent x) (cons x accum))]))))]
           [(size)
            (handle x (+ (lookup-constant 'header-size-record)
-                        (* (re:rtd-count new-base-rtd) (lookup-constant 'ptr-bytes))))]
+                        (* (re:rtd-count (subst-base-rtd x)) (lookup-constant 'ptr-bytes))))]
           [(pm)
            (handle x (let ([fields (all-fields (subst-base-rtd x))])
                        (cond
@@ -100,7 +100,9 @@
                                   fields)
                           -1]
                          [else
-                          (let loop ([pm 0] [m 1] [fields fields])
+                          (let loop ([pm 1] ; start after base-rtd
+                                     [m 2]
+                                     [fields fields])
                             (cond
                               [(null? fields) pm]
                               [else
@@ -109,7 +111,9 @@
                                      (cdr fields))]))])))]
           [(mpm)
            (handle x (let ([fields (all-fields (subst-base-rtd x))])
-                       (let loop ([pm 0] [m 1] [fields fields])
+                       (let loop ([pm 1] ; start after base-rtd
+                                  [m 2]
+                                  [fields fields])
                          (cond
                            [(null? fields) pm]
                            [else
@@ -296,7 +300,6 @@
                                   (make-field 'mutable 'scheme-object f)
                                   f))
                             fields)
-                       (+ (length fields) (parent-rtd-count parent))
                        #f #f)]))
 
 (define-primitive ($remake-rtd rtd compute-field-offsets)
