@@ -100,8 +100,8 @@
                                   fields)
                           -1]
                          [else
-                          (let loop ([pm 1] ; start after base-rtd
-                                     [m 2]
+                          (let loop ([pm 1]
+                                     [m 2] ; start after base-rtd
                                      [fields fields])
                             (cond
                               [(null? fields) pm]
@@ -111,8 +111,8 @@
                                      (cdr fields))]))])))]
           [(mpm)
            (handle x (let ([fields (all-fields (subst-base-rtd x))])
-                       (let loop ([pm 1] ; start after base-rtd
-                                  [m 2]
+                       (let loop ([pm 0]
+                                  [m 2] ; start after base-rtd
                                   [fields fields])
                          (cond
                            [(null? fields) pm]
@@ -273,12 +273,21 @@
                                          [else (make-field (caddr f) (car f) (cadr f))]))
                                      fields)
                                 (+ (length fields) (parent-rtd-count parent))
-                                sealed? opaque? extras)])
+                                sealed?
+                                (or opaque? (and parent
+                                                 (re:rtd-opaque? (subst-base-rtd parent))))
+                                extras)])
           (hashtable-set! all-rtds uid rtd)
           rtd))))
 
 (define-primitive ($make-record-type base-rtd parent name fields sealed? opaque? . extras)
-  (apply $make-record-type-descriptor base-rtd name parent (if (#%gensym? name) name (gensym)) sealed? opaque? (list->vector fields) extras))
+  (apply $make-record-type-descriptor base-rtd name parent (if (#%gensym? name) name (gensym)) sealed? opaque?
+         (list->vector (map (lambda (f)
+                              (if (symbol? f)
+                                  (list 'mutable f)
+                                  f))
+                            fields))
+         extras))
 
 (define-primitive (make-record-type-descriptor name parent uid sealed? opaque? fields)
   ($make-record-type-descriptor #!base-rtd name parent uid sealed? opaque? fields))
@@ -482,9 +491,9 @@
      (unless (or (eq? type 'scheme-object)
                  (eq? type 'ptr)
                  (and (eq? type 'integer-64)
-                      (= 8 (lookup-constant 'ptr-bytes)))
+                      (= 8 (ftype-sizeof uptr)))
                  (and (eq? type 'integer-32)
-                      (= 4 (lookup-constant 'ptr-bytes))))
+                      (= 4 (ftype-sizeof uptr))))
        (error '$object-ref "unrecognized type: ~s in ~s ~s" type v offset))
      (let ([i (quotient (- offset (+ (lookup-constant 'record-ptr-offset)
                                      (lookup-constant 'ptr-bytes)))
@@ -499,7 +508,13 @@
          [(re:record? v) (vector-ref (re:record-vec v) i)]
          [else
           (check-allowed-host-record v)
-          (#%$object-ref type v offset)]))]))
+          (let ([offset (+ (* (+ i 1) (ftype-sizeof uptr))
+                           ;; this turns out to be constant across word
+                           ;; sizes, but it would be better to not rely on that;
+                           ;; using `$record-ref` would avoid the problem, but
+                           ;; it's relatively new
+                           (lookup-constant 'record-ptr-offset))])
+            (#%$object-ref type v offset))]))]))
 
 (meta define record-type-info list)
 (meta define record-type-info-rtd car)
