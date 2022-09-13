@@ -45,7 +45,7 @@
                               fields)
                          (length fields)
                          #f
-                         #t
+                         #f
                          '()))]
          [else (loop)])))))
 
@@ -508,13 +508,15 @@
          [(re:record? v) (vector-ref (re:record-vec v) i)]
          [else
           (check-allowed-host-record v)
-          (let ([offset (+ (* (+ i 1) (ftype-sizeof uptr))
-                           ;; this turns out to be constant across word
-                           ;; sizes, but it would be better to not rely on that;
-                           ;; using `$record-ref` would avoid the problem, but
-                           ;; it's relatively new
-                           (lookup-constant 'record-ptr-offset))])
-            (#%$object-ref type v offset))]))]))
+          (meta-cond
+           [(#%$top-level-bound? '$record-ref)
+            (#%$record-ref v i)]
+           [else
+            (let ([offset (+ (* (+ i 1) (ftype-sizeof uptr))
+                             ;; this turns out to be constant across word
+                             ;; sizes, at least for versions before `$record-ref`
+                             (lookup-constant 'record-ptr-offset))])
+              (#%$object-ref type v offset))])]))]))
 
 (meta define record-type-info list)
 (meta define record-type-info-rtd car)
