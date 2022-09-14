@@ -214,7 +214,7 @@
   m)
 
 (define (check-machine-type m)
-  (define lines (map string-trim
+  (define lines (map (lambda (s) (string-trim (string-trim s "\r")))
                      (string-split (file->string (at-source "../s/cmacros.ss")) "\n")))
   (let loop ([lines lines])
     (cond

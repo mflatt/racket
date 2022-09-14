@@ -134,7 +134,6 @@
      (lambda (xm m host-scheme host-workarea)
        (unless (or host-scheme host-workarea)
          (check-not-kernel-only))
-       (alert "here" xm m)
        (boot:cross-build-boot token ccopts make-targets
                               xm host-scheme host-workarea
                               at-dir config vars m))))
@@ -442,7 +441,7 @@
                            (alert (~a "building boot files for " m " via pb"))
                            (define pb-dir (at-dir ".." "pb"))
                            (mkdir-p pb-dir)
-                           (define config (map string-trim
+                           (define config (map (lambda (s) (string-trim (string-trim s "\r")))
                                                (string-split (file->string (at-dir "Mf-config")) "\n")))
                            (define m-line (~a "m=" m))
                            (define mboot-line (~a "mboot=" mboot))
