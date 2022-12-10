@@ -212,10 +212,10 @@
 (test #t copy-file*/tf "tmp5" "tmp5y" #t)
 (test (file-or-directory-permissions "tmp5") file-or-directory-permissions "tmp5y")
 (test #t copy-file*/tf "tmp5" "tmp5y" #t #o111)
-(test #o111 file-or-directory-permissions "tmp5y" 'bits)
+(test (if (eq? 'windows (system-type)) #o555 #o111) file-or-directory-permissions "tmp5y" 'bits)
 (delete-file "tmp5y")
 (test #t copy-file*/tf "tmp5" "tmp5y" #f #o666)
-(test #o666 file-or-directory-permissions "tmp5y" 'bits)
+(test (if (eq? 'windows (system-type)) #o777 #o666) file-or-directory-permissions "tmp5y" 'bits)
 (unless (eq? 'windows (system-type))
   (test #t copy-file*/tf "tmp5" "tmp5y" #t #f #f) ; don't replace existing file's permissions
   (test #o666 file-or-directory-permissions "tmp5y" 'bits))
