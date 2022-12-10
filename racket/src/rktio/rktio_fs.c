@@ -1909,8 +1909,8 @@ rktio_ok_t rktio_copy_file_finish_permissions(rktio_t *rktio, rktio_file_copy_t 
     int ok;
     DWORD attrs = GetFileAttributesW(fc->dest_w);
     if (attrs != INVALID_FILE_ATTRIBUTES) {
-      if (!!(attrs & FILE_ATTRIBUTE_READONLY) != fc->ready_only) {
-        if (fc->ready_only)
+      if (!!(attrs & FILE_ATTRIBUTE_READONLY) != fc->read_only) {
+        if (fc->read_only)
           attrs |= FILE_ATTRIBUTE_READONLY;
         else
           attrs -= FILE_ATTRIBUTE_READONLY;
