@@ -167,6 +167,7 @@
     file-name-from-path
     path->complete-path
     ls* rm* cp* mkdir-p
+    :keep-mode
     :error :truncate :must-truncate :append :update :can-update
     cleanable-file
     cleanable-cancel
