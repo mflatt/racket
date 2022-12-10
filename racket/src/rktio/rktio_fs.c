@@ -1832,7 +1832,7 @@ rktio_file_copy_t *rktio_copy_file_start_permissions(rktio_t *rktio, const char 
 
   free(src_w);
   if (use_perm_bits)
-    free(dest_w);
+    free((void *)dest_w);
 
   return NULL;
 #endif
@@ -1909,11 +1909,11 @@ rktio_ok_t rktio_copy_file_finish_permissions(rktio_t *rktio, rktio_file_copy_t 
     int ok;
     DWORD attrs = GetFileAttributesW(fc->dest_w);
     if (attrs != INVALID_FILE_ATTRIBUTES) {
-      if (!(attrs & FILE_ATTRIBUTE_READONLY) != !(perm_bits & RKTIO_PERMISSION_WRITE)) {
-        if (perm_bits & RKTIO_PERMISSION_WRITE)
-          attrs -= FILE_ATTRIBUTE_READONLY;
-        else
+      if (!!(attrs & FILE_ATTRIBUTE_READONLY) != fc->ready_only) {
+        if (fc->ready_only)
           attrs |= FILE_ATTRIBUTE_READONLY;
+        else
+          attrs -= FILE_ATTRIBUTE_READONLY;
         ok = SetFileAttributesW(fc->dest_w, attrs);
       } else
         ok = 1;
