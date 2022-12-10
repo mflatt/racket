@@ -1914,7 +1914,7 @@ rktio_ok_t rktio_copy_file_finish_permissions(rktio_t *rktio, rktio_file_copy_t 
           attrs -= FILE_ATTRIBUTE_READONLY;
         else
           attrs |= FILE_ATTRIBUTE_READONLY;
-        ok = GetFileAttributesW(fc->dest_w, attrs);
+        ok = SetFileAttributesW(fc->dest_w, attrs);
       } else
         ok = 1;
     } else
