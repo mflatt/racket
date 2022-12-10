@@ -5371,7 +5371,7 @@ static zuo_t *zuo_cp(zuo_t *src_path, zuo_t *dest_path, zuo_t *options) {
             attrs -= FILE_ATTRIBUTE_READONLY;
           else
             attrs |= FILE_ATTRIBUTE_READONLY;
-          ok = GetFileAttributesW(dest_w, attrs);
+          ok = SetFileAttributesW(dest_w, attrs);
         } else
           ok = 1;
       } else
