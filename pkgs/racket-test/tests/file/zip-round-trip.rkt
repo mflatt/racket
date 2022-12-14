@@ -53,8 +53,9 @@
   (compare "y")
   (compare (build-path "d" "z"))
 
-  (check-same (rounded (file-or-directory-modify-seconds (build-path dir "d")))
-              (rounded (file-or-directory-modify-seconds (build-path dir2 "d"))))
+  (unless (eq? 'windows (system-type))
+    (check-same (rounded (file-or-directory-modify-seconds (build-path dir "d")))
+                (rounded (file-or-directory-modify-seconds (build-path dir2 "d")))))
 
   (delete-directory/files dir2))
 

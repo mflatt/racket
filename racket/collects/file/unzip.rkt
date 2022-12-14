@@ -484,21 +484,26 @@
                 [else
                  (make-directory* path)
                  ;; maybe post thunk for directory permission
-                 (let ([permissions (and (not (eq? 'windows (system-type)))
-                                         (hash? timestamp-or-attrs)
-                                         (hash-ref timestamp-or-attrs 'permissions #f))]
-                       ;; we only try to set a timestamp in attributes mode,
-                       ;; since it needs to be done via a post action
-                       [timestamp (and (hash? timestamp-or-attrs)
-                                       (hash-ref timestamp-or-attrs 'timestamp #f))])
-                   (or (and (or permissions
-                                timestamp)
-                            (lambda ()
-                              (when timestamp
-                                (file-or-directory-modify-seconds path timestamp))
-                              (when permissions
-                                (file-or-directory-permissions path (windows-adjust permissions)))))
-                       (no-post-action)))])]
+                 (cond
+                   [(eq? 'windows (system-type))
+                    ;; can't set directory modify time on Windows, and read-only
+                    ;; doesn't mean the same thing there on directories
+                    (no-post-action)]
+                   [else
+                    (let ([permissions (and (hash? timestamp-or-attrs)
+                                            (hash-ref timestamp-or-attrs 'permissions #f))]
+                          ;; we only try to set a timestamp in attributes mode,
+                          ;; since it needs to be done via a post action
+                          [timestamp (and (hash? timestamp-or-attrs)
+                                          (hash-ref timestamp-or-attrs 'timestamp #f))])
+                      (or (and (or permissions
+                                   timestamp)
+                               (lambda ()
+                                 (when timestamp
+                                   (file-or-directory-modify-seconds path timestamp))
+                                 (when permissions
+                                   (file-or-directory-permissions path (windows-adjust permissions)))))
+                          (no-post-action)))])])]
              [else
               (let ([parent (dirname path)])
                 (unless (directory-exists? parent)
