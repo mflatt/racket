@@ -208,8 +208,18 @@
   ;; (define *unix:other-write* #o00002)
   ;; (define *unix:other-exe*   #o00001)
   (define (path-attributes path dir? permissions)
-    (let ([dos  (if dir? #x10 0)]
-          [unix (apply bitwise-ior (if dir? #o40000 #x8000)
+    (define syms (and (not permissions)
+                      (file-or-directory-permissions path)))
+    (let ([dos (bitwise-ior (if dir? #x10 0)
+                            (let ([read-only?
+                                   (if permissions
+                                       (zero? (bitwise-and #o200 permissions))
+                                       (not (memq 'write syms)))])
+                              (if read-only? #x01 0)))]
+          [unix (apply bitwise-ior (if dir?
+                                       #o40000
+                                       ;; pkzip sets this bit:
+                                       #x8000)
                        (or (and permissions
                                 (list permissions))
                            (map (lambda (p)
@@ -217,7 +227,7 @@
                                     [(read)    #o444]
                                     [(write)   #o200] ; mask out write bits
                                     [(execute) #o111]))
-                                (file-or-directory-permissions path))))])
+                                syms)))])
       (bitwise-ior dos (arithmetic-shift unix 16))))
 
   ;; with-trailing-slash : bytes -> bytes

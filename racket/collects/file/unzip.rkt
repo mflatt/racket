@@ -307,9 +307,14 @@
                              [dir? (directory-entry? filename)])
                         (skip-bytes (+ extra-length comment-length) in)
                         (let* ([attribs (case (arithmetic-shift version -8)
-                                          [(3 19)
+                                          [(3 19) ; Unix and (for historical reasons) Mac OS X
                                            (hasheq 'permissions
                                                    (arithmetic-shift external-attributes -16))]
+                                          [(0) ; Windows
+                                           (hasheq 'permissions
+                                                   (if (zero? (bitwise-and external-attributes #x01))
+                                                       #o555    ; read only
+                                                       #o777))] ; read+write
                                           [else #hasheq()])])
                           (cons filename (make-zip-entry relative-offset dir? attribs))))))))))
 
@@ -410,10 +415,20 @@
                         (if dest-dir
                             (build-path dest-dir base-path)
                             base-path))])
+        (define (windows-adjust bits)
+          (if (eq? (system-type) 'windows)
+              (if (zero? (bitwise-and #o200 bits))
+                  #o555  ; read only
+                  #o777) ; read+write
+              bits))
         (when path
           (if dir?
               (unless (directory-exists? path)
-                (make-directory* path))
+                (make-directory* path)
+                (let ([permissions (and (hash? timestamp-or-attrs)
+                                        (hash-ref timestamp-or-attrs 'permissions #f))])
+                  (when permissions
+                    (file-or-directory-permissions path (windows-adjust permissions)))))
               (let ([parent (dirname path)])
                 (unless (directory-exists? parent)
                   (make-directory* parent))
@@ -434,7 +449,7 @@
                     (let ([permissions (and (hash? timestamp-or-attrs)
                                             (hash-ref timestamp-or-attrs 'permissions #f))])
                       (when permissions
-                        (file-or-directory-permissions path permissions))))))))))))
+                        (file-or-directory-permissions path (windows-adjust permissions)))))))))))))
 
 (define (dirname p)
   (define-values (base name dir?) (split-path p))
