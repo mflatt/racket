@@ -43,8 +43,8 @@
     (case type
       [(windows)    0]
       [(macos)      7]
-      [(macosx)    19]
-      [else        3]))
+      [(macosx)     3] ; although Mac OS X = 19, it's not recognized by unzip on macOS
+      [else         3]))
   (define *os-specific-separator-regexp*
     (case (system-type)
       [(unix macosx oskit) #rx"/"]
@@ -209,7 +209,7 @@
   ;; (define *unix:other-exe*   #o00001)
   (define (path-attributes path dir? permissions)
     (let ([dos  (if dir? #x10 0)]
-          [unix (apply bitwise-ior (if dir? #o40000 0)
+          [unix (apply bitwise-ior (if dir? #o40000 #x8000)
                        (or (and permissions
                                 (list permissions))
                            (map (lambda (p)

@@ -86,7 +86,7 @@
 (define-struct zip-directory (contents))
 
 ;; nat * boolean
-(define-struct zip-entry (offset dir?))
+(define-struct zip-entry (offset dir? version external-attributes))
 
 (define (raise-unzip-error message)
   (error 'unzip "~a" message))
@@ -296,7 +296,8 @@
                       (let* ([filename (read-bytes filename-length in)]
                              [dir? (directory-entry? filename)])
                         (skip-bytes (+ extra-length comment-length) in)
-                        (cons filename (make-zip-entry relative-offset dir?)))))))))
+                        (cons filename (make-zip-entry relative-offset dir?
+                                                       version external-attributes)))))))))
 
 (define (msdos-date+time->seconds date time utc?)
   (with-handlers ([exn:fail? (lambda (exn) #f)])
@@ -329,22 +330,23 @@
      orig-in
      (lambda (in)
        (define tag (peek-integer 4 #f in #f))
-       (cond
-         [(eqv? tag *local-file-header*)
-          (unzip-one-entry in read-entry preserve-timestamps? utc?)
-          (unzip in read-entry
-                 #:preserve-timestamps? preserve-timestamps?
-                 #:utc-timestamps? utc?)]
-         [(memv tag (list *archive-extra-record*
-                          *central-file-header*
-                          *digital-signature*
-                          *zip64-end-of-central-directory-record*
-                          *zip64-end-of-central-directory-locator*
-                          *end-of-central-directory-record*))
-          (void)]
-         [must-unzip?
-          (error 'unzip "input does not appear to be an archive\n  input: ~e" orig-in)]
-         [else (void)])))))
+       (unless (memv tag (list *local-file-header*
+                               *archive-extra-record*
+                               *central-file-header*
+                               *digital-signature*
+                               *zip64-end-of-central-directory-record*
+                               *zip64-end-of-central-directory-locator*
+                               *end-of-central-directory-record*))
+         (error 'unzip "input does not appear to be an archive\n  input: ~e" orig-in))
+       
+       (define entries (read-central-directory in (input-size in)))
+       (for-each (lambda (e)
+                   (file-position in (zip-entry-offset (cdr e)))
+                   (define tag (peek-integer 4 #f in #f))
+                   (unless (= tag *local-file-header*)
+                     (error 'unzip "expected a file entry\n  input: ~e" orig-in))
+                   (unzip-one-entry in read-entry preserve-timestamps? utc?))
+                 entries)))))
 
 (define (input-size in)
   (file-position in eof)
