@@ -8,12 +8,18 @@
 a function to extract items from a @exec{zip} archive.}
 
 @defproc[(unzip [in (or/c path-string? input-port?)]
-                [entry-reader (if preserve-timestamps?
-                                  (bytes? boolean? input-port? (or/c #f exact-integer?)
-                                   . -> . any)
-                                  (bytes? boolean? input-port? . -> . any))
+                [entry-reader (cond
+                                [preserve-attributes?
+                                 (bytes? boolean? input-port? (and/c hash? immutable?)
+                                         . -> . any)]
+                                [preserve-timestamps?
+                                 (bytes? boolean? input-port? (or/c #f exact-integer?)
+                                         . -> . any)]
+                                [else
+                                 (bytes? boolean? input-port? . -> . any)])
                               (make-filesystem-entry-reader)]
                 [#:must-unzip? must-unzip? any/c #t]
+                [#:preserve-attributes? preserve-attributes? any/c #f]
                 [#:preserve-timestamps? preserve-timestamps? any/c #f]
                 [#:utc-timestamps? utc-timestamps? any/c #f])
          void?]{
@@ -27,19 +33,43 @@ For each entry in the archive, the @racket[entry-reader] procedure is
 called with three or four arguments: the byte string representing the entry
 name, a boolean flag indicating whether the entry represents a
 directory, an input port containing the inflated contents of the
-entry, and (if @racket[preserve-timestamps?]) @racket[#f] or a timestamp
+entry, and either (if @racket[preserve-attributes?]) hash table
+or (if @racket[preserve-timestamps?]) @racket[#f] or a timestamp
 for a file. The default @racket[entry-reader] unpacks entries to the
 filesystem; call @racket[make-filesystem-entry-reader] to configure
 aspects of the unpacking, such as  the destination directory.
 
-Normally, @exec{zip} archives record modification dates in local time,
+When @racket[preserve-attributes?] is true, the hash table passed to
+@racket[entry-reader] provides additional file attributes. Attributes
+are mapped from one of the following keys, but any of the keys may be
+missing:
+
+@itemlist[
+
+ @item{@racket['timestamp] --- an exact integer representing the file
+       timestamp}
+
+ @item{@racket['permissions] --- an exact integer representing file
+       or directory permissions}
+
+ ]
+
+Although @racket[preserve-attributes?] and
+@racket[preserve-timestamps?] provide extra information to
+@racket[entry-reader], perserving attributes or preserving timestamps
+for a file on the filesystem is up to @racket[entry-reader]. The
+reader produced by @racket[make-filesystem-entry-reader] preserves
+whatever information is it given.
+
+For timestamps, @exec{zip} archives normally record modification dates in local time,
 but if @racket[utc-timestamps?] is true, then the time in the archive
 is interpreted as UTC.
 
 @history[#:changed "6.0.0.3" @elem{Added the @racket[#:preserve-timestamps?] argument.}
          #:changed "6.0.1.12" @elem{Added the @racket[#:utc-timestamps?] argument.}
          #:changed "8.0.0.10" @elem{Added the @racket[#:must-unzip?] argument.}
-         #:changed "8.2.0.7" @elem{Changed the @racket[#:must-unzip?] default to @racket[#t].}]}
+         #:changed "8.2.0.7" @elem{Changed the @racket[#:must-unzip?] default to @racket[#t].}
+         #:changed "8.7.0.9" @elem{Added the @racket[#:preserve-attributes?] argument.}]}
 
 
 @defproc[(call-with-unzip [in (or/c path-string? input-port?)]
@@ -67,7 +97,7 @@ not a @exec{zip} archive, unless @racket[must-unzip?] is true.
                                  'truncate/replace 'append 'update
                                  'can-update 'must-truncate)
                            'error])
-         ((bytes? boolean? input-port?) ((or/c #f exact-integer?))
+         ((bytes? boolean? input-port?) ((or/c hash? #f exact-integer?))
           . ->* . any)]{
 
 Creates a @exec{zip} entry reader that can be used with either
@@ -99,7 +129,9 @@ inflated content.
 @history[#:changed "6.0.0.3"
          @elem{Added support for the optional timestamp argument in the result function.}
          #:changed "6.3"
-         @elem{Added the @racket[#:permissive?] argument.}]}
+         @elem{Added the @racket[#:permissive?] argument.}
+         #:changed "8.7.0.9"
+         @elem{Added support for an optional attributes hash-table argument in the result function.}]}
 
 
 @defproc[(read-zip-directory [in (or/c path-string? input-port?)]) zip-directory?]{
@@ -149,11 +181,17 @@ itself or as the containing directory of other entries. If
 @defproc[(unzip-entry [in (or/c path-string? input-port?)]
                       [zipdir zip-directory?]
                       [entry (or/c bytes? path-string?)]
-                      [entry-reader (if preserve-timestamps?
-                                        (bytes? boolean? input-port? (or/c #f exact-integer?)
-                                         . -> . any)
-                                        (bytes? boolean? input-port? . -> . any))
+                      [entry-reader (cond
+                                      [preserve-attributes?
+                                       (bytes? boolean? input-port? (and/c hash? immutable?)
+                                               . -> . any)]
+                                      [preserve-timestamps?
+                                       (bytes? boolean? input-port? (or/c #f exact-integer?)
+                                               . -> . any)]
+                                      [else
+                                       (bytes? boolean? input-port? . -> . any)])
                                     (make-filesystem-entry-reader)]
+                      [#:preserve-attributes? preserve-attributes? any/c #f]
                       [#:preserve-timestamps? preserve-timestamps? any/c #f]
                       [#:utc-timestamps? utc-timestamps? any/c #f])
          void?]{
@@ -174,7 +212,8 @@ If @racket[entry] is not in @racket[zipdir], an
 @racket[exn:fail:unzip:no-such-entry] exception is raised.
 
 @history[#:changed "6.0.0.3" @elem{Added the @racket[#:preserve-timestamps?] argument.}
-         #:changed "6.0.1.12" @elem{Added the @racket[#:utc-timestamps?] argument.}]}
+         #:changed "6.0.1.12" @elem{Added the @racket[#:utc-timestamps?] argument.}
+         #:changed "8.7.0.9" @elem{Added the @racket[#:preserve-attributes?] argument.}]}
 
 
 @defproc[(call-with-unzip-entry [in (or/c path-string? input-port?)]

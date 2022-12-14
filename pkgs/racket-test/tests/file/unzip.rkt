@@ -48,6 +48,11 @@
                                            (unzip file (lambda (name dir? in ts)
                                                          (reader name dir? in ts))
                                                   #:preserve-timestamps? #t))))
+  (test-with-direct-unzip unzip-me.zip (let ([reader (make-filesystem-entry-reader)])
+                                         (lambda (file)
+                                           (unzip file (lambda (name dir? in ts)
+                                                         (reader name dir? in ts))
+                                                  #:preserve-attributes? #t))))
   (call-with-input-file* unzip-me.zip test-with-unzip)
   (call-with-input-file* unzip-me.zip
                          (lambda(in_port) (test-with-unzip (input-port-append #f in_port))))

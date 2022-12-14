@@ -15,8 +15,9 @@
           ((or/c (procedure-arity-includes/c 3) (procedure-arity-includes/c 4))
            ;; More precisely (but unimplementable):
            #;
-           (or/c (bytes? boolean? input-port? (or/c #f exact-integer?) . -> . any)
+           (or/c (bytes? boolean? input-port? (or/c #f exact-integer? hash?) . -> . any)
                  (bytes? boolean? input-port? . -> . any))
+           #:preserve-attributes? any/c
            #:preserve-timestamps? any/c
            #:utc-timestamps? any/c
            #:must-unzip? any/c)
@@ -34,7 +35,7 @@
                                            'can-update 'must-truncate))
                                  . ->* .
                                  ((bytes? boolean? input-port?)
-                                  ((or/c #f exact-integer?))
+                                  ((or/c hash? #f exact-integer?))
                                   . ->* . any))]
 
   [read-zip-directory ((or/c path-string? input-port?) . -> . zip-directory?)]
@@ -44,6 +45,7 @@
   [zip-directory-includes-directory? (zip-directory? (or/c path-string? input-port?) . -> . boolean?)]
   [unzip-entry (((or/c path-string? input-port?) zip-directory? bytes?)
                 ((or/c (procedure-arity-includes/c 2) (procedure-arity-includes/c 3))
+                 #:preserve-attributes? any/c
                  #:preserve-timestamps? any/c
                  #:utc-timestamps? any/c)
                 . ->* .
@@ -86,7 +88,7 @@
 (define-struct zip-directory (contents))
 
 ;; nat * boolean
-(define-struct zip-entry (offset dir? version external-attributes))
+(define-struct zip-entry (offset dir? attributes))
 
 (define (raise-unzip-error message)
   (error 'unzip "~a" message))
@@ -182,8 +184,8 @@
   (read-bytes amt in)
   (void))
 
-;; unzip-one-entry : input-port (bytes boolean input-port [exact-integer?] -> a) -> a
-(define (unzip-one-entry in read-entry preserve-timestamps? utc?)
+;; unzip-one-entry : input-port (bytes boolean input-port [exact-integer?] -> a) .... -> a
+(define (unzip-one-entry in read-entry ze preserve-attributes? preserve-timestamps? utc?)
   (let ([read-int (lambda (count) (read-integer count #f in #f))])
     (let* ([signature            (read-int 4)]
            [version              (read-bytes 2 in)]
@@ -214,9 +216,17 @@
 
           (define read-exn
             (with-handlers ([exn:fail? (lambda (exn) exn)])
-              (if preserve-timestamps?
-                  (read-entry filename dir? in (and (not dir?)
-                                                    (msdos-date+time->seconds date time utc?)))
+              (if (or preserve-attributes?
+                      preserve-timestamps?)
+                  (read-entry filename dir? in
+                              (let ([ts (and (not dir?)
+                                               (msdos-date+time->seconds date time utc?))])
+                                (if preserve-attributes?
+                                    (let ([attrs (zip-entry-attributes ze)])
+                                      (if ts
+                                          (hash-set attrs 'timestamp ts)
+                                          attrs))
+                                    ts)))
                   (read-entry filename dir? in))
 
               ;; Read until the end of the deflated stream when compressed size unknown
@@ -296,8 +306,12 @@
                       (let* ([filename (read-bytes filename-length in)]
                              [dir? (directory-entry? filename)])
                         (skip-bytes (+ extra-length comment-length) in)
-                        (cons filename (make-zip-entry relative-offset dir?
-                                                       version external-attributes)))))))))
+                        (let* ([attribs (case (arithmetic-shift version -8)
+                                          [(3 19)
+                                           (hasheq 'permissions
+                                                   (arithmetic-shift external-attributes -16))]
+                                          [else #hasheq()])])
+                          (cons filename (make-zip-entry relative-offset dir? attribs))))))))))
 
 (define (msdos-date+time->seconds date time utc?)
   (with-handlers ([exn:fail? (lambda (exn) #f)])
@@ -324,6 +338,7 @@
 (define unzip
   (lambda (orig-in [read-entry (make-filesystem-entry-reader)]
                    #:must-unzip? [must-unzip? #t]
+                   #:preserve-attributes? [preserve-attributes? #f]
                    #:preserve-timestamps? [preserve-timestamps? #f]
                    #:utc-timestamps? [utc? #f])
     (call-with-input
@@ -341,11 +356,12 @@
        
        (define entries (read-central-directory in (input-size in)))
        (for-each (lambda (e)
-                   (file-position in (zip-entry-offset (cdr e)))
+                   (define ze (cdr e))
+                   (file-position in (zip-entry-offset ze))
                    (define tag (peek-integer 4 #f in #f))
                    (unless (= tag *local-file-header*)
                      (error 'unzip "expected a file entry\n  input: ~e" orig-in))
-                   (unzip-one-entry in read-entry preserve-timestamps? utc?))
+                   (unzip-one-entry in read-entry ze preserve-attributes? preserve-timestamps? utc?))
                  entries)))))
 
 (define (input-size in)
@@ -366,6 +382,7 @@
 ;; unzip-entry : (union string path) zip-directory bytes [(bytes boolean input-port -> a)] -> a
 (define unzip-entry
   (lambda (in dir entry-name [read-entry (make-filesystem-entry-reader)]
+              #:preserve-attributes? [preserve-attributes? #f]
               #:preserve-timestamps? [preserve-timestamps? #f]
               #:utc-timestamps? [utc? #f])
     (cond
@@ -375,7 +392,7 @@
             in
             (lambda (in)
               (file-position in (zip-entry-offset entry))
-              (unzip-one-entry in read-entry preserve-timestamps? utc?))))]
+              (unzip-one-entry in read-entry entry preserve-attributes? preserve-timestamps? utc?))))]
      [else (raise-entry-not-found entry-name)])))
 
 ;; ===========================================================================
@@ -385,7 +402,7 @@
 ;; make-filesystem-entry-reader : [output-flag] -> (bytes boolean input-port -> any)
 (define make-filesystem-entry-reader
   (lambda (#:dest [dest-dir #f] #:strip-count [strip-count 0] #:permissive? [permissive? #f] #:exists [flag 'error])
-    (lambda (name dir? in [timestamp #f])
+    (lambda (name dir? in [timestamp-or-attrs #f])
       (define path (bytes->path name))
       (check-unpack-path 'unzip path #:allow-up? permissive?)
       (let* ([base-path (strip-prefix path strip-count)]
@@ -406,8 +423,18 @@
                     #:exists flag
                     (lambda ()
                       (copy-port in (current-output-port))))
-                  (when timestamp
-                    (file-or-directory-modify-seconds path timestamp))))))))))
+                  (let ([timestamp (cond
+                                     [(exact-integer? timestamp-or-attrs)
+                                      timestamp-or-attrs]
+                                     [(hash? timestamp-or-attrs)
+                                      (hash-ref timestamp-or-attrs 'timestamp #f)]
+                                     [else #f])])
+                    (when timestamp
+                      (file-or-directory-modify-seconds path timestamp))
+                    (let ([permissions (and (hash? timestamp-or-attrs)
+                                            (hash-ref timestamp-or-attrs 'permissions #f))])
+                      (when permissions
+                        (file-or-directory-permissions path permissions))))))))))))
 
 (define (dirname p)
   (define-values (base name dir?) (split-path p))
