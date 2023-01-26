@@ -308,7 +308,7 @@
                                   (datum->syntax #f (syntax-e val-id) val-id val-id)))
                               val-idss))
 
-    (define (get-body)
+    (define (get-body rec-ctx extra-scopes)
       (cond
         [(expand-context-parsing-expanded? ctx)
          (for/list ([body (in-list bodys)])
@@ -332,7 +332,7 @@
              (if (expand-context-to-parsed? ctx)
                  (list keys exp-rhs)
                  (datum->syntax #f `[,ids ,exp-rhs] clause clause))))
-         (define exp-body (get-body))
+         (define exp-body (get-body rec-ctx null))
          (when frame-id
            (reference-record-clear! frame-id))
          (if (expand-context-to-parsed? ctx)

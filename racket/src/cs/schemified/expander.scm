@@ -80728,7 +80728,7 @@
            (let ((finish-bodys_0
                   (|#%name|
                    finish-bodys
-                   (lambda ()
+                   (lambda (finish-ctx_1 extra-scopes_0)
                      (begin
                        (let ((last-i_0 (sub1 (length done-bodys30_0))))
                          (begin
@@ -80771,56 +80771,62 @@
                                                                          obs_0
                                                                          'next)
                                                                         (void)))
-                                                                    (let ((temp144_0
-                                                                           (if (if name12_0
-                                                                                 (=
-                                                                                  pos_0
-                                                                                  last-i_0)
-                                                                                 #f)
-                                                                             (if (expand-context/outer?
-                                                                                  finish-ctx_0)
-                                                                               (let ((inner146_0
-                                                                                      (root-expand-context/outer-inner
-                                                                                       finish-ctx_0)))
-                                                                                 (expand-context/outer1.1
-                                                                                  inner146_0
-                                                                                  (root-expand-context/outer-post-expansion
-                                                                                   finish-ctx_0)
-                                                                                  (root-expand-context/outer-use-site-scopes
-                                                                                   finish-ctx_0)
-                                                                                  (root-expand-context/outer-frame-id
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-context
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-env
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-scopes
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-def-ctx-scopes
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-binding-layer
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-reference-records
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-only-immediate?
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-need-eventually-defined
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-current-introduction-scopes
-                                                                                   finish-ctx_0)
-                                                                                  (expand-context/outer-current-use-scopes
-                                                                                   finish-ctx_0)
-                                                                                  name12_0))
-                                                                               (raise-argument-error
-                                                                                'struct-copy
-                                                                                "expand-context/outer?"
-                                                                                finish-ctx_0))
-                                                                             finish-ctx_0)))
-                                                                      (expand.1
-                                                                       #f
-                                                                       #f
-                                                                       done-body_0
-                                                                       temp144_0)))
+                                                                    (let ((temp143_0
+                                                                           (add-scopes
+                                                                            done-body_0
+                                                                            extra-scopes_0)))
+                                                                      (let ((temp144_0
+                                                                             (if (if name12_0
+                                                                                   (=
+                                                                                    pos_0
+                                                                                    last-i_0)
+                                                                                   #f)
+                                                                               (if (expand-context/outer?
+                                                                                    finish-ctx_1)
+                                                                                 (let ((inner146_0
+                                                                                        (root-expand-context/outer-inner
+                                                                                         finish-ctx_1)))
+                                                                                   (expand-context/outer1.1
+                                                                                    inner146_0
+                                                                                    (root-expand-context/outer-post-expansion
+                                                                                     finish-ctx_1)
+                                                                                    (root-expand-context/outer-use-site-scopes
+                                                                                     finish-ctx_1)
+                                                                                    (root-expand-context/outer-frame-id
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-context
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-env
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-scopes
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-def-ctx-scopes
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-binding-layer
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-reference-records
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-only-immediate?
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-need-eventually-defined
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-current-introduction-scopes
+                                                                                     finish-ctx_1)
+                                                                                    (expand-context/outer-current-use-scopes
+                                                                                     finish-ctx_1)
+                                                                                    name12_0))
+                                                                                 (raise-argument-error
+                                                                                  'struct-copy
+                                                                                  "expand-context/outer?"
+                                                                                  finish-ctx_1))
+                                                                               finish-ctx_1)))
+                                                                        (let ((temp143_1
+                                                                               temp143_0))
+                                                                          (expand.1
+                                                                           #f
+                                                                           #f
+                                                                           temp143_1
+                                                                           temp144_0)))))
                                                                   fold-var_0)))
                                                             (values
                                                              fold-var_1))))
@@ -80853,7 +80859,7 @@
                          (expand-context/inner-observer
                           (root-expand-context/outer-inner finish-ctx_0)))))
                    (if obs_0 (call-expand-observe obs_0 'block->list) (void)))
-                 (finish-bodys_0))
+                 (finish-bodys_0 finish-ctx_0 null))
                (begin
                  (let ((obs_0
                         (begin-unsafe
@@ -80961,17 +80967,20 @@
                       accum-keyss_0
                       accum-rhss_0
                       accum-track-stxs_0
+                      ctx_0
+                      extra-scopes_0
                       track?_0
                       get-list?_0)
                (begin
                  (if (null? idss_0)
                    (if (if (null? accum-idss_0) get-list?_0 #f)
-                     (|#%app| get-body37_0)
-                     (let ((exp-body_0 (|#%app| get-body37_0)))
+                     (|#%app| get-body37_0 ctx_0 extra-scopes_0)
+                     (let ((exp-body_0
+                            (|#%app| get-body37_0 ctx_0 extra-scopes_0)))
                        (let ((result-s_0
                               (if (begin-unsafe
                                    (expand-context/inner-to-parsed?
-                                    (root-expand-context/outer-inner ctx34_0)))
+                                    (root-expand-context/outer-inner ctx_0)))
                                 (if (null? accum-idss_0)
                                   (parsed-let-values17.1
                                    (keep-properties-only source35_0)
@@ -81010,184 +81019,223 @@
                      (let ((obs_0
                             (begin-unsafe
                              (expand-context/inner-observer
-                              (root-expand-context/outer-inner ctx34_0)))))
+                              (root-expand-context/outer-inner ctx_0)))))
                        (if obs_0 (call-expand-observe obs_0 'next) (void)))
-                     (let ((ids_0 (car idss_0)))
-                       (let ((expanded-rhs_0
-                              (let ((temp161_0 (car rhss_0)))
-                                (let ((temp162_0
-                                       (as-named-context ctx34_0 ids_0)))
-                                  (let ((temp161_1 temp161_0))
-                                    (expand.1 #f #f temp161_1 temp162_0))))))
-                         (let ((track-stx_0 (car track-stxs_0)))
-                           (let ((local-or-forward-references?_0
-                                  (reference-record-forward-references?
-                                   frame-id33_0)))
-                             (begin
-                               (reference-record-bound!
-                                frame-id33_0
-                                (car keyss_0))
-                               (let ((forward-references?_0
-                                      (reference-record-forward-references?
-                                       frame-id33_0)))
-                                 (if (if (not local-or-forward-references?_0)
-                                       split?32_0
-                                       #f)
-                                   (begin
-                                     (if (null? accum-idss_0)
-                                       (void)
-                                       (error
-                                        "internal error: accumulated ids not empty"))
-                                     (let ((exp-rest_0
-                                            (let ((app_0 (cdr idss_0)))
-                                              (let ((app_1 (cdr keyss_0)))
-                                                (let ((app_2 (cdr rhss_0)))
-                                                  (loop_0
-                                                   app_0
-                                                   app_1
-                                                   app_2
-                                                   (cdr track-stxs_0)
-                                                   null
-                                                   null
-                                                   null
-                                                   null
-                                                   #f
-                                                   #t))))))
-                                       (let ((result-s_0
-                                              (if (begin-unsafe
-                                                   (expand-context/inner-to-parsed?
-                                                    (root-expand-context/outer-inner
-                                                     ctx34_0)))
-                                                (let ((app_0
-                                                       (keep-properties-only
-                                                        source35_0)))
-                                                  (let ((app_1 (list ids_0)))
-                                                    (parsed-let-values17.1
-                                                     app_0
-                                                     app_1
-                                                     (list
-                                                      (list
-                                                       (car keyss_0)
-                                                       expanded-rhs_0))
-                                                     exp-rest_0)))
-                                                (let ((temp165_0
-                                                       (let ((app_0
-                                                              (core-id
-                                                               'let-values
-                                                               phase_0)))
-                                                         (list*
+                     (let ((orig-ids_0 (car idss_0)))
+                       (call-with-values
+                        (lambda ()
+                          (apply-extra-scopes
+                           orig-ids_0
+                           (car keyss_0)
+                           ctx_0
+                           extra-scopes_0))
+                        (case-lambda
+                         ((ids_0 next-ctx_0)
+                          (let ((expanded-rhs_0
+                                 (let ((temp161_0
+                                        (add-scopes
+                                         (car rhss_0)
+                                         extra-scopes_0)))
+                                   (let ((temp162_0
+                                          (as-named-context next-ctx_0 ids_0)))
+                                     (let ((temp161_1 temp161_0))
+                                       (expand.1
+                                        #f
+                                        #f
+                                        temp161_1
+                                        temp162_0))))))
+                            (let ((track-stx_0 (car track-stxs_0)))
+                              (let ((local-or-forward-references?_0
+                                     (reference-record-forward-references?
+                                      frame-id33_0)))
+                                (begin
+                                  (reference-record-bound!
+                                   frame-id33_0
+                                   (car keyss_0))
+                                  (let ((forward-references?_0
+                                         (reference-record-forward-references?
+                                          frame-id33_0)))
+                                    (if (if (not
+                                             local-or-forward-references?_0)
+                                          split?32_0
+                                          #f)
+                                      (begin
+                                        (if (null? accum-idss_0)
+                                          (void)
+                                          (error
+                                           "internal error: accumulated ids not empty"))
+                                        (let ((next-extra-scopes_0
+                                               (create-binding-layer
+                                                next-ctx_0
+                                                extra-scopes_0)))
+                                          (let ((exp-rest_0
+                                                 (let ((app_0 (cdr idss_0)))
+                                                   (let ((app_1 (cdr keyss_0)))
+                                                     (let ((app_2
+                                                            (cdr rhss_0)))
+                                                       (loop_0
+                                                        app_0
+                                                        app_1
+                                                        app_2
+                                                        (cdr track-stxs_0)
+                                                        null
+                                                        null
+                                                        null
+                                                        null
+                                                        next-ctx_0
+                                                        next-extra-scopes_0
+                                                        #f
+                                                        #t))))))
+                                            (let ((result-s_0
+                                                   (if (begin-unsafe
+                                                        (expand-context/inner-to-parsed?
+                                                         (root-expand-context/outer-inner
+                                                          next-ctx_0)))
+                                                     (let ((app_0
+                                                            (keep-properties-only
+                                                             source35_0)))
+                                                       (let ((app_1
+                                                              (list ids_0)))
+                                                         (parsed-let-values17.1
                                                           app_0
+                                                          app_1
                                                           (list
-                                                           (build-clause
-                                                            ids_0
-                                                            expanded-rhs_0
-                                                            track-stx_0))
-                                                          exp-rest_0))))
-                                                  (rebuild.1
-                                                   track?_0
-                                                   source35_0
-                                                   temp165_0)))))
-                                         (if get-list?_0
-                                           (list result-s_0)
-                                           result-s_0))))
-                                   (if (if (not forward-references?_0)
-                                         (if split?32_0
-                                           split?32_0
-                                           (null? (cdr idss_0)))
-                                         #f)
-                                     (let ((exp-rest_0
-                                            (let ((app_0 (cdr idss_0)))
-                                              (let ((app_1 (cdr keyss_0)))
-                                                (let ((app_2 (cdr rhss_0)))
-                                                  (loop_0
-                                                   app_0
-                                                   app_1
-                                                   app_2
-                                                   (cdr track-stxs_0)
-                                                   null
-                                                   null
-                                                   null
-                                                   null
-                                                   #f
-                                                   #t))))))
-                                       (let ((result-s_0
-                                              (if (begin-unsafe
-                                                   (expand-context/inner-to-parsed?
-                                                    (root-expand-context/outer-inner
-                                                     ctx34_0)))
-                                                (let ((app_0
-                                                       (keep-properties-only
-                                                        source35_0)))
-                                                  (let ((app_1
-                                                         (reverse$1
-                                                          (cons
-                                                           ids_0
-                                                           accum-idss_0))))
-                                                    (parsed-letrec-values18.1
+                                                           (list
+                                                            (car keyss_0)
+                                                            expanded-rhs_0))
+                                                          exp-rest_0)))
+                                                     (let ((temp165_0
+                                                            (let ((app_0
+                                                                   (core-id
+                                                                    'let-values
+                                                                    phase_0)))
+                                                              (list*
+                                                               app_0
+                                                               (list
+                                                                (build-clause
+                                                                 ids_0
+                                                                 expanded-rhs_0
+                                                                 track-stx_0))
+                                                               exp-rest_0))))
+                                                       (rebuild.1
+                                                        track?_0
+                                                        source35_0
+                                                        temp165_0)))))
+                                              (if get-list?_0
+                                                (list result-s_0)
+                                                result-s_0)))))
+                                      (if (if (not forward-references?_0)
+                                            (if split?32_0
+                                              split?32_0
+                                              (null? (cdr idss_0)))
+                                            #f)
+                                        (let ((next-extra-scopes_0
+                                               (create-binding-layer
+                                                next-ctx_0
+                                                extra-scopes_0)))
+                                          (let ((exp-rest_0
+                                                 (let ((app_0 (cdr idss_0)))
+                                                   (let ((app_1 (cdr keyss_0)))
+                                                     (let ((app_2
+                                                            (cdr rhss_0)))
+                                                       (loop_0
+                                                        app_0
+                                                        app_1
+                                                        app_2
+                                                        (cdr track-stxs_0)
+                                                        null
+                                                        null
+                                                        null
+                                                        null
+                                                        next-ctx_0
+                                                        next-extra-scopes_0
+                                                        #f
+                                                        #t))))))
+                                            (let ((result-s_0
+                                                   (if (begin-unsafe
+                                                        (expand-context/inner-to-parsed?
+                                                         (root-expand-context/outer-inner
+                                                          next-ctx_0)))
+                                                     (let ((app_0
+                                                            (keep-properties-only
+                                                             source35_0)))
+                                                       (let ((app_1
+                                                              (reverse$1
+                                                               (cons
+                                                                ids_0
+                                                                accum-idss_0))))
+                                                         (parsed-letrec-values18.1
+                                                          app_0
+                                                          app_1
+                                                          (reverse$1
+                                                           (let ((app_2
+                                                                  (list
+                                                                   (car
+                                                                    keyss_0)
+                                                                   expanded-rhs_0)))
+                                                             (cons
+                                                              app_2
+                                                              (map_1346
+                                                               list
+                                                               accum-keyss_0
+                                                               accum-rhss_0))))
+                                                          exp-rest_0)))
+                                                     (let ((temp168_0
+                                                            (let ((app_0
+                                                                   (core-id
+                                                                    'letrec-values
+                                                                    phase_0)))
+                                                              (list*
+                                                               app_0
+                                                               (build-clauses
+                                                                (cons
+                                                                 ids_0
+                                                                 accum-idss_0)
+                                                                (cons
+                                                                 expanded-rhs_0
+                                                                 accum-rhss_0)
+                                                                (cons
+                                                                 track-stx_0
+                                                                 accum-track-stxs_0))
+                                                               exp-rest_0))))
+                                                       (rebuild.1
+                                                        track?_0
+                                                        source35_0
+                                                        temp168_0)))))
+                                              (if get-list?_0
+                                                (list result-s_0)
+                                                result-s_0))))
+                                        (let ((app_0 (cdr idss_0)))
+                                          (let ((app_1 (cdr keyss_0)))
+                                            (let ((app_2 (cdr rhss_0)))
+                                              (let ((app_3 (cdr track-stxs_0)))
+                                                (let ((app_4
+                                                       (cons
+                                                        ids_0
+                                                        accum-idss_0)))
+                                                  (let ((app_5
+                                                         (cons
+                                                          (car keyss_0)
+                                                          accum-keyss_0)))
+                                                    (loop_0
                                                      app_0
                                                      app_1
-                                                     (reverse$1
-                                                      (let ((app_2
-                                                             (list
-                                                              (car keyss_0)
-                                                              expanded-rhs_0)))
-                                                        (cons
-                                                         app_2
-                                                         (map_1346
-                                                          list
-                                                          accum-keyss_0
-                                                          accum-rhss_0))))
-                                                     exp-rest_0)))
-                                                (let ((temp168_0
-                                                       (let ((app_0
-                                                              (core-id
-                                                               'letrec-values
-                                                               phase_0)))
-                                                         (list*
-                                                          app_0
-                                                          (build-clauses
-                                                           (cons
-                                                            ids_0
-                                                            accum-idss_0)
-                                                           (cons
-                                                            expanded-rhs_0
-                                                            accum-rhss_0)
-                                                           (cons
-                                                            track-stx_0
-                                                            accum-track-stxs_0))
-                                                          exp-rest_0))))
-                                                  (rebuild.1
-                                                   track?_0
-                                                   source35_0
-                                                   temp168_0)))))
-                                         (if get-list?_0
-                                           (list result-s_0)
-                                           result-s_0)))
-                                     (let ((app_0 (cdr idss_0)))
-                                       (let ((app_1 (cdr keyss_0)))
-                                         (let ((app_2 (cdr rhss_0)))
-                                           (let ((app_3 (cdr track-stxs_0)))
-                                             (let ((app_4
-                                                    (cons ids_0 accum-idss_0)))
-                                               (let ((app_5
-                                                      (cons
-                                                       (car keyss_0)
-                                                       accum-keyss_0)))
-                                                 (loop_0
-                                                  app_0
-                                                  app_1
-                                                  app_2
-                                                  app_3
-                                                  app_4
-                                                  app_5
-                                                  (cons
-                                                   expanded-rhs_0
-                                                   accum-rhss_0)
-                                                  (cons
-                                                   track-stx_0
-                                                   accum-track-stxs_0)
-                                                  track?_0
-                                                  get-list?_0))))))))))))))))))))))
+                                                     app_2
+                                                     app_3
+                                                     app_4
+                                                     app_5
+                                                     (cons
+                                                      expanded-rhs_0
+                                                      accum-rhss_0)
+                                                     (cons
+                                                      track-stx_0
+                                                      accum-track-stxs_0)
+                                                     ctx_0
+                                                     extra-scopes_0
+                                                     track?_0
+                                                     get-list?_0)))))))))))))))
+                         (args
+                          (raise-binding-result-arity-error 2 args))))))))))))
           (loop_0
            idss46_0
            keyss47_0
@@ -81197,8 +81245,93 @@
            null
            null
            null
+           ctx34_0
+           null
            track?38_0
            #f)))))))
+(define create-binding-layer
+  (lambda (ctx_0 extra-scopes_0)
+    (if (begin-unsafe
+         (expand-context/inner-to-parsed?
+          (root-expand-context/outer-inner ctx_0)))
+      extra-scopes_0
+      (append extra-scopes_0 (list (new-scope 'local))))))
+(define apply-extra-scopes
+  (lambda (ids_0 keys_0 ctx_0 extra-scopes_0)
+    (if (null? extra-scopes_0)
+      (values ids_0 ctx_0)
+      (let ((new-ids_0
+             (reverse$1
+              (begin
+                (letrec*
+                 ((for-loop_0
+                   (|#%name|
+                    for-loop
+                    (lambda (fold-var_0 lst_0)
+                      (begin
+                        (if (pair? lst_0)
+                          (let ((id_0 (unsafe-car lst_0)))
+                            (let ((rest_0 (unsafe-cdr lst_0)))
+                              (let ((fold-var_1
+                                     (let ((fold-var_1
+                                            (cons
+                                             (add-scopes id_0 extra-scopes_0)
+                                             fold-var_0)))
+                                       (values fold-var_1))))
+                                (for-loop_0 fold-var_1 rest_0))))
+                          fold-var_0))))))
+                 (for-loop_0 null ids_0))))))
+        (let ((env_0 (begin-unsafe (expand-context/outer-env ctx_0))))
+          (let ((new-env_0
+                 (begin
+                   (letrec*
+                    ((for-loop_0
+                      (|#%name|
+                       for-loop
+                       (lambda (env_1 lst_0 lst_1)
+                         (begin
+                           (if (if (pair? lst_0) (pair? lst_1) #f)
+                             (let ((new-id_0 (unsafe-car lst_0)))
+                               (let ((rest_0 (unsafe-cdr lst_0)))
+                                 (let ((key_0 (unsafe-car lst_1)))
+                                   (let ((rest_1 (unsafe-cdr lst_1)))
+                                     (let ((val_0
+                                            (local-variable1.1 new-id_0)))
+                                       (let ((env_2
+                                              (let ((env_2
+                                                     (begin-unsafe
+                                                      (hash-set
+                                                       env_1
+                                                       key_0
+                                                       val_0))))
+                                                (values env_2))))
+                                         (for-loop_0 env_2 rest_0 rest_1)))))))
+                             env_1))))))
+                    (for-loop_0 env_0 new-ids_0 keys_0)))))
+            (values
+             new-ids_0
+             (if (expand-context/outer? ctx_0)
+               (let ((inner170_0 (root-expand-context/outer-inner ctx_0)))
+                 (expand-context/outer1.1
+                  inner170_0
+                  (root-expand-context/outer-post-expansion ctx_0)
+                  (root-expand-context/outer-use-site-scopes ctx_0)
+                  (root-expand-context/outer-frame-id ctx_0)
+                  (expand-context/outer-context ctx_0)
+                  new-env_0
+                  (expand-context/outer-scopes ctx_0)
+                  (expand-context/outer-def-ctx-scopes ctx_0)
+                  (expand-context/outer-binding-layer ctx_0)
+                  (expand-context/outer-reference-records ctx_0)
+                  (expand-context/outer-only-immediate? ctx_0)
+                  (expand-context/outer-need-eventually-defined ctx_0)
+                  (expand-context/outer-current-introduction-scopes ctx_0)
+                  (expand-context/outer-current-use-scopes ctx_0)
+                  (expand-context/outer-name ctx_0)))
+               (raise-argument-error
+                'struct-copy
+                "expand-context/outer?"
+                ctx_0)))))))))
 (define build-clauses
   (lambda (accum-idss_0 accum-rhss_0 accum-track-stxs_0)
     (let ((app_0 (reverse$1 accum-idss_0)))
@@ -84021,7 +84154,8 @@
                                                                                (let ((get-body_0
                                                                                       (|#%name|
                                                                                        get-body
-                                                                                       (lambda ()
+                                                                                       (lambda (rec-ctx_1
+                                                                                                extra-scopes_0)
                                                                                          (begin
                                                                                            (if (begin-unsafe
                                                                                                 (expand-context/inner-parsing-expanded?
@@ -84051,7 +84185,7 @@
                                                                                                                               #f
                                                                                                                               #f
                                                                                                                               body_0
-                                                                                                                              rec-ctx_0)
+                                                                                                                              rec-ctx_1)
                                                                                                                              fold-var_0)))
                                                                                                                        (values
                                                                                                                         fold-var_1))))
@@ -84064,43 +84198,43 @@
                                                                                                   bodys_1))))
                                                                                              (let ((body-ctx_0
                                                                                                     (if (expand-context/outer?
-                                                                                                         rec-ctx_0)
+                                                                                                         rec-ctx_1)
                                                                                                       (let ((inner185_0
                                                                                                              (root-expand-context/outer-inner
-                                                                                                              rec-ctx_0)))
+                                                                                                              rec-ctx_1)))
                                                                                                         (expand-context/outer1.1
                                                                                                          inner185_0
                                                                                                          (root-expand-context/outer-post-expansion
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (root-expand-context/outer-use-site-scopes
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (root-expand-context/outer-frame-id
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-context
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-env
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-scopes
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-def-ctx-scopes
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-binding-layer
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          orig-rrs_0
                                                                                                          (expand-context/outer-only-immediate?
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-need-eventually-defined
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-current-introduction-scopes
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-current-use-scopes
-                                                                                                          rec-ctx_0)
+                                                                                                          rec-ctx_1)
                                                                                                          (expand-context/outer-name
-                                                                                                          rec-ctx_0)))
+                                                                                                          rec-ctx_1)))
                                                                                                       (raise-argument-error
                                                                                                        'struct-copy
                                                                                                        "expand-context/outer?"
-                                                                                                       rec-ctx_0))))
+                                                                                                       rec-ctx_1))))
                                                                                                (let ((temp182_0
                                                                                                       (as-tail-context.1
                                                                                                        ctx_0
@@ -84220,7 +84354,9 @@
                                                                                                       val-rhss_1
                                                                                                       val-clauses_0))))))
                                                                                             (let ((exp-body_0
-                                                                                                   (get-body_0)))
+                                                                                                   (get-body_0
+                                                                                                    rec-ctx_0
+                                                                                                    null)))
                                                                                               (begin
                                                                                                 (if frame-id_0
                                                                                                   (reference-record-clear!

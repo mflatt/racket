@@ -276,17 +276,18 @@
                                    [def-ctx-scopes #f]
                                    [post-expansion #:parent root-expand-context #f]))
   ;; Helper to expand and wrap the ending expressions in `begin`, if needed:
-  (define (finish-bodys)
+  (define (finish-bodys finish-ctx extra-scopes)
     (define last-i (sub1 (length done-bodys)))
     (log-expand body-ctx 'enter-list done-bodys)
     (define exp-bodys
       (for/list ([done-body (in-list done-bodys)]
                  [i (in-naturals)])
         (log-expand body-ctx 'next)
-        (expand done-body (if (and name (= i last-i))
-                              (struct*-copy expand-context finish-ctx
-                                            [name name])
-                              finish-ctx))))
+        (expand (add-scopes done-body extra-scopes)
+                (if (and name (= i last-i))
+                    (struct*-copy expand-context finish-ctx
+                                  [name name])
+                    finish-ctx))))
     (log-expand body-ctx 'exit-list exp-bodys)
     (reference-record-clear! frame-id)
     exp-bodys)
@@ -295,7 +296,7 @@
          (null? disappeared-transformer-bindings))
     ;; No definitions, so just return the body list
     (log-expand finish-ctx 'block->list)
-    (finish-bodys)]
+    (finish-bodys finish-ctx null)]
    [else
     (log-expand finish-ctx 'block->letrec val-idss val-rhss done-bodys)
     ;; Roughly, finish expanding the right-hand sides, finish the body
@@ -332,15 +333,16 @@
   (define phase (expand-context-phase ctx))
   (let loop ([idss idss] [keyss keyss] [rhss rhss] [track-stxs track-stxs]
              [accum-idss null] [accum-keyss null] [accum-rhss null] [accum-track-stxs null]
+             [ctx ctx] [extra-scopes null]
              [track? track?] [get-list? #f])
     (cond
      [(null? idss)
       (cond
        [(and (null? accum-idss)
              get-list?)
-        (get-body)]
+        (get-body ctx extra-scopes)]
        [else
-        (define exp-body (get-body))
+        (define exp-body (get-body ctx extra-scopes))
         (define result-s
           (if (expand-context-to-parsed? ctx)
               (if (null? accum-idss)
@@ -360,8 +362,9 @@
         (if get-list? (list result-s) result-s)])]
      [else
       (log-expand ctx 'next)
-      (define ids (car idss))
-      (define expanded-rhs (expand (car rhss) (as-named-context ctx ids)))
+      (define orig-ids (car idss))
+      (define-values (ids next-ctx) (apply-extra-scopes orig-ids (car keyss) ctx extra-scopes))
+      (define expanded-rhs (expand (add-scopes (car rhss) extra-scopes) (as-named-context next-ctx ids)))
       (define track-stx (car track-stxs))
       
       (define local-or-forward-references? (reference-record-forward-references? frame-id))
@@ -372,11 +375,13 @@
        [(and (not local-or-forward-references?)
              split?)
         (unless (null? accum-idss) (error "internal error: accumulated ids not empty"))
+        (define next-extra-scopes (create-binding-layer next-ctx extra-scopes))
         (define exp-rest (loop (cdr idss) (cdr keyss) (cdr rhss) (cdr track-stxs)
                                null null null null
+                               next-ctx next-extra-scopes
                                #f #t))
         (define result-s
-          (if (expand-context-to-parsed? ctx)
+          (if (expand-context-to-parsed? next-ctx)
              (parsed-let-values (keep-properties-only s)
                                 (list ids)
                                 (list (list (car keyss) expanded-rhs))
@@ -390,11 +395,13 @@
         (if get-list? (list result-s) result-s)]
        [(and (not forward-references?)
              (or split? (null? (cdr idss))))
+        (define next-extra-scopes (create-binding-layer next-ctx extra-scopes))
         (define exp-rest (loop (cdr idss) (cdr keyss) (cdr rhss) (cdr track-stxs)
                                null null null null
+                               next-ctx next-extra-scopes
                                #f #t))
         (define result-s
-         (if (expand-context-to-parsed? ctx)
+         (if (expand-context-to-parsed? next-ctx)
              (parsed-letrec-values (keep-properties-only s)
                                    (reverse (cons ids accum-idss))
                                    (reverse
@@ -414,7 +421,34 @@
         (loop (cdr idss) (cdr keyss) (cdr rhss) (cdr track-stxs)
               (cons ids accum-idss) (cons (car keyss) accum-keyss)
               (cons expanded-rhs accum-rhss) (cons track-stx accum-track-stxs)
+              ctx extra-scopes
               track? get-list?)])])))
+
+(define (create-binding-layer ctx extra-scopes)
+  (cond
+    [(expand-context-to-parsed? ctx)
+     extra-scopes]
+    [else
+     ;; In case of re-expansion, we need to create a scope to reflect
+     ;; a new `let[rec]-values` context. Otherwise, re-expansion can
+     ;; lead to ambiguous bindings. We add the scope to the end to
+     ;; hopefully increase sharing of scope sets as `add-scopes` is
+     ;; used on the list.
+     (append extra-scopes (list (new-scope 'local)))]))
+
+(define (apply-extra-scopes ids keys ctx extra-scopes)
+  (cond
+    [(null? extra-scopes) (values ids ctx)]
+    [else
+     (define new-ids (for/list ([id (in-list ids)])
+                       (add-scopes id extra-scopes)))
+     (define env (expand-context-env ctx))
+     (define new-env (for/fold ([env env]) ([new-id (in-list new-ids)]
+                                            [key (in-list keys)])
+                       (env-extend env key (local-variable new-id))))
+     (values new-ids
+             (struct*-copy expand-context ctx
+                           [env new-env]))]))
 
 (define (build-clauses accum-idss accum-rhss accum-track-stxs)
   (map build-clause
