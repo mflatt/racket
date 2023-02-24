@@ -4,7 +4,7 @@
                      syntax/kerncase
                      syntax/transformer
                      racket/base)
-         syntax/parse/define)
+         syntax/parse/pre/define)
 
 (provide block)
 

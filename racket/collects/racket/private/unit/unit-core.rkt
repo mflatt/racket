@@ -6,7 +6,7 @@
                      racket/list
                      racket/syntax
                      syntax/context
-                     syntax/id-table
+                     syntax/private/id-table
                      syntax/intdef
                      syntax/kerncase
                      syntax/name
@@ -21,7 +21,7 @@
          racket/stxparam
          racket/unsafe/undefined
          syntax/location
-         syntax/parse/define
+         syntax/parse/pre/define
          "keywords.rkt"
          "runtime.rkt"
          "util.rkt")

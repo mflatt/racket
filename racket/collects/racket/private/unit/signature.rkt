@@ -6,13 +6,13 @@
                      racket/list
                      racket/struct-info
                      racket/syntax
-                     syntax/struct
+                     syntax/private/struct
                      syntax/stx
                      "exptime/import-export.rkt"
                      "exptime/signature.rkt")
          racket/contract/base
          (rename-in racket/private/struct [struct struct~])
-         syntax/parse/define
+         syntax/parse/pre/define
          "keywords.rkt"
          "util.rkt")
 
