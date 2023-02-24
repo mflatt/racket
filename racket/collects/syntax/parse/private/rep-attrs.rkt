@@ -1,6 +1,6 @@
 #lang racket/base
 (require syntax/parse/private/residual-ct ;; keep abs. path
-         racket/contract/base
+         "contract.rkt"
          syntax/private/id-table
          racket/syntax
          "make.rkt")

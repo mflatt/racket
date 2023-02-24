@@ -1,6 +1,6 @@
 #lang racket/base
-(require racket/contract/base
-         racket/dict
+(require "contract.rkt"
+         racket/private/dict
          syntax/private/id-table
          racket/syntax
          syntax/parse/private/residual-ct ;; keep abs. path
@@ -170,17 +170,17 @@ expressions are duplicated, and may be evaluated in different scopes.
 
 ;; Contracts
 
-(define DeclEnv/c declenv?)
-
-(define DeclEntry/c 
-  (or/c den:lit? den:datum-lit? den:class? den:magic-class? den:delayed?))
-
 (provide (struct-out den:class)
          (struct-out den:magic-class)
          ;; from residual.rkt:
          (struct-out den:lit)
          (struct-out den:datum-lit)
          (struct-out den:delayed))
+
+(define DeclEnv/c declenv?)
+
+(define DeclEntry/c 
+  (or/c den:lit? den:datum-lit? den:class? den:magic-class? den:delayed?))
 
 (provide/contract
  [DeclEnv/c contract?]

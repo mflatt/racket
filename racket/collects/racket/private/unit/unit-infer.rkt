@@ -6,7 +6,7 @@
                      racket/list
                      racket/syntax
                      syntax/context
-                     syntax/id-table
+                     syntax/private/id-table
                      syntax/intdef
                      syntax/kerncase
                      syntax/name
@@ -19,7 +19,7 @@
          racket/contract/base
          racket/contract/region
          syntax/location
-         syntax/parse/define
+         syntax/parse/pre/define
          "contract.rkt"
          "keywords.rkt"
          "runtime.rkt"
