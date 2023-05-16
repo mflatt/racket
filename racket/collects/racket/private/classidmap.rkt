@@ -35,7 +35,10 @@
 
 ;; Check Syntax binding info:
 (define (binding from to stx)
-  stx)
+  (syntax-property
+   stx
+   'disappeared-use
+   (syntax-local-introduce to)))
 
 ;; Declarations used to determine whether a chaperone is
 ;; needed to protect against unsafe-undefined access
