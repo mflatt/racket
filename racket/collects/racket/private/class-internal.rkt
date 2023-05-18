@@ -269,8 +269,8 @@
 ;;  local member name lookup
 ;;--------------------------------------------------------------------
 
-(define-for-syntax (localize orig-id)
-  (do-localize orig-id #'validate-local-member))
+(define-for-syntax (localize orig-id [def-ctx #f])
+  (do-localize orig-id #'validate-local-member def-ctx))
 
 (define (validate-local-member orig s)
   (if (symbol? s)
@@ -697,7 +697,7 @@
                [localized-map (make-bound-identifier-mapping)]
                [any-localized? #f]
                [localize/set-flag (lambda (id)
-                                    (let ([id2 (localize id)])
+                                    (let ([id2 (localize id def-ctx)])
                                       (unless (eq? id id2)
                                         (set! any-localized? #t))
                                       id2))]
@@ -716,7 +716,7 @@
                                    (lambda ()
                                      ;; If internal & external names are distinguished,
                                      ;; we need to fall back to localize:
-                                     (localize id))))])
+                                     (localize id def-ctx))))])
           
           ;; ----- Expand definitions -----
           (let ([defn-and-exprs (expand-all-forms stx defn-and-exprs def-ctx bind-local-id)]

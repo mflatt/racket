@@ -34,11 +34,14 @@
     (datum->syntax this-id name src)))
 
 ;; Check Syntax binding info:
-(define (binding from to stx)
+(define (binding from to stx [def-ctx #f])
   (syntax-property
    stx
    'disappeared-use
-   (syntax-local-introduce to)))
+   (let ([id (syntax-local-introduce to)])
+     (if def-ctx
+         (internal-definition-context-introduce	def-ctx id 'remove)
+         id))))
 
 ;; Declarations used to determine whether a chaperone is
 ;; needed to protect against unsafe-undefined access
@@ -365,7 +368,7 @@
                                    "unbound local member name"
                                    stx))))
 
-(define (do-localize orig-id validate-local-member-stx)
+(define (do-localize orig-id validate-local-member-stx def-ctx)
   (let loop ([id orig-id])
     (let ([v (syntax-local-value id (lambda () #f))])
       (cond
@@ -375,7 +378,8 @@
                      (list 'quote orig-id)
                      (binding (private-name-orig-id v)
                               id
-                              (private-name-gen-id v))))]
+                              (private-name-gen-id v)
+                              def-ctx)))]
         [(and (set!-transformer? v)
               (s!t? (set!-transformer-procedure v)))
          (s!t-ref (set!-transformer-procedure v) 1)]
