@@ -609,6 +609,14 @@
             ($oops 'collect-generation-radix "~s is not a positive fixnum" v))
          v)))
 
+(define-who collect-maximum-generation-ratio
+   (make-parameter
+      2
+      (lambda (v)
+         (unless (or (not v) (and (real? v) (> v 0)))
+            ($oops who "~s is not a positive real or #f" v))
+         v)))
+
 (define $reset-protect
   (lambda (body out)
     ((call/cc
@@ -800,13 +808,14 @@
   (define gc-bytes 0)
   (define gc-count 0)
   (define start-bytes 0)
+  (define gc-post-major-bytes 0)
   (define docollect
     (let ([do-gc (foreign-procedure "(cs)do_gc" (int int int ptr) ptr)])
       (lambda (p)
         (with-tc-mutex
           (unless (= $active-threads 1)
             ($oops 'collect "cannot collect when multiple threads are active"))
-          (let-values ([(trip g gmintarget gmaxtarget count-roots) (p gc-trip)])
+          (let-values ([(trip g gmintarget gmaxtarget count-roots) (p gc-trip gc-post-major-bytes)])
             (set! gc-trip trip)
             (let ([cpu (current-time 'time-process)] [real (current-time 'time-monotonic)])
               (set! gc-bytes (+ gc-bytes (bytes-allocated)))
@@ -828,6 +837,8 @@
                 (set! gc-cpu (add-duration gc-cpu (time-difference (current-time 'time-process) cpu)))
                 (set! gc-real (add-duration gc-real (time-difference (current-time 'time-monotonic) real)))
                 (set! gc-count (1+ gc-count))
+                (when (eqv? g (collect-maximum-generation))
+                  (set! gc-post-major-bytes (bytes-allocated (collect-maximum-generation))))
                 gc-result)))))))
   (define collect-init
     (lambda ()
@@ -836,7 +847,8 @@
       (set! gc-real (make-time 'time-collector-real 0 0))
       (set! gc-count 0)
       (set! gc-bytes 0)
-      (set! start-bytes (bytes-allocated))))
+      (set! start-bytes (bytes-allocated))
+      (set! gc-post-major-bytes start-bytes)))
   (set! $gc-real-time (lambda () gc-real))
   (set! $gc-cpu-time (lambda () gc-cpu))
   (set! initial-bytes-allocated (lambda () start-bytes))
@@ -858,19 +870,26 @@
     (define collect0
       (lambda ()
         (docollect
-          (lambda (gct)
-            (let ([gct (+ gct 1)])
-              (let ([cmg (collect-maximum-generation)])
-                (let loop ([g cmg])
-                  (if (= (modulo gct (expt (collect-generation-radix) g)) 0)
-                      (if (fx= g cmg)
-                          (values 0 g (fxmin g 1) g #f)
-                          (values gct g 1 (fx+ g 1) #f))
-                      (loop (fx- g 1))))))))))
+          (lambda (gct post-major-bytes)
+            (let ([ratio (collect-maximum-generation-ratio)])
+              (cond
+                [(and ratio (> (bytes-allocated (collect-maximum-generation))
+                               (* ratio post-major-bytes)))
+                 (let ([cmg (collect-maximum-generation)])
+                   (values gct cmg 1 cmg #f))]
+                [else
+                 (let ([gct (+ gct 1)])
+                   (let ([cmg (collect-maximum-generation)])
+                     (let loop ([g (if ratio (- cmg 1) cmg)])
+                       (if (= (modulo gct (expt (collect-generation-radix) g)) 0)
+                           (if (fx= g cmg)
+                               (values 0 cmg 1 cmg #f)
+                               (values gct g 1 (fx+ g 1) #f))
+                           (loop (fx- g 1))))))]))))))
     (define collect2
       (lambda (g gmintarget gmaxtarget count-roots)
         (docollect
-          (lambda (gct)
+          (lambda (gct post-major-bytes)
             (values 
              ; make gc-trip to look like we've just collected generation g
              ; w/o also having collected generation g+1

@@ -5688,7 +5688,33 @@ evaluating module init
       (let ([b1 (maximum-memory-bytes)])
         (or (< (- b1 b0) (expt 2 24))
             (errorf #f "b0 = ~s, b1 = ~s, b1-b0 = ~s" b0 b1 (- b1 b0))))))
- )
+
+  (error? ; invalid ratio
+    (collect-maximum-generation-ratio -1))
+  (error? ; invalid ratio
+    (collect-maximum-generation-ratio 1+2i))
+  (let* ([s (gensym)]
+         [b (weak-cons s '())])
+    ;; force `s` into old generation:
+    (collect (collect-maximum-generation) (collect-maximum-generation))
+    (with-interrupts-disabled
+     (set! s #f)
+     ;; high ratio => no colelction of old generation
+     (parameterize ([collect-maximum-generation-ratio 100.0])
+       (let loop ([i (min (expt (collect-generation-radix) (collect-maximum-generation)) 1000)])
+         (unless (fx= i 0)
+           (collect)
+           (loop (fx- i 1)))))
+     (and (not (eq? (car b) #!bwp))
+          (begin
+            ;; ratio as #f => eventual collection of old generation
+            (parameterize ([collect-maximum-generation-ratio #f])
+              (let loop ([i (min (expt (collect-generation-radix) (collect-maximum-generation)) 1000)])
+                (unless (fx= i 0)
+                  (collect)
+                  (loop (fx- i 1)))))
+            (eq? (car b) #!bwp)))))
+)
 
 (mat object-counts
   ; basic structural checks

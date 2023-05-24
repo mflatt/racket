@@ -7849,6 +7849,8 @@ format.mo:Expected error in mat format-dollar: "format: expected real number for
 7.mo:Expected error in mat collect: "collect: invalid minimum target generation 2 for generation 0 and maximum target generation 0".
 7.mo:Expected error in mat collect: "collect: invalid minimum target generation 0 for generation 4 and maximum target generation static".
 7.mo:Expected error in mat collect: "collect: invalid minimum target generation -1 for generation 4 and maximum target generation static".
+7.mo:Expected error in mat collect: "collect-maximum-generation-ratio: -1 is not a positive real or #f".
+7.mo:Expected error in mat collect: "collect-maximum-generation-ratio: 1+2i is not a positive real or #f".
 7.mo:Expected error in mat sstats: "make-sstats: cpu value 0 is not a time record".
 7.mo:Expected error in mat sstats: "make-sstats: real value 0 is not a time record".
 7.mo:Expected error in mat sstats: "make-sstats: bytes value 0.0 is not an exact integer".

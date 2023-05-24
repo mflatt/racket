@@ -259,6 +259,9 @@ Generations are collected once every $r^g$ times a collection occurs,
 where $r$ is the
 value of \scheme{collect-generation-radix} and $g$ is the generation
 number.
+The generation specified by the value of \scheme{collect-maximum-generation} is
+treated specially unless the value of \scheme{collect-maximum-generation-ratio} is
+\scheme{#false}.
 
 Setting \scheme{collect-generation-radix} to one forces all generations
 to be collected each time a collection occurs.
@@ -283,6 +286,29 @@ Increasing the number of generations effectively decreases how often old
 objects are collected, potentially decreasing collection overhead but
 potentially increasing the number of inaccessible objects retained in the
 system and thus the total amount of memory required.
+
+
+%----------------------------------------------------------------------------
+\entryheader
+\formdef{collect-maximum-generation-ratio}{\categoryglobalparameter}{collect-maximum-generation-ratio}
+\listlibraries
+\endentryheader
+
+\noindent
+This parameter determines how often the maximum generation (i.e., the
+value of \scheme{collect-maximum-generation}) is collected when
+\scheme{collect} is invoked without arguments, as by the default
+collect-request handler. If the value is \scheme{#false}, then the
+maximum generation is treated like other generations, and the
+frequency of its collection is determined by
+\scheme{collect-generation-radix}. Otherwise, the value must be a
+positive real number, and the maximum generation is collected when its
+number of allocated bytes is the parameter's value times the number of
+bytes allocated after the most recent collection of the generation.
+
+A non-\scheme{#false} value for \scheme{collect-generation-ratio} can
+reduce collection time for a program that has a large number of
+objects that are long-lived but that are not static.
 
 
 %----------------------------------------------------------------------------
