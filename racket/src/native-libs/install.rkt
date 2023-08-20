@@ -25,16 +25,16 @@
 
 ;; Hack to make AArch64 Mac OS and Windows libraries look like other Macs:
 (define aarch64-renames
-  `(("libffi.7" "libffi.6")))
+  `())
 
 (define libs
-  `("libffi.6"
+  `("libffi.8"
     "libgio-2.0.0"
     "libgmodule-2.0.0"
     "libgthread-2.0.0"
     "libglib-2.0.0"
     "libgobject-2.0.0"
-    "libintl.9"
+    "libintl.8"
     "libharfbuzz.0"
     "libfribidi.0"
     "libpango-1.0.0"
@@ -48,9 +48,9 @@
     "libpixman-1.0"
     "libpng16.16"
     "libgmp.10"
-    "libmpfr.4"
+    "libmpfr.6"
     "libjpeg.9"
-    "libpoppler.44"
+    "libpoppler.130"
     "libpoppler-glib.8"))
 
 (define win-libs
@@ -75,9 +75,8 @@
   '("PSMTabBarControl.framework"))
 
 (define nonwin-libs
-  '("libcrypto.1.1"
-    "libssl.1.1"
-    "libuuid.1"))
+  '("libcrypto.3"
+    "libssl.3"))
 
 (define no-copy-libs
   '("PSMTabBarControl.framework"
@@ -97,7 +96,8 @@
      "libsqlite3.0")
    '("libgtk-x11-2.0.0"
      "libgdk-x11-2.0.0"
-     "libgdk_pixbuf-2.0.0")))
+     "libgdk_pixbuf-2.0.0")
+   '("libuuid.1")))
 (define linux-remove-libs
   '("libintl.9"))
 
@@ -120,7 +120,7 @@
 (define package-mapping
   (package-mapping-qq
    (["draw"        ; pkg name
-     "-3"          ; pkg suffix (increment after "-" when library versions change)
+     "-4"          ; pkg suffix (increment after "-" when library versions change)
      "racket/draw" ; subdir
      "" ; extra for "LICENSE.txt"
      ("additionally, fontconfig/src/fcmd5.h and"
@@ -181,13 +181,13 @@
       ["libz" "zlib is by Jean-loup Gailly and Mark Adler."
               Zlib])]
     ["racket"
-     "-3"
+     "-4"
      "racket"
      ""
      ()
      #t
      "base"
-     "1.2"
+     #f ; version
      (["libeay32" ,(~a "This product includes software developed by the OpenSSL Project for\n"
                        "use in the OpenSSL Toolkit (https://www.openssl.org/).\n"
                        "\n"
@@ -209,7 +209,7 @@
                  BSD-3-clause])]
 
     ["math"
-     ""
+     "-2"
      "math"
      ""
      ()
@@ -288,7 +288,7 @@
      ()
      #t
      #f
-     "1.3" ; version
+     "1.4" ; version
      (["libgtk-x11-2.0.0" "GTK+ is released under the GNU Library General Public License (GNU LGPL)."
                           LGPL-2.1-or-later]
       ["libatk" "ATK is released under the GNU Library General Public License (GNU LGPL)."

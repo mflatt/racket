@@ -111,52 +111,52 @@
 ;; Patches:
 
 ;; Fix a problem with glyph extents and clipped rendering:
-(define-runtime-path cairo-coretext-patch "patches/cairo-coretext.patch")
+#;(define-runtime-path cairo-coretext-patch "patches/cairo-coretext.patch")
 
 ;; Fix a problem with blank glyphs triggering Type 3 substitutions:
-(define-runtime-path cairo-emptyglyph.patch "patches/cairo-emptyglyph.patch")
+#;(define-runtime-path cairo-emptyglyph.patch "patches/cairo-emptyglyph.patch")
 
 ;; Hack to workaround broken Courier New in Mac OS 10.{7.8}:
-(define-runtime-path courier-new-patch "patches/courier-new.patch")
+#;(define-runtime-path courier-new-patch "patches/courier-new.patch")
 
 ;; Enable kerning and set DPI to 72:
-(define-runtime-path coretext-patch "patches/coretext.patch")
+#;(define-runtime-path coretext-patch "patches/coretext.patch")
 
 ;; Support registration of extra font families:
 (define-runtime-path coretext-fontreg-patch "patches/coretext-fontreg.patch")
 
 ;; Avoid crash when CTFontCollectionCreateMatchingFontDescriptors fails:
-(define-runtime-path coretext-nullarray "patches/coretext-nullarray.patch")
+#;(define-runtime-path coretext-nullarray "patches/coretext-nullarray.patch")
 
 ;; MinGW doesn't like `-Wp,-D_FORTIFY_SOURCE=2`, at least not without
 ;; linking extra libraries:
-(define-runtime-path cairo-nofortfy-patch "patches/cairo-nofortify.patch")
+#;(define-runtime-path cairo-nofortfy-patch "patches/cairo-nofortify.patch")
 
 ;; Adds cairo_quartz_get_cg_context_with_clip, which is based on
 ;; https://hg.mozilla.org/mozilla-central/file/tip/gfx/cairo/native-clipping.patch
 (define-runtime-path cairo-cg-surface-patch "patches/cairo-cg-surface.patch")
 
 ;; Decallocation-ordering fix
-(define-runtime-path cairo-quartz-callback-patch "patches/cairo-quartz-callback.patch")
+#;(define-runtime-path cairo-quartz-callback-patch "patches/cairo-quartz-callback.patch")
 
 ;; Define some functions that aren't in Mac OS 10.5 (for the 32-bit build)
-(define-runtime-path pango-surrogate-patch "patches/pango-surrogate.patch")
+#;(define-runtime-path pango-surrogate-patch "patches/pango-surrogate.patch")
 
 ;; Enable "symbol" fonts, and fix off-by-one:
-(define-runtime-path win32text-patch "patches/win32text.patch")
+#;(define-runtime-path win32text-patch "patches/win32text.patch")
 
 ;; Disable emoji-specific font, which intereferes with substitutions
 ;; (i.e., auto-find a suitable font) as implemented by `racket/draw`
-(define-runtime-path pango-emoji-patch "patches/pango-emoji.patch")
+#;(define-runtime-path pango-emoji-patch "patches/pango-emoji.patch")
 
 ;; Merge a Pango patch that fixes a decoding problem
-(define-runtime-path pango-emojiiter-patch "patches/pango-emojiiter.patch")
+#;(define-runtime-path pango-emojiiter-patch "patches/pango-emojiiter.patch")
 
 ;; Allow more flexible font matching
-(define-runtime-path pango-match-patch "patches/pango-match.patch")
+#;(define-runtime-path pango-match-patch "patches/pango-match.patch")
 
 ;; Detect oblique before italic on Mac OS
-(define-runtime-path pango-preferoblique-patch "patches/pango-preferoblique.patch")
+#;(define-runtime-path pango-preferoblique-patch "patches/pango-preferoblique.patch")
 
 ;; Add `-lusp10` before `-lgdi32` to preserve support for Windows 7
 (define-runtime-path pango-usp10-patch "patches/pango-usp10.patch")
@@ -168,7 +168,9 @@
 (define-runtime-path libedit-getline-patch "patches/libedit-getline.patch")
 
 ;; strerror_s is not available in XP
-(define-runtime-path glib-strerror-patch "patches/glib-strerror.patch")
+#;(define-runtime-path glib-strerror-patch "patches/glib-strerror.patch")
+
+(define-runtime-path glib-disable-gio-test-patch "patches/glib-disable-gio-test.patch")
 
 ;; Remove "-fno-check-new", which Clang does not recognize:
 (define-runtime-path nonochecknew-patch "patches/nonochecknew.patch")
@@ -177,16 +179,16 @@
 (define-runtime-path poppler-no-volatile-patch "patches/poppler-no-volatile.patch")
 
 ;; 64-bit MinGW doesn't like this use of `__always_inline__`:
-(define-runtime-path noforceinline-patch "patches/noforceinline.patch")
+#;(define-runtime-path noforceinline-patch "patches/noforceinline.patch")
 
 ;; `vector` syntax with old gcc
-(define-runtime-path pixman-altivec-patch "patches/pixman-altivec.patch")
+#;(define-runtime-path pixman-altivec-patch "patches/pixman-altivec.patch")
 
 ;; No need for pixman demos and tests
 (define-runtime-path pixman-notest-patch "patches/pixman-notest.patch")
 
 ;; Disable pthread use for pixman on Windows
-(define-runtime-path pixman-nopthread-patch "patches/pixman-nopthread.patch")
+#;(define-runtime-path pixman-nopthread-patch "patches/pixman-nopthread.patch")
 
 ;; Disable libtool's management of standard libs so that
 ;; MinGW's -static-libstdc++ works:
@@ -194,21 +196,21 @@
 (define-runtime-path libtoolhb-link-patch "patches/libtoolhb-link.patch")
 
 ;; Add FcSetFallbackDirs to set fallback directories dynamically:
-(define-runtime-path fcdirs-patch "patches/fcdirs.patch")
+(define-runtime-path fontconfig-dirs-patch "patches/fontconfig-dirs.patch")
 (define-runtime-path fonts-conf "patches/fonts.conf")
 
 ;; Skip `fc-config` on install:
 (define-runtime-path fc-config-patch "patches/fc-config.patch")
 
 ;; Avoid problems compiling with an old version of g++
-(define-runtime-path harfbuzz-oldcompiler-patch "patches/harfbuzz-oldcompiler.patch")
+#;(define-runtime-path harfbuzz-oldcompiler-patch "patches/harfbuzz-oldcompiler.patch")
 
 ;; Adapt inline-function handling for an old gcc
-(define-runtime-path gmp-inline-patch "patches/gmp-inline.patch")
+#;(define-runtime-path gmp-inline-patch "patches/gmp-inline.patch")
 
 ;; Configure for AArch64
-(define-runtime-path openssl-aarch64osx-patch "patches/openssl-aarch64osx.patch")
-(define-runtime-path openssl-aarch64nt-patch "patches/openssl3-aarch64nt.patch")
+#;(define-runtime-path openssl-aarch64osx-patch "patches/openssl-aarch64osx.patch")
+#;(define-runtime-path openssl-aarch64nt-patch "patches/openssl3-aarch64nt.patch")
 
 ;; libffi via MinGW for AArch64:
 (define-runtime-path libffi-arm64nt-patch "patches/libffi-arm64nt.patch")
@@ -244,8 +246,8 @@
   (cond
    [win?
     (case package-name
-      [("pkg-config" "sed")
-       ;; pkgconfig and sed run on build platform:
+      [("pkg-config" "sed" "bison")
+       ;; runs on build platform:
        null]
       [("openssl-1" "openssl-3")
        ;; Not libtool, and prefix added automatically
@@ -273,8 +275,8 @@
      [else
       (define sdk-flags (sdk mac64-sdk))
       (list
-       (list "CPPFLAGS" (~a "-m64" sdk-flags))
-       (list "LDFLAGS" (~a "-m64" sdk-flags)))])]
+       (list "CPPFLAGS" (~a "-arch x86_64" sdk-flags))
+       (list "LDFLAGS" (~a "-arch x86_64" sdk-flags)))])]
    [else
     (cond
      [m32?
@@ -317,14 +319,54 @@
    (lambda (out)
      (displayln content out))))
 
+(define (make-mac-cross_file.txt cpu)
+  (define content
+    @~a{[host_machine]
+        system = 'darwin'
+        cpu_family = '@|cpu|'
+        cpu = '@|cpu|'
+        endian = 'little'
+
+        [binaries]
+        c = ['gcc', '-arch', '@|cpu|']
+        cpp = ['g++', '-arch', '@|cpu|']
+        objc = ['gcc', '-arch', '@|cpu|']
+        ar = 'ar'
+        as = 'fail_now'
+        ld = ['ld', '-arch', '@|cpu|']
+        objcopy = ['objcopy', '-arch', '@|cpu|']
+        strip = ['strip', '-arch', '@|cpu|']
+        pkgconfig = 'pkg-config'})
+  (call-with-output-file*
+   "cross_file.txt"
+   #:exists 'truncate
+   (lambda (out)
+     (displayln content out))))
+
+(define (make-mac-toolchain.txt cpu)
+  (define content
+    @~a{set(CMAKE_SYSTEM_NAME macos)
+        set(CMAKE_C_COMPILER gcc -arch @|cpu|)
+        set(CMAKE_CXX_COMPILER g++ -arch @|cpu|)})
+  (call-with-output-file*
+   "toolchain.txt"
+   #:exists 'truncate
+   (lambda (out)
+     (displayln content out))))
+
 (define (make-all-args use-cross-file)
   (append
-   (list (~a "--prefix=" dest))
+   (case package-name
+     [()
+      ;; cmake
+      (list (~a "-DCMAKE_INSTALL_PREFIX=" dest))]
+     [else
+      (list (~a "--prefix=" dest))])
    (cond
     [win?
      (case package-name
-       [("pkg-config" "sed")
-        ;; pkgconfig and sed run on build platform:
+       [("pkg-config" "sed" "bison")
+        ;; runs on build platform
         null]
        [("openssl-1" "openssl-3")
         ;; not the usual "configure"
@@ -343,6 +385,23 @@
            (list "--host=aarch64-w64-mingw32")]
           [else
            (list "--host=x86_64-w64-mingw32")])])]
+    [mac?
+     (cond
+       [(and (not m32?) (not aarch64?))
+        (case package-name
+          [("pkg-config" "sed" "bison")
+           ;; runs on build platform
+           null]
+          [("openssl-1" "openssl-3")
+           ;; not the usual "configure"
+           null]
+          [("glib" "harfbuzz" "pango" #;"gobject-introspection" "atk")
+           ;; meson
+           (list "--cross-file" "cross_file.txt")]
+          [else
+           (list "--host=x86_64-apple-darwin")])]
+       [else
+        null])]
     [else null])
    (case package-name
      [("openssl-1" "openssl-3")
@@ -385,9 +444,11 @@
                 #:install-patches [install-patches null]
                 #:fixup [fixup #f]
                 #:fixup-proc [fixup-proc #f]
-                #:use-cross-file [use-cross-file #f])
+                #:use-cross-file [use-cross-file #f]
+                #:build-directory [build-dir #f])
   (for ([d (in-list (append (if (or (equal? package-name "pkg-config")
-                                    (equal? package-name "sed"))
+                                    (equal? package-name "sed")
+                                    (equal? package-name "bison"))
                                 '()
                                 (append
                                  '("pkg-config")
@@ -396,7 +457,7 @@
     (unless (file-exists? (build-path dest "stamps" d))
       (error 'build "prerequisite needed: ~a" d)))
   (values env exe args make make-install setup patches post-patches install-patches fixup fixup-proc
-          use-cross-file))
+          use-cross-file build-dir))
 
 (define path-flags
   (list (list "CPPFLAGS" (~a "-I" dest "/include"))
@@ -428,9 +489,38 @@
   (unless linux?
     (error (format "build ~a only for Linux" package-name))))
 
+(define (meson-exe)
+  (find-executable-path "meson"))
+
+(define (meson-make)
+  "meson compile -C _build")
+
+(define (meson-install)
+  "meson install -C _build")
+
+(define (meson-configure . args)
+  (append '("setup")
+          '("--buildtype" "release")
+          (apply append args)
+          '(#f "_build")))
+
+(define (meson-cross-file)
+  (cond
+    [win?
+     (cond
+       [aarch64? "aarch64"]
+       [m32? "i686"]
+       [else "x86_64"])]
+    [mac?
+     (cond
+       [aarch64? #f]
+       [m32? #f]
+       [else "x86_64"])]
+    [else #f]))
+
 (define-values (extra-env configure-exe extra-args make-command make-install-command 
                           setup patches post-patches install-patches fixup fixup-proc
-                          use-cross-file)
+                          use-cross-file build-dir)
   (case package-name
     [("pkg-config") (config #:configure (list "--with-internal-glib"))]
     [("sed") (config)]
@@ -473,7 +563,7 @@
                                   (cond
                                    [ppc? "darwin-ppc-cc"]
                                    [m32? "darwin-i386-cc"]
-                                   [aarch64? "darwin64-aarch64-cc"]
+                                   [aarch64? "darwin64-arm64-cc"]
                                    [else "darwin64-x86_64-cc"])
                                   (car (regexp-match #rx"-mmacosx-version-min=[0-9.]*"
                                                      (cadr (assoc "CPPFLAGS" all-env)))))
@@ -488,8 +578,8 @@
 	     #:make make
              #:make-install (~a make " install_sw")
 	     #:patches (if (and win? aarch64?)
-                           (list openssl-aarch64nt-patch)
-                           (list openssl-aarch64osx-patch))
+                           (list #;openssl-aarch64nt-patch)
+                           (list #;openssl-aarch64osx-patch))
              #:fixup (and win?
                           (~a "cd " (build-path dest "bin")
                               " && mv libssl-" vers (if (or m32? aarch64?) "" "-x64") ".dll ssleay32.dll"
@@ -532,12 +622,31 @@
 	     #:configure '("--without-libtiff")
 	     #:env (append path-flags
 			   ld-library-path-flags))]
+    [("bison")
+     (config #:env path-flags
+             #:configure-exe "../configure"
+             #:build-directory "build")]
+    #;
+    [("gobject-introspection")     
+     (config #:depends '("bison" "libffi")
+             #:env (list (list "CPPFLAGS" "-DFFI_GO_CLOSURES=0"))
+             #:configure-exe (meson-exe)
+             #:make (meson-make)
+             #:make-install (meson-install)
+             #:configure (meson-configure)
+             #:use-cross-file (meson-cross-file))]
     [("atk")
      (config #:depends (if linux?
                            '("libX11")
                            '())
 	     #:env (append path-flags
-			   ld-library-path-flags))]
+			   ld-library-path-flags)
+             #:configure-exe (meson-exe)
+             #:make (meson-make)
+             #:make-install (meson-install)
+             #:configure (meson-configure
+                          '("-Dintrospection=false"))
+             #:use-cross-file (meson-cross-file))]
     [("gtk+")
      (linux-only)
      (config #:depends '("gdk-pixbuf" "atk" "libXrender")
@@ -576,17 +685,13 @@
 			  (~a "cp zlib1.dll " dest "/bin && cp libz.dll.a " dest "/lib")))]
     [("glib") (config #:depends (append '("libffi" "gettext")
                                         (if win? '("libiconv") '()))
-                      #:configure-exe (find-executable-path "meson")
-                      #:use-cross-file (and win? (cond
-                                                   [aarch64? "aarch64"]
-                                                   [m32? "i686"]
-                                                   [else "x86_64"]))
-                      #:make "meson compile -C _build"
-                      #:make-install "meson install -C _build"
-                      #:configure (append '("setup")
-                                          ;; '("-Dinternal_pcre=true")
-                                          (if linux? '("-Dlibmount=disabled") '())
-                                          '(#f "_build"))
+                      #:configure-exe (meson-exe)
+                      #:use-cross-file (meson-cross-file)
+                      #:make (meson-make)
+                      #:make-install (meson-install)
+                      #:configure (meson-configure
+                                   ;; '("-Dinternal_pcre=true")
+                                   (if linux? '("-Dlibmount=disabled") '()))
                       #:env (add-flag (add-flag path-flags
                                                 ;; Disable Valgrind support, which particularly
                                                 ;; goes wrong for 64-bit Windows builds.
@@ -598,9 +703,11 @@
                                       "LDFLAGS" (if (and win? (not aarch64?))
                                                     "-Wl,--allow-multiple-definition"
                                                     ""))
-                      #:patches (cond
-                                  [win? (list glib-strerror-patch)]
-                                  [else null]))]
+                      #:patches (append
+                                 (list glib-disable-gio-test-patch)
+                                 (cond
+                                   [win? (list #;glib-strerror-patch)]
+                                   [else null])))]
     [("libpng") (config #:depends (if (or win? linux?) '("zlib") '())
                         #:env (if (or linux? win?)
                                   (append
@@ -612,23 +719,27 @@
     [("libuuid") (config)]
     [("freetype") (config #:depends '("libpng"))]
     [("fontconfig") (config #:depends (append '("expat" "freetype")
-                                              (if win? '() '("libuuid")))
+                                              (if (or win? mac?) '() '("libuuid")))
                             #:configure (append '("--disable-docs")
                                                 (if win?
                                                     `("--without-libiconv-prefix"
                                                       "--without-libintl-prefix")
                                                     '()))
-                            #:patches (list fcdirs-patch)
+                            #:patches (list fontconfig-dirs-patch)
 			    #:install-patches (cond
 					       [(and mac? aarch64?) (list fc-config-patch)]
 					       [else null]))]
-    [("pixman") (config #:patches (append
+    [("pixman") (config #:configure
+                        (cond
+                          [(and mac? aarch64?) (list "--disable-arm-a64-neon")]
+                          [else null])
+                        #:patches (append
                                    (cond
-                                     [(and win? (not m32?)) (list noforceinline-patch)]
-                                     [ppc? (list pixman-altivec-patch)]
+                                     [(and win? (not m32?)) (list #;noforceinline-patch)]
+                                     [ppc? (list #;pixman-altivec-patch)]
                                      [else null])
                                    (cond
-                                     [win? (list pixman-nopthread-patch)]
+                                     [win? (list #;pixman-nopthread-patch)]
                                      [else (list)])
                                    (list pixman-notest-patch)))]
     [("cairo")
@@ -648,54 +759,75 @@
                               '("--enable-xlib=no")
                               null)
                           '("png_REQUIRES=libpng16")
+                          #;
                           (if mac?
                               '("CFLAGS=-include Kernel/uuid/uuid.h")
                               '()))
              #:patches (append
-                        (list cairo-emptyglyph.patch
-                              cairo-coretext-patch
-                              courier-new-patch
+                        (list #;cairo-emptyglyph.patch
+                              #;cairo-coretext-patch
+                              #;courier-new-patch
                               cairo-cg-surface-patch
-                              cairo-quartz-callback-patch)
+                              #;cairo-quartz-callback-patch)
                         (if win?
-                            (list cairo-nofortfy-patch)
+                            (list #;cairo-nofortfy-patch)
                             null)))]
     [("harfbuzz") (config #:depends '("fontconfig" "freetype" "cairo")
-                          #:configure '("--without-icu")
+                          #:configure-exe (meson-exe)
+                          #:use-cross-file (meson-cross-file)
+                          #:make (meson-make)
+                          #:make-install (meson-install)
+                          #:configure (meson-configure
+                                       '("-Dfreetype=enabled"
+                                         "-Dcoretext=enabled"
+                                         "-Dtests=disabled"))
                           #:env cxx-env
-                          #:patches (if ppc?
-                                        (list harfbuzz-oldcompiler-patch)
-                                        null)
+                          #:patches (if mac?
+                                        (list #;harfbuzz-coretext-cflags-patch)
+                                        (if ppc?
+                                            (list #;harfbuzz-oldcompiler-patch)
+                                            null))
                           #:post-patches (if (and win? aarch64?)
                                              (list libtoolhb-link-patch)
                                              null))]
     [("fribidi") (config #:configure '("--disable-docs"))]
     [("pango") (config #:depends '("cairo" "harfbuzz" "fribidi")
-                       #:env (if win? path-flags null)
-                       #:configure (append
-				    (if (not linux?)
-					'("--without-x")
-					null)
-				    '("--with-included-modules=yes"
-				      "--with-dynamic-modules=no")
+                       #:env (cond
+                               [win? path-flags]
+                               #; [mac? '(("CFLAGS" "-include Kernel/uuid/uuid.h"))]
+                               [else '()])
+                       #:configure-exe (meson-exe)
+                       #:use-cross-file (meson-cross-file)
+                       #:make (meson-make)
+                       #:make-install (meson-install)
+                       #:configure (meson-configure
+                                    '("-Dfontconfig=enabled")
+                                    #;
+                                    (if (not linux?)
+                                        '("--without-x")
+                                        null)
+                                    #;
+                                    '("--with-included-modules=yes"
+                                      "--with-dynamic-modules=no")
+                                    #;
                                     (if mac?
                                         '("CFLAGS=-include Kernel/uuid/uuid.h")
                                         '()))
                        #:patches (append
-                                  (list coretext-patch
+                                  (list #;coretext-patch
                                         coretext-fontreg-patch
-                                        coretext-nullarray
-                                        win32text-patch
-                                        pango-emojiiter-patch
-                                        pango-match-patch)
+                                        #;coretext-nullarray
+                                        #;win32text-patch
+                                        #;pango-emojiiter-patch
+                                        #;pango-match-patch)
                                   (if mac?
-                                      (list pango-preferoblique-patch)
+                                      (list #;pango-preferoblique-patch)
                                       null)
                                   (if (and mac? m32? (mac32-sdk . < . 6))
-                                      (list pango-surrogate-patch)
+                                      (list #;pango-surrogate-patch)
                                       null)
                                   (if (or mac? win?)
-                                      (list pango-emoji-patch)
+                                      (list #;pango-emoji-patch)
                                       null)
                                   (if (and win? (not aarch64?))
                                       (list pango-usp10-patch)
@@ -722,7 +854,7 @@
                                       (list "ABI=32")
                                       null))
                      #:post-patches (if (and mac? ppc?)
-                                        (list gmp-inline-patch)
+                                        (list #;gmp-inline-patch)
                                         null))]
     [("mpfr") (config #:configure (append (if (and #f win?) ; creates dependency on "libwinpthread-1.dll"
                                               '("--enable-thread-safe")
@@ -739,8 +871,8 @@
                                             (list libtool-link-patch)
                                             null)
                          #:configure '("--enable-zlib"
-				       "--disable-splash-output"
-				       "--disable-poppler-cpp"))]
+                                       "--disable-splash-output"
+                                       "--disable-poppler-cpp"))]
     [else (error 'build "unrecognized package: ~a" package-name)]))
 
 ;; --------------------------------------------------
@@ -767,7 +899,12 @@
        #:exists 'truncate
        (lambda (o) (display s2 o))))))
 
-(parameterize ([current-directory package-dir]
+(when build-dir
+  (make-directory* (build-path package-dir build-dir)))
+
+(parameterize ([current-directory (if build-dir
+                                      (build-path package-dir build-dir)
+                                      package-dir)]
                [current-environment-variables
                 (environment-variables-copy
                  (current-environment-variables))])
@@ -788,7 +925,12 @@
     (for ([p (in-list patches)])
       (system/show (~a "patch -p2 < " p))))
   (when use-cross-file
-    (make-windows-cross_file.txt use-cross-file))
+    (cond
+      [win?
+       (make-windows-cross_file.txt use-cross-file)]
+      [mac?
+       (make-mac-cross_file.txt use-cross-file)
+       (make-mac-toolchain.txt use-cross-file)]))
   (unless skip-config?
     (apply system*/show
            (or configure-exe "./configure")
