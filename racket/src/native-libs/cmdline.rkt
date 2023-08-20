@@ -44,6 +44,9 @@
       [("--maarch64") "build 64-bit mode AArch64"
        (set! m32? #f)
        (set! aarch64? #t)]
+      [("--mx86_64") "build 64-bit mode x86_64"
+       (set! m32? #f)
+       (set! aarch64? #f)]
       #:multi
       [("--archives") dir "Find archives in <dir>"
        (set! archives-dirs (cons dir (or archives-dirs null)))]

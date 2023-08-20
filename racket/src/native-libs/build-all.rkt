@@ -25,8 +25,9 @@
     [else
      null])
    (cond
-     [(and win?
-           aarch64?)
+     [(or #t
+          (and win?
+               aarch64?))
       '("openssl-3")]
      [else
       '("openssl-1")])
@@ -50,7 +51,7 @@
        "freefont")]
     [else null])
    (cond
-     [win? null]
+     [(or win? mac?) null]
      [else '("libuuid")])
    '("libffi"
      "glib"
@@ -65,6 +66,7 @@
      "gmp"
      "mpfr"
      "jpeg"
+     "bison"
      "atk"
      "poppler")
    (cond
@@ -97,7 +99,7 @@
                       (list (if win? "--win" (if linux? "--linux" "--mac"))
                             (if m32?
                                 (if ppc? "--mppc" "--m32")
-                                (if aarch64? "--maarch64" "--m64")))
+                                (if aarch64? "--maarch64" "--mx86_64")))
                       (cons "--archives"
                             (add-between (map ~a archives-dirs)
                                          "--archives"))
