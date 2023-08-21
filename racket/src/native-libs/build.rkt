@@ -377,7 +377,9 @@
       ;; cmake
       (list (~a "-DCMAKE_INSTALL_PREFIX=" dest))]
      [else
-      (list (~a "--prefix=" dest))])
+      (list (~a "--prefix=" dest
+                ;; override use of system name in lib path:
+                " --libdir=" dest "/lib"))])
    (cond
     [win?
      (case package-name
@@ -663,8 +665,7 @@
              #:make (meson-make)
              #:make-install (meson-install)
              #:configure (meson-configure
-                          '("-Dintrospection=false"
-                            "-Datk_only=true"))
+                          '("-Dintrospection=false"))
              #:use-cross-file (meson-cross-file))]
     [("gtk+")
      (linux-only)
