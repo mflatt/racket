@@ -377,9 +377,9 @@
       ;; cmake
       (list (~a "-DCMAKE_INSTALL_PREFIX=" dest))]
      [else
-      (list (~a "--prefix=" dest
-                ;; override use of system name in lib path:
-                " --libdir=" dest "/lib"))])
+      (list (~a "--prefix=" dest)
+            ;; override use of system name in lib path:
+            (~a "--libdir=" (build-path dest "lib")))])
    (cond
     [win?
      (case package-name
@@ -514,7 +514,21 @@
     (error (format "build ~a only for Linux" package-name))))
 
 (define (meson-exe)
-  (find-executable-path "meson"))
+  (cond
+    [linux?
+     (list (find-executable-path "python3")
+           (let ([dir (find-package "meson" #t #t)])
+             (unless dir
+               (let ([tgz (for/or ([archives-dir (in-list archives-dirs)])
+                            (parameterize ([current-directory archives-dir])
+                              (define tgz (find-package "meson" #f #t))
+                              (and tgz (build-path archives-dir tgz))))])
+                 (unless tgz
+                   (error "need meson package"))
+                 (system/show (~a "tar zxf " tgz))))
+             (path->complete-path (build-path (find-package "meson" #t #f) "meson.py"))))]
+    [else
+     (find-executable-path "meson")]))
 
 (define (meson-make)
   "meson compile -C _build")
@@ -960,12 +974,20 @@
        (make-mac-toolchain.txt use-cross-file)]))
   (unless skip-config?
     (apply system*/show
-           (or configure-exe "./configure")
-           (let loop ([extra-args extra-args])
-             (cond
-              [(null? extra-args) (make-all-args use-cross-file)]
-              [(not (car extra-args)) (append (make-all-args use-cross-file) (cdr extra-args))]
-              [else (cons (car extra-args) (loop (cdr extra-args)))])))
+           (if configure-exe
+               (if (pair? configure-exe)
+                   (car configure-exe)
+                   configure-exe)
+               "./configure")
+           (append
+            (if (pair? configure-exe)
+                (cdr configure-exe)
+                null)
+            (let loop ([extra-args extra-args])
+              (cond
+                [(null? extra-args) (make-all-args use-cross-file)]
+                [(not (car extra-args)) (append (make-all-args use-cross-file) (cdr extra-args))]
+                [else (cons (car extra-args) (loop (cdr extra-args)))]))))
     (for ([p (in-list post-patches)])
       (system/show (~a "patch -p2 < " p))))
   (remove-libtool-flat-namespace)
