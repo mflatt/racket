@@ -531,10 +531,14 @@
      (find-executable-path "meson")]))
 
 (define (meson-make)
-  "meson compile -C _build")
+  (define exe (meson-exe))
+  (append (if (list? exe) exe (list exe))
+          (list "compile" "-C" "_build")))
 
 (define (meson-install)
-  "meson install -C _build")
+  (define exe (meson-exe))
+  (append (if (list? exe) exe (list exe))
+          (list "install" "-C" "_build")))
 
 (define (meson-configure . args)
   (append '("setup")
@@ -991,10 +995,14 @@
     (for ([p (in-list post-patches)])
       (system/show (~a "patch -p2 < " p))))
   (remove-libtool-flat-namespace)
-  (system/show make-command)
+  (if (list? make-command)
+      (apply system*/show make-command)
+      (system/show make-command))
   (for ([p (in-list install-patches)])
     (system/show (~a "patch -p2 < " p)))
-  (system/show make-install-command)
+  (if (list? make-install-command)
+      (apply system*/show make-install-command)
+      (system/show make-install-command))
   (when fixup
     (system/show fixup))
   (when fixup-proc
