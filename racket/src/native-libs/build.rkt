@@ -657,7 +657,12 @@
      (config #:depends (if linux?
                            '("libX11")
                            '())
-	     #:env (append path-flags
+	     #:env (append (if linux?
+                               (add-flag path-flags
+                                         "CPPFLAGS"
+                                         ;; something goes wrong with `__tm_gmtoff` in an assert
+                                         " -DG_DISABLE_ASSERT")
+                               path-flags)
 			   ld-library-path-flags)
              #:configure-exe (meson-exe)
              #:make (meson-make)
