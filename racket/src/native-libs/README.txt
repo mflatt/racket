@@ -19,28 +19,28 @@ older versions):
 
  pkg-config-0.28
  sed-4.2 (Windows only, to avoid non-GNU `sed`)
- sqlite[-autoconf]-3360000 (Windows and Linux)
- libedit-20191231-3.1 (Mac OS only)
- openssl-1.1.1o (Windows AArch64: openssl-3.0.2)
- libiconv-1.15 (Windows only)
- zlib-1.2.12 (Windows and Linux only)
- libffi-3.2.1 (AArch64 Mac OS and Windows: libffi-3.3)
- expat-2.4.8
- gettext-0.19.8
- glib-2.72.2
- libpng-1.6.37
- pixman-0.38.4
+ sqlite[-autoconf]-3420000 (Windows and Linux)
+ libedit-20170329-3.1 (Mac OS only)
+ openssl-3.1.2
+ libiconv-1.17 (Windows only)
+ zlib-1.2.13 (Windows and Linux only)
+ libffi-3.4.4
+ expat-2.5.0
+ gettext-0.22
+ glib-2.77.2
+ libpng-1.6.40
+ pixman-0.42.2
  cairo-1.16.0
  jpegsrc.v9e
- harfbuzz-1.7.6
- fribidi-1.0.2
- fontconfig-2.13.0
- freetype-2.12.1
- pango-1.42.0
+ harfbuzz-8.1.1
+ fribidi-1.0.13
+ fontconfig-2.14.2
+ freetype-2.13.1
+ pango-1.51.0
  poppler-0.24.5
- mpfr-3.1.6
- gmp-6.2.1
- atk-2.28.1
+ mpfr-4.2.0
+ gmp-6.3.0
+ atk-2.38.0
 
 (Linux only:)
  xtrans-1.3.5

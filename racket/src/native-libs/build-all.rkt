@@ -96,10 +96,17 @@
                    [current-command-line-arguments
                     (list->vector
                      (append
-                      (list (if win? "--win" (if linux? "--linux" "--mac"))
-                            (if m32?
-                                (if ppc? "--mppc" "--m32")
-                                (if aarch64? "--maarch64" "--mx86_64")))
+                      (list (cond
+                              [win? "--win"]
+                              [mac? "--mac"]
+                              [linux? "--linux"]
+                              [else (error "missing OS")])
+                            (cond
+                              [i386? "--i386"]
+                              [x86_64? "--x86_64"]
+                              [ppc? "--ppc"]
+                              [aarch64? "--aarch64"]
+                              [else (error "missing arch")]))
                       (cons "--archives"
                             (add-between (map ~a archives-dirs)
                                          "--archives"))

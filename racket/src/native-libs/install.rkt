@@ -50,7 +50,7 @@
     "libgmp.10"
     "libmpfr.6"
     "libjpeg.9"
-    "libpoppler.130"
+    "libpoppler.44"
     "libpoppler-glib.8"))
 
 (define win-libs
@@ -540,9 +540,12 @@
       (when sign-as
 	(system (format "codesign -s ~s --timestamp ~a" sign-as p-new)))))
 
-  (define platform (~a (if m32? 
-                           (if ppc? "ppc" "i386")
-			   (if aarch64? "aarch64" "x86_64"))
+  (define platform (~a (cond
+                         [ppc? "ppc"]
+                         [i386? "i386"]
+                         [aarch64? "aarch64"]
+                         [x86_64? "x86_64"]
+                         [else (error "mac arch")])
                        "-macosx"))
 
   (define renames (if aarch64?
@@ -555,7 +558,7 @@
                      [ppc? '()]
                      [else mac-libs])
                    (cond
-                     [m32? '()]
+                     [(or i386? ppc?) '()]
                      [else mac64-libs])
                    (cond
                      [aarch64? '()]
@@ -565,9 +568,10 @@
 
 (define (install-win)
   (define exe-prefix (cond
-                       [m32? "i686-w64-mingw32"]
+                       [i386? "i686-w64-mingw32"]
                        [aarch64? "aarch64-w64-mingw32"]
-                       [else "x86_64-w64-mingw32"]))
+                       [x86_64? "x86_64-w64-mingw32"]
+                       [else (error "win arch")]))
 
   (define renames (if aarch64?
                       aarch64-renames
@@ -604,13 +608,19 @@
   (parameterize ([current-environment-variables
                   (environment-variables-copy
                    (current-environment-variables))])
-    (putenv "PATH" (~a (if m32?
+    (putenv "PATH" (~a (if i386?
                            "/usr/local/mw32/bin:/usr/mw32/bin:"
                            "/usr/local/mw64/bin:/usr/mw64/bin:")
                        (getenv "PATH")))
 
-    (install (~a "win32-" (if m32? "i386" (if aarch64? "arm64" "x86_64")))
-             (~a "win32\\" (if m32? "i386" (if aarch64? "arm64" "x86_64")))
+    (define arch (cond
+                   [i386? "i386"]
+                   [aarch64? "arm64"]
+                   [x86_64? "x86_64"]
+                   [else (error "win string arch")]))
+
+    (install (~a "win32-" arch)
+             (~a "win32\\" arch)
              "dll"
              fixup
              (for/list ([s (in-list (append libs
@@ -627,7 +637,7 @@
     ;; Might fail if there are no external references:
     (system (format "chrpath -r '$ORIGIN' ~a" p-new)))
 
-  (define platform (~a (if m32?
+  (define platform (~a (if i386?
                            "i386"
                            "x86_64")
                        "-linux-natipkg"))
