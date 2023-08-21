@@ -657,18 +657,14 @@
      (config #:depends (if linux?
                            '("libX11")
                            '())
-	     #:env (append (if linux?
-                               (add-flag path-flags
-                                         "CFLAGS"
-                                         ;; something goes wrong with `__tm_gmtoff` in an assert
-                                         " -DG_DISABLE_ASSERT")
-                               path-flags)
+	     #:env (append path-flags
 			   ld-library-path-flags)
              #:configure-exe (meson-exe)
              #:make (meson-make)
              #:make-install (meson-install)
              #:configure (meson-configure
-                          '("-Dintrospection=false"))
+                          '("-Dintrospection=false"
+                            "-Datk_only=true"))
              #:use-cross-file (meson-cross-file))]
     [("gtk+")
      (linux-only)
