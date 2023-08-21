@@ -659,7 +659,7 @@
                            '())
 	     #:env (append (if linux?
                                (add-flag path-flags
-                                         "CPPFLAGS"
+                                         "CFLAGS"
                                          ;; something goes wrong with `__tm_gmtoff` in an assert
                                          " -DG_DISABLE_ASSERT")
                                path-flags)
