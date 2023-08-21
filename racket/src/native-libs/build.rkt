@@ -666,7 +666,13 @@
     [("gdk-pixbuf")
      (linux-only)
      (config #:depends '("libX11")
-	     #:configure '("--without-libtiff")
+             #:configure-exe (meson-exe)
+             #:make (meson-make)
+             #:make-install (meson-install)
+             #:configure (meson-configure
+                          '("-Dtiff=disabled"
+                            "-Dtests=false"))
+             #:use-cross-file (meson-cross-file)
 	     #:env (append path-flags
 			   ld-library-path-flags))]
     [("bison")
