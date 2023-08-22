@@ -663,9 +663,17 @@
       "libXrender")
      (linux-only)
      (config #:env path-flags)]
+    [("shared-mime-info")
+     (linux-only)
+     (config #:depends '()
+             #:configure-exe (meson-exe)
+             #:make (meson-make)
+             #:make-install (meson-install)
+             #:configure (meson-configure)
+             #:use-cross-file (meson-cross-file))]
     [("gdk-pixbuf")
      (linux-only)
-     (config #:depends '("libX11")
+     (config #:depends '("libX11" "shared-mime-info")
              #:configure-exe (meson-exe)
              #:make (meson-make)
              #:make-install (meson-install)
