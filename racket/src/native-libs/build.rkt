@@ -660,12 +660,13 @@
       "libxcb"
       "libX11"
       "libXext"
-      "libXrender")
+      "libXrender"
+      "libxml2")
      (linux-only)
      (config #:env path-flags)]
     [("shared-mime-info")
      (linux-only)
-     (config #:depends '()
+     (config #:depends '("libxml2")
              #:configure-exe (meson-exe)
              #:make (meson-make)
              #:make-install (meson-install)
