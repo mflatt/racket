@@ -1,0 +1,12 @@
+diff -r -u old/shared-mime-info-2.2/meson.build new/shared-mime-info-2.2/meson.build
+--- old/shared-mime-info-2.2/meson.build	2022-03-27 04:19:00
++++ new/shared-mime-info-2.2/meson.build	2023-08-22 12:10:24
+@@ -65,7 +65,7 @@
+     gio = dependency('gio-2.0', required: false)
+     subdir('src')
+ endif
+-subdir('tests')
++# subdir('tests')
+ 
+ configure_file(
+     input: 'shared-mime-info.pc.in',
