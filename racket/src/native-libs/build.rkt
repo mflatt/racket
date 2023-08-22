@@ -216,7 +216,10 @@
 
 ;; libffi via MinGW for AArch64:
 (define-runtime-path libffi-arm64nt-patch "patches/libffi-arm64nt.patch")
-  
+
+;; disable tests when we're just trying to get MIME data
+(define-runtime-path mime-info-no-test-patch "patches/mime-info-no-test.patch")
+
 ;; --------------------------------------------------
 
 (define (replace-in-file file orig new)
@@ -660,17 +663,18 @@
       "libxcb"
       "libX11"
       "libXext"
-      "libXrender"
-      "libxml2")
+      "libXrender")
      (linux-only)
      (config #:env path-flags)]
     [("shared-mime-info")
      (linux-only)
-     (config #:depends '("libxml2")
+     (config #:depends '()
              #:configure-exe (meson-exe)
              #:make (meson-make)
              #:make-install (meson-install)
-             #:configure (meson-configure)
+             #:configure (meson-configure
+                          '("-Dbuild-tools=false"))
+             #:patches (list mime-info-no-test-patch)
              #:use-cross-file (meson-cross-file))]
     [("gdk-pixbuf")
      (linux-only)
