@@ -24127,7 +24127,7 @@
       (begin
         (begin-unsafe (hash-set! built-in-symbols built-in-s_0 #t))
         built-in-s_0))))
-(define effect_2872
+(define effect_2735
   (begin
     (void
      (begin
@@ -24224,7 +24224,8 @@
              ptr-ref/double
              ptr-set!/double
              ptr-ref/float
-             ptr-set!/float))))
+             ptr-set!/float
+             ffi-static-call-and-callback-core))))
     (void)))
 (define phase-shift-id (make-built-in-symbol! 'phase))
 (define dest-phase-id (make-built-in-symbol! 'dest-phase))
@@ -77840,34 +77841,7 @@
                                          (|#%name|
                                           get-so
                                           (lambda (file_1 rep-sfx?_0)
-                                            (begin
-                                              (if (eq?
-                                                   'racket
-                                                   (system-type 'vm))
-                                                (lambda (root-dir_0
-                                                         compiled-dir_0)
-                                                  (let ((app_0
-                                                         (reroot_0
-                                                          base_1
-                                                          root-dir_0)))
-                                                    (let ((app_1
-                                                           (system-library-subpath)))
-                                                      (build-path
-                                                       app_0
-                                                       compiled-dir_0
-                                                       "native"
-                                                       app_1
-                                                       (if rep-sfx?_0
-                                                         (begin-unsafe
-                                                          (path-adjust-extension
-                                                           'path-add-extension
-                                                           #vu8(95)
-                                                           subbytes
-                                                           file_1
-                                                           dll-suffix
-                                                           #t))
-                                                         file_1)))))
-                                                #f))))))
+                                            (begin #f)))))
                                     (let ((zo_0
                                            (|#%name|
                                             zo
@@ -78108,7 +78082,7 @@
       #f)))
 (define version-bytes (string->bytes/utf-8 (version)))
 (define version-length (unsafe-bytes-length version-bytes))
-(define vm-bytes (string->bytes/utf-8 (symbol->string (system-type 'vm))))
+(define vm-bytes (string->bytes/utf-8 (symbol->string 'chez-scheme)))
 (define vm-length (unsafe-bytes-length vm-bytes))
 (define linklet-bundle-or-directory-start
   (lambda (i_0 tag_0)
