@@ -277,13 +277,15 @@
                 ,(lambda (token)
                    (unless (build-kernel-only?)
                      (build (find-target "bootstrap" (s-targets-at (make-at-dir (at-dir "s")) vars))
-                            token)))]
+                            token)))
+                :recur]
 
        ;; Builds just the kernel (C code):
        [:target kernel (workarea)
                 ,(lambda (token)
                    (build (find-target "build" (c-targets-at (make-at-dir (at-dir "c")) vars))
-                          token))]
+                          token))
+                :recur]
 
        [:target install ()
                 ,(lambda (token)
@@ -452,7 +454,8 @@
        [:target workarea (,@bounce-files ,@boot-files ,clean-links-stamp)
                 ,(lambda (token)
                    (check-boot-file-version))
-                :quiet]
+                :quiet
+                :recur]
 
        ,@(map (lambda (dir file script)
                 `[:target ,file (,(input-data-target 'script script))
