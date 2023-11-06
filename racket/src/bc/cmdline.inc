@@ -762,7 +762,7 @@ static int run_from_cmd_line(int argc, char *_argv[],
   console_printf = scheme_get_console_printf();
 #endif
 
-  self_exe = get_self_path(prog);
+  self_exe = get_process_executable_path(prog);
 
   extract_built_in_arguments(self_exe, &prog, &sprog, &argc, &argv);
 

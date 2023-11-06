@@ -159,7 +159,7 @@ static int bytes_main(int argc, char **argv,
     argv++;
   }
 
-  self_exe = get_self_path(exec_file);
+  self_exe = get_process_executable_path(exec_file);
 
   extract_built_in_arguments(self_exe, &exec_file, &run_file, &argc, &argv);
   if (!run_file)

@@ -281,7 +281,7 @@ int main(int argc, char **argv)
   /* use `me` for `-k`, unless we have a way to more directly get the
      executable file that contains embedded code; if we do, then
      argv[0] doesn't have to match the executable */
-  embedding_me = get_self_path(me);
+  embedding_me = get_process_executable_path(me);
 
   start = as_int(config + 8);
   decl_end = as_int(config + 12);

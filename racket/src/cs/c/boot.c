@@ -431,7 +431,7 @@ iptr racket_cpointer_offset(ptr cptr) {
 }
 
 char *racket_get_self_exe_path(const char *exec_file) {
-  return get_self_path(exec_file);
+  return get_process_executable_path(exec_file);
 }
 
 char *racket_path_replace_filename(const char *path, const char *new_filename) {
