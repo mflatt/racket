@@ -93,7 +93,7 @@ static const char *get_framework_path() {
   return NULL;
 }
 
-static char *path_append(const char *p1, const char *p2) {
+static char *path_append_2(const char *p1, const char *p2) {
   int l1, l2;
   char *s;
   l1 = strlen(p1);
@@ -159,7 +159,7 @@ static int bytes_main(int argc, char **argv,
     argv++;
   }
 
-  self_exe = get_self_path(exec_file);
+  self_exe = S_get_process_executable_path(exec_file);
 
   extract_built_in_arguments(self_exe, &exec_file, &run_file, &argc, &argv);
   if (!run_file)
@@ -213,9 +213,9 @@ static int bytes_main(int argc, char **argv,
   if (!boot_images_in_exe) {
     const char *fw_path = get_framework_path();
     if (fw_path) {
-      boot1_path = path_append(fw_path, "petite.boot");
-      boot2_path = path_append(fw_path, "scheme.boot");
-      boot3_path = path_append(fw_path, "racket.boot");
+      boot1_path = path_append_2(fw_path, "petite.boot");
+      boot2_path = path_append_2(fw_path, "scheme.boot");
+      boot3_path = path_append_2(fw_path, "racket.boot");
       boot1_offset = boot2_offset = boot3_offset = boot_end_offset = 0;
     }
   }
