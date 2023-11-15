@@ -184,7 +184,7 @@
                              (ls)))
                  (parameterize ([current-directory src])
                    (for-each (lambda (p) (loop p (make-path dst p))) (ls))))]
-            [(file-exists? src) (copy-file src dst) (time!)]
+            [(file-exists? src) (copy-file src dst #:exists-ok? #t) (time!)]
             [else (error 'cp "internal error: ~e" src)]))))
 
 ;; try to rename and if it fails (due to different fs) copy and remove
@@ -450,9 +450,9 @@
     (register-change! 'md dir)))
 
 (define yes-to-all? #f)
-(define (ask-overwrite kind path)
+(define (ask-overwrite kind path merge?)
   (let ([rm (lambda () (rm path))])
-    (if yes-to-all?
+    (if (or merge? yes-to-all?)
       (rm)
       (begin (printf "Overwrite ~a \"~a\"?\n" kind path)
              (let loop ()
@@ -488,12 +488,11 @@
              [dst-f? (file-exists? dst)])
          (unless (skip-filter src)
            (when (and src-d? (not lvl) (not dst-d?))
-             (unless merge?
-               (when (or dst-l? dst-f?) (ask-overwrite "file or link" dst)))
+             (when (or dst-l? dst-f?) (ask-overwrite "file or link" dst merge?))
              (make-directory dst)
              (register-change! 'md dst)
              (set! dst-d? #t) (set! dst-l? #f) (set! dst-f? #f))
-           (cond [dst-l? (unless merge? (ask-overwrite "symlink" dst)) (doit)]
+           (cond [dst-l? (ask-overwrite "symlink" dst merge?) (doit)]
                  [dst-d? (if (and src-d? (or (not lvl) (< 0 lvl)))
                            ;; recur only when source is dir, & not too deep
                            (for-each (lambda (name)
@@ -501,8 +500,8 @@
                                              (make-path dst name)
                                              (and lvl (sub1 lvl))))
                                      (ls src))
-                           (begin (unless merge? (ask-overwrite "dir" dst)) (doit)))]
-                 [dst-f? (unless merge? (ask-overwrite "file" dst)) (doit)]
+                           (begin (unless merge? (ask-overwrite "dir" dst #f)) (doit)))]
+                 [dst-f? (ask-overwrite "file" dst merge?) (doit)]
                  [else (doit)]))))
      (when move? (remove-empty-dirs src))]
     [(eq? missing 'error)
