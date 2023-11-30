@@ -474,9 +474,12 @@
                                    [ppc? "darwin-ppc-cc"]
                                    [m32? "darwin-i386-cc"]
                                    [aarch64? "darwin64-aarch64-cc"]
-                                   [else "darwin64-x86_64-cc"])
-                                  (car (regexp-match #rx"-mmacosx-version-min=[0-9.]*"
-                                                     (cadr (assoc "CPPFLAGS" all-env)))))
+                                   [else "darwin64-x86_64-cc"]))
+                            (let ([m (regexp-match #rx"-mmacosx-version-min=[0-9.]*"
+                                                   (cadr (assoc "CPPFLAGS" all-env)))])
+                              (if m
+                                  (list (car m))
+                                  null))
 			    (if aarch64?
 				'("no-asm")
 				null))]
@@ -592,7 +595,7 @@
                                                 ;; goes wrong for 64-bit Windows builds.
                                                 "CPPFLAGS" (string-append
                                                             "-DNVALGRIND=1"
-                                                            (if mac?
+                                                            (if #f ;; mac?
                                                                 " -include Kernel/uuid/uuid.h"
                                                                 "")))
                                       "LDFLAGS" (if (and win? (not aarch64?))
@@ -758,9 +761,9 @@
   ;; add ancient `-flat_namespace` flag
   (when (file-exists? "libtool")
     (define s (file->string "libtool"))
-    (define s2 (regexp-replace #rx"\\\\[$]wl-flat_namespace \\\\[$]wl-undefined \\\\[$][{]wl[}]suppress"
-                               s
-                               "\\\\$wl-undefined \\\\${wl}dynamic_lookup"))
+    (define s2 (regexp-replace* #rx"\\\\[$][{]?wl[}]?-flat_namespace \\\\[$][{]?wl[}]?-undefined \\\\[$][{]?wl[}]?suppress"
+                                s
+                                "\\\\$wl-undefined \\\\${wl}dynamic_lookup"))
     (unless (equal? s s2)
       (call-with-output-file*
        "libtool"
