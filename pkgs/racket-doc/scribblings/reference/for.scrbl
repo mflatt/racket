@@ -421,9 +421,10 @@ are evaluated and the @racket[accum-id]s are bound, and finally the
 outermost iteration's identifiers are bound. One consequence is that
 the @racket[accum-id]s are not bound in @racket[for-clause]s for the
 outermost initialization. At the same time, when a @racket[accum-id]
-is used as a @racket[for-clause] binding for the outermost iteration,
+is used as a @racket[for-clause] binding,
 the @racket[for-clause] binding shadows the @racket[accum-id] binding
-in the loop body (which is what you would expect syntactically).
+in the loop body on the first iteration (which is what you would expect syntactically)
+but not later iterations (which is not what you would expect).
 A fresh variable for each @racket[accum-id] (at a
 fresh location) is bound in each nested iteration that is created by a
 later group for @racket[for-clause]s (after a @racket[#:when] or
