@@ -13,6 +13,9 @@
 #  include <ulimit.h>
 # endif
 #endif
+#if defined(__linux__)
+# include <dirent.h>
+#endif
 
 #if defined(RKTIO_SYSTEM_UNIX) && defined(RKTIO_USE_PTHREADS)
 #define CENTRALIZED_SIGCHILD
@@ -1753,19 +1756,62 @@ static void close_non_standard_fd(int fd)
 
 int rktio_close_fds_len()
 {
-  int i;
+  int max_fds;
 
   /* These functions are not async-signal safe, so use them before
      a fork: */
 # ifdef USE_ULIMIT
-  i = ulimit(4, 0);
+  max_fds = ulimit(4, 0);
 # elif defined(__ANDROID__)
-  i = sysconf(_SC_OPEN_MAX);
+  max_fds = sysconf(_SC_OPEN_MAX);
 # else
-  i = getdtablesize();
+  max_fds = getdtablesize();
 # endif
 
-  return i;
+#if defined(__linux__)
+  /* We should be able to get a list of open file descriptors via
+     "/proc/self/fd", and the maximum open fd that we find is likely to
+     be much smaller than `max_fds`. */
+  if (max_fds > 256) {
+    DIR *dir;
+    struct dirent *e;
+    dir = opendir("/proc/self/fd");
+    if (dir != NULL) {
+      int ok = 1, max_open_fd = 0;
+      errno = 0;
+      while (ok && (e = readdir(dir))) {
+	if ((e->d_name[0] == '.')
+	    && ((e->d_name[1] == 0)
+		|| ((e->d_name[1] == '.')
+		    && (e->d_name[2] == 0)))) {
+	  /* skip "." and ".." */
+	} else {
+	  /* parse a filename as an integer, defensively */
+	  int s, n = 0;
+	  for (s = 0; ok && e->d_name[s]; s++) {
+	    int c = e->d_name[s] - '0';
+	    if ((c >= 0) && (c <= 9)) {
+	      n = n*10 + c;
+	      if (n >= max_fds)
+		ok = 0;
+	    } else
+	      ok = 0;
+	  }
+	  if (n > max_open_fd)
+	    max_open_fd = n;
+	  errno = 0;
+	}
+      }
+      if (errno != 0)
+        ok = 0;
+      closedir(dir);
+      if (ok)
+        return max_open_fd + 1;
+    }
+  }
+#endif  
+
+  return max_fds;
 }
 
 void rktio_close_fds_after_fork(int i, int skip1, int skip2, int skip3)
