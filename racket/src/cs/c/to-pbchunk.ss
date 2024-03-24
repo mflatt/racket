@@ -39,12 +39,16 @@
 (define (generate in.boot out.boot c~a reg~a start-index)
   (printf "Converting ~a to ~a and ~a\n" in.boot out.boot c~a)
   (flush-output-port)
-  (time
-   (pbchunk-convert-file in.boot
-                         (path-build dest out.boot)
-                         (map (lambda (c) (path-build dest c)) (many c~a))
-                         (many reg~a)
-                         start-index)))
+  (let ([index
+         (time
+          (pbchunk-convert-file in.boot
+                                (path-build dest out.boot)
+                                (map (lambda (c) (path-build dest c)) (many c~a))
+                                (many reg~a)
+                                start-index))])
+    (printf "    ~a bytes peak memory use\n" (maximum-memory-bytes))
+    (reset-maximum-memory-bytes!)
+    index))
 
 (define post-petite-index (generate petite.boot
                                     "petite-pbchunk.boot"

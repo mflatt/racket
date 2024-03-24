@@ -172,6 +172,8 @@
                                             new-c-files
                                             new-reg-names
                                             index)])
+           (printf "    ~a bytes peak memory use\n" (maximum-memory-bytes))
+           (reset-maximum-memory-bytes!)
            (loop (cdr src-boots)
                  (cdr dest-boots)
                  index
