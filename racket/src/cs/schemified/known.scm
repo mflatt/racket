@@ -22,6 +22,11 @@
           (raise-argument-error name_0 "(or/c struct-type? #f)" what_0))
         (void))
       what_0)))
+(define 1/raise-argument-error
+  (|#%name|
+   raise-argument-error
+   (lambda (who_0 . args_0)
+     (begin (apply raise-argument-error* who_0 'racket/primitive args_0)))))
 (define-values
  (prop:stream stream-via-prop? stream-ref)
  (make-struct-type-property
@@ -44,7 +49,7 @@
               #f)
             #f)
         (void)
-        (raise-argument-error
+        (1/raise-argument-error
          'guard-for-prop:stream
          (string-append
           "(vector/c (procedure-arity-includes/c 1)\n"
@@ -62,7 +67,7 @@
     (begin
       (if (if (procedure? v_0) (procedure-arity-includes? v_0 1) #f)
         (void)
-        (raise-argument-error
+        (1/raise-argument-error
          'guard-for-prop:sequence
          "(procedure-arity-includes/c 1)"
          v_0))
@@ -697,6 +702,78 @@
         (if (impersonator? v)
           (known-procedure/no-prompt/multi?_2394 (impersonator-val v))
           #f))))))
+(define finish_2303
+  (make-struct-type-install-properties
+   '(known-procedure/no-prompt/multi/n)
+   1
+   0
+   (if (struct-type? struct:known-procedure/no-prompt/multi)
+     struct:known-procedure/no-prompt/multi
+     (check-struct-type 'struct struct:known-procedure/no-prompt/multi))
+   null
+   'prefab
+   #f
+   '(0)
+   #f
+   'known-procedure/no-prompt/multi/n))
+(define struct:known-procedure/no-prompt/multi/n
+  (make-record-type-descriptor
+   'known-procedure/no-prompt/multi/n
+   (if (struct-type? struct:known-procedure/no-prompt/multi)
+     struct:known-procedure/no-prompt/multi
+     (check-struct-type 'struct struct:known-procedure/no-prompt/multi))
+   (structure-type-lookup-prefab-uid
+    'known-procedure/no-prompt/multi/n
+    (if (struct-type? struct:known-procedure/no-prompt/multi)
+      struct:known-procedure/no-prompt/multi
+      (check-struct-type 'struct struct:known-procedure/no-prompt/multi))
+    1
+    0
+    #f
+    '(0))
+   #f
+   #f
+   '(1 . 1)))
+(define effect_2771 (finish_2303 struct:known-procedure/no-prompt/multi/n))
+(define known-procedure/no-prompt/multi/n
+  (|#%name|
+   known-procedure/no-prompt/multi/n
+   (record-constructor
+    (make-record-constructor-descriptor
+     struct:known-procedure/no-prompt/multi/n
+     #f
+     #f))))
+(define known-procedure/no-prompt/multi/n?_2226
+  (|#%name|
+   known-procedure/no-prompt/multi/n?
+   (record-predicate struct:known-procedure/no-prompt/multi/n)))
+(define known-procedure/no-prompt/multi/n?
+  (|#%name|
+   known-procedure/no-prompt/multi/n?
+   (lambda (v)
+     (if (known-procedure/no-prompt/multi/n?_2226 v)
+       #t
+       ($value
+        (if (impersonator? v)
+          (known-procedure/no-prompt/multi/n?_2226 (impersonator-val v))
+          #f))))))
+(define known-procedure/no-prompt/multi/n-results_3062
+  (|#%name|
+   known-procedure/no-prompt/multi/n-results
+   (record-accessor struct:known-procedure/no-prompt/multi/n 0)))
+(define known-procedure/no-prompt/multi/n-results
+  (|#%name|
+   known-procedure/no-prompt/multi/n-results
+   (lambda (s)
+     (if (known-procedure/no-prompt/multi/n?_2226 s)
+       (known-procedure/no-prompt/multi/n-results_3062 s)
+       ($value
+        (impersonate-ref
+         known-procedure/no-prompt/multi/n-results_3062
+         struct:known-procedure/no-prompt/multi/n
+         0
+         s
+         'results))))))
 (define finish_2574
   (make-struct-type-install-properties
    '(known-procedure/no-return)

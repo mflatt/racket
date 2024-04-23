@@ -87,6 +87,8 @@
                    zero-args?
                    (known-procedure/parameter? v)
                    (returns 1))
+              (and (known-procedure/no-prompt/multi/n? v)
+                   (returns (known-procedure/no-prompt/multi/n-results v)))
               (and (known-procedure/no-prompt/multi? v)
                    (eqv? result-arity #f))
               (and (known-field-accessor? v)
@@ -156,6 +158,16 @@
                       (ok-to-call? v #f))))
              (for/and ([e (in-list es)])
                (simple? e 1))))]
+      [`(call-with-values (lambda () ,e) ,recv)
+       (let-values ([(args body)
+                     (match recv
+                       [`(lambda ,args ,body) (values args body)]
+                       [`(case-lambda [,args ,body] . ,_) (values args body)]
+                       [`,_ (values #f #f)])])
+         (cached
+          (and (list? args)
+               (simple? e (length args))
+               (simple? body result-arity))))]
       [`(,proc . ,args)
        (cached
         (let ([proc (unwrap proc)])

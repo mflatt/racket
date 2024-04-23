@@ -48,13 +48,15 @@
 
 ;; Convert a `let-values` to nested `let-values`es to
 ;; enforce order
-(define (left-to-right/let-values idss rhss bodys mutated target unsafe-mode?)
+(define (left-to-right/let-values idss rhss bodys target
+                                  prim-knowns knowns imports mutated simples unsafe-mode?)
   (cond
     [(null? (cdr idss))
      (define e (if (null? (cdr bodys))
                    (car bodys)
                    `(begin . ,bodys)))
-     (make-let-values (car idss) (car rhss) e target unsafe-mode?)]
+     (make-let-values (car idss) (car rhss) e target
+                      prim-knowns knowns imports mutated simples unsafe-mode?)]
    [else
     (let loop ([idss idss] [rhss rhss] [binds null])
       (cond
@@ -64,7 +66,7 @@
          `(let ,binds
             . ,bodys)
          target
-	 unsafe-mode?)]
+         prim-knowns knowns imports mutated simples unsafe-mode?)]
        [else
         (define ids (car idss))
         (make-let-values
@@ -74,7 +76,7 @@
                                                `[,id ,id])
                                              binds))
          target
-	 unsafe-mode?)]))]))
+         prim-knowns knowns imports mutated simples unsafe-mode?)]))]))
 
 ;; Convert an application to enforce left-to-right evaluation order.
 (define (left-to-right/app rator rands app-form target
@@ -145,7 +147,8 @@
           
 ;; ----------------------------------------
 
-(define (make-let-values ids rhs body target unsafe-mode?)
+(define (make-let-values ids rhs body target
+                         prim-knowns knowns imports mutated simples unsafe-mode?)
   (cond
    [(and (pair? ids) (null? (cdr ids)))
     `(let ([,(car ids) ,rhs]) ,body)]
@@ -155,7 +158,10 @@
        `(begin ,rhs ,body)]
       [`,_
        (cond
-         [(or unsafe-mode? (aim? target 'cify))
+         [(or unsafe-mode?
+              (aim? target 'cify)
+              (simple? #:pure? #f rhs prim-knowns knowns imports mutated simples unsafe-mode?
+                       #:result-arity (length ids)))
           ;; No checking
           `(call-with-values (lambda () ,rhs)
              (lambda ,ids ,body))]

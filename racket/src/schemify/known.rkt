@@ -13,6 +13,7 @@
          known-procedure/single-valued known-procedure/single-valued?
          known-procedure/no-prompt known-procedure/no-prompt?
          known-procedure/no-prompt/multi known-procedure/no-prompt/multi?
+         known-procedure/no-prompt/multi/n known-procedure/no-prompt/multi/n? known-procedure/no-prompt/multi/n-results
          known-procedure/no-return known-procedure/no-return?
          known-procedure/parameter known-procedure/parameter?
          known-procedure/folding known-procedure/folding?
@@ -87,6 +88,9 @@
 
 ;; like known-procedure/no-prompt, but not single-valued
 (struct known-procedure/no-prompt/multi () #:prefab #:omit-define-syntaxes #:super struct:known-procedure)
+
+;; like known-procedure/no-prompt/multi, but with a known number of results
+(struct known-procedure/no-prompt/multi/n (results) #:prefab #:omit-define-syntaxes #:super struct:known-procedure/no-prompt/multi)
 
 ;; procedure that does not return, because it always escapes
 (struct known-procedure/no-return () #:prefab #:omit-define-syntaxes #:super struct:known-procedure/single-valued)

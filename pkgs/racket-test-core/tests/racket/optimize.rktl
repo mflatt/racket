@@ -5296,6 +5296,16 @@
               (define f (let ([tmp (list 0)]) (lambda (x) (list x tmp))))
               (lambda () (call-with-values (lambda () 7) f))))
 
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; avoid over-complicating `let-values` expansion when RHS's result arity is known
+(test-comp '(lambda (a b c d e f g h)
+              (call-with-values (lambda () (make-struct-type a b c d e f g h))
+                                (lambda (x y z w q) (list x q))))
+           '(lambda (a b c d e f g h)
+              (let-values ([(x y z w q) (make-struct-type a b c d e f g h)])
+                (list x q))))
+
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Inlining with higher-order functions:
 
