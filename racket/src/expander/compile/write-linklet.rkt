@@ -25,8 +25,8 @@
   (write-bytes (make-bytes 20 0) port)
   ;; The rest is whatever the VM wants
   (if as-correlated-linklet?
-      (write-correlated-linklet-bundle-hash (linklet-bundle->hash b) port)
-      (write-linklet-bundle-hash (linklet-bundle->hash b) port)))
+      (write-correlated-linklet-bundle-hash (linklet-bundle->hash b #t) port)
+      (write-linklet-bundle-hash (linklet-bundle->hash b #t) port)))
 
 (define (linklet-bundle->bytes b as-correlated-linklet? linklet-bundle->hash)
   (define o (open-output-bytes))

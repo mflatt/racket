@@ -1,5 +1,7 @@
 #lang racket/base
 (require "../common/contract.rkt"
+         "../common/module-path.rkt"
+         "../common/phase.rkt"
          "../host/linklet.rkt"
          "write-linklet.rkt"
          "correlated-linklet.rkt")
@@ -54,7 +56,7 @@
                               "key" k)]))
   (linklet-directory ht))
 
-(define/who (hash->linklet-bundle ht)
+(define/who (hash->linklet-bundle ht [recur-amalgam? #f])
   (check who (lambda (ht)
                (and (not (impersonator? ht))
                     (hash? ht)
@@ -67,15 +69,52 @@
       (raise-arguments-error who
                              "key in given hash is not a symbol or fixnum"
                              "key" k)))
-  (linklet-bundle ht))
+  (define a-ht
+    (cond
+      [(and recur-amalgam?
+            (hash-ref ht 'amalgam #f))
+       => (lambda (amalgam)
+            (unless (and (list? amalgam)
+                         (for/and ([p (in-list amalgam)])
+                           (and (list? p)
+                                ((length p) . >= . 2)
+                                (module-path? (car p))
+                                (for/and ([ph (in-list (cddr p))])
+                                  (phase? ph)))))
+              (raise-arguments-error who
+                                     "value for amalgam in given hash is not a list of lists with module paths and phases"
+                                     "alamgam" amalgam))
+            (define amalgam-bundles
+              (for/list ([p (in-list amalgam)])
+                (if (cadr p)
+                    (list* (car p)
+                           (hash->linklet-bundle (cadr p))
+                           (cddr p))
+                    p)))
+            (hash-set ht 'amalgam amalgam-bundles))]
+      [else ht]))
+  (linklet-bundle a-ht))
 
-(define/who (linklet-directory->hash ld)
+(define/who (linklet-directory->hash ld [recur-amalgam? #f])
   (check who linklet-directory? ld)
   (linklet-directory-ht ld))
   
-(define/who (linklet-bundle->hash ld)
+(define/who (linklet-bundle->hash ld [recur-amalgam? #f])
   (check who linklet-bundle? ld)
-  (linklet-bundle-ht ld))
+  (define ht (linklet-bundle-ht ld))
+  (cond
+    [(and recur-amalgam?
+          (hash-ref ht 'amalgam #f))
+     => (lambda (amalgam)
+          (define amalgam-hts
+            (for/list ([name+bundle+phases (in-list amalgam)])
+              (if (cadr name+bundle+phases)
+                  (list* (car name+bundle+phases)
+                         (linklet-bundle->hash (cadr name+bundle+phases))
+                         (cddr name+bundle+phases))
+                  name+bundle+phases)))
+          (hash-set ht 'amalgam amalgam-hts))]
+    [else ht]))
 
 ;; ----------------------------------------
 

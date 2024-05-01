@@ -28,10 +28,20 @@
         (loop (cddr ls)
               (hash-set ht
                         key
-                        (if (linklet? val)
-                            (adjust-linklet-laziness
-                             (decode-linklet-literals val))
-                            val))))])))
+                        (cond
+                          [(linklet? val)
+                           (adjust-linklet-laziness
+                            (decode-linklet-literals val))]
+                          [(eq? key 'amalgam)
+                           ;; amalgam is a list of lists containing converted bundle hash tables
+                           (#%map (lambda (p)
+                                    (if (cadr p)
+                                        (cons (car p)
+                                              (cons (adjust-linklet-bundle-laziness-and-literals (cadr p))
+                                                    (cddr p)))
+                                        p))
+                                  val)]
+                          [else val]))))])))
 
 (define (adjust-linklet-laziness linklet)
   (set-linklet-code linklet

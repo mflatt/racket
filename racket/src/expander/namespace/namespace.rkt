@@ -55,6 +55,7 @@
                    phase-to-namespace  ; phase -> namespace for same module  [shared for the same module instance]
                    phase-level-to-definitions ; phase-level -> definitions [shared for the same module instance]
                    module-registry     ; module-registry of (resolved-module-path -> module) [shared among modules]
+                   module-instance-shifted-requires ; (resolved-module-path -> (list (list resolved-module-path ...))) [shared among modules]
                    bulk-binding-registry ; (resolved-module-path -> bulk-provide) for resolving bulk bindings on unmarshal
                    submodule-declarations ; resolved-module-path -> module [shared during a module compilation]
                    root-namespace      ; #f or namespace for #lang, #reader, and persistent instances [shared among modules]
@@ -105,6 +106,9 @@
                (if share-from-ns
                    (namespace-module-registry share-from-ns)
                    (make-module-registry))
+               (if share-from-ns
+                   (namespace-module-instance-shifted-requires share-from-ns)
+                   (make-hasheq))
                (if share-from-ns
                    (namespace-bulk-binding-registry share-from-ns)
                    (make-bulk-binding-registry))

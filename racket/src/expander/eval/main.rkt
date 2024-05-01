@@ -15,6 +15,7 @@
          "../compile/linklet.rkt"
          "top.rkt"
          "module.rkt"
+         "amalgam.rkt"
          "../common/module-path.rkt"
          "../host/linklet.rkt"
          "../syntax/bulk-binding.rkt"
@@ -60,6 +61,8 @@
 
 (define (eval-compiled c ns [as-tail? #t])
   (cond
+   [(compiled-module-amalgam-expression? c)
+    (eval-module-amalgam c #:namespace ns)]
    [(compiled-module-expression? c)
     (eval-module c #:namespace ns)]
    [else

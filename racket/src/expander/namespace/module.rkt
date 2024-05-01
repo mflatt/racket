@@ -20,9 +20,11 @@
 
          namespace->module-instance
          namespace->module-namespace
+         namespace-copy-shifted-requires!
          namespace-install-module-namespace!
          namespace-record-module-instance-attached!
          module-force-bulk-binding!
+         module-instance-running-at-level?
          
          namespace->module-linklet-info
          (struct-out module-linklet-info)
@@ -47,6 +49,7 @@
          
          module-instance-namespace
          module-instance-module
+         module-instance-shifted-requires
 
          namespace-module-instantiate!
          namespace-module-visit!
@@ -112,6 +115,8 @@
                      #:recur-requires [recur-requires (for/list ([phase+mps (in-list requires)])
                                                         (for/list ([mp (in-list (cdr phase+mps))])
                                                           #t))]
+                     #:amalgam-back [amalgam-back #f] ; not currently used
+                     #:amalgam-parts [amalgam-parts #f] ; not currently used
                      #:provides provides
                      #:min-phase-level [min-phase-level 0]
                      #:max-phase-level [max-phase-level 0]
@@ -302,7 +307,7 @@
       (check-availablilty mi check-available-at-phase-level unavailable-callback)
       mi))
 
-(define (namespace-install-module-namespace! ns name 0-phase m existing-m-ns)
+(define (namespace-install-module-namespace! ns name 0-phase m existing-m-ns run-phase)
   (define m-ns (struct-copy namespace ns
                             [mpi (namespace-mpi existing-m-ns)]
                             [source-name (namespace-source-name existing-m-ns)]
@@ -332,11 +337,12 @@
                mi)
     (small-hash-set! (module-instance-phase-level-to-state mi) 0 'started)]
    [else
+    (define run-phase-level (phase- run-phase 0-phase))
     (small-hash-set! (namespace-phase-to-namespace m-ns) 0-phase m-ns)
     (small-hash-set! (namespace-phase-level-to-definitions m-ns)
-                     0
-                     (namespace->definitions existing-m-ns 0))
-    (small-hash-set! (module-instance-phase-level-to-state mi) 0 'started)
+                     run-phase-level
+                     (namespace->definitions existing-m-ns run-phase-level))
+    (small-hash-set! (module-instance-phase-level-to-state mi) run-phase-level 'started)
     (define at-phase (or (hash-ref (namespace-module-instances ns) 0-phase #f)
                          (let ([at-phase (make-hasheq)])
                            (hash-set! (namespace-module-instances ns) 0-phase at-phase)
@@ -394,6 +400,11 @@
 ;; bulk-binding regsitry
 (define (module-force-bulk-binding! m ns)
   ((module-force-bulk-binding m) (namespace-bulk-binding-registry ns)))
+
+(define (module-instance-running-at-level? mi phase-level)
+  (and (or (label-phase? phase-level)
+           (not (phase<? phase-level 0)))
+       (eq? 'started (small-hash-ref (module-instance-phase-level-to-state mi) phase-level #f))))
 
 ;; ----------------------------------------
 
@@ -539,18 +550,28 @@
      ;; need to explicitly instaniate, where others are presumed
      ;; to be instantiated transitively and we should skip trying
      ;; again for this module's direct require
-     (unless (module-instance-shifted-requires mi)
-       (set-module-instance-shifted-requires!
-        mi
-        (for/list ([phase+mpis (in-list (module-requires m))]
-                   [recurs (in-list (module-recur-requires m))])
-          (cons (car phase+mpis)
-                (for/list ([req-mpi (in-list (cdr phase+mpis))]
-                           [recur? (in-list recurs)]
-                           #:when recur?)
-                  (module-path-index-shift req-mpi
-                                           (module-self m)
-                                           mpi))))))
+     (define record-shifted-requires-at-name
+       (cond
+         [(module-instance-shifted-requires mi) #f]
+         [else
+          (define name (module-path-index-resolve mpi))
+          (define requires (module-requires m))
+          (define recur-requires (module-recur-requires m))
+          (define shifted-requires
+            (for/list ([phase+mpis (in-list requires)]
+                       [recurs (in-list recur-requires)]
+                       [resolved-paths (in-list (namespace-find-shifted-requires ns name requires))])
+              (cons (car phase+mpis)
+                    (for/list ([req-mpi (in-list (cdr phase+mpis))]
+                               [recur? (in-list recurs)]
+                               [resolved-path (in-list resolved-paths)]
+                               #:when recur?)
+                      (module-path-index-shift/resolved req-mpi
+                                                        (module-self m)
+                                                        mpi
+                                                        resolved-path)))))
+          (set-module-instance-shifted-requires! mi shifted-requires)
+          name]))
 
      ;; Recur for required modules:
      (for ([phase+mpis (in-list (module-instance-shifted-requires mi))])
@@ -564,7 +585,14 @@
                                         #:seen-list (cons mi seen-list)
                                         #:minimum-inspector inspector
                                         #:transitive-record transitive-modules)))
-     
+
+     (when record-shifted-requires-at-name
+       ;; Recur forced resolutions, so we can now save resolved paths for future use
+       (namespace-save-shifted-requires! ns
+                                         record-shifted-requires-at-name
+                                         (module-recur-requires m)
+                                         (module-instance-shifted-requires mi)))
+
      ;; Run or make available phases of the module body:
      (unless (label-phase? instance-phase)
        (for ([phase-level (in-range (module-max-phase-level m) (sub1 (module-min-phase-level m)) -1)])
@@ -621,6 +649,40 @@
   (define mi (hash-ref (namespace-module-instances ns) (make-resolved-module-path name)))
   (run-module-instance! mi ns #:run-phase 1 #:skip-run? #f #:otherwise-available? #t))
 
+(define (namespace-find-shifted-requires ns name requires)
+  (or (hash-ref (namespace-module-instance-shifted-requires ns) name #f)
+      (for/list ([phase+mpis (in-list requires)])
+        (for/list ([mpi (in-list (cdr phase+mpis))])
+          #f))))
+
+(define (namespace-save-shifted-requires! ns name recur?ss shifted-requires)
+  (hash-set! (namespace-module-instance-shifted-requires ns)
+             name
+             ;; keep only the resolved path, and keep only for filesystem paths;
+             ;; note that module-expansion instances can get an mpi that maps to
+             ;; an `'expanded` symbol, and we don't want to keep that
+             (for/list ([phase+mpis (in-list shifted-requires)]
+                        [recur?s (in-list recur?ss)])
+               (let loop ([recur?s recur?s]
+                          [mpis (cdr phase+mpis)])
+                 (cond
+                   [(null? recur?s) null]
+                   [(not (car recur?s)) (cons #f (loop (cdr recur?s) mpis))]
+                   [else
+                    (define mpi (car mpis))
+                    (define r (module-path-index-resolve mpi))
+                    (cons (and r
+                               (let ([name (resolved-module-path-name r)])
+                                 (and (or (path? name)
+                                          (and (pair? name) (path? (car name))))
+                                      r)))
+                          (loop (cdr recur?s) (cdr mpis)))])))))
+
+(define (namespace-copy-shifted-requires! dest-namespace src-namespace name)
+  (define sr (hash-ref (namespace-module-instance-shifted-requires src-namespace) name #f))
+  (when sr
+    (hash-set! (namespace-module-instance-shifted-requires dest-namespace) name sr)))
+
 ;; ----------------------------------------
 
 (define (namespace-module-use->module+linklet-instances ns mu 
@@ -642,9 +704,11 @@
       (values mi (definitions-variables d))
       (error 'eval (string-append "namespace mismatch: phase level not found;\n"
                                   "  module: ~a\n"
+                                  "  instance phase: ~a\n"
                                   "  phase level: ~a\n"
                                   "  found phase levels: ~a")
              mod
+             (namespace-0-phase m-ns)
              (module-use-phase mu)
              (small-hash-keys (namespace-phase-level-to-definitions m-ns)))))
 

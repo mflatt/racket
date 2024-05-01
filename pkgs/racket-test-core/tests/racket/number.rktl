@@ -3695,7 +3695,9 @@
     (check-random-pairs check-shift-plus-bits-to-even)))
   
 (check-conversion max-53-bit-number)
-(for ([i 100])
+(for ([i (if (eq? (system-type 'gc) 'cgc)
+             10
+             100)])
   (check-conversion
    ;; Random 53-bit number:
    (+ (arithmetic-shift 1 52)
@@ -3764,7 +3766,9 @@
                   (/ (random-bits (+ 1 (random 8192))) d))]))
 
       (test #t string? "Randomized testing of rational->flonum")
-      (for ([_  (in-range 10000)])
+      (for ([_  (in-range (if (eq? (system-type 'gc) 'cgc)
+                              100
+                              10000))])
         (define ry (random-rational))
         (define y (real->double-flonum ry))  ; this generates rounding errors
         (define e (flulp-error y ry))

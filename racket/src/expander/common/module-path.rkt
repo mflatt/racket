@@ -28,6 +28,7 @@
          imitate-generic-module-path-index!
          module-path-index-shift
          module-path-index-resolved ; returns #f if not yet resolved
+         module-path-index-shift/resolved
 
          top-level-module-path-index
          top-level-module-path-index?
@@ -367,6 +368,13 @@
         (shift-cache-set! shifted-base shifted-mpi)
         shifted-mpi])])]))
 
+(define (module-path-index-shift/resolved mpi from-mpi to-mpi rp)
+  (define new-mpi (module-path-index-shift mpi from-mpi to-mpi))
+  (when rp
+    (unless (module-path-index-resolved new-mpi)
+      (set-module-path-index-resolved! new-mpi rp)))
+  new-mpi)
+
 (define (shift-cache-ref cache mpi)
   (for/or ([wb (in-list cache)])
     (define v (weak-box-value wb))
@@ -458,7 +466,7 @@
        (error 'core-module-name-resolver
               "not a supported module path: ~v" p)])]))
 
-;; Build a submodule name given an enclosing module name, if cany
+;; Build a submodule name given an enclosing module name, if any
 (define (build-module-name name ; a symbol
                            enclosing ; #f => no enclosing module
                            #:original [orig-name name]) ; for error reporting
