@@ -21,6 +21,7 @@
          module-path-index-resolve
          module-path-index-fresh
          module-path-index-join
+         module-path-index-join*
          module-path-index-split
          module-path-index-submodule
          make-self-module-path-index
@@ -28,6 +29,7 @@
          imitate-generic-module-path-index!
          module-path-index-shift
          module-path-index-resolved ; returns #f if not yet resolved
+         module-path-index-shift/resolved
 
          top-level-module-path-index
          top-level-module-path-index?
@@ -208,7 +210,7 @@
 ;; must be shared across phases of a module
 (define deserialize-module-path-index
   (case-lambda
-    [(path base) (module-path-index-join path base)]
+    [(path base) (module-path-index-join* path base #:can-merge? #f)]
     [(name) (make-self-module-path-index (make-resolved-module-path name))]
     [() top-level-module-path-index]))
 
@@ -239,7 +241,7 @@
 
 (define (module-path-index-fresh mpi)
   (define-values (path base) (module-path-index-split mpi))
-  (module-path-index-join path base))
+  (module-path-index-join* path base #:can-merge? #f))
 
 (define/who (module-path-index-join mod-path base [submod #f])
   (check who #:or-false module-path? mod-path)
@@ -267,16 +269,33 @@
     (make-self-module-path-index (make-resolved-module-path
                                   (cons generic-module-name submod)))]
    [else
-    (define keep-base
-      (let loop ([mod-path mod-path])
-        (cond
-         [(path? mod-path) #f]
-         [(and (pair? mod-path) (eq? 'quote (car mod-path))) #f]
-         [(symbol? mod-path) #f]
-         [(and (pair? mod-path) (eq? 'submod (car mod-path)))
-          (loop (cadr mod-path))]
-         [else base])))
-    (module-path-index mod-path keep-base #f empty-shift-cache)]))
+    (do-module-path-index-join mod-path base #:can-merge? #f)]))
+
+(define (module-path-index-join* mod-path base
+                                 #:can-merge? [can-merge? #t])
+  (do-module-path-index-join mod-path base #:can-merge? can-merge?))
+
+(define (do-module-path-index-join mod-path base #:can-merge? can-merge?)
+  (define keep-base
+    (let loop ([mod-path mod-path])
+      (cond
+        [(path? mod-path) #f]
+        [(and (pair? mod-path) (eq? 'quote (car mod-path))) #f]
+        [(symbol? mod-path) #f]
+        [(and (pair? mod-path) (eq? 'lib (car mod-path))) #f]
+        [(and (pair? mod-path) (eq? 'submod (car mod-path)))
+         (loop (cadr mod-path))]
+        [else base])))
+  (cond
+    [(and can-merge?
+          keep-base
+          (not (module-path-index-resolved keep-base))
+          (string? mod-path)
+          (string? (module-path-index-path keep-base)))
+     (module-path-index (merge-relative-module-path mod-path (module-path-index-path keep-base))
+                        (module-path-index-base keep-base) #f empty-shift-cache)]
+    [else
+     (module-path-index mod-path keep-base #f empty-shift-cache)]))
 
 (define (module-path-index-resolve/maybe base load?)
   (if (module-path-index? base)
@@ -296,6 +315,31 @@
               (let ([p (resolved-module-path-name r)])
                 (and (pair? p)
                      (cdr p)))))))
+
+(define (merge-relative-module-path path wrt-path)
+  (let loop ([i (string-length wrt-path)] [saw-non-dot? #f])
+    (cond
+      [(eqv? i 0) (if saw-non-dot?
+                      path
+                      (string-append wrt-path "/" path))]
+      [else
+       (let ([j (sub1 i)])
+         (if (eqv? #\/ (string-ref wrt-path j))
+             (cond
+               [(not saw-non-dot?)
+                (string-append wrt-path "/" path)]
+               [(and ((string-length path) . > . 3)
+                     (eqv? #\. (string-ref path 0))
+                     (eqv? #\. (string-ref path 1))
+                     (eqv? #\/ (string-ref path 2))
+                     (not (eqv? #\. (string-ref wrt-path (sub1 j)))))
+                (merge-relative-module-path (substring path 3)
+                                            (substring wrt-path 0 j))]
+               [else
+                (string-append (substring wrt-path 0 i) path)])
+             (loop j
+                   (or saw-non-dot?
+                       (not (eqv? #\. (string-ref wrt-path j)))))))])))
 
 (define make-self-module-path-index
   (case-lambda
@@ -363,9 +407,27 @@
        [(shift-cache-ref (module-path-index-shift-cache shifted-base) mpi)]
        [else
         (define shifted-mpi
-          (module-path-index (module-path-index-path mpi) shifted-base #f empty-shift-cache))
+          (module-path-index-join* (module-path-index-path mpi) shifted-base))
         (shift-cache-set! shifted-base shifted-mpi)
         shifted-mpi])])]))
+
+;; ensures that the result module-path index is fresh enough, so that
+;; resolving will go through the module name resolver
+(define (module-path-index-shift/resolved mpi from-mpi to-mpi rp)
+  (define maybe-new-mpi (module-path-index-shift mpi from-mpi to-mpi))
+  (define new-mpi (if (and (eq? maybe-new-mpi mpi)
+                           (let ([p (module-path-index-path mpi)])
+                             (not (and (pair? p)
+                                       (eq? 'quote (car p))))))
+                      (module-path-index (module-path-index-path mpi)
+                                         (module-path-index-base mpi)
+                                         #f
+                                         empty-shift-cache)
+                      maybe-new-mpi))
+  (when rp
+    (unless (module-path-index-resolved new-mpi)
+      (set-module-path-index-resolved! new-mpi rp)))
+  new-mpi)
 
 (define (shift-cache-ref cache mpi)
   (for/or ([wb (in-list cache)])
@@ -458,7 +520,7 @@
        (error 'core-module-name-resolver
               "not a supported module path: ~v" p)])]))
 
-;; Build a submodule name given an enclosing module name, if cany
+;; Build a submodule name given an enclosing module name, if any
 (define (build-module-name name ; a symbol
                            enclosing ; #f => no enclosing module
                            #:original [orig-name name]) ; for error reporting
