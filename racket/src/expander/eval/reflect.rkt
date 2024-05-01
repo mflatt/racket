@@ -7,11 +7,13 @@
          "../namespace/provide-for-api.rkt"
          "reflect-compiled.rkt"
          "reflect-name.rkt"
-         "reflect-submodule.rkt")
+         "reflect-submodule.rkt"
+         "reflect-amalgam.rkt")
 
 (provide compiled-expression?
 
          compiled-module-expression?
+         compiled-module-amalgam-expression?
          module-compiled-name
          module-compiled-submodules
          module-compiled-language-info
@@ -19,7 +21,8 @@
          module-compiled-exports
          module-compiled-indirect-exports
          module-compiled-cross-phase-persistent?
-         module-compiled-realm)
+         module-compiled-realm
+         module-compiled-amalgam)
 
 ;; The representation of a module with its submodules is designed to
 ;; make reading an individual submodule (with its submodule path

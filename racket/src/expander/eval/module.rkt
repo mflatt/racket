@@ -39,7 +39,9 @@
 (define (eval-module c
                      #:namespace [ns (current-namespace)]
                      #:with-submodules? [with-submodules? #t]
-                     #:supermodule-name [supermodule-name #f]) ; for submodules declared with module
+                     #:supermodule-name [supermodule-name #f] ; for submodules declared with module
+                     #:amalgam-name [amalgam-name #f]
+                     #:amalgam-parts [amalgam-parts #f])
   (performance-region
    ['eval 'module]
 
@@ -111,7 +113,7 @@
      ;; If there's no `dh`, then it's important not to retain a reference to
      ;; `c`, which could cause the serialized form of syntax objects to
      ;; be retained after deserialization and reachable from the module cache;
-     ;; if it's there's a `dh`, though, then we won't be in the module cache
+     ;; if it's there's a `dh`, though, then it won't be in the module cache
      (if dh
          ;; Callback to declare submodules:
          (lambda (ns names declare-name pre?)
@@ -146,6 +148,8 @@
                               #:predefined? (current-module-declare-as-predefined)
                               #:submodule-names (append pre-submodule-names post-submodule-names)
                               #:supermodule-name supermodule-name
+                              #:amalgam-name amalgam-name
+                              #:amalgam-parts amalgam-parts
                               #:get-all-variables (lambda () (get-all-variables phases-h))
                               #:phase-level-linklet-info-callback
                               (lambda (phase-level ns insp)

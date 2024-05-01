@@ -54,6 +54,7 @@
 
           'compiled-expression? compiled-expression?
           'compiled-module-expression? compiled-module-expression?
+          'compiled-module-amalgam-expression? compiled-module-amalgam-expression?
           'module-compiled-name module-compiled-name
           'module-compiled-submodules module-compiled-submodules
           'module-compiled-language-info module-compiled-language-info
@@ -62,6 +63,7 @@
           'module-compiled-indirect-exports module-compiled-indirect-exports
           'module-compiled-cross-phase-persistent? module-compiled-cross-phase-persistent?
           'module-compiled-realm module-compiled-realm
+          'module-compiled-amalgam module-compiled-amalgam
 
           'compiled-expression-recompile compiled-expression-recompile
           'compiled-expression-add-target-machine compiled-expression-add-target-machine

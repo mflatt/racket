@@ -25,7 +25,7 @@
          (when (linklet? v) (check-fasl-preparation v))
          (let ([new-v (cond
                         [(linklet? v)
-                         (adjust-cross-perparation
+                         (adjust-cross-preparation
                           (let ([literals (linklet-literals v)])
                             (cond
                               [(and (#%vector? literals)
@@ -35,6 +35,15 @@
                                (set-linklet-literals
                                 v
                                 (fasl-literals (extract-literals literals) uninterned-symbol?))])))]
+                        [(eq? key 'amalgam)
+                         ;; amalgam is a list of lists containing bundle hash tables
+                         (#%map (lambda (p)
+                                  (cond
+                                    [(cadr p)
+                                     (let-values ([(encoded cm) (encode-linklet-literals (cadr p))])
+                                       (cons (car p) (cons encoded (cddr p))))]
+                                    [else p]))
+                                v)]
                         [else v])])
            (when (linklet? new-v)
              (linklet-pack-exports-info! new-v))
@@ -47,7 +56,7 @@
                               (and (pair? prep) (cdr prep)))))))))])))
 
 ;; Before fasl conversion, change 'cross or 'faslable-unsafe to 'faslable
-(define (adjust-cross-perparation l)
+(define (adjust-cross-preparation l)
   (let ([p (linklet-preparation l)])
     (if (or (pair? p) (eq? p 'faslable-unsafe))
         (set-linklet-preparation l 'faslable)

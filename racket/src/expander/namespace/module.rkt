@@ -68,6 +68,7 @@
                 self            ; module path index used for a self reference
                 requires        ; list of (cons phase list-of-module-path-index)
                 recur-requires  ; list of (list boolean ...) in parallel to `requires`
+                amalgam         ; name of enclosing amalgam or (hasheqv phase (list mod-path ...))
                 provides        ; phase-level -> sym -> binding or (provided binding bool bool); see [*] below
                 [access #:mutable] ; phase-level -> sym -> 'provided or 'protected; computed on demand from `provides`
                 language-info   ; #f or vector
@@ -112,6 +113,8 @@
                      #:recur-requires [recur-requires (for/list ([phase+mps (in-list requires)])
                                                         (for/list ([mp (in-list (cdr phase+mps))])
                                                           #t))]
+                     #:amalgam-name [amalgam-name #f]
+                     #:amalgam-parts [amalgam-parts #f]
                      #:provides provides
                      #:min-phase-level [min-phase-level 0]
                      #:max-phase-level [max-phase-level 0]
@@ -134,6 +137,7 @@
           self
           (fresh-requires requires)
           recur-requires
+          (or amalgam-name amalgam-parts)
           provides
           #f ; access
           language-info
@@ -405,7 +409,8 @@
                                        #:seen [seen #hasheq()]
                                        #:seen-list [seen-list null]
                                        #:minimum-inspector [minimum-inspector #f]
-                                       #:transitive-record [transitive-modules #f])
+                                       #:transitive-record [transitive-modules #f]
+                                       #:recur? [recur? #t])
   (unless (module-path-index? mpi)
     (error "not a module path index:" mpi))
   (define name (module-path-index-resolve mpi #t))
@@ -423,7 +428,8 @@
                           #:seen seen
                           #:seen-list seen-list
                           #:minimum-inspector minimum-inspector
-                          #:transitive-record transitive-modules))
+                          #:transitive-record transitive-modules
+                          #:recur? recur?))
   ;; If the module is cross-phase persistent, make sure it's instantiated
   ;; at phase 0 and registered in `ns` as phaseless; otherwise
   (cond
@@ -494,7 +500,8 @@
                               #:seen [seen #hasheq()]
                               #:seen-list [seen-list null]
                               #:minimum-inspector [minimum-inspector #f]
-                              #:transitive-record [transitive-modules #f])
+                              #:transitive-record [transitive-modules #f]
+                              #:recur? [recur? #t])
   (performance-region
    ['eval 'requires]
    ;; Nothing to do if we've run this phase already and made the
@@ -534,28 +541,37 @@
                      "  dependency chain:"
                      (module-instances->indented-module-names mi seen-list))))
 
-     ;; If we haven't shifted required mpis already, do that;
-     ;; the list of required mpis is pruned to the set that we
-     ;; need to explicitly instaniate, where others are presumed
-     ;; to be instantiated transitively and we should skip trying
-     ;; again for this module's direct require
-     (unless (module-instance-shifted-requires mi)
-       (set-module-instance-shifted-requires!
-        mi
-        (for/list ([phase+mpis (in-list (module-requires m))]
-                   [recurs (in-list (module-recur-requires m))])
-          (cons (car phase+mpis)
-                (for/list ([req-mpi (in-list (cdr phase+mpis))]
-                           [recur? (in-list recurs)]
-                           #:when recur?)
-                  (module-path-index-shift req-mpi
-                                           (module-self m)
-                                           mpi))))))
+     (when recur?
+       (define amalgam? (pair? (module-amalgam m)))
 
-     ;; Recur for required modules:
-     (for ([phase+mpis (in-list (module-instance-shifted-requires mi))])
-       (define req-phase (car phase+mpis))
-       (for ([req-mpi (in-list (cdr phase+mpis))])
+       ;; If we haven't shifted required mpis already, do that;
+       ;; in the amalgam case, we have a flattened list of module paths
+       ;; with phases and a choice on transitive instantiation; otherwise,
+       ;; the list of required mpis is pruned to the set that we
+       ;; need to explicitly instaniate, where others are presumed
+       ;; to be instantiated transitively and we should skip trying
+       ;; again for this module's direct require
+       (unless (module-instance-shifted-requires mi)
+         (set-module-instance-shifted-requires!
+          mi
+          (cond
+            [amalgam?
+             (for/list ([name+nonrecur?+phases (in-list (module-amalgam m))])
+               (cons (module-path-index-join (car name+nonrecur?+phases) mpi)
+                     (cdr name+nonrecur?+phases)))]
+            [else
+             (for/list ([phase+mpis (in-list (module-requires m))]
+                        [recurs (in-list (module-recur-requires m))])
+               (cons (car phase+mpis)
+                     (for/list ([req-mpi (in-list (cdr phase+mpis))]
+                                [recur? (in-list recurs)]
+                                #:when recur?)
+                       (module-path-index-shift req-mpi
+                                                (module-self m)
+                                                mpi))))])))
+
+       ;; Recur for required modules:
+       (define (instantiate! req-mpi req-phase recur?)
          (namespace-module-instantiate! ns req-mpi (phase+ instance-phase req-phase)
                                         #:run-phase run-phase
                                         #:skip-run? skip-run?
@@ -563,7 +579,20 @@
                                         #:seen (hash-set seen mi #t)
                                         #:seen-list (cons mi seen-list)
                                         #:minimum-inspector inspector
-                                        #:transitive-record transitive-modules)))
+                                        #:transitive-record transitive-modules
+                                        #:recur? recur?))
+       (cond
+         [amalgam?
+          (for ([mpi+nonrecur?+phases (in-list (module-instance-shifted-requires mi))])
+            (define mpi (car mpi+nonrecur?+phases))
+            (define recur? (not (cadr mpi+nonrecur?+phases)))
+            (for ([phase (in-list (cddr mpi+nonrecur?+phases))])
+              (instantiate! mpi phase recur?)))]
+         [else
+          (for ([phase+mpis (in-list (module-instance-shifted-requires mi))])
+            (define req-phase (car phase+mpis))
+            (for ([req-mpi (in-list (cdr phase+mpis))])
+              (instantiate! req-mpi req-phase #t)))]))
      
      ;; Run or make available phases of the module body:
      (unless (label-phase? instance-phase)

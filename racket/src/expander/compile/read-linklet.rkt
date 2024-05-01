@@ -59,7 +59,8 @@
         (add-hash-code (if initial?
                            (strip-submodule-references b-ht)
                            b-ht)
-                       sha-1))]
+                       sha-1)
+        #t)]
       [(eqv? tag (char->integer #\D))
        (unless initial?
          (raise-read-error 'read-compiled-linklet
