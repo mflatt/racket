@@ -650,8 +650,7 @@
         (let loop ([name-to-phases name-to-phases]
                    [all-mpis all-mpis]
                    [mpi (module-path-index-shift mpi old-self new-self)]
-                   [phase phase]
-                   [add? #t])
+                   [phase phase])
           (define name (module-path-index-resolve mpi))          
           (define at-name (hash-ref name-to-phases name #hasheq()))
           (cond
@@ -662,7 +661,7 @@
              ;; Mark `name` as done to avoid re-traversing:
              (define done-name-to-phases (hash-set name-to-phases name (hash-set at-name phase #t)))
              (define (add mpi/boxed all-mpis)
-               (if (or (not add?) (hash-ref name-to-phases name #f))
+               (if (hash-ref name-to-phases name #f)
                    all-mpis
                    (cons (cons name mpi/boxed) all-mpis)))
              (define m (namespace->module ns name))
@@ -670,27 +669,30 @@
                (raise-arguments-error 'module
                                       "cannot find module while flattening requires"
                                       "module" name))
-             ;; If `m` has flattened requires, then don't flatten here, but do register
-             ;; any modules it will trigger
-             (define flattened? (module-flattened-requires m))
-             (define-values (new-name-to-phases new-all-mpis)
-               (for/fold ([name-to-phases done-name-to-phases]
-                          [all-mpis all-mpis])
-                         ([phase+reqs (in-list (module-requires m))]
-                          [recurs (in-list (module-recur-requires m))]
-                          #:do [(define new-phase (phase+ (car phase+reqs) phase))]
-                          [req (in-list (cdr phase+reqs))]
-                          [recur (in-list recurs)]
-                          #:when recur)
-                 (loop name-to-phases
-                       all-mpis
-                       (module-path-index-shift req
-                                                (module-self m)
-                                                mpi)                           
-                       new-phase
-                       (and add? (not flattened?)))))
-             (values new-name-to-phases
-                     (add (if flattened? (box-immutable mpi) mpi) new-all-mpis))]))))
+             (cond
+               [(and (module-cross-phase-persistent? m)
+                     (not (eqv? phase 0))
+                     (not (label-phase? phase)))
+                ;; Only need to keep phase 0 for a cross-phase persistent module
+                (loop name-to-phases all-mpis mpi 0)]
+               [else
+                (define-values (new-name-to-phases new-all-mpis)
+                  (for/fold ([name-to-phases done-name-to-phases]
+                             [all-mpis all-mpis])
+                            ([phase+reqs (in-list (module-requires m))]
+                             [recurs (in-list (module-recur-requires m))]
+                             #:do [(define new-phase (phase+ (car phase+reqs) phase))]
+                             [req (in-list (cdr phase+reqs))]
+                             [recur (in-list recurs)]
+                             #:when recur)
+                    (loop name-to-phases
+                          all-mpis
+                          (module-path-index-shift req
+                                                   (module-self m)
+                                                   mpi)                           
+                          new-phase)))
+                (values new-name-to-phases
+                        (add mpi new-all-mpis))])]))))
     (define interned (make-hash))
     (define (intern-phases phases)
       (or (hash-ref interned phases #f)

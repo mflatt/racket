@@ -442,7 +442,7 @@
                           #:minimum-inspector minimum-inspector
                           #:transitive-record transitive-modules))
   ;; If the module is cross-phase persistent, make sure it's instantiated
-  ;; at phase 0 and registered in `ns` as phaseless; otherwise
+  ;; at phase 0 and registered in `ns` as phaseless
   (cond
    [(module-cross-phase-persistent? m)
     (instantiate! 0 0 (or (namespace-root-namespace ns) ns))]
@@ -545,14 +545,14 @@
      (define phase-shift instance-phase) ; instance phase = phase shift
      (define bulk-binding-registry (namespace-bulk-binding-registry m-ns))
      
-     (when (hash-ref seen mi #f)
-       (error 'require
-              (apply string-append
-                     "import cycle detected during module instantiation\n"
-                     "  dependency chain:"
-                     (module-instances->indented-module-names mi seen-list))))
-
      (when recur?
+
+       (when (hash-ref seen mi #f)
+         (error 'require
+                (apply string-append
+                       "import cycle detected during module instantiation\n"
+                       "  dependency chain:"
+                       (module-instances->indented-module-names mi seen-list))))
 
        ;; If we haven't shifted required mpis already, do that;
        ;; the list of required mpis is pruned to the set that we
@@ -596,12 +596,13 @@
             name]))
 
        ;; Recur for required modules:
+       (define new-seen (hash-set seen mi #t))
        (define (recur-instantiate! req-mpi req-phase req-recur?)
          (namespace-module-instantiate! ns req-mpi (phase+ instance-phase req-phase)
                                         #:run-phase run-phase
                                         #:skip-run? skip-run?
                                         #:otherwise-available? otherwise-available?
-                                        #:seen (hash-set seen mi #t)
+                                        #:seen new-seen
                                         #:seen-list (cons mi seen-list)
                                         #:recur? req-recur?
                                         #:minimum-inspector inspector

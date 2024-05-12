@@ -368,16 +368,20 @@
         (shift-cache-set! shifted-base shifted-mpi)
         shifted-mpi])])]))
 
-;; ensures that the result module-path index is fresh, so that
+;; ensures that the result module-path index is fresh enough, so that
 ;; resolving will go through the module name resolver
 (define (module-path-index-shift/resolved mpi from-mpi to-mpi rp)
   (define maybe-new-mpi (module-path-index-shift mpi from-mpi to-mpi))
-  (define new-mpi (if (eq? maybe-new-mpi mpi)
+  (define new-mpi (if (and (eq? maybe-new-mpi mpi)
+                           (let ([p (module-path-index-path mpi)])
+                             (not (and (pair? p)
+                                       (eq? 'quote (car p))))))
                       (module-path-index-join (module-path-index-path mpi)
                                               (module-path-index-base mpi))
                       maybe-new-mpi))
   (when rp
-    (set-module-path-index-resolved! new-mpi rp))
+    (unless (module-path-index-resolved new-mpi)
+      (set-module-path-index-resolved! new-mpi rp)))
   new-mpi)
 
 (define (shift-cache-ref cache mpi)

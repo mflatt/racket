@@ -52,7 +52,8 @@
                                   mod-path)]
              [phase phase]
              [attach-instances? attach-instances?]
-             [attach-phase phase])
+             [attach-phase phase]
+             [recur? #t])
     (define mod-name (or maybe-mod-name
                          (parameterize ([current-namespace src-namespace])
                            (module-path-index-resolve mpi))))
@@ -75,7 +76,7 @@
              (not (zero-phase? phase)))
         ;; Always handle a cross-phase persistent module at phase 0, which means
         ;; that all phases will get the same instance if any instance is attached
-        (loop mpi mod-name 0 attach-instances? 0)]
+        (loop mpi mod-name 0 attach-instances? 0 recur?)]
        [else
         (define already-m (namespace->module dest-namespace mod-name))
         (when (and already-m (not (eq? already-m m)))
@@ -90,7 +91,8 @@
         (define-values (m-ns already?)
           (cond
            [(or attach-this-instance?
-                (module-cross-phase-persistent? m))
+                (and (module-cross-phase-persistent? m)
+                     (not (label-phase? phase))))
             (define m-ns (namespace->module-namespace src-namespace mod-name phase))
             (unless m-ns
               (raise-arguments-error who
@@ -121,7 +123,7 @@
 
         (hash-update! todo mod-name (lambda (ht) (hash-set ht phase m-ns)) #hasheqv())
 
-        (unless already?
+        (unless (or already? (not recur?))
           (define shifted-requires (and mi
                                         (module-instance-shifted-requires mi)))
           (if shifted-requires
@@ -134,7 +136,8 @@
                             #f
                             (phase+ phase (car phase+mpis))
                             attach-instances?
-                            attach-phase)))
+                            attach-phase
+                            #t)))
                   ;; per-mpi list of phases
                   (for ([mpi/boxed+phases (in-list (module-instance-shifted-requires mi))])
                     (define mpi/boxed (vector-ref mpi/boxed+phases 0))
@@ -144,7 +147,8 @@
                             #f
                             (phase+ phase req-phase)
                             attach-instances?
-                            attach-phase))))
+                            attach-phase
+                            (box? mpi/boxed)))))
               (if (not (module-flattened-requires m))
                   ;; per-phase list of mpis
                   (for ([phase+reqs (in-list (module-requires m))]
@@ -159,7 +163,8 @@
                           #f
                           (phase+ phase (car phase+reqs))
                           attach-instances?
-                          attach-phase))
+                          attach-phase
+                          #t))
                   ;; per-mpi list of phases:
                   (for ([mpi/boxed+phases (in-list (module-flattened-requires m))])
                     (define mpi/boxed (vector-ref mpi/boxed+phases 0))
@@ -171,7 +176,8 @@
                             #f
                             (phase+ phase req-phase)
                             attach-instances?
-                            attach-phase)))))
+                            attach-phase
+                            (box? mpi/boxed))))))
           (for ([submod-name (in-list (module-submodule-names m))])
             (loop (module-path-index-join `(submod "." ,submod-name) mpi)
                   (make-resolved-module-path
@@ -185,10 +191,11 @@
                   ;; been instantiated
                   #f
                   #f
-                  attach-phase))
+                  attach-phase
+                  #t))
           (when (module-supermodule-name m)
             ;; Associated supermodule is treated like an associated submodule
-            (loop (module-path-index-join `(submod "..") mpi) #f #f #f attach-phase)))])))
+            (loop (module-path-index-join `(submod "..") mpi) #f #f #f attach-phase #t)))])))
 
   ;; Perform decided transfers
   (for ([(mod-name phases) (in-hash todo)])

@@ -6507,13 +6507,20 @@
     (let ((maybe-new-mpi_0
            (module-path-index-shift mpi_0 from-mpi_0 to-mpi_0)))
       (let ((new-mpi_0
-             (if (eq? maybe-new-mpi_0 mpi_0)
+             (if (if (eq? maybe-new-mpi_0 mpi_0)
+                   (let ((p_0 (module-path-index-path mpi_0)))
+                     (not (if (pair? p_0) (eq? 'quote (car p_0)) #f)))
+                   #f)
                (1/module-path-index-join
                 (module-path-index-path mpi_0)
                 (module-path-index-base mpi_0))
                maybe-new-mpi_0)))
         (begin
-          (if rp_0 (set-module-path-index-resolved! new-mpi_0 rp_0) (void))
+          (if rp_0
+            (if (module-path-index-resolved new-mpi_0)
+              (void)
+              (set-module-path-index-resolved! new-mpi_0 rp_0))
+            (void))
           new-mpi_0)))))
 (define shift-cache-ref
   (lambda (cache_0 mpi_0)
@@ -17964,460 +17971,462 @@
                                       (namespace-bulk-binding-registry
                                        m-ns_0)))
                                  (begin
-                                   (if (hash-ref seen129_0 mi141_0 #f)
-                                     (error
-                                      'require
-                                      (apply
-                                       string-append
-                                       "import cycle detected during module instantiation\n"
-                                       "  dependency chain:"
-                                       (module-instances->indented-module-names
-                                        mi141_0
-                                        seen-list130_0)))
-                                     (void))
                                    (if recur?128_0
-                                     (let ((record-shifted-requires-at-name_0
-                                            (if (module-instance-shifted-requires
-                                                 mi141_0)
-                                              #f
-                                              (let ((name_0
-                                                     (1/module-path-index-resolve
-                                                      mpi_0)))
-                                                (let ((requires_0
-                                                       (module-requires m_1)))
-                                                  (let ((recur-requires_0
-                                                         (module-recur-requires
+                                     (begin
+                                       (if (hash-ref seen129_0 mi141_0 #f)
+                                         (error
+                                          'require
+                                          (apply
+                                           string-append
+                                           "import cycle detected during module instantiation\n"
+                                           "  dependency chain:"
+                                           (module-instances->indented-module-names
+                                            mi141_0
+                                            seen-list130_0)))
+                                         (void))
+                                       (let ((record-shifted-requires-at-name_0
+                                              (if (module-instance-shifted-requires
+                                                   mi141_0)
+                                                #f
+                                                (let ((name_0
+                                                       (1/module-path-index-resolve
+                                                        mpi_0)))
+                                                  (let ((requires_0
+                                                         (module-requires
                                                           m_1)))
-                                                    (let ((flattened-requires_0
-                                                           (module-flattened-requires
+                                                    (let ((recur-requires_0
+                                                           (module-recur-requires
                                                             m_1)))
-                                                      (let ((shifted-requires_0
-                                                             (if (not
-                                                                  flattened-requires_0)
-                                                               (reverse$1
-                                                                (let ((lst_0
-                                                                       (namespace-find-shifted-requires.1
-                                                                        #f
-                                                                        ns142_0
-                                                                        name_0
-                                                                        requires_0)))
-                                                                  (begin
-                                                                    (letrec*
-                                                                     ((for-loop_0
-                                                                       (|#%name|
-                                                                        for-loop
-                                                                        (lambda (fold-var_0
-                                                                                 lst_1
-                                                                                 lst_2
-                                                                                 lst_3)
-                                                                          (begin
-                                                                            (if (if (pair?
-                                                                                     lst_1)
-                                                                                  (if (pair?
-                                                                                       lst_2)
-                                                                                    (pair?
-                                                                                     lst_3)
+                                                      (let ((flattened-requires_0
+                                                             (module-flattened-requires
+                                                              m_1)))
+                                                        (let ((shifted-requires_0
+                                                               (if (not
+                                                                    flattened-requires_0)
+                                                                 (reverse$1
+                                                                  (let ((lst_0
+                                                                         (namespace-find-shifted-requires.1
+                                                                          #f
+                                                                          ns142_0
+                                                                          name_0
+                                                                          requires_0)))
+                                                                    (begin
+                                                                      (letrec*
+                                                                       ((for-loop_0
+                                                                         (|#%name|
+                                                                          for-loop
+                                                                          (lambda (fold-var_0
+                                                                                   lst_1
+                                                                                   lst_2
+                                                                                   lst_3)
+                                                                            (begin
+                                                                              (if (if (pair?
+                                                                                       lst_1)
+                                                                                    (if (pair?
+                                                                                         lst_2)
+                                                                                      (pair?
+                                                                                       lst_3)
+                                                                                      #f)
                                                                                     #f)
-                                                                                  #f)
-                                                                              (let ((phase+mpis_0
-                                                                                     (unsafe-car
-                                                                                      lst_1)))
-                                                                                (let ((rest_0
-                                                                                       (unsafe-cdr
+                                                                                (let ((phase+mpis_0
+                                                                                       (unsafe-car
                                                                                         lst_1)))
-                                                                                  (let ((recurs_0
-                                                                                         (unsafe-car
-                                                                                          lst_2)))
-                                                                                    (let ((rest_1
-                                                                                           (unsafe-cdr
+                                                                                  (let ((rest_0
+                                                                                         (unsafe-cdr
+                                                                                          lst_1)))
+                                                                                    (let ((recurs_0
+                                                                                           (unsafe-car
                                                                                             lst_2)))
-                                                                                      (let ((resolved-paths_0
-                                                                                             (unsafe-car
-                                                                                              lst_3)))
-                                                                                        (let ((rest_2
-                                                                                               (unsafe-cdr
+                                                                                      (let ((rest_1
+                                                                                             (unsafe-cdr
+                                                                                              lst_2)))
+                                                                                        (let ((resolved-paths_0
+                                                                                               (unsafe-car
                                                                                                 lst_3)))
-                                                                                          (let ((fold-var_1
-                                                                                                 (let ((fold-var_1
-                                                                                                        (cons
-                                                                                                         (let ((app_0
-                                                                                                                (car
-                                                                                                                 phase+mpis_0)))
-                                                                                                           (cons
-                                                                                                            app_0
-                                                                                                            (reverse$1
-                                                                                                             (let ((lst_4
-                                                                                                                    (cdr
-                                                                                                                     phase+mpis_0)))
-                                                                                                               (begin
-                                                                                                                 (letrec*
-                                                                                                                  ((for-loop_1
-                                                                                                                    (|#%name|
-                                                                                                                     for-loop
-                                                                                                                     (lambda (fold-var_1
-                                                                                                                              lst_5
-                                                                                                                              lst_6
-                                                                                                                              lst_7)
-                                                                                                                       (begin
-                                                                                                                         (if (if (pair?
-                                                                                                                                  lst_5)
-                                                                                                                               (if (pair?
-                                                                                                                                    lst_6)
-                                                                                                                                 (pair?
-                                                                                                                                  lst_7)
-                                                                                                                                 #f)
-                                                                                                                               #f)
-                                                                                                                           (let ((req-mpi_0
-                                                                                                                                  (unsafe-car
-                                                                                                                                   lst_5)))
-                                                                                                                             (let ((rest_3
-                                                                                                                                    (unsafe-cdr
-                                                                                                                                     lst_5)))
-                                                                                                                               (let ((recur_0
-                                                                                                                                      (unsafe-car
-                                                                                                                                       lst_6)))
-                                                                                                                                 (let ((rest_4
-                                                                                                                                        (unsafe-cdr
-                                                                                                                                         lst_6)))
-                                                                                                                                   (let ((resolved-path_0
-                                                                                                                                          (unsafe-car
-                                                                                                                                           lst_7)))
-                                                                                                                                     (let ((rest_5
-                                                                                                                                            (unsafe-cdr
-                                                                                                                                             lst_7)))
-                                                                                                                                       (let ((fold-var_2
-                                                                                                                                              (let ((fold-var_2
-                                                                                                                                                     (cons
-                                                                                                                                                      (if recur_0
-                                                                                                                                                        (module-path-index-shift/resolved
-                                                                                                                                                         req-mpi_0
-                                                                                                                                                         (module-self
-                                                                                                                                                          m_1)
-                                                                                                                                                         mpi_0
-                                                                                                                                                         resolved-path_0)
-                                                                                                                                                        #f)
-                                                                                                                                                      fold-var_1)))
-                                                                                                                                                (values
-                                                                                                                                                 fold-var_2))))
-                                                                                                                                         (for-loop_1
-                                                                                                                                          fold-var_2
-                                                                                                                                          rest_3
-                                                                                                                                          rest_4
-                                                                                                                                          rest_5))))))))
-                                                                                                                           fold-var_1))))))
-                                                                                                                  (for-loop_1
-                                                                                                                   null
-                                                                                                                   lst_4
-                                                                                                                   recurs_0
-                                                                                                                   resolved-paths_0)))))))
-                                                                                                         fold-var_0)))
-                                                                                                   (values
-                                                                                                    fold-var_1))))
-                                                                                            (for-loop_0
-                                                                                             fold-var_1
-                                                                                             rest_0
-                                                                                             rest_1
-                                                                                             rest_2))))))))
-                                                                              fold-var_0))))))
-                                                                     (for-loop_0
-                                                                      null
-                                                                      requires_0
-                                                                      recur-requires_0
-                                                                      lst_0)))))
-                                                               (reverse$1
-                                                                (let ((lst_0
-                                                                       (namespace-find-shifted-requires.1
-                                                                        #t
-                                                                        ns142_0
-                                                                        name_0
-                                                                        flattened-requires_0)))
-                                                                  (begin
-                                                                    (letrec*
-                                                                     ((for-loop_0
-                                                                       (|#%name|
-                                                                        for-loop
-                                                                        (lambda (fold-var_0
-                                                                                 lst_1
-                                                                                 lst_2)
-                                                                          (begin
-                                                                            (if (if (pair?
-                                                                                     lst_1)
-                                                                                  (pair?
-                                                                                   lst_2)
-                                                                                  #f)
-                                                                              (let ((mpi/box+phases_0
-                                                                                     (unsafe-car
-                                                                                      lst_1)))
-                                                                                (let ((rest_0
-                                                                                       (unsafe-cdr
-                                                                                        lst_1)))
-                                                                                  (let ((resolved-path_0
-                                                                                         (unsafe-car
-                                                                                          lst_2)))
-                                                                                    (let ((rest_1
-                                                                                           (unsafe-cdr
-                                                                                            lst_2)))
-                                                                                      (let ((fold-var_1
-                                                                                             (let ((fold-var_1
-                                                                                                    (cons
-                                                                                                     (let ((mpi/box_0
-                                                                                                            (vector-ref
-                                                                                                             mpi/box+phases_0
-                                                                                                             0)))
-                                                                                                       (let ((req-mpi_0
-                                                                                                              (if (box?
-                                                                                                                   mpi/box_0)
-                                                                                                                (unbox
-                                                                                                                 mpi/box_0)
-                                                                                                                mpi/box_0)))
-                                                                                                         (let ((new-req-mpi_0
-                                                                                                                (module-path-index-shift/resolved
-                                                                                                                 req-mpi_0
-                                                                                                                 (module-self
-                                                                                                                  m_1)
-                                                                                                                 mpi_0
-                                                                                                                 resolved-path_0)))
+                                                                                          (let ((rest_2
+                                                                                                 (unsafe-cdr
+                                                                                                  lst_3)))
+                                                                                            (let ((fold-var_1
+                                                                                                   (let ((fold-var_1
+                                                                                                          (cons
                                                                                                            (let ((app_0
-                                                                                                                  (if (box?
-                                                                                                                       mpi/box_0)
-                                                                                                                    (box-immutable
-                                                                                                                     new-req-mpi_0)
-                                                                                                                    new-req-mpi_0)))
-                                                                                                             (vector-immutable
+                                                                                                                  (car
+                                                                                                                   phase+mpis_0)))
+                                                                                                             (cons
                                                                                                               app_0
+                                                                                                              (reverse$1
+                                                                                                               (let ((lst_4
+                                                                                                                      (cdr
+                                                                                                                       phase+mpis_0)))
+                                                                                                                 (begin
+                                                                                                                   (letrec*
+                                                                                                                    ((for-loop_1
+                                                                                                                      (|#%name|
+                                                                                                                       for-loop
+                                                                                                                       (lambda (fold-var_1
+                                                                                                                                lst_5
+                                                                                                                                lst_6
+                                                                                                                                lst_7)
+                                                                                                                         (begin
+                                                                                                                           (if (if (pair?
+                                                                                                                                    lst_5)
+                                                                                                                                 (if (pair?
+                                                                                                                                      lst_6)
+                                                                                                                                   (pair?
+                                                                                                                                    lst_7)
+                                                                                                                                   #f)
+                                                                                                                                 #f)
+                                                                                                                             (let ((req-mpi_0
+                                                                                                                                    (unsafe-car
+                                                                                                                                     lst_5)))
+                                                                                                                               (let ((rest_3
+                                                                                                                                      (unsafe-cdr
+                                                                                                                                       lst_5)))
+                                                                                                                                 (let ((recur_0
+                                                                                                                                        (unsafe-car
+                                                                                                                                         lst_6)))
+                                                                                                                                   (let ((rest_4
+                                                                                                                                          (unsafe-cdr
+                                                                                                                                           lst_6)))
+                                                                                                                                     (let ((resolved-path_0
+                                                                                                                                            (unsafe-car
+                                                                                                                                             lst_7)))
+                                                                                                                                       (let ((rest_5
+                                                                                                                                              (unsafe-cdr
+                                                                                                                                               lst_7)))
+                                                                                                                                         (let ((fold-var_2
+                                                                                                                                                (let ((fold-var_2
+                                                                                                                                                       (cons
+                                                                                                                                                        (if recur_0
+                                                                                                                                                          (module-path-index-shift/resolved
+                                                                                                                                                           req-mpi_0
+                                                                                                                                                           (module-self
+                                                                                                                                                            m_1)
+                                                                                                                                                           mpi_0
+                                                                                                                                                           resolved-path_0)
+                                                                                                                                                          #f)
+                                                                                                                                                        fold-var_1)))
+                                                                                                                                                  (values
+                                                                                                                                                   fold-var_2))))
+                                                                                                                                           (for-loop_1
+                                                                                                                                            fold-var_2
+                                                                                                                                            rest_3
+                                                                                                                                            rest_4
+                                                                                                                                            rest_5))))))))
+                                                                                                                             fold-var_1))))))
+                                                                                                                    (for-loop_1
+                                                                                                                     null
+                                                                                                                     lst_4
+                                                                                                                     recurs_0
+                                                                                                                     resolved-paths_0)))))))
+                                                                                                           fold-var_0)))
+                                                                                                     (values
+                                                                                                      fold-var_1))))
+                                                                                              (for-loop_0
+                                                                                               fold-var_1
+                                                                                               rest_0
+                                                                                               rest_1
+                                                                                               rest_2))))))))
+                                                                                fold-var_0))))))
+                                                                       (for-loop_0
+                                                                        null
+                                                                        requires_0
+                                                                        recur-requires_0
+                                                                        lst_0)))))
+                                                                 (reverse$1
+                                                                  (let ((lst_0
+                                                                         (namespace-find-shifted-requires.1
+                                                                          #t
+                                                                          ns142_0
+                                                                          name_0
+                                                                          flattened-requires_0)))
+                                                                    (begin
+                                                                      (letrec*
+                                                                       ((for-loop_0
+                                                                         (|#%name|
+                                                                          for-loop
+                                                                          (lambda (fold-var_0
+                                                                                   lst_1
+                                                                                   lst_2)
+                                                                            (begin
+                                                                              (if (if (pair?
+                                                                                       lst_1)
+                                                                                    (pair?
+                                                                                     lst_2)
+                                                                                    #f)
+                                                                                (let ((mpi/box+phases_0
+                                                                                       (unsafe-car
+                                                                                        lst_1)))
+                                                                                  (let ((rest_0
+                                                                                         (unsafe-cdr
+                                                                                          lst_1)))
+                                                                                    (let ((resolved-path_0
+                                                                                           (unsafe-car
+                                                                                            lst_2)))
+                                                                                      (let ((rest_1
+                                                                                             (unsafe-cdr
+                                                                                              lst_2)))
+                                                                                        (let ((fold-var_1
+                                                                                               (let ((fold-var_1
+                                                                                                      (cons
+                                                                                                       (let ((mpi/box_0
                                                                                                               (vector-ref
                                                                                                                mpi/box+phases_0
-                                                                                                               1))))))
-                                                                                                     fold-var_0)))
-                                                                                               (values
-                                                                                                fold-var_1))))
-                                                                                        (for-loop_0
-                                                                                         fold-var_1
-                                                                                         rest_0
-                                                                                         rest_1))))))
-                                                                              fold-var_0))))))
-                                                                     (for-loop_0
-                                                                      null
-                                                                      flattened-requires_0
-                                                                      lst_0))))))))
-                                                        (begin
-                                                          (set-module-instance-shifted-requires!
-                                                           mi141_0
-                                                           shifted-requires_0)
-                                                          name_0)))))))))
-                                       (let ((recur-instantiate!_0
-                                              (|#%name|
-                                               recur-instantiate!
-                                               (lambda (req-mpi_0
-                                                        req-phase_0
-                                                        req-recur?_0)
-                                                 (begin
-                                                   (let ((temp255_0
-                                                          (phase+
-                                                           instance-phase_0
-                                                           req-phase_0)))
-                                                     (let ((temp259_0
-                                                            (hash-set
-                                                             seen129_0
+                                                                                                               0)))
+                                                                                                         (let ((req-mpi_0
+                                                                                                                (if (box?
+                                                                                                                     mpi/box_0)
+                                                                                                                  (unbox
+                                                                                                                   mpi/box_0)
+                                                                                                                  mpi/box_0)))
+                                                                                                           (let ((new-req-mpi_0
+                                                                                                                  (module-path-index-shift/resolved
+                                                                                                                   req-mpi_0
+                                                                                                                   (module-self
+                                                                                                                    m_1)
+                                                                                                                   mpi_0
+                                                                                                                   resolved-path_0)))
+                                                                                                             (let ((app_0
+                                                                                                                    (if (box?
+                                                                                                                         mpi/box_0)
+                                                                                                                      (box-immutable
+                                                                                                                       new-req-mpi_0)
+                                                                                                                      new-req-mpi_0)))
+                                                                                                               (vector-immutable
+                                                                                                                app_0
+                                                                                                                (vector-ref
+                                                                                                                 mpi/box+phases_0
+                                                                                                                 1))))))
+                                                                                                       fold-var_0)))
+                                                                                                 (values
+                                                                                                  fold-var_1))))
+                                                                                          (for-loop_0
+                                                                                           fold-var_1
+                                                                                           rest_0
+                                                                                           rest_1))))))
+                                                                                fold-var_0))))))
+                                                                       (for-loop_0
+                                                                        null
+                                                                        flattened-requires_0
+                                                                        lst_0))))))))
+                                                          (begin
+                                                            (set-module-instance-shifted-requires!
                                                              mi141_0
-                                                             #t)))
-                                                       (let ((temp260_0
-                                                              (cons
-                                                               mi141_0
-                                                               seen-list130_0)))
-                                                         (let ((temp259_1
-                                                                temp259_0)
-                                                               (temp255_1
-                                                                temp255_0))
-                                                           (namespace-module-instantiate!.1
-                                                            inspector_0
-                                                            otherwise-available?127_0
-                                                            req-recur?_0
-                                                            run-phase125_0
-                                                            temp259_1
-                                                            temp260_0
-                                                            skip-run?126_0
-                                                            transitive-record132_0
-                                                            ns142_0
-                                                            req-mpi_0
-                                                            temp255_1))))))))))
-                                         (begin
-                                           (if (not
-                                                (module-flattened-requires
-                                                 m_1))
+                                                             shifted-requires_0)
+                                                            name_0)))))))))
+                                         (let ((new-seen_0
+                                                (hash-set
+                                                 seen129_0
+                                                 mi141_0
+                                                 #t)))
+                                           (let ((recur-instantiate!_0
+                                                  (|#%name|
+                                                   recur-instantiate!
+                                                   (lambda (req-mpi_0
+                                                            req-phase_0
+                                                            req-recur?_0)
+                                                     (begin
+                                                       (let ((temp255_0
+                                                              (phase+
+                                                               instance-phase_0
+                                                               req-phase_0)))
+                                                         (let ((temp260_0
+                                                                (cons
+                                                                 mi141_0
+                                                                 seen-list130_0)))
+                                                           (let ((temp255_1
+                                                                  temp255_0))
+                                                             (namespace-module-instantiate!.1
+                                                              inspector_0
+                                                              otherwise-available?127_0
+                                                              req-recur?_0
+                                                              run-phase125_0
+                                                              new-seen_0
+                                                              temp260_0
+                                                              skip-run?126_0
+                                                              transitive-record132_0
+                                                              ns142_0
+                                                              req-mpi_0
+                                                              temp255_1)))))))))
                                              (begin
-                                               (let ((lst_0
-                                                      (module-instance-shifted-requires
-                                                       mi141_0)))
-                                                 (let ((lst_1
-                                                        (module-recur-requires
-                                                         m_1)))
-                                                   (let ((lst_2 lst_0))
+                                               (if (not
+                                                    (module-flattened-requires
+                                                     m_1))
+                                                 (begin
+                                                   (let ((lst_0
+                                                          (module-instance-shifted-requires
+                                                           mi141_0)))
+                                                     (let ((lst_1
+                                                            (module-recur-requires
+                                                             m_1)))
+                                                       (let ((lst_2 lst_0))
+                                                         (begin
+                                                           (letrec*
+                                                            ((for-loop_0
+                                                              (|#%name|
+                                                               for-loop
+                                                               (lambda (lst_3
+                                                                        lst_4)
+                                                                 (begin
+                                                                   (if (if (pair?
+                                                                            lst_3)
+                                                                         (pair?
+                                                                          lst_4)
+                                                                         #f)
+                                                                     (let ((phase+mpis_0
+                                                                            (unsafe-car
+                                                                             lst_3)))
+                                                                       (let ((rest_0
+                                                                              (unsafe-cdr
+                                                                               lst_3)))
+                                                                         (let ((recurs_0
+                                                                                (unsafe-car
+                                                                                 lst_4)))
+                                                                           (let ((rest_1
+                                                                                  (unsafe-cdr
+                                                                                   lst_4)))
+                                                                             (begin
+                                                                               (let ((req-phase_0
+                                                                                      (car
+                                                                                       phase+mpis_0)))
+                                                                                 (begin
+                                                                                   (let ((lst_5
+                                                                                          (cdr
+                                                                                           phase+mpis_0)))
+                                                                                     (begin
+                                                                                       (letrec*
+                                                                                        ((for-loop_1
+                                                                                          (|#%name|
+                                                                                           for-loop
+                                                                                           (lambda (lst_6
+                                                                                                    lst_7)
+                                                                                             (begin
+                                                                                               (if (if (pair?
+                                                                                                        lst_6)
+                                                                                                     (pair?
+                                                                                                      lst_7)
+                                                                                                     #f)
+                                                                                                 (let ((req-mpi_0
+                                                                                                        (unsafe-car
+                                                                                                         lst_6)))
+                                                                                                   (let ((rest_2
+                                                                                                          (unsafe-cdr
+                                                                                                           lst_6)))
+                                                                                                     (let ((recur_0
+                                                                                                            (unsafe-car
+                                                                                                             lst_7)))
+                                                                                                       (let ((rest_3
+                                                                                                              (unsafe-cdr
+                                                                                                               lst_7)))
+                                                                                                         (call-with-values
+                                                                                                          (lambda ()
+                                                                                                            (if req-mpi_0
+                                                                                                              (begin
+                                                                                                                (recur-instantiate!_0
+                                                                                                                 req-mpi_0
+                                                                                                                 req-phase_0
+                                                                                                                 recur_0)
+                                                                                                                (values))
+                                                                                                              (values)))
+                                                                                                          (lambda ()
+                                                                                                            (for-loop_1
+                                                                                                             rest_2
+                                                                                                             rest_3)))))))
+                                                                                                 (values)))))))
+                                                                                        (for-loop_1
+                                                                                         lst_5
+                                                                                         recurs_0))))
+                                                                                   (void)))
+                                                                               (for-loop_0
+                                                                                rest_0
+                                                                                rest_1))))))
+                                                                     (values)))))))
+                                                            (for-loop_0
+                                                             lst_2
+                                                             lst_1))))))
+                                                   (void))
+                                                 (begin
+                                                   (let ((lst_0
+                                                          (module-instance-shifted-requires
+                                                           mi141_0)))
                                                      (begin
                                                        (letrec*
                                                         ((for-loop_0
                                                           (|#%name|
                                                            for-loop
-                                                           (lambda (lst_3
-                                                                    lst_4)
+                                                           (lambda (lst_1)
                                                              (begin
-                                                               (if (if (pair?
-                                                                        lst_3)
-                                                                     (pair?
-                                                                      lst_4)
-                                                                     #f)
-                                                                 (let ((phase+mpis_0
+                                                               (if (pair?
+                                                                    lst_1)
+                                                                 (let ((mpi/boxed+phases_0
                                                                         (unsafe-car
-                                                                         lst_3)))
+                                                                         lst_1)))
                                                                    (let ((rest_0
                                                                           (unsafe-cdr
-                                                                           lst_3)))
-                                                                     (let ((recurs_0
-                                                                            (unsafe-car
-                                                                             lst_4)))
-                                                                       (let ((rest_1
-                                                                              (unsafe-cdr
-                                                                               lst_4)))
-                                                                         (begin
-                                                                           (let ((req-phase_0
-                                                                                  (car
-                                                                                   phase+mpis_0)))
-                                                                             (begin
-                                                                               (let ((lst_5
-                                                                                      (cdr
-                                                                                       phase+mpis_0)))
-                                                                                 (begin
-                                                                                   (letrec*
-                                                                                    ((for-loop_1
-                                                                                      (|#%name|
-                                                                                       for-loop
-                                                                                       (lambda (lst_6
-                                                                                                lst_7)
-                                                                                         (begin
-                                                                                           (if (if (pair?
-                                                                                                    lst_6)
-                                                                                                 (pair?
-                                                                                                  lst_7)
-                                                                                                 #f)
-                                                                                             (let ((req-mpi_0
-                                                                                                    (unsafe-car
-                                                                                                     lst_6)))
-                                                                                               (let ((rest_2
-                                                                                                      (unsafe-cdr
-                                                                                                       lst_6)))
-                                                                                                 (let ((recur_0
-                                                                                                        (unsafe-car
-                                                                                                         lst_7)))
-                                                                                                   (let ((rest_3
-                                                                                                          (unsafe-cdr
-                                                                                                           lst_7)))
-                                                                                                     (call-with-values
-                                                                                                      (lambda ()
-                                                                                                        (if req-mpi_0
-                                                                                                          (begin
-                                                                                                            (recur-instantiate!_0
-                                                                                                             req-mpi_0
-                                                                                                             req-phase_0
-                                                                                                             recur_0)
-                                                                                                            (values))
-                                                                                                          (values)))
-                                                                                                      (lambda ()
-                                                                                                        (for-loop_1
-                                                                                                         rest_2
-                                                                                                         rest_3)))))))
-                                                                                             (values)))))))
-                                                                                    (for-loop_1
-                                                                                     lst_5
-                                                                                     recurs_0))))
-                                                                               (void)))
-                                                                           (for-loop_0
-                                                                            rest_0
-                                                                            rest_1))))))
-                                                                 (values)))))))
-                                                        (for-loop_0
-                                                         lst_2
-                                                         lst_1))))))
-                                               (void))
-                                             (begin
-                                               (let ((lst_0
-                                                      (module-instance-shifted-requires
-                                                       mi141_0)))
-                                                 (begin
-                                                   (letrec*
-                                                    ((for-loop_0
-                                                      (|#%name|
-                                                       for-loop
-                                                       (lambda (lst_1)
-                                                         (begin
-                                                           (if (pair? lst_1)
-                                                             (let ((mpi/boxed+phases_0
-                                                                    (unsafe-car
-                                                                     lst_1)))
-                                                               (let ((rest_0
-                                                                      (unsafe-cdr
-                                                                       lst_1)))
-                                                                 (begin
-                                                                   (let ((req-mpi/boxed_0
-                                                                          (vector-ref
-                                                                           mpi/boxed+phases_0
-                                                                           0)))
-                                                                     (let ((req-mpi_0
-                                                                            (if (box?
-                                                                                 req-mpi/boxed_0)
-                                                                              (unbox
-                                                                               req-mpi/boxed_0)
-                                                                              req-mpi/boxed_0)))
-                                                                       (begin
-                                                                         (let ((lst_2
-                                                                                (vector-ref
-                                                                                 mpi/boxed+phases_0
-                                                                                 1)))
+                                                                           lst_1)))
+                                                                     (begin
+                                                                       (let ((req-mpi/boxed_0
+                                                                              (vector-ref
+                                                                               mpi/boxed+phases_0
+                                                                               0)))
+                                                                         (let ((req-mpi_0
+                                                                                (if (box?
+                                                                                     req-mpi/boxed_0)
+                                                                                  (unbox
+                                                                                   req-mpi/boxed_0)
+                                                                                  req-mpi/boxed_0)))
                                                                            (begin
-                                                                             (letrec*
-                                                                              ((for-loop_1
-                                                                                (|#%name|
-                                                                                 for-loop
-                                                                                 (lambda (lst_3)
-                                                                                   (begin
-                                                                                     (if (pair?
-                                                                                          lst_3)
-                                                                                       (let ((req-phase_0
-                                                                                              (unsafe-car
-                                                                                               lst_3)))
-                                                                                         (let ((rest_1
-                                                                                                (unsafe-cdr
-                                                                                                 lst_3)))
-                                                                                           (begin
-                                                                                             (recur-instantiate!_0
-                                                                                              req-mpi_0
-                                                                                              req-phase_0
-                                                                                              (box?
-                                                                                               req-mpi/boxed_0))
-                                                                                             (for-loop_1
-                                                                                              rest_1))))
-                                                                                       (values)))))))
-                                                                              (for-loop_1
-                                                                               lst_2))))
-                                                                         (void))))
-                                                                   (for-loop_0
-                                                                    rest_0))))
-                                                             (values)))))))
-                                                    (for-loop_0 lst_0))))
-                                               (void)))
-                                           (if record-shifted-requires-at-name_0
-                                             (let ((temp266_0
-                                                    (module-instance-shifted-requires
-                                                     mi141_0)))
-                                               (let ((temp267_0
-                                                      (module-flattened-requires
-                                                       m_1)))
-                                                 (let ((temp266_1 temp266_0))
-                                                   (namespace-save-shifted-requires!.1
-                                                    temp267_0
-                                                    ns142_0
-                                                    record-shifted-requires-at-name_0
-                                                    temp266_1))))
-                                             (void)))))
+                                                                             (let ((lst_2
+                                                                                    (vector-ref
+                                                                                     mpi/boxed+phases_0
+                                                                                     1)))
+                                                                               (begin
+                                                                                 (letrec*
+                                                                                  ((for-loop_1
+                                                                                    (|#%name|
+                                                                                     for-loop
+                                                                                     (lambda (lst_3)
+                                                                                       (begin
+                                                                                         (if (pair?
+                                                                                              lst_3)
+                                                                                           (let ((req-phase_0
+                                                                                                  (unsafe-car
+                                                                                                   lst_3)))
+                                                                                             (let ((rest_1
+                                                                                                    (unsafe-cdr
+                                                                                                     lst_3)))
+                                                                                               (begin
+                                                                                                 (recur-instantiate!_0
+                                                                                                  req-mpi_0
+                                                                                                  req-phase_0
+                                                                                                  (box?
+                                                                                                   req-mpi/boxed_0))
+                                                                                                 (for-loop_1
+                                                                                                  rest_1))))
+                                                                                           (values)))))))
+                                                                                  (for-loop_1
+                                                                                   lst_2))))
+                                                                             (void))))
+                                                                       (for-loop_0
+                                                                        rest_0))))
+                                                                 (values)))))))
+                                                        (for-loop_0 lst_0))))
+                                                   (void)))
+                                               (if record-shifted-requires-at-name_0
+                                                 (let ((temp266_0
+                                                        (module-instance-shifted-requires
+                                                         mi141_0)))
+                                                   (let ((temp267_0
+                                                          (module-flattened-requires
+                                                           m_1)))
+                                                     (let ((temp266_1
+                                                            temp266_0))
+                                                       (namespace-save-shifted-requires!.1
+                                                        temp267_0
+                                                        ns142_0
+                                                        record-shifted-requires-at-name_0
+                                                        temp266_1))))
+                                                 (void)))))))
                                      (void))
                                    (if (begin-unsafe (not instance-phase_0))
                                      (void)
@@ -31349,9 +31358,24 @@
                                                                                                       "cannot find module while flattening requires"
                                                                                                       "module"
                                                                                                       name_0))
-                                                                                                   (let ((flattened?_0
-                                                                                                          (module-flattened-requires
-                                                                                                           m_0)))
+                                                                                                   (if (if (module-cross-phase-persistent?
+                                                                                                            m_0)
+                                                                                                         (if (not
+                                                                                                              (eqv?
+                                                                                                               phase_1
+                                                                                                               0))
+                                                                                                           (not
+                                                                                                            (begin-unsafe
+                                                                                                             (not
+                                                                                                              phase_1)))
+                                                                                                           #f)
+                                                                                                         #f)
+                                                                                                     (loop_0
+                                                                                                      name-to-phases_4
+                                                                                                      all-mpis_2
+                                                                                                      mpi_1
+                                                                                                      0
+                                                                                                      add?_0)
                                                                                                      (call-with-values
                                                                                                       (lambda ()
                                                                                                         (let ((lst_3
@@ -31439,8 +31463,7 @@
                                                                                                                                                                      mpi_1)
                                                                                                                                                                     new-phase_0
                                                                                                                                                                     (if add?_0
-                                                                                                                                                                      (not
-                                                                                                                                                                       flattened?_0)
+                                                                                                                                                                      #t
                                                                                                                                                                       #f)))
                                                                                                                                                                  (lambda (name-to-phases_7
                                                                                                                                                                           all-mpis_5)
@@ -31485,10 +31508,7 @@
                                                                                                         (values
                                                                                                          new-name-to-phases_0
                                                                                                          (add_0
-                                                                                                          (if flattened?_0
-                                                                                                            (box-immutable
-                                                                                                             mpi_1)
-                                                                                                            mpi_1)
+                                                                                                          mpi_1
                                                                                                           new-all-mpis_0)))))))))))))))))
                                                                               (loop_0
                                                                                name-to-phases_3
@@ -58427,7 +58447,8 @@
                                     maybe-mod-name_0
                                     phase_1
                                     attach-instances?_0
-                                    attach-phase_0)
+                                    attach-phase_0
+                                    recur?_0)
                              (begin
                                (let ((mod-name_0
                                       (if maybe-mod-name_0
@@ -58489,7 +58510,8 @@
                                               mod-name_0
                                               0
                                               attach-instances?_0
-                                              0)
+                                              0
+                                              recur?_0)
                                              (let ((already-m_0
                                                     (namespace->module
                                                      dest-namespace12_0
@@ -58519,8 +58541,12 @@
                                                     (lambda ()
                                                       (if (if attach-this-instance?_0
                                                             attach-this-instance?_0
-                                                            (module-cross-phase-persistent?
-                                                             m_0))
+                                                            (if (module-cross-phase-persistent?
+                                                                 m_0)
+                                                              (not
+                                                               (begin-unsafe
+                                                                (not phase_1)))
+                                                              #f))
                                                         (let ((m-ns_1
                                                                (namespace->module-namespace.1
                                                                 #f
@@ -58637,7 +58663,9 @@
                                                               mod-name_0
                                                               xform_0
                                                               default_0))))
-                                                        (if already?_0
+                                                        (if (if already?_0
+                                                              already?_0
+                                                              (not recur?_0))
                                                           (void)
                                                           (let ((shifted-requires_0
                                                                  (if mi_0
@@ -58698,7 +58726,8 @@
                                                                                                                  (car
                                                                                                                   phase+mpis_0))
                                                                                                                 attach-instances?_0
-                                                                                                                attach-phase_0)
+                                                                                                                attach-phase_0
+                                                                                                                #t)
                                                                                                                (void))
                                                                                                              (for-loop_1
                                                                                                               rest_1))))
@@ -58770,7 +58799,9 @@
                                                                                                                     phase_1
                                                                                                                     req-phase_0)
                                                                                                                    attach-instances?_0
-                                                                                                                   attach-phase_0)
+                                                                                                                   attach-phase_0
+                                                                                                                   (box?
+                                                                                                                    mpi/boxed_0))
                                                                                                                   (for-loop_1
                                                                                                                    rest_1))))
                                                                                                             (values)))))))
@@ -58866,7 +58897,8 @@
                                                                                                                                 (car
                                                                                                                                  phase+reqs_0))
                                                                                                                                attach-instances?_0
-                                                                                                                               attach-phase_0))
+                                                                                                                               attach-phase_0
+                                                                                                                               #t))
                                                                                                                             (values))
                                                                                                                           (values)))
                                                                                                                       (lambda ()
@@ -58950,7 +58982,9 @@
                                                                                                                       phase_1
                                                                                                                       req-phase_0)
                                                                                                                      attach-instances?_0
-                                                                                                                     attach-phase_0))
+                                                                                                                     attach-phase_0
+                                                                                                                     (box?
+                                                                                                                      mpi/boxed_0)))
                                                                                                                   (for-loop_1
                                                                                                                    rest_1))))
                                                                                                             (values)))))))
@@ -59006,7 +59040,8 @@
                                                                                            submod-name_0))))
                                                                                      #f
                                                                                      #f
-                                                                                     attach-phase_0))
+                                                                                     attach-phase_0
+                                                                                     #t))
                                                                                   (for-loop_0
                                                                                    rest_0))))
                                                                             (values)))))))
@@ -59023,7 +59058,8 @@
                                                                  #f
                                                                  #f
                                                                  #f
-                                                                 attach-phase_0)
+                                                                 attach-phase_0
+                                                                 #t)
                                                                 (void)))))))))))))))
                                      (void)))))))))
                         (loop_0
@@ -59037,7 +59073,8 @@
                            #f)
                          phase_0
                          attach-instances?7_0
-                         phase_0))
+                         phase_0
+                         #t))
                        (begin
                          (begin
                            (letrec*
