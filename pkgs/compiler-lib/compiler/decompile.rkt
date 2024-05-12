@@ -108,7 +108,7 @@
                                   #:when (exact-integer? k))
                          k)
                        <))
-  (define-values (mpi-vector requires recur-requires provides phase-to-link-modules)
+  (define-values (mpi-vector requires recur-requires flattened-requires provides phase-to-link-modules)
     (deserialize-requires-and-provides l))
   (define (phase-wrap phase l)
     (case phase
@@ -133,6 +133,16 @@
                                                    [recur? (in-list recurs)]
                                                    #:when recur?)
                                           (collapse-module-path-index mpi)))))))
+       ,@(if flattened-requires
+             `((quote (flattened: ,@(for/list ([mpi/boxed+phases (in-list flattened-requires)])
+                                      (define mpi/boxed (vector-ref mpi/boxed+phases 0))
+                                      (define mpi (if (box? mpi/boxed) (unbox mpi/boxed) mpi/boxed))
+                                      (cons (let ([mpi (collapse-module-path-index mpi)])
+                                              (if (box? mpi/boxed)
+                                                  (box mpi)
+                                                  mpi))
+                                            (vector-ref mpi/boxed+phases 1))))))
+             null)
        (provide ,@(apply
                    append
                    (for/list ([(phase ht) (in-hash provides)])

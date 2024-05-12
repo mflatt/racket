@@ -62,7 +62,7 @@
              empty-syntax-literals-data-instance]))))
    
    (define (decl key)
-     (instance-variable-value declaration-instance key))
+     (instance-variable-value declaration-instance key (lambda () #f))) ;; FIXME - remove temporary failure handler
    
    (define pre-submodule-names (hash-ref h 'pre null))
    (define post-submodule-names (hash-ref h 'post null))
@@ -101,6 +101,7 @@
 
    (define requires (decl 'requires))
    (define recur-requires (decl 'recur-requires))
+   (define flattened-requires (decl 'flattened-requires))
    (define provides (decl 'provides))
    (define original-self (decl 'self-mpi))
    (define phase-to-link-modules (decl 'phase-to-link-modules))
@@ -139,6 +140,7 @@
                               #:self original-self
                               #:requires requires
                               #:recur-requires recur-requires
+                              #:flattened-requires flattened-requires
                               #:provides provides
                               #:language-info language-info
                               #:realm realm
@@ -425,6 +427,7 @@
                  'self-mpi (compiled-in-memory-original-self cim)
                  'requires (compiled-in-memory-requires cim)
                  'recur-requires (compiled-in-memory-recur-requires cim)
+                 'flattened-requires (compiled-in-memory-flattened-requires cim)
                  'provides (compiled-in-memory-provides cim)
                  'phase-to-link-modules (compiled-in-memory-phase-to-link-module-uses cim)
                  'portal-stxes (compiled-in-memory-portal-stxes cim)))

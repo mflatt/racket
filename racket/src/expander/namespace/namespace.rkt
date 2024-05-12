@@ -219,10 +219,10 @@
 (define (namespace->instance ns phase-shift)
   (definitions-variables (namespace->definitions ns phase-shift)))
 
-(define (namespace-same-instance? a-ns b-ns)
+(define (namespace-same-instance? a-ns b-ns phase-level)
   (eq? (small-hash-ref (namespace-phase-level-to-definitions a-ns)
-                       0
+                       phase-level
                        'no-a)
        (small-hash-ref (namespace-phase-level-to-definitions b-ns)
-                       0
+                       phase-level
                        'no-b)))

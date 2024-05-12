@@ -34,6 +34,7 @@
          module-self
          module-requires
          module-recur-requires
+         module-flattened-requires
          module-provides
          module-primitive?
          module-is-predefined?
@@ -71,6 +72,7 @@
                 self            ; module path index used for a self reference
                 requires        ; list of (cons phase list-of-module-path-index)
                 recur-requires  ; list of (list boolean ...) in parallel to `requires`
+                flattened-requires ; #f or list of (vector mpi (list phase ...)), which is flattened version of `requires`
                 provides        ; phase-level -> sym -> binding or (provided binding bool bool); see [*] below
                 [access #:mutable] ; phase-level -> sym -> 'provided or 'protected; computed on demand from `provides`
                 language-info   ; #f or vector
@@ -115,6 +117,7 @@
                      #:recur-requires [recur-requires (for/list ([phase+mps (in-list requires)])
                                                         (for/list ([mp (in-list (cdr phase+mps))])
                                                           #t))]
+                     #:flattened-requires [flattened-requires #f]
                      #:amalgam-back [amalgam-back #f] ; not currently used
                      #:amalgam-parts [amalgam-parts #f] ; not currently used
                      #:provides provides
@@ -139,6 +142,7 @@
           self
           (fresh-requires requires)
           recur-requires
+          flattened-requires
           provides
           #f ; access
           language-info
@@ -160,7 +164,7 @@
 
 (struct module-instance (namespace
                          module                        ; can be #f for the module being expanded
-                         [shifted-requires #:mutable]  ; computed on demand; shifted from `module-requires`
+                         [shifted-requires #:mutable]  ; computed on demand; shifted from `module-requires` or `module-flattened-requires`
                          phase-level-to-state          ; phase-level -> #f, 'available, or 'started
                          [made-available? #:mutable]   ; no #f in `phase-level-to-state`?
                          [attached? #:mutable]         ; whether the instance has been attached elsewhere
@@ -415,6 +419,7 @@
                                        #:otherwise-available? [otherwise-available? #t]
                                        #:seen [seen #hasheq()]
                                        #:seen-list [seen-list null]
+                                       #:recur? [recur? #t]
                                        #:minimum-inspector [minimum-inspector #f]
                                        #:transitive-record [transitive-modules #f])
   (unless (module-path-index? mpi)
@@ -433,6 +438,7 @@
                           #:otherwise-available? otherwise-available?
                           #:seen seen
                           #:seen-list seen-list
+                          #:recur? recur?
                           #:minimum-inspector minimum-inspector
                           #:transitive-record transitive-modules))
   ;; If the module is cross-phase persistent, make sure it's instantiated
@@ -502,6 +508,7 @@
 (define (run-module-instance! mi ns #:run-phase run-phase
                               #:skip-run? skip-run? 
                               #:otherwise-available? otherwise-available?
+                              #:recur? [recur? #t]
                               #:seen [seen #hasheq()]
                               #:seen-list [seen-list null]
                               #:minimum-inspector [minimum-inspector #f]
@@ -545,53 +552,82 @@
                      "  dependency chain:"
                      (module-instances->indented-module-names mi seen-list))))
 
-     ;; If we haven't shifted required mpis already, do that;
-     ;; the list of required mpis is pruned to the set that we
-     ;; need to explicitly instaniate, where others are presumed
-     ;; to be instantiated transitively and we should skip trying
-     ;; again for this module's direct require
-     (define record-shifted-requires-at-name
-       (cond
-         [(module-instance-shifted-requires mi) #f]
-         [else
-          (define name (module-path-index-resolve mpi))
-          (define requires (module-requires m))
-          (define recur-requires (module-recur-requires m))
-          (define shifted-requires
-            (for/list ([phase+mpis (in-list requires)]
-                       [recurs (in-list recur-requires)]
-                       [resolved-paths (in-list (namespace-find-shifted-requires ns name requires))])
-              (cons (car phase+mpis)
-                    (for/list ([req-mpi (in-list (cdr phase+mpis))]
-                               [recur? (in-list recurs)]
-                               [resolved-path (in-list resolved-paths)]
-                               #:when recur?)
-                      (module-path-index-shift/resolved req-mpi
-                                                        (module-self m)
-                                                        mpi
-                                                        resolved-path)))))
-          (set-module-instance-shifted-requires! mi shifted-requires)
-          name]))
+     (when recur?
 
-     ;; Recur for required modules:
-     (for ([phase+mpis (in-list (module-instance-shifted-requires mi))])
-       (define req-phase (car phase+mpis))
-       (for ([req-mpi (in-list (cdr phase+mpis))])
+       ;; If we haven't shifted required mpis already, do that;
+       ;; the list of required mpis is pruned to the set that we
+       ;; need to explicitly instaniate, where others are presumed
+       ;; to be instantiated transitively and we should skip trying
+       ;; again for this module's direct require
+       (define record-shifted-requires-at-name
+         (cond
+           [(module-instance-shifted-requires mi) #f]
+           [else
+            (define name (module-path-index-resolve mpi))
+            (define requires (module-requires m))
+            (define recur-requires (module-recur-requires m))
+            (define flattened-requires (module-flattened-requires m))
+            (define shifted-requires
+              (if (not flattened-requires)
+                  (for/list ([phase+mpis (in-list requires)]
+                             [recurs (in-list recur-requires)]
+                             [resolved-paths (in-list (namespace-find-shifted-requires ns name requires))])
+                    (cons (car phase+mpis)
+                          (for/list ([req-mpi (in-list (cdr phase+mpis))]
+                                     [recur (in-list recurs)]
+                                     [resolved-path (in-list resolved-paths)])
+                            (and recur
+                                 (module-path-index-shift/resolved req-mpi
+                                                                   (module-self m)
+                                                                   mpi
+                                                                   resolved-path)))))
+                  (for/list ([mpi/box+phases (in-list flattened-requires)]
+                             [resolved-path (in-list (namespace-find-shifted-requires ns name flattened-requires
+                                                                                      #:flattened? #t))])
+                    (define mpi/box (vector-ref mpi/box+phases 0))
+                    (define req-mpi (if (box? mpi/box) (unbox mpi/box) mpi/box))
+                    (define new-req-mpi (module-path-index-shift/resolved req-mpi
+                                                                          (module-self m)
+                                                                          mpi
+                                                                          resolved-path))
+                    (vector-immutable (if (box? mpi/box) (box-immutable new-req-mpi) new-req-mpi)
+                                      (vector-ref mpi/box+phases 1)))))
+            (set-module-instance-shifted-requires! mi shifted-requires)
+            name]))
+
+       ;; Recur for required modules:
+       (define (recur-instantiate! req-mpi req-phase req-recur?)
          (namespace-module-instantiate! ns req-mpi (phase+ instance-phase req-phase)
                                         #:run-phase run-phase
                                         #:skip-run? skip-run?
                                         #:otherwise-available? otherwise-available?
                                         #:seen (hash-set seen mi #t)
                                         #:seen-list (cons mi seen-list)
+                                        #:recur? req-recur?
                                         #:minimum-inspector inspector
-                                        #:transitive-record transitive-modules)))
+                                        #:transitive-record transitive-modules))
+       (if (not (module-flattened-requires m))
+           ;; traverse per-phase list of mpis
+           (for ([phase+mpis (in-list (module-instance-shifted-requires mi))]
+                 [recurs (in-list (module-recur-requires m))])
+             (define req-phase (car phase+mpis))
+             (for ([req-mpi (in-list (cdr phase+mpis))]
+                   [recur (in-list recurs)]
+                   #:when req-mpi)
+               (recur-instantiate! req-mpi req-phase recur)))
+           ;; traverse per-mpi list of phases
+           (for ([mpi/boxed+phases (in-list (module-instance-shifted-requires mi))])
+             (define req-mpi/boxed (vector-ref mpi/boxed+phases 0)) ; boxed => do recur
+             (define req-mpi (if (box? req-mpi/boxed) (unbox req-mpi/boxed) req-mpi/boxed))
+             (for ([req-phase (in-list (vector-ref mpi/boxed+phases 1))])
+               (recur-instantiate! req-mpi req-phase (box? req-mpi/boxed)))))
 
-     (when record-shifted-requires-at-name
-       ;; Recur forced resolutions, so we can now save resolved paths for future use
-       (namespace-save-shifted-requires! ns
-                                         record-shifted-requires-at-name
-                                         (module-recur-requires m)
-                                         (module-instance-shifted-requires mi)))
+       (when record-shifted-requires-at-name
+         ;; Recur forced resolutions, so we can now save resolved paths for future use
+         (namespace-save-shifted-requires! ns
+                                           record-shifted-requires-at-name
+                                           (module-instance-shifted-requires mi)
+                                           #:flattened? (module-flattened-requires m))))
 
      ;; Run or make available phases of the module body:
      (unless (label-phase? instance-phase)
@@ -649,34 +685,38 @@
   (define mi (hash-ref (namespace-module-instances ns) (make-resolved-module-path name)))
   (run-module-instance! mi ns #:run-phase 1 #:skip-run? #f #:otherwise-available? #t))
 
-(define (namespace-find-shifted-requires ns name requires)
+(define (namespace-find-shifted-requires ns name requires
+                                         #:flattened? [flattened? #f])
   (or (hash-ref (namespace-module-instance-shifted-requires ns) name #f)
-      (for/list ([phase+mpis (in-list requires)])
-        (for/list ([mpi (in-list (cdr phase+mpis))])
-          #f))))
+      (if (not flattened?)
+          (for/list ([phase+mpis (in-list requires)])
+            (for/list ([mpi (in-list (cdr phase+mpis))])
+              #f))
+          (for/list ([mpi/boxed+phases (in-list requires)])
+            #f))))
 
-(define (namespace-save-shifted-requires! ns name recur?ss shifted-requires)
+(define (namespace-save-shifted-requires! ns name shifted-requires
+                                          #:flattened? [flattened? #f])
+  (define (resolve mpi)
+    ;; keep only the resolved path, and keep only for filesystem paths;
+    ;; note that module-expansion instances can get an mpi that maps to
+    ;; an `'expanded` symbol, and we don't want to keep that  
+    (define r (and mpi (module-path-index-resolve mpi)))
+    (and r
+         (let ([name (resolved-module-path-name r)])
+           (and (or (path? name)
+                    (and (pair? name) (path? (car name))))
+                r))))
   (hash-set! (namespace-module-instance-shifted-requires ns)
              name
-             ;; keep only the resolved path, and keep only for filesystem paths;
-             ;; note that module-expansion instances can get an mpi that maps to
-             ;; an `'expanded` symbol, and we don't want to keep that
-             (for/list ([phase+mpis (in-list shifted-requires)]
-                        [recur?s (in-list recur?ss)])
-               (let loop ([recur?s recur?s]
-                          [mpis (cdr phase+mpis)])
-                 (cond
-                   [(null? recur?s) null]
-                   [(not (car recur?s)) (cons #f (loop (cdr recur?s) mpis))]
-                   [else
-                    (define mpi (car mpis))
-                    (define r (module-path-index-resolve mpi))
-                    (cons (and r
-                               (let ([name (resolved-module-path-name r)])
-                                 (and (or (path? name)
-                                          (and (pair? name) (path? (car name))))
-                                      r)))
-                          (loop (cdr recur?s) (cdr mpis)))])))))
+             (if (not flattened?)
+                 (for/list ([phase+mpis (in-list shifted-requires)])
+                   (for/list ([mpi (in-list (cdr phase+mpis))])
+                     (resolve mpi)))
+                 (for/list ([mpi/boxed+phases (in-list shifted-requires)])
+                   (define mpi/boxed (vector-ref mpi/boxed+phases 0))
+                   (define mpi (if (box? mpi/boxed) (unbox mpi/boxed) mpi/boxed))
+                   (resolve mpi)))))
 
 (define (namespace-copy-shifted-requires! dest-namespace src-namespace name)
   (define sr (hash-ref (namespace-module-instance-shifted-requires src-namespace) name #f))
