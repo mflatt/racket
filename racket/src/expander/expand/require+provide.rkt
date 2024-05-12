@@ -643,7 +643,7 @@
     (define phases-in-order (sort (hash-keys phase-to-mpis-in-order) phase<?))
     (define-values (name-to-phases all-mpis)
       (for*/fold ([name-to-phases #hasheq()]
-                  [all-mpis '()]) ; list of (cons name mpi/boxed)
+                  [all-mpis '()]) ; list of (cons name mpi)
                  ([phase (in-list phases-in-order)]
                   [mpi (in-list (reverse (hash-ref phase-to-mpis-in-order phase)))]
                   #:unless (eq? mpi old-self))
@@ -660,10 +660,10 @@
             [else
              ;; Mark `name` as done to avoid re-traversing:
              (define done-name-to-phases (hash-set name-to-phases name (hash-set at-name phase #t)))
-             (define (add mpi/boxed all-mpis)
+             (define (add mpi all-mpis)
                (if (hash-ref name-to-phases name #f)
                    all-mpis
-                   (cons (cons name mpi/boxed) all-mpis)))
+                   (cons (cons name mpi) all-mpis)))
              (define m (namespace->module ns name))
              (unless m
                (raise-arguments-error 'module
@@ -699,10 +699,10 @@
           (let ([lst (hash-keys phases #t)])
             (hash-set! interned phases lst)
             lst)))
-    (for/list ([name+mpi/boxed (in-list (reverse all-mpis))])
-      (define name (car name+mpi/boxed))
-      (define mpi/boxed (cdr name+mpi/boxed))
-      (vector-immutable mpi/boxed
+    (for/list ([name+mpi (in-list (reverse all-mpis))])
+      (define name (car name+mpi))
+      (define mpi (cdr name+mpi))
+      (vector-immutable mpi
                         (intern-phases (hash-ref name-to-phases name)))))
 
   (define (extract-provides)

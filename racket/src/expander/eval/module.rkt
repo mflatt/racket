@@ -62,7 +62,7 @@
              empty-syntax-literals-data-instance]))))
    
    (define (decl key)
-     (instance-variable-value declaration-instance key (lambda () #f))) ;; FIXME - remove temporary failure handler
+     (instance-variable-value declaration-instance key))
    
    (define pre-submodule-names (hash-ref h 'pre null))
    (define post-submodule-names (hash-ref h 'post null))

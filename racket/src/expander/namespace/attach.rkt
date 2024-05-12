@@ -139,16 +139,15 @@
                             attach-phase
                             #t)))
                   ;; per-mpi list of phases
-                  (for ([mpi/boxed+phases (in-list (module-instance-shifted-requires mi))])
-                    (define mpi/boxed (vector-ref mpi/boxed+phases 0))
-                    (define mpi (if (box? mpi/boxed) (unbox mpi/boxed) mpi/boxed))
-                    (for ([req-phase (in-list (vector-ref mpi/boxed+phases 1))])
+                  (for ([mpi+phases (in-list (module-instance-shifted-requires mi))])
+                    (define mpi (vector-ref mpi+phases 0))
+                    (for ([req-phase (in-list (vector-ref mpi+phases 1))])
                       (loop mpi
                             #f
                             (phase+ phase req-phase)
                             attach-instances?
                             attach-phase
-                            (box? mpi/boxed)))))
+                            #f))))
               (if (not (module-flattened-requires m))
                   ;; per-phase list of mpis
                   (for ([phase+reqs (in-list (module-requires m))]
@@ -166,10 +165,9 @@
                           attach-phase
                           #t))
                   ;; per-mpi list of phases:
-                  (for ([mpi/boxed+phases (in-list (module-flattened-requires m))])
-                    (define mpi/boxed (vector-ref mpi/boxed+phases 0))
-                    (define req (if (box? mpi/boxed) (unbox mpi/boxed) mpi/boxed))
-                    (for ([req-phase (in-list (vector-ref mpi/boxed+phases 1))])
+                  (for ([mpi+phases (in-list (module-flattened-requires m))])
+                    (define req (vector-ref mpi+phases 0))
+                    (for ([req-phase (in-list (vector-ref mpi+phases 1))])
                       (loop (module-path-index-shift req
                                                      (module-self m)
                                                      mpi)
@@ -177,7 +175,7 @@
                             (phase+ phase req-phase)
                             attach-instances?
                             attach-phase
-                            (box? mpi/boxed))))))
+                            #f)))))
           (for ([submod-name (in-list (module-submodule-names m))])
             (loop (module-path-index-join `(submod "." ,submod-name) mpi)
                   (make-resolved-module-path
