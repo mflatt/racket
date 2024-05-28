@@ -4087,6 +4087,9 @@
 (define-values
  (prop:binding-reach-scopes binding-reach-scopes? binding-reach-scopes-ref)
  (make-struct-type-property 'binding-reach-scopes))
+(define-values
+ (prop:binding-shift-report binding-shift-report? binding-shift-report-ref)
+ (make-struct-type-property 'binding-shift-report))
 (define log-performance?
   (if (environment-variables-ref
        (current-environment-variables)
@@ -6894,16 +6897,16 @@
   (lambda (small-ht_0 key_0 val_0)
     (set-box! small-ht_0 (hash-set (unbox small-ht_0) key_0 val_0))))
 (define small-hash-keys (lambda (small-ht_0) (hash-keys (unbox small-ht_0))))
-(define finish_3075
+(define finish_2886
   (make-struct-type-install-properties
    '(serialize-state)
-   14
+   16
    0
    #f
    (list (cons prop:authentic #t))
    (current-inspector)
    #f
-   '(0 1 2 3 4 5 6 7 8 9 10 11 12 13)
+   '(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
    #f
    'serialize-state))
 (define struct:serialize-state
@@ -6913,8 +6916,8 @@
    (|#%nongenerative-uid| serialize-state)
    #f
    #f
-   '(14 . 0)))
-(define effect_2707 (finish_3075 struct:serialize-state))
+   '(16 . 0)))
+(define effect_2707 (finish_2886 struct:serialize-state))
 (define serialize-state1.1
   (|#%name|
    serialize-state
@@ -6948,34 +6951,46 @@
   (|#%name|
    serialize-state-mpi-shifts
    (record-accessor struct:serialize-state 6)))
+(define serialize-state-drop-shifts?
+  (|#%name|
+   serialize-state-drop-shifts?
+   (record-accessor struct:serialize-state 7)))
 (define serialize-state-context-triples
   (|#%name|
    serialize-state-context-triples
-   (record-accessor struct:serialize-state 7)))
+   (record-accessor struct:serialize-state 8)))
 (define serialize-state-props
-  (|#%name| serialize-state-props (record-accessor struct:serialize-state 8)))
+  (|#%name| serialize-state-props (record-accessor struct:serialize-state 9)))
 (define serialize-state-interned-props
   (|#%name|
    serialize-state-interned-props
-   (record-accessor struct:serialize-state 9)))
+   (record-accessor struct:serialize-state 10)))
 (define serialize-state-syntax-context
   (|#%name|
    serialize-state-syntax-context
-   (record-accessor struct:serialize-state 10)))
+   (record-accessor struct:serialize-state 11)))
 (define serialize-state-sharing-syntaxes
   (|#%name|
    serialize-state-sharing-syntaxes
-   (record-accessor struct:serialize-state 11)))
+   (record-accessor struct:serialize-state 12)))
 (define serialize-state-preserve-prop-keys
   (|#%name|
    serialize-state-preserve-prop-keys
-   (record-accessor struct:serialize-state 12)))
+   (record-accessor struct:serialize-state 13)))
 (define serialize-state-keep-provides?
   (|#%name|
    serialize-state-keep-provides?
-   (record-accessor struct:serialize-state 13)))
+   (record-accessor struct:serialize-state 14)))
+(define serialize-state-map-binding-symbol
+  (|#%name|
+   serialize-state-map-binding-symbol
+   (record-accessor struct:serialize-state 15)))
 (define make-serialize-state
-  (lambda (reachable-scopes_0 preserve-prop-keys_0 keep-provides?_0)
+  (lambda (reachable-scopes_0
+           preserve-prop-keys_0
+           keep-provides?_0
+           drop-shifts?_0
+           map-binding-symbol_0)
     (let ((state_0
            (let ((app_0 (make-hasheq)))
              (let ((app_1 (make-hasheq)))
@@ -6995,13 +7010,15 @@
                                 app_3
                                 app_4
                                 app_5
+                                drop-shifts?_0
                                 app_6
                                 app_7
                                 app_8
                                 app_9
                                 (make-hasheq)
                                 preserve-prop-keys_0
-                                keep-provides?_0)))))))))))))
+                                keep-provides?_0
+                                map-binding-symbol_0)))))))))))))
       (let ((empty-seteq_0 (seteq)))
         (begin
           (hash-set!
@@ -7589,7 +7606,7 @@
   (|#%name|
    modified-content-scope-propagations+taint
    (record-accessor struct:modified-content 1)))
-(define finish_2769
+(define finish_2976
   (make-struct-type-install-properties
    '(syntax)
    7
@@ -7734,7 +7751,11 @@
                           (intern-context-triple
                            app_0
                            app_1
-                           (intern-mpi-shifts (syntax-mpi-shifts s_0) state_0)
+                           (if (serialize-state-drop-shifts? state_0)
+                             null
+                             (intern-mpi-shifts
+                              (syntax-mpi-shifts s_0)
+                              state_0))
                            state_0)))))
                  (let ((stx-state_0 (get-syntax-context state_0)))
                    (if (if properties_0 properties_0 taint_0)
@@ -7855,7 +7876,7 @@
    #t
    #f
    '(7 . 1)))
-(define effect_2447 (finish_2769 struct:syntax))
+(define effect_2447 (finish_2976 struct:syntax))
 (define syntax2.1
   (|#%name|
    syntax
@@ -8554,7 +8575,7 @@
   (lambda (b_0)
     (let ((or-part_0 (simple-module-binding? b_0)))
       (if or-part_0 or-part_0 (full-module-binding? b_0)))))
-(define finish_2397
+(define finish_3005
   (make-struct-type-install-properties
    '(full-module-binding)
    9
@@ -8562,6 +8583,41 @@
    struct:full-binding
    (list
     (cons prop:authentic #t)
+    (cons
+     prop:binding-shift-report
+     (lambda (b_0 bulk-shifts_0 report-shifts_0)
+       (begin
+         (|#%app|
+          report-shifts_0
+          (full-module-binding-module b_0)
+          bulk-shifts_0)
+         (|#%app|
+          report-shifts_0
+          (full-module-binding-nominal-module b_0)
+          bulk-shifts_0)
+         (let ((lst_0 (full-module-binding-extra-nominal-bindings b_0)))
+           (begin
+             (letrec*
+              ((for-loop_0
+                (|#%name|
+                 for-loop
+                 (lambda (lst_1)
+                   (begin
+                     (if (pair? lst_1)
+                       (let ((b_1 (unsafe-car lst_1)))
+                         (let ((rest_0 (unsafe-cdr lst_1)))
+                           (begin
+                             (if (binding-shift-report? b_1)
+                               (|#%app|
+                                (binding-shift-report-ref b_1)
+                                b_1
+                                bulk-shifts_0
+                                report-shifts_0)
+                               (void))
+                             (for-loop_0 rest_0))))
+                       (values)))))))
+              (for-loop_0 lst_0))))
+         (void))))
     (cons
      prop:serialize
      (lambda (b_0 ser-push!_0 state_0)
@@ -8585,7 +8641,13 @@
            (begin
              (|#%app| ser-push!_0 'tag kw2804)
              (|#%app| ser-push!_0 (full-module-binding-module b_0))
-             (|#%app| ser-push!_0 (full-module-binding-sym b_0))
+             (|#%app|
+              ser-push!_0
+              (|#%app|
+               (serialize-state-map-binding-symbol state_0)
+               (full-module-binding-module b_0)
+               (full-module-binding-phase b_0)
+               (full-module-binding-sym b_0)))
              (|#%app| ser-push!_0 (full-module-binding-phase b_0))
              (|#%app| ser-push!_0 (full-module-binding-nominal-module b_0))
              (|#%app|
@@ -8616,7 +8678,7 @@
    #f
    #f
    '(9 . 0)))
-(define effect_2481 (finish_2397 struct:full-module-binding))
+(define effect_2481 (finish_3005 struct:full-module-binding))
 (define full-module-binding45.1
   (|#%name|
    full-module-binding
@@ -8662,7 +8724,7 @@
   (|#%name|
    full-module-binding-extra-nominal-bindings
    (record-accessor struct:full-module-binding 8)))
-(define finish_2371
+(define finish_2512
   (make-struct-type-install-properties
    '(simple-module-binding)
    4
@@ -8671,12 +8733,30 @@
    (list
     (cons prop:authentic #t)
     (cons
+     prop:binding-shift-report
+     (lambda (b_0 bulk-shifts_0 report-shifts_0)
+       (begin
+         (|#%app|
+          report-shifts_0
+          (simple-module-binding-module b_0)
+          bulk-shifts_0)
+         (|#%app|
+          report-shifts_0
+          (simple-module-binding-nominal-module b_0)
+          bulk-shifts_0))))
+    (cons
      prop:serialize
      (lambda (b_0 ser-push!_0 state_0)
        (begin
          (|#%app| ser-push!_0 'tag kw2755)
          (|#%app| ser-push!_0 (simple-module-binding-module b_0))
-         (|#%app| ser-push!_0 (simple-module-binding-sym b_0))
+         (|#%app|
+          ser-push!_0
+          (|#%app|
+           (serialize-state-map-binding-symbol state_0)
+           (simple-module-binding-module b_0)
+           (simple-module-binding-phase b_0)
+           (simple-module-binding-sym b_0)))
          (|#%app| ser-push!_0 (simple-module-binding-phase b_0))
          (|#%app| ser-push!_0 (simple-module-binding-nominal-module b_0))))))
    #f
@@ -8692,7 +8772,7 @@
    #f
    #f
    '(4 . 0)))
-(define effect_2891 (finish_2371 struct:simple-module-binding))
+(define effect_2891 (finish_2512 struct:simple-module-binding))
 (define simple-module-binding46.1
   (|#%name|
    simple-module-binding
@@ -8934,16 +9014,16 @@
 (define-values
  (prop:bulk-binding bulk-binding?$1 bulk-binding-ref)
  (make-struct-type-property 'bulk-binding))
-(define finish_2649
+(define finish_2732
   (make-struct-type-install-properties
    '(bulk-binding-class)
-   3
+   4
    0
    #f
    null
    (current-inspector)
    #f
-   '(0 1 2)
+   '(0 1 2 3)
    #f
    'bulk-binding-class))
 (define struct:bulk-binding-class
@@ -8953,8 +9033,8 @@
    (|#%nongenerative-uid| bulk-binding-class)
    #f
    #f
-   '(3 . 0)))
-(define effect_2841 (finish_2649 struct:bulk-binding-class))
+   '(4 . 0)))
+(define effect_2841 (finish_2732 struct:bulk-binding-class))
 (define bulk-binding-class3.1
   (|#%name|
    bulk-binding-class
@@ -9023,6 +9103,23 @@
          2
          s
          'modname))))))
+(define bulk-binding-class-report-shifts_2318
+  (|#%name|
+   bulk-binding-class-report-shifts
+   (record-accessor struct:bulk-binding-class 3)))
+(define bulk-binding-class-report-shifts
+  (|#%name|
+   bulk-binding-class-report-shifts
+   (lambda (s)
+     (if (bulk-binding-class?_2308 s)
+       (bulk-binding-class-report-shifts_2318 s)
+       ($value
+        (impersonate-ref
+         bulk-binding-class-report-shifts_2318
+         struct:bulk-binding-class
+         3
+         s
+         'report-shifts))))))
 (define bulk-binding-symbols
   (lambda (b_0 s_0 extra-shifts_0)
     (let ((app_0 (bulk-binding-class-get-symbols (bulk-binding-ref b_0))))
@@ -9045,6 +9142,13 @@
             b_0
             extra-shifts_0))
           (bulk-binding-symbols b_0 #f extra-shifts_0))))))
+(define bulk-binding-report-shifts
+  (lambda (b_0 bulk-shifts_0 report-shifts_0)
+    (|#%app|
+     (bulk-binding-class-report-shifts (bulk-binding-ref b_0))
+     b_0
+     bulk-shifts_0
+     report-shifts_0)))
 (define binding-table-empty?
   (lambda (bt_0) (if (hash? bt_0) (zero? (hash-count bt_0)) #f)))
 (define binding-table-add
@@ -9584,7 +9688,8 @@
            get-reachable-scopes_0
            bulk-shifts_0
            reach_0
-           register-trigger_0)
+           register-trigger_0
+           report-shifts_0)
     (begin
       (let ((ht_0
              (if (hash? bt_0)
@@ -9619,21 +9724,33 @@
                                           i_1))
                                        (lambda (scopes_0 binding_0)
                                          (begin
-                                           (let ((v_0
-                                                  (if (binding-reach-scopes?
+                                           (begin
+                                             (if (if report-shifts_0
+                                                   (binding-shift-report?
+                                                    binding_0)
+                                                   #f)
+                                               (|#%app|
+                                                (binding-shift-report-ref
+                                                 binding_0)
+                                                binding_0
+                                                bulk-shifts_0
+                                                report-shifts_0)
+                                               (void))
+                                             (let ((v_0
+                                                    (if (binding-reach-scopes?
+                                                         binding_0)
+                                                      (|#%app|
+                                                       (binding-reach-scopes-ref
+                                                        binding_0)
                                                        binding_0)
-                                                    (|#%app|
-                                                     (binding-reach-scopes-ref
-                                                      binding_0)
-                                                     binding_0)
-                                                    #f)))
-                                             (scopes-register-reachable
-                                              scopes_0
-                                              v_0
-                                              get-reachable-scopes_0
-                                              bulk-shifts_0
-                                              reach_0
-                                              register-trigger_0))
+                                                      #f)))
+                                               (scopes-register-reachable
+                                                scopes_0
+                                                v_0
+                                                get-reachable-scopes_0
+                                                bulk-shifts_0
+                                                reach_0
+                                                register-trigger_0)))
                                            (for-loop_1
                                             (unsafe-immutable-hash-iterate-next
                                              bindings-for-sym_0
@@ -9667,6 +9784,16 @@
                                   (force-bulk-bindings
                                    (bulk-binding-at-bulk bba_0)
                                    bulk-shifts_0)
+                                  (void))
+                                (if report-shifts_0
+                                  (let ((b_0 (bulk-binding-at-bulk bba_0)))
+                                    (begin-unsafe
+                                     (|#%app|
+                                      (bulk-binding-class-report-shifts
+                                       (bulk-binding-ref b_0))
+                                      b_0
+                                      bulk-shifts_0
+                                      report-shifts_0)))
                                   (void))
                                 (scopes-register-reachable
                                  (bulk-binding-at-scopes bba_0)
@@ -10465,7 +10592,7 @@
             s_0))))))
 (define cache-place-init!
   (lambda () (begin (resolve-cache-place-init!) (sets-place-init!))))
-(define finish_3056
+(define finish_2436
   (make-struct-type-install-properties
    '(scope)
    3
@@ -10479,13 +10606,15 @@
               get-reachable-scopes_0
               extra-shifts_0
               reach_0
-              register-trigger_0)
+              register-trigger_0
+              report-shifts_0)
        (binding-table-register-reachable
         (scope-binding-table s_0)
         get-reachable-scopes_0
         extra-shifts_0
         reach_0
-        register-trigger_0)))
+        register-trigger_0
+        report-shifts_0)))
     (cons prop:reach-scopes (lambda (s_0 extra-shifts_0 reach_0) (void)))
     (cons
      prop:serialize-fill!
@@ -10534,7 +10663,7 @@
    #f
    #f
    '(3 . 4)))
-(define effect_2269 (finish_3056 struct:scope))
+(define effect_2269 (finish_2436 struct:scope))
 (define scope1.1
   (|#%name|
    scope
@@ -10606,7 +10735,7 @@
   (|#%name| interned-scope? (record-predicate struct:interned-scope)))
 (define interned-scope-key
   (|#%name| interned-scope-key (record-accessor struct:interned-scope 0)))
-(define finish_2430
+(define finish_2710
   (make-struct-type-install-properties
    '(multi-scope)
    5
@@ -10621,7 +10750,8 @@
               get-reachable-scopes_0
               bulk-shifts_0
               reach_0
-              register-trigger_0)
+              register-trigger_0
+              report-shifts_0)
        (begin
          (let ((ht_0 (unbox (multi-scope-scopes ms_0))))
            (begin
@@ -10730,7 +10860,7 @@
    #t
    #f
    '(5 . 0)))
-(define effect_1895 (finish_2430 struct:multi-scope))
+(define effect_1895 (finish_2710 struct:multi-scope))
 (define multi-scope3.1
   (|#%name|
    multi-scope
@@ -14278,7 +14408,7 @@
                   unsafe-undefined
                   unsafe-undefined
                   binding_0))))))))))
-(define finish_2014
+(define finish_3010
   (make-struct-type-install-properties
    '(bulk-binding)
    8
@@ -14388,7 +14518,50 @@
       (lambda (b_0 mpi-shifts_0)
         (begin-unsafe
          (1/module-path-index-resolve
-          (apply-syntax-shifts (bulk-binding-mpi b_0) mpi-shifts_0)))))))
+          (apply-syntax-shifts (bulk-binding-mpi b_0) mpi-shifts_0))))
+      (lambda (b_0 bulk-shifts_0 report-shifts_0)
+        (begin
+          (|#%app| report-shifts_0 (bulk-binding-mpi b_0) bulk-shifts_0)
+          (let ((more-bulk-shifts_0
+                 (append
+                  bulk-shifts_0
+                  (list
+                   (let ((app_0 (bulk-binding-self b_0)))
+                     (cons app_0 (bulk-binding-mpi b_0)))))))
+            (begin
+              (|#%app|
+               report-shifts_0
+               (bulk-binding-self b_0)
+               more-bulk-shifts_0)
+              (let ((provides_0 (bulk-binding-provides b_0)))
+                (if provides_0
+                  (begin
+                    (begin
+                      (letrec*
+                       ((for-loop_0
+                         (|#%name|
+                          for-loop
+                          (lambda (i_0)
+                            (begin
+                              (if i_0
+                                (let ((binding/p_0
+                                       (hash-iterate-value provides_0 i_0)))
+                                  (begin
+                                    (let ((binding_0
+                                           (provided-as-binding binding/p_0)))
+                                      (if (binding-shift-report? binding_0)
+                                        (|#%app|
+                                         (binding-shift-report-ref binding_0)
+                                         binding_0
+                                         more-bulk-shifts_0
+                                         report-shifts_0)
+                                        (void)))
+                                    (for-loop_0
+                                     (hash-iterate-next provides_0 i_0))))
+                                (values)))))))
+                       (for-loop_0 (hash-iterate-first provides_0))))
+                    (void))
+                  (void))))))))))
    (current-inspector)
    #f
    '(1 2 4 5 6 7)
@@ -14402,7 +14575,7 @@
    #f
    #f
    '(8 . 9)))
-(define effect_2834 (finish_2014 struct:bulk-binding))
+(define effect_2834 (finish_3010 struct:bulk-binding))
 (define bulk-binding12.1
   (|#%name|
    bulk-binding
@@ -19281,7 +19454,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish817
+  (let ((finish822
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -19301,7 +19474,7 @@
             #f
             #f
             '(1 . 0))))
-      (let ((effect818 (finish817 struct:set!-transformer_0)))
+      (let ((effect823 (finish822 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -24726,6 +24899,72 @@
                   (let ((pos_0 (hash-count positions_0)))
                     (begin (hash-set! positions_0 mpi_2 pos_0) pos_0)))))))
         (void)))))
+(define module-path-index-table-mpis
+  (lambda (mpis_0)
+    (let ((table_0 hash2589))
+      (let ((pos->mpi_0
+             (let ((table_1 table_0))
+               (let ((ht_0 (module-path-index-table-positions mpis_0)))
+                 (begin
+                   (letrec*
+                    ((for-loop_0
+                      (|#%name|
+                       for-loop
+                       (lambda (table_2 i_0)
+                         (begin
+                           (if i_0
+                             (call-with-values
+                              (lambda () (hash-iterate-key+value ht_0 i_0))
+                              (lambda (mpi_0 pos_0)
+                                (let ((table_3
+                                       (let ((table_3
+                                              (call-with-values
+                                               (lambda () (values pos_0 mpi_0))
+                                               (lambda (key_0 val_0)
+                                                 (hash-set
+                                                  table_2
+                                                  key_0
+                                                  val_0)))))
+                                         (values table_3))))
+                                  (for-loop_0
+                                   table_3
+                                   (hash-iterate-next ht_0 i_0)))))
+                             table_2))))))
+                    (for-loop_0 table_1 (hash-iterate-first ht_0))))))))
+        (call-with-values
+         (lambda ()
+           (let ((vec_0 (let ((vec_0 (make-vector 16))) vec_0)))
+             (let ((end_0 (hash-count pos->mpi_0)))
+               (begin
+                 (letrec*
+                  ((for-loop_0
+                    (|#%name|
+                     for-loop
+                     (lambda (vec_1 i_0 pos_0)
+                       (begin
+                         (if (< pos_0 end_0)
+                           (call-with-values
+                            (lambda ()
+                              (call-with-values
+                               (lambda ()
+                                 (let ((new-vec_0
+                                        (if (eq?
+                                             i_0
+                                             (unsafe-vector*-length vec_1))
+                                          (grow-vector vec_1)
+                                          vec_1)))
+                                   (begin
+                                     (unsafe-vector*-set!
+                                      new-vec_0
+                                      i_0
+                                      (hash-ref pos->mpi_0 pos_0))
+                                     (values new-vec_0 (unsafe-fx+ i_0 1)))))
+                               (lambda (vec_2 i_1) (values vec_2 i_1))))
+                            (lambda (vec_2 i_1)
+                              (for-loop_0 vec_2 i_1 (+ pos_0 1))))
+                           (values vec_1 i_0)))))))
+                  (for-loop_0 vec_0 0 0))))))
+         (lambda (vec_0 i_0) (shrink-vector vec_0 i_0)))))))
 (define generate-module-path-index-deserialize.1
   (|#%name|
    generate-module-path-index-deserialize
@@ -25185,9 +25424,12 @@
                 (generate-deserialize.1
                  #f
                  #f
+                 unsafe-undefined
+                 unsafe-undefined
                  mpis_0
                  #f
                  hash2610
+                 #f
                  #f
                  requires_0))))
           (let ((app_3
@@ -25203,9 +25445,12 @@
                       (generate-deserialize.1
                        #f
                        #f
+                       unsafe-undefined
+                       unsafe-undefined
                        mpis_0
                        #f
                        hash2610
+                       #f
                        #f
                        flattened-requires_0)
                       ''#f))))
@@ -25216,9 +25461,12 @@
                       (generate-deserialize.1
                        #f
                        #f
+                       unsafe-undefined
+                       unsafe-undefined
                        mpis_0
                        provides_0
                        hash2610
+                       #f
                        #f
                        provides_0))))
                 (list
@@ -25295,8 +25543,8 @@
 (define serialize-phase-to-link-module-uses
   (lambda (phase-to-link-module-uses_0 mpis_0)
     (let ((phases-in-order_0
-           (let ((temp32_0 (hash-keys phase-to-link-module-uses_0)))
-             (sort.1 #f #f temp32_0 <))))
+           (let ((temp38_0 (hash-keys phase-to-link-module-uses_0)))
+             (sort.1 #f #f temp38_0 <))))
       (list*
        'hasheqv
        (apply
@@ -25334,227 +25582,166 @@
    generate-deserialize
    (lambda (as-data?7_0
             keep-provides?10_0
+            map-binding-symbol13_0
+            map-mpi12_0
             mpis6_0
             phase+space-hasheqv11_0
             preserve-prop-keys9_0
+            report-mpi-shifts14_0
             syntax-support?8_0
-            v18_0)
+            v24_0)
      (begin
-       (let ((bulk-shifts_0 (if keep-provides?10_0 (list (make-hasheq)) #f)))
-         (let ((reachable-scopes_0
-                (find-reachable-scopes v18_0 bulk-shifts_0)))
-           (let ((state_0
-                  (make-serialize-state
-                   reachable-scopes_0
-                   preserve-prop-keys9_0
-                   (if keep-provides?10_0
-                     (lambda (b_0)
-                       (let ((name_0 (hash-ref (car bulk-shifts_0) b_0 #f)))
-                         (let ((or-part_0 (not name_0)))
-                           (if or-part_0
-                             or-part_0
-                             (|#%app| keep-provides?10_0 name_0)))))
-                     #f))))
-             (let ((mutables_0 (make-hasheq)))
-               (let ((objs_0 (make-hasheq)))
-                 (let ((shares_0 (make-hasheq)))
-                   (let ((obj-step_0 0))
-                     (let ((frontier_0 null))
-                       (letrec*
-                        ((add-frontier!_0
-                          (|#%name|
-                           add-frontier!
-                           (case-lambda
-                            ((v_0)
-                             (begin (set! frontier_0 (cons v_0 frontier_0))))
-                            ((kind_0 v_0) (add-frontier!_0 v_0))))))
-                        (begin
-                          (letrec*
-                           ((frontier-loop_0
-                             (|#%name|
-                              frontier-loop
-                              (lambda (v_0)
-                                (begin
-                                  (begin
-                                    (letrec*
-                                     ((loop_0
-                                       (|#%name|
-                                        loop
-                                        (lambda (v_1)
-                                          (begin
-                                            (if (let ((or-part_0
-                                                       (interned-literal?
-                                                        v_1)))
-                                                  (if or-part_0
-                                                    or-part_0
-                                                    (1/module-path-index?
-                                                     v_1)))
-                                              (void)
-                                              (if (hash-ref objs_0 v_1 #f)
-                                                (if (hash-ref
-                                                     mutables_0
-                                                     v_1
-                                                     #f)
+       (let ((map-mpi_0
+              (if (eq? map-mpi12_0 unsafe-undefined)
+                (|#%name| map-mpi (lambda (mpi_0) (begin mpi_0)))
+                map-mpi12_0)))
+         (let ((map-binding-symbol_0
+                (if (eq? map-binding-symbol13_0 unsafe-undefined)
+                  (|#%name|
+                   map-binding-symbol
+                   (lambda (mpi_0 phase_0 sym_0) (begin sym_0)))
+                  map-binding-symbol13_0)))
+           (let ((bulk-shifts_0
+                  (if keep-provides?10_0 (list (make-hasheq)) #f)))
+             (let ((reachable-scopes_0
+                    (find-reachable-scopes
+                     v24_0
+                     bulk-shifts_0
+                     report-mpi-shifts14_0)))
+               (let ((state_0
+                      (make-serialize-state
+                       reachable-scopes_0
+                       preserve-prop-keys9_0
+                       (if keep-provides?10_0
+                         (lambda (b_0)
+                           (let ((name_0
+                                  (hash-ref (car bulk-shifts_0) b_0 #f)))
+                             (let ((or-part_0 (not name_0)))
+                               (if or-part_0
+                                 or-part_0
+                                 (|#%app| keep-provides?10_0 name_0)))))
+                         #f)
+                       (if report-mpi-shifts14_0 #t #f)
+                       map-binding-symbol_0)))
+                 (let ((mutables_0 (make-hasheq)))
+                   (let ((objs_0 (make-hasheq)))
+                     (let ((shares_0 (make-hasheq)))
+                       (let ((obj-step_0 0))
+                         (let ((frontier_0 null))
+                           (letrec*
+                            ((add-frontier!_0
+                              (|#%name|
+                               add-frontier!
+                               (case-lambda
+                                ((v_0)
+                                 (begin
+                                   (set! frontier_0 (cons v_0 frontier_0))))
+                                ((kind_0 v_0) (add-frontier!_0 v_0))))))
+                            (begin
+                              (letrec*
+                               ((frontier-loop_0
+                                 (|#%name|
+                                  frontier-loop
+                                  (lambda (v_0)
+                                    (begin
+                                      (begin
+                                        (letrec*
+                                         ((loop_0
+                                           (|#%name|
+                                            loop
+                                            (lambda (v_1)
+                                              (begin
+                                                (if (let ((or-part_0
+                                                           (interned-literal?
+                                                            v_1)))
+                                                      (if or-part_0
+                                                        or-part_0
+                                                        (1/module-path-index?
+                                                         v_1)))
                                                   (void)
-                                                  (hash-set! shares_0 v_1 #t))
-                                                (begin
-                                                  (if (serialize-fill!? v_1)
-                                                    (begin
+                                                  (if (hash-ref objs_0 v_1 #f)
+                                                    (if (hash-ref
+                                                         mutables_0
+                                                         v_1
+                                                         #f)
+                                                      (void)
                                                       (hash-set!
-                                                       mutables_0
+                                                       shares_0
                                                        v_1
-                                                       (hash-count mutables_0))
-                                                      (|#%app|
-                                                       (serialize-fill!-ref
-                                                        v_1)
-                                                       v_1
-                                                       add-frontier!_0
-                                                       state_0))
-                                                    (if (serialize? v_1)
-                                                      (|#%app|
-                                                       (serialize-ref v_1)
-                                                       v_1
-                                                       (case-lambda
-                                                        ((sub-v_0)
-                                                         (loop_0 sub-v_0))
-                                                        ((kind_0 sub-v_0)
-                                                         (loop_0 sub-v_0)))
-                                                       state_0)
-                                                      (if (pair? v_1)
+                                                       #t))
+                                                    (begin
+                                                      (if (serialize-fill!?
+                                                           v_1)
                                                         (begin
-                                                          (loop_0 (car v_1))
-                                                          (loop_0 (cdr v_1)))
-                                                        (if (vector? v_1)
-                                                          (if (let ((or-part_0
-                                                                     (immutable?
-                                                                      v_1)))
-                                                                (if or-part_0
-                                                                  or-part_0
-                                                                  (zero?
-                                                                   (vector-length
-                                                                    v_1))))
+                                                          (hash-set!
+                                                           mutables_0
+                                                           v_1
+                                                           (hash-count
+                                                            mutables_0))
+                                                          (|#%app|
+                                                           (serialize-fill!-ref
+                                                            v_1)
+                                                           v_1
+                                                           add-frontier!_0
+                                                           state_0))
+                                                        (if (serialize? v_1)
+                                                          (|#%app|
+                                                           (serialize-ref v_1)
+                                                           v_1
+                                                           (case-lambda
+                                                            ((sub-v_0)
+                                                             (loop_0 sub-v_0))
+                                                            ((kind_0 sub-v_0)
+                                                             (loop_0 sub-v_0)))
+                                                           state_0)
+                                                          (if (pair? v_1)
                                                             (begin
-                                                              (call-with-values
-                                                               (lambda ()
-                                                                 (begin
-                                                                   (values
-                                                                    v_1
-                                                                    (unsafe-vector-length
-                                                                     v_1))))
-                                                               (lambda (vec_0
-                                                                        len_0)
-                                                                 (letrec*
-                                                                  ((for-loop_0
-                                                                    (|#%name|
-                                                                     for-loop
-                                                                     (lambda (pos_0)
-                                                                       (begin
-                                                                         (if (unsafe-fx<
-                                                                              pos_0
-                                                                              len_0)
-                                                                           (let ((e_0
-                                                                                  (unsafe-vector-ref
-                                                                                   vec_0
-                                                                                   pos_0)))
-                                                                             (begin
-                                                                               (loop_0
-                                                                                e_0)
-                                                                               (for-loop_0
-                                                                                (unsafe-fx+
-                                                                                 1
-                                                                                 pos_0))))
-                                                                           (values)))))))
-                                                                  (for-loop_0
-                                                                   0))))
-                                                              (void))
-                                                            (begin
-                                                              (hash-set!
-                                                               mutables_0
-                                                               v_1
-                                                               (hash-count
-                                                                mutables_0))
-                                                              (begin
-                                                                (call-with-values
-                                                                 (lambda ()
-                                                                   (begin
-                                                                     (values
-                                                                      v_1
-                                                                      (unsafe-vector-length
-                                                                       v_1))))
-                                                                 (lambda (vec_0
-                                                                          len_0)
-                                                                   (letrec*
-                                                                    ((for-loop_0
-                                                                      (|#%name|
-                                                                       for-loop
-                                                                       (lambda (pos_0)
-                                                                         (begin
-                                                                           (if (unsafe-fx<
-                                                                                pos_0
-                                                                                len_0)
-                                                                             (let ((e_0
-                                                                                    (unsafe-vector-ref
-                                                                                     vec_0
-                                                                                     pos_0)))
-                                                                               (begin
-                                                                                 (add-frontier!_0
-                                                                                  e_0)
-                                                                                 (for-loop_0
-                                                                                  (unsafe-fx+
-                                                                                   1
-                                                                                   pos_0))))
-                                                                             (values)))))))
-                                                                    (for-loop_0
-                                                                     0))))
-                                                                (void))))
-                                                          (if (box? v_1)
-                                                            (if (immutable?
-                                                                 v_1)
                                                               (loop_0
-                                                               (unbox v_1))
-                                                              (begin
-                                                                (hash-set!
-                                                                 mutables_0
-                                                                 v_1
-                                                                 (hash-count
-                                                                  mutables_0))
-                                                                (add-frontier!_0
-                                                                 (unbox v_1))))
-                                                            (if (hash? v_1)
-                                                              (if (immutable?
-                                                                   v_1)
-                                                                (begin
-                                                                  (let ((lst_0
-                                                                         (sorted-hash-keys
+                                                               (car v_1))
+                                                              (loop_0
+                                                               (cdr v_1)))
+                                                            (if (vector? v_1)
+                                                              (if (let ((or-part_0
+                                                                         (immutable?
                                                                           v_1)))
-                                                                    (begin
-                                                                      (letrec*
-                                                                       ((for-loop_0
-                                                                         (|#%name|
-                                                                          for-loop
-                                                                          (lambda (lst_1)
-                                                                            (begin
-                                                                              (if (pair?
-                                                                                   lst_1)
-                                                                                (let ((k_0
-                                                                                       (unsafe-car
-                                                                                        lst_1)))
-                                                                                  (let ((rest_0
-                                                                                         (unsafe-cdr
-                                                                                          lst_1)))
-                                                                                    (begin
-                                                                                      (begin
-                                                                                        (loop_0
-                                                                                         k_0)
-                                                                                        (loop_0
-                                                                                         (hash-ref
-                                                                                          v_1
-                                                                                          k_0)))
-                                                                                      (for-loop_0
-                                                                                       rest_0))))
-                                                                                (values)))))))
-                                                                       (for-loop_0
-                                                                        lst_0))))
+                                                                    (if or-part_0
+                                                                      or-part_0
+                                                                      (zero?
+                                                                       (vector-length
+                                                                        v_1))))
+                                                                (begin
+                                                                  (call-with-values
+                                                                   (lambda ()
+                                                                     (begin
+                                                                       (values
+                                                                        v_1
+                                                                        (unsafe-vector-length
+                                                                         v_1))))
+                                                                   (lambda (vec_0
+                                                                            len_0)
+                                                                     (letrec*
+                                                                      ((for-loop_0
+                                                                        (|#%name|
+                                                                         for-loop
+                                                                         (lambda (pos_0)
+                                                                           (begin
+                                                                             (if (unsafe-fx<
+                                                                                  pos_0
+                                                                                  len_0)
+                                                                               (let ((e_0
+                                                                                      (unsafe-vector-ref
+                                                                                       vec_0
+                                                                                       pos_0)))
+                                                                                 (begin
+                                                                                   (loop_0
+                                                                                    e_0)
+                                                                                   (for-loop_0
+                                                                                    (unsafe-fx+
+                                                                                     1
+                                                                                     pos_0))))
+                                                                               (values)))))))
+                                                                      (for-loop_0
+                                                                       0))))
                                                                   (void))
                                                                 (begin
                                                                   (hash-set!
@@ -25563,84 +25750,130 @@
                                                                    (hash-count
                                                                     mutables_0))
                                                                   (begin
-                                                                    (let ((lst_0
-                                                                           (sorted-hash-keys
-                                                                            v_1)))
-                                                                      (begin
-                                                                        (letrec*
-                                                                         ((for-loop_0
-                                                                           (|#%name|
-                                                                            for-loop
-                                                                            (lambda (lst_1)
-                                                                              (begin
-                                                                                (if (pair?
-                                                                                     lst_1)
-                                                                                  (let ((k_0
-                                                                                         (unsafe-car
-                                                                                          lst_1)))
-                                                                                    (let ((rest_0
-                                                                                           (unsafe-cdr
-                                                                                            lst_1)))
-                                                                                      (begin
-                                                                                        (begin
-                                                                                          (add-frontier!_0
-                                                                                           k_0)
-                                                                                          (add-frontier!_0
-                                                                                           (hash-ref
-                                                                                            v_1
-                                                                                            k_0)))
-                                                                                        (for-loop_0
-                                                                                         rest_0))))
-                                                                                  (values)))))))
-                                                                         (for-loop_0
-                                                                          lst_0))))
+                                                                    (call-with-values
+                                                                     (lambda ()
+                                                                       (begin
+                                                                         (values
+                                                                          v_1
+                                                                          (unsafe-vector-length
+                                                                           v_1))))
+                                                                     (lambda (vec_0
+                                                                              len_0)
+                                                                       (letrec*
+                                                                        ((for-loop_0
+                                                                          (|#%name|
+                                                                           for-loop
+                                                                           (lambda (pos_0)
+                                                                             (begin
+                                                                               (if (unsafe-fx<
+                                                                                    pos_0
+                                                                                    len_0)
+                                                                                 (let ((e_0
+                                                                                        (unsafe-vector-ref
+                                                                                         vec_0
+                                                                                         pos_0)))
+                                                                                   (begin
+                                                                                     (add-frontier!_0
+                                                                                      e_0)
+                                                                                     (for-loop_0
+                                                                                      (unsafe-fx+
+                                                                                       1
+                                                                                       pos_0))))
+                                                                                 (values)))))))
+                                                                        (for-loop_0
+                                                                         0))))
                                                                     (void))))
-                                                              (if (prefab-struct-key
-                                                                   v_1)
-                                                                (begin
-                                                                  (call-with-values
-                                                                   (lambda ()
-                                                                     (unsafe-normalise-inputs
-                                                                      unsafe-vector-length
-                                                                      (struct->vector
-                                                                       v_1)
-                                                                      1
-                                                                      #f
-                                                                      1))
-                                                                   (lambda (v*_0
-                                                                            start*_0
-                                                                            stop*_0
-                                                                            step*_0)
-                                                                     (letrec*
-                                                                      ((for-loop_0
-                                                                        (|#%name|
-                                                                         for-loop
-                                                                         (lambda (idx_0)
-                                                                           (begin
-                                                                             (if (unsafe-fx<
-                                                                                  idx_0
-                                                                                  stop*_0)
-                                                                               (let ((e_0
-                                                                                      (unsafe-vector-ref
-                                                                                       v*_0
-                                                                                       idx_0)))
-                                                                                 (begin
-                                                                                   (loop_0
-                                                                                    e_0)
-                                                                                   (for-loop_0
-                                                                                    (unsafe-fx+
-                                                                                     idx_0
-                                                                                     1))))
-                                                                               (values)))))))
-                                                                      (for-loop_0
-                                                                       start*_0))))
-                                                                  (void))
-                                                                (if (srcloc?
+                                                              (if (box? v_1)
+                                                                (if (immutable?
                                                                      v_1)
-                                                                  (if (path?
-                                                                       (srcloc-source
-                                                                        v_1))
-                                                                    (void)
+                                                                  (loop_0
+                                                                   (unbox v_1))
+                                                                  (begin
+                                                                    (hash-set!
+                                                                     mutables_0
+                                                                     v_1
+                                                                     (hash-count
+                                                                      mutables_0))
+                                                                    (add-frontier!_0
+                                                                     (unbox
+                                                                      v_1))))
+                                                                (if (hash? v_1)
+                                                                  (if (immutable?
+                                                                       v_1)
+                                                                    (begin
+                                                                      (let ((lst_0
+                                                                             (sorted-hash-keys
+                                                                              v_1)))
+                                                                        (begin
+                                                                          (letrec*
+                                                                           ((for-loop_0
+                                                                             (|#%name|
+                                                                              for-loop
+                                                                              (lambda (lst_1)
+                                                                                (begin
+                                                                                  (if (pair?
+                                                                                       lst_1)
+                                                                                    (let ((k_0
+                                                                                           (unsafe-car
+                                                                                            lst_1)))
+                                                                                      (let ((rest_0
+                                                                                             (unsafe-cdr
+                                                                                              lst_1)))
+                                                                                        (begin
+                                                                                          (begin
+                                                                                            (loop_0
+                                                                                             k_0)
+                                                                                            (loop_0
+                                                                                             (hash-ref
+                                                                                              v_1
+                                                                                              k_0)))
+                                                                                          (for-loop_0
+                                                                                           rest_0))))
+                                                                                    (values)))))))
+                                                                           (for-loop_0
+                                                                            lst_0))))
+                                                                      (void))
+                                                                    (begin
+                                                                      (hash-set!
+                                                                       mutables_0
+                                                                       v_1
+                                                                       (hash-count
+                                                                        mutables_0))
+                                                                      (begin
+                                                                        (let ((lst_0
+                                                                               (sorted-hash-keys
+                                                                                v_1)))
+                                                                          (begin
+                                                                            (letrec*
+                                                                             ((for-loop_0
+                                                                               (|#%name|
+                                                                                for-loop
+                                                                                (lambda (lst_1)
+                                                                                  (begin
+                                                                                    (if (pair?
+                                                                                         lst_1)
+                                                                                      (let ((k_0
+                                                                                             (unsafe-car
+                                                                                              lst_1)))
+                                                                                        (let ((rest_0
+                                                                                               (unsafe-cdr
+                                                                                                lst_1)))
+                                                                                          (begin
+                                                                                            (begin
+                                                                                              (add-frontier!_0
+                                                                                               k_0)
+                                                                                              (add-frontier!_0
+                                                                                               (hash-ref
+                                                                                                v_1
+                                                                                                k_0)))
+                                                                                            (for-loop_0
+                                                                                             rest_0))))
+                                                                                      (values)))))))
+                                                                             (for-loop_0
+                                                                              lst_0))))
+                                                                        (void))))
+                                                                  (if (prefab-struct-key
+                                                                       v_1)
                                                                     (begin
                                                                       (call-with-values
                                                                        (lambda ()
@@ -25678,228 +25911,241 @@
                                                                                    (values)))))))
                                                                           (for-loop_0
                                                                            start*_0))))
-                                                                      (void)))
-                                                                  (void)))))))))
-                                                  (hash-set!
-                                                   objs_0
-                                                   v_1
-                                                   obj-step_0)
-                                                  (set! obj-step_0
-                                                    (add1 obj-step_0))))))))))
-                                     (loop_0 v_0))
-                                    (if (null? frontier_0)
-                                      (void)
-                                      (let ((l_0 frontier_0))
-                                        (begin
-                                          (set! frontier_0 null)
-                                          (begin
-                                            (letrec*
-                                             ((for-loop_0
-                                               (|#%name|
-                                                for-loop
-                                                (lambda (lst_0)
-                                                  (begin
-                                                    (if (pair? lst_0)
-                                                      (let ((v_1
-                                                             (unsafe-car
-                                                              lst_0)))
-                                                        (let ((rest_0
-                                                               (unsafe-cdr
-                                                                lst_0)))
-                                                          (begin
-                                                            (frontier-loop_0
-                                                             v_1)
-                                                            (for-loop_0
-                                                             rest_0))))
-                                                      (values)))))))
-                                             (for-loop_0 l_0)))
-                                          (void))))))))))
-                           (frontier-loop_0 v18_0))
-                          (let ((num-mutables_0 (hash-count mutables_0)))
-                            (let ((share-step-positions_0
-                                   (let ((share-steps_0
-                                          (reverse$1
-                                           (begin
-                                             (letrec*
-                                              ((for-loop_0
-                                                (|#%name|
-                                                 for-loop
-                                                 (lambda (fold-var_0 i_0)
-                                                   (begin
-                                                     (if i_0
-                                                       (let ((obj_0
-                                                              (hash-iterate-key
-                                                               shares_0
-                                                               i_0)))
-                                                         (let ((fold-var_1
-                                                                (let ((fold-var_1
-                                                                       (cons
-                                                                        (hash-ref
-                                                                         objs_0
-                                                                         obj_0)
-                                                                        fold-var_0)))
-                                                                  (values
-                                                                   fold-var_1))))
-                                                           (for-loop_0
-                                                            fold-var_1
-                                                            (hash-iterate-next
-                                                             shares_0
-                                                             i_0))))
-                                                       fold-var_0))))))
-                                              (for-loop_0
-                                               null
-                                               (hash-iterate-first
-                                                shares_0)))))))
-                                     (let ((table_0 hash2589))
-                                       (let ((table_1 table_0))
-                                         (let ((lst_0
-                                                (sort.1
-                                                 #f
-                                                 #f
-                                                 share-steps_0
-                                                 <)))
-                                           (begin
-                                             (letrec*
-                                              ((for-loop_0
-                                                (|#%name|
-                                                 for-loop
-                                                 (lambda (table_2 lst_1 pos_0)
-                                                   (begin
-                                                     (if (if (pair? lst_1)
-                                                           #t
-                                                           #f)
-                                                       (let ((step_0
-                                                              (unsafe-car
-                                                               lst_1)))
-                                                         (let ((rest_0
-                                                                (unsafe-cdr
-                                                                 lst_1)))
-                                                           (let ((table_3
-                                                                  (let ((table_3
-                                                                         (call-with-values
-                                                                          (lambda ()
-                                                                            (values
-                                                                             step_0
-                                                                             pos_0))
-                                                                          (lambda (key_0
-                                                                                   val_0)
-                                                                            (hash-set
-                                                                             table_2
-                                                                             key_0
-                                                                             val_0)))))
-                                                                    (values
-                                                                     table_3))))
-                                                             (for-loop_0
-                                                              table_3
-                                                              rest_0
-                                                              (+ pos_0 1)))))
-                                                       table_2))))))
-                                              (for-loop_0
-                                               table_1
-                                               lst_0
-                                               num-mutables_0)))))))))
-                              (let ((stream_0 null))
-                                (let ((stream-size_0 0))
-                                  (let ((next-push-position_0
-                                         (|#%name|
-                                          next-push-position
-                                          (lambda () (begin stream-size_0)))))
-                                    (let ((quoted?_0
-                                           (|#%name|
-                                            quoted?
-                                            (lambda (pos_0)
+                                                                      (void))
+                                                                    (if (srcloc?
+                                                                         v_1)
+                                                                      (if (path?
+                                                                           (srcloc-source
+                                                                            v_1))
+                                                                        (void)
+                                                                        (begin
+                                                                          (call-with-values
+                                                                           (lambda ()
+                                                                             (unsafe-normalise-inputs
+                                                                              unsafe-vector-length
+                                                                              (struct->vector
+                                                                               v_1)
+                                                                              1
+                                                                              #f
+                                                                              1))
+                                                                           (lambda (v*_0
+                                                                                    start*_0
+                                                                                    stop*_0
+                                                                                    step*_0)
+                                                                             (letrec*
+                                                                              ((for-loop_0
+                                                                                (|#%name|
+                                                                                 for-loop
+                                                                                 (lambda (idx_0)
+                                                                                   (begin
+                                                                                     (if (unsafe-fx<
+                                                                                          idx_0
+                                                                                          stop*_0)
+                                                                                       (let ((e_0
+                                                                                              (unsafe-vector-ref
+                                                                                               v*_0
+                                                                                               idx_0)))
+                                                                                         (begin
+                                                                                           (loop_0
+                                                                                            e_0)
+                                                                                           (for-loop_0
+                                                                                            (unsafe-fx+
+                                                                                             idx_0
+                                                                                             1))))
+                                                                                       (values)))))))
+                                                                              (for-loop_0
+                                                                               start*_0))))
+                                                                          (void)))
+                                                                      (void)))))))))
+                                                      (hash-set!
+                                                       objs_0
+                                                       v_1
+                                                       obj-step_0)
+                                                      (set! obj-step_0
+                                                        (add1
+                                                         obj-step_0))))))))))
+                                         (loop_0 v_0))
+                                        (if (null? frontier_0)
+                                          (void)
+                                          (let ((l_0 frontier_0))
+                                            (begin
+                                              (set! frontier_0 null)
                                               (begin
-                                                (let ((v_0
-                                                       (let ((app_0 stream_0))
-                                                         (list-ref
-                                                          app_0
-                                                          (let ((app_1
-                                                                 stream-size_0))
-                                                            (-
-                                                             app_1
-                                                             (add1 pos_0)))))))
-                                                  (let ((or-part_0
-                                                         (not (keyword? v_0))))
-                                                    (if or-part_0
-                                                      or-part_0
-                                                      (eq?
-                                                       kw2626
-                                                       v_0)))))))))
-                                      (let ((ser-reset!_0
-                                             (|#%name|
-                                              ser-reset!
-                                              (lambda (pos_0)
-                                                (begin
-                                                  (begin
-                                                    (set! stream_0
-                                                      (let ((app_0 stream_0))
-                                                        (list-tail
-                                                         app_0
-                                                         (-
-                                                          stream-size_0
-                                                          pos_0))))
-                                                    (set! stream-size_0
-                                                      pos_0)))))))
-                                        (let ((reap-stream!_0
-                                               (|#%name|
-                                                reap-stream!
-                                                (lambda ()
-                                                  (begin
-                                                    (begin0
-                                                      (list->vector
-                                                       (reverse$1 stream_0))
-                                                      (set! stream_0 null)
-                                                      (set! stream-size_0
-                                                        0)))))))
-                                          (letrec*
-                                           ((ser-push!_0
-                                             (|#%name|
-                                              ser-push!
-                                              (case-lambda
-                                               ((v_0)
-                                                (begin
-                                                  (if (hash-ref
-                                                       shares_0
-                                                       v_0
-                                                       #f)
-                                                    (let ((n_0
-                                                           (hash-ref
-                                                            share-step-positions_0
-                                                            (hash-ref
-                                                             objs_0
-                                                             v_0))))
+                                                (letrec*
+                                                 ((for-loop_0
+                                                   (|#%name|
+                                                    for-loop
+                                                    (lambda (lst_0)
                                                       (begin
-                                                        (ser-push!_0
-                                                         'tag
-                                                         kw2603)
-                                                        (ser-push!_0
-                                                         'exact
-                                                         n_0)))
-                                                    (let ((c1_0
-                                                           (hash-ref
-                                                            mutables_0
-                                                            v_0
-                                                            #f)))
-                                                      (if c1_0
-                                                        (begin
-                                                          (ser-push!_0
-                                                           'tag
-                                                           kw2603)
-                                                          (ser-push!_0
-                                                           'exact
-                                                           c1_0))
-                                                        (ser-push-encoded!_0
-                                                         v_0))))))
-                                               ((kind_0 v_0)
-                                                (if (eq? kind_0 'exact)
+                                                        (if (pair? lst_0)
+                                                          (let ((v_1
+                                                                 (unsafe-car
+                                                                  lst_0)))
+                                                            (let ((rest_0
+                                                                   (unsafe-cdr
+                                                                    lst_0)))
+                                                              (begin
+                                                                (frontier-loop_0
+                                                                 v_1)
+                                                                (for-loop_0
+                                                                 rest_0))))
+                                                          (values)))))))
+                                                 (for-loop_0 l_0)))
+                                              (void))))))))))
+                               (frontier-loop_0 v24_0))
+                              (let ((num-mutables_0 (hash-count mutables_0)))
+                                (let ((share-step-positions_0
+                                       (let ((share-steps_0
+                                              (reverse$1
+                                               (begin
+                                                 (letrec*
+                                                  ((for-loop_0
+                                                    (|#%name|
+                                                     for-loop
+                                                     (lambda (fold-var_0 i_0)
+                                                       (begin
+                                                         (if i_0
+                                                           (let ((obj_0
+                                                                  (hash-iterate-key
+                                                                   shares_0
+                                                                   i_0)))
+                                                             (let ((fold-var_1
+                                                                    (let ((fold-var_1
+                                                                           (cons
+                                                                            (hash-ref
+                                                                             objs_0
+                                                                             obj_0)
+                                                                            fold-var_0)))
+                                                                      (values
+                                                                       fold-var_1))))
+                                                               (for-loop_0
+                                                                fold-var_1
+                                                                (hash-iterate-next
+                                                                 shares_0
+                                                                 i_0))))
+                                                           fold-var_0))))))
+                                                  (for-loop_0
+                                                   null
+                                                   (hash-iterate-first
+                                                    shares_0)))))))
+                                         (let ((table_0 hash2589))
+                                           (let ((table_1 table_0))
+                                             (let ((lst_0
+                                                    (sort.1
+                                                     #f
+                                                     #f
+                                                     share-steps_0
+                                                     <)))
+                                               (begin
+                                                 (letrec*
+                                                  ((for-loop_0
+                                                    (|#%name|
+                                                     for-loop
+                                                     (lambda (table_2
+                                                              lst_1
+                                                              pos_0)
+                                                       (begin
+                                                         (if (if (pair? lst_1)
+                                                               #t
+                                                               #f)
+                                                           (let ((step_0
+                                                                  (unsafe-car
+                                                                   lst_1)))
+                                                             (let ((rest_0
+                                                                    (unsafe-cdr
+                                                                     lst_1)))
+                                                               (let ((table_3
+                                                                      (let ((table_3
+                                                                             (call-with-values
+                                                                              (lambda ()
+                                                                                (values
+                                                                                 step_0
+                                                                                 pos_0))
+                                                                              (lambda (key_0
+                                                                                       val_0)
+                                                                                (hash-set
+                                                                                 table_2
+                                                                                 key_0
+                                                                                 val_0)))))
+                                                                        (values
+                                                                         table_3))))
+                                                                 (for-loop_0
+                                                                  table_3
+                                                                  rest_0
+                                                                  (+
+                                                                   pos_0
+                                                                   1)))))
+                                                           table_2))))))
+                                                  (for-loop_0
+                                                   table_1
+                                                   lst_0
+                                                   num-mutables_0)))))))))
+                                  (let ((stream_0 null))
+                                    (let ((stream-size_0 0))
+                                      (let ((next-push-position_0
+                                             (|#%name|
+                                              next-push-position
+                                              (lambda ()
+                                                (begin stream-size_0)))))
+                                        (let ((quoted?_0
+                                               (|#%name|
+                                                quoted?
+                                                (lambda (pos_0)
                                                   (begin
-                                                    (set! stream_0
-                                                      (cons v_0 stream_0))
-                                                    (set! stream-size_0
-                                                      (add1 stream-size_0)))
-                                                  (if (eq? kind_0 'tag)
-                                                    (ser-push!_0 'exact v_0)
-                                                    (if (eq? kind_0 'reference)
+                                                    (let ((v_0
+                                                           (let ((app_0
+                                                                  stream_0))
+                                                             (list-ref
+                                                              app_0
+                                                              (let ((app_1
+                                                                     stream-size_0))
+                                                                (-
+                                                                 app_1
+                                                                 (add1
+                                                                  pos_0)))))))
+                                                      (let ((or-part_0
+                                                             (not
+                                                              (keyword? v_0))))
+                                                        (if or-part_0
+                                                          or-part_0
+                                                          (eq?
+                                                           kw2626
+                                                           v_0)))))))))
+                                          (let ((ser-reset!_0
+                                                 (|#%name|
+                                                  ser-reset!
+                                                  (lambda (pos_0)
+                                                    (begin
+                                                      (begin
+                                                        (set! stream_0
+                                                          (let ((app_0
+                                                                 stream_0))
+                                                            (list-tail
+                                                             app_0
+                                                             (-
+                                                              stream-size_0
+                                                              pos_0))))
+                                                        (set! stream-size_0
+                                                          pos_0)))))))
+                                            (let ((reap-stream!_0
+                                                   (|#%name|
+                                                    reap-stream!
+                                                    (lambda ()
+                                                      (begin
+                                                        (begin0
+                                                          (list->vector
+                                                           (reverse$1
+                                                            stream_0))
+                                                          (set! stream_0 null)
+                                                          (set! stream-size_0
+                                                            0)))))))
+                                              (letrec*
+                                               ((ser-push!_0
+                                                 (|#%name|
+                                                  ser-push!
+                                                  (case-lambda
+                                                   ((v_0)
+                                                    (begin
                                                       (if (hash-ref
                                                            shares_0
                                                            v_0
@@ -25910,153 +26156,109 @@
                                                                 (hash-ref
                                                                  objs_0
                                                                  v_0))))
-                                                          (ser-push!_0
-                                                           'exact
-                                                           n_0))
-                                                        (let ((c2_0
+                                                          (begin
+                                                            (ser-push!_0
+                                                             'tag
+                                                             kw2603)
+                                                            (ser-push!_0
+                                                             'exact
+                                                             n_0)))
+                                                        (let ((c1_0
                                                                (hash-ref
                                                                 mutables_0
                                                                 v_0
                                                                 #f)))
-                                                          (if c2_0
-                                                            (ser-push!_0
-                                                             'exact
-                                                             c2_0)
-                                                            (ser-push!_0
-                                                             v_0))))
-                                                      (ser-push!_0 v_0))))))))
-                                            (ser-push-encoded!_0
-                                             (|#%name|
-                                              ser-push-encoded!
-                                              (lambda (v_0)
-                                                (begin
-                                                  (if (keyword? v_0)
-                                                    (begin
-                                                      (ser-push!_0
-                                                       'tag
-                                                       kw2626)
-                                                      (ser-push!_0 'exact v_0))
-                                                    (if (1/module-path-index?
-                                                         v_0)
-                                                      (begin
-                                                        (ser-push!_0
-                                                         'tag
-                                                         kw3163)
-                                                        (ser-push!_0
-                                                         'exact
-                                                         (add-module-path-index!/pos
-                                                          mpis6_0
-                                                          v_0)))
-                                                      (if (serialize? v_0)
-                                                        (|#%app|
-                                                         (serialize-ref v_0)
-                                                         v_0
-                                                         ser-push!_0
-                                                         state_0)
-                                                        (if (if (list? v_0)
-                                                              (if (pair? v_0)
-                                                                (pair?
-                                                                 (cdr v_0))
-                                                                #f)
-                                                              #f)
-                                                          (let ((start-pos_0
-                                                                 (begin-unsafe
-                                                                  (begin
-                                                                    stream-size_0))))
+                                                          (if c1_0
                                                             (begin
                                                               (ser-push!_0
                                                                'tag
-                                                               kw2802)
-                                                              (begin
+                                                               kw2603)
+                                                              (ser-push!_0
+                                                               'exact
+                                                               c1_0))
+                                                            (ser-push-encoded!_0
+                                                             v_0))))))
+                                                   ((kind_0 v_0)
+                                                    (if (eq? kind_0 'exact)
+                                                      (begin
+                                                        (set! stream_0
+                                                          (cons v_0 stream_0))
+                                                        (set! stream-size_0
+                                                          (add1
+                                                           stream-size_0)))
+                                                      (if (eq? kind_0 'tag)
+                                                        (ser-push!_0
+                                                         'exact
+                                                         v_0)
+                                                        (if (eq?
+                                                             kind_0
+                                                             'reference)
+                                                          (if (hash-ref
+                                                               shares_0
+                                                               v_0
+                                                               #f)
+                                                            (let ((n_0
+                                                                   (hash-ref
+                                                                    share-step-positions_0
+                                                                    (hash-ref
+                                                                     objs_0
+                                                                     v_0))))
+                                                              (ser-push!_0
+                                                               'exact
+                                                               n_0))
+                                                            (let ((c2_0
+                                                                   (hash-ref
+                                                                    mutables_0
+                                                                    v_0
+                                                                    #f)))
+                                                              (if c2_0
                                                                 (ser-push!_0
                                                                  'exact
-                                                                 (length v_0))
-                                                                (let ((all-quoted?_0
-                                                                       (begin
-                                                                         (letrec*
-                                                                          ((for-loop_0
-                                                                            (|#%name|
-                                                                             for-loop
-                                                                             (lambda (all-quoted?_0
-                                                                                      lst_0)
-                                                                               (begin
-                                                                                 (if (pair?
-                                                                                      lst_0)
-                                                                                   (let ((i_0
-                                                                                          (unsafe-car
-                                                                                           lst_0)))
-                                                                                     (let ((rest_0
-                                                                                            (unsafe-cdr
-                                                                                             lst_0)))
-                                                                                       (let ((all-quoted?_1
-                                                                                              (let ((all-quoted?_1
-                                                                                                     (let ((i-pos_0
-                                                                                                            (begin-unsafe
-                                                                                                             (begin
-                                                                                                               stream-size_0))))
-                                                                                                       (begin
-                                                                                                         (ser-push!_0
-                                                                                                          i_0)
-                                                                                                         (if all-quoted?_0
-                                                                                                           (quoted?_0
-                                                                                                            i-pos_0)
-                                                                                                           #f)))))
-                                                                                                (values
-                                                                                                 all-quoted?_1))))
-                                                                                         (for-loop_0
-                                                                                          all-quoted?_1
-                                                                                          rest_0))))
-                                                                                   all-quoted?_0))))))
-                                                                          (for-loop_0
-                                                                           #t
-                                                                           v_0)))))
-                                                                  (if all-quoted?_0
-                                                                    (begin
-                                                                      (ser-reset!_0
-                                                                       start-pos_0)
-                                                                      (ser-push-optional-quote!_0)
-                                                                      (ser-push!_0
-                                                                       'exact
-                                                                       v_0))
-                                                                    (void))))))
-                                                          (if (pair? v_0)
-                                                            (let ((start-pos_0
-                                                                   (begin-unsafe
-                                                                    (begin
-                                                                      stream-size_0))))
-                                                              (begin
+                                                                 c2_0)
                                                                 (ser-push!_0
-                                                                 'tag
-                                                                 kw2821)
-                                                                (let ((a-pos_0
-                                                                       (begin-unsafe
-                                                                        (begin
-                                                                          stream-size_0))))
-                                                                  (begin
-                                                                    (ser-push!_0
-                                                                     (car v_0))
-                                                                    (let ((d-pos_0
-                                                                           (begin-unsafe
-                                                                            (begin
-                                                                              stream-size_0))))
-                                                                      (begin
-                                                                        (ser-push!_0
-                                                                         (cdr
-                                                                          v_0))
-                                                                        (if (if (quoted?_0
-                                                                                 a-pos_0)
-                                                                              (quoted?_0
-                                                                               d-pos_0)
-                                                                              #f)
-                                                                          (begin
-                                                                            (ser-reset!_0
-                                                                             start-pos_0)
-                                                                            (ser-push-optional-quote!_0)
-                                                                            (ser-push!_0
-                                                                             'exact
-                                                                             v_0))
-                                                                          (void))))))))
-                                                            (if (box? v_0)
+                                                                 v_0))))
+                                                          (ser-push!_0
+                                                           v_0))))))))
+                                                (ser-push-encoded!_0
+                                                 (|#%name|
+                                                  ser-push-encoded!
+                                                  (lambda (v_0)
+                                                    (begin
+                                                      (if (keyword? v_0)
+                                                        (begin
+                                                          (ser-push!_0
+                                                           'tag
+                                                           kw2626)
+                                                          (ser-push!_0
+                                                           'exact
+                                                           v_0))
+                                                        (if (1/module-path-index?
+                                                             v_0)
+                                                          (begin
+                                                            (ser-push!_0
+                                                             'tag
+                                                             kw3163)
+                                                            (ser-push!_0
+                                                             'exact
+                                                             (add-module-path-index!/pos
+                                                              mpis6_0
+                                                              (|#%app|
+                                                               map-mpi_0
+                                                               v_0))))
+                                                          (if (serialize? v_0)
+                                                            (|#%app|
+                                                             (serialize-ref
+                                                              v_0)
+                                                             v_0
+                                                             ser-push!_0
+                                                             state_0)
+                                                            (if (if (list? v_0)
+                                                                  (if (pair?
+                                                                       v_0)
+                                                                    (pair?
+                                                                     (cdr v_0))
+                                                                    #f)
+                                                                  #f)
                                                               (let ((start-pos_0
                                                                      (begin-unsafe
                                                                       (begin
@@ -26064,17 +26266,52 @@
                                                                 (begin
                                                                   (ser-push!_0
                                                                    'tag
-                                                                   kw2525)
-                                                                  (let ((v-pos_0
-                                                                         (begin-unsafe
-                                                                          (begin
-                                                                            stream-size_0))))
-                                                                    (begin
-                                                                      (ser-push!_0
-                                                                       (unbox
-                                                                        v_0))
-                                                                      (if (quoted?_0
-                                                                           v-pos_0)
+                                                                   kw2802)
+                                                                  (begin
+                                                                    (ser-push!_0
+                                                                     'exact
+                                                                     (length
+                                                                      v_0))
+                                                                    (let ((all-quoted?_0
+                                                                           (begin
+                                                                             (letrec*
+                                                                              ((for-loop_0
+                                                                                (|#%name|
+                                                                                 for-loop
+                                                                                 (lambda (all-quoted?_0
+                                                                                          lst_0)
+                                                                                   (begin
+                                                                                     (if (pair?
+                                                                                          lst_0)
+                                                                                       (let ((i_0
+                                                                                              (unsafe-car
+                                                                                               lst_0)))
+                                                                                         (let ((rest_0
+                                                                                                (unsafe-cdr
+                                                                                                 lst_0)))
+                                                                                           (let ((all-quoted?_1
+                                                                                                  (let ((all-quoted?_1
+                                                                                                         (let ((i-pos_0
+                                                                                                                (begin-unsafe
+                                                                                                                 (begin
+                                                                                                                   stream-size_0))))
+                                                                                                           (begin
+                                                                                                             (ser-push!_0
+                                                                                                              i_0)
+                                                                                                             (if all-quoted?_0
+                                                                                                               (quoted?_0
+                                                                                                                i-pos_0)
+                                                                                                               #f)))))
+                                                                                                    (values
+                                                                                                     all-quoted?_1))))
+                                                                                             (for-loop_0
+                                                                                              all-quoted?_1
+                                                                                              rest_0))))
+                                                                                       all-quoted?_0))))))
+                                                                              (for-loop_0
+                                                                               #t
+                                                                               v_0)))))
+                                                                      (if all-quoted?_0
                                                                         (begin
                                                                           (ser-reset!_0
                                                                            start-pos_0)
@@ -26083,7 +26320,7 @@
                                                                            'exact
                                                                            v_0))
                                                                         (void))))))
-                                                              (if (vector? v_0)
+                                                              (if (pair? v_0)
                                                                 (let ((start-pos_0
                                                                        (begin-unsafe
                                                                         (begin
@@ -26091,284 +26328,266 @@
                                                                   (begin
                                                                     (ser-push!_0
                                                                      'tag
-                                                                     kw2967)
-                                                                    (begin
-                                                                      (ser-push!_0
-                                                                       'exact
-                                                                       (vector-length
-                                                                        v_0))
-                                                                      (let ((all-quoted?_0
-                                                                             (call-with-values
-                                                                              (lambda ()
-                                                                                (begin
-                                                                                  (values
-                                                                                   v_0
-                                                                                   (unsafe-vector-length
-                                                                                    v_0))))
-                                                                              (lambda (vec_0
-                                                                                       len_0)
-                                                                                (letrec*
-                                                                                 ((for-loop_0
-                                                                                   (|#%name|
-                                                                                    for-loop
-                                                                                    (lambda (all-quoted?_0
-                                                                                             pos_0)
-                                                                                      (begin
-                                                                                        (if (unsafe-fx<
-                                                                                             pos_0
-                                                                                             len_0)
-                                                                                          (let ((i_0
-                                                                                                 (unsafe-vector-ref
-                                                                                                  vec_0
-                                                                                                  pos_0)))
-                                                                                            (let ((all-quoted?_1
-                                                                                                   (let ((all-quoted?_1
-                                                                                                          (let ((i-pos_0
-                                                                                                                 (begin-unsafe
-                                                                                                                  (begin
-                                                                                                                    stream-size_0))))
-                                                                                                            (begin
-                                                                                                              (ser-push!_0
-                                                                                                               i_0)
-                                                                                                              (if all-quoted?_0
-                                                                                                                (quoted?_0
-                                                                                                                 i-pos_0)
-                                                                                                                #f)))))
-                                                                                                     (values
-                                                                                                      all-quoted?_1))))
-                                                                                              (for-loop_0
-                                                                                               all-quoted?_1
-                                                                                               (unsafe-fx+
-                                                                                                1
-                                                                                                pos_0))))
-                                                                                          all-quoted?_0))))))
-                                                                                 (for-loop_0
-                                                                                  #t
-                                                                                  0))))))
-                                                                        (if all-quoted?_0
-                                                                          (begin
-                                                                            (ser-reset!_0
-                                                                             start-pos_0)
-                                                                            (ser-push-optional-quote!_0)
-                                                                            (ser-push!_0
-                                                                             'exact
-                                                                             v_0))
-                                                                          (void))))))
-                                                                (if (hash? v_0)
-                                                                  (let ((start-pos_0
-                                                                         (begin-unsafe
-                                                                          (begin
-                                                                            stream-size_0))))
-                                                                    (let ((as-set?_0
-                                                                           (begin
-                                                                             (letrec*
-                                                                              ((for-loop_0
-                                                                                (|#%name|
-                                                                                 for-loop
-                                                                                 (lambda (result_0
-                                                                                          i_0)
-                                                                                   (begin
-                                                                                     (if i_0
-                                                                                       (let ((val_0
-                                                                                              (hash-iterate-value
-                                                                                               v_0
-                                                                                               i_0)))
-                                                                                         (let ((result_1
-                                                                                                (eq?
-                                                                                                 val_0
-                                                                                                 #t)))
-                                                                                           (let ((result_2
-                                                                                                  (values
-                                                                                                   result_1)))
-                                                                                             (if (if (not
-                                                                                                      (let ((x_0
-                                                                                                             (list
-                                                                                                              val_0)))
-                                                                                                        (not
-                                                                                                         result_2)))
-                                                                                                   #t
-                                                                                                   #f)
-                                                                                               (for-loop_0
-                                                                                                result_2
-                                                                                                (hash-iterate-next
-                                                                                                 v_0
-                                                                                                 i_0))
-                                                                                               result_2))))
-                                                                                       result_0))))))
-                                                                              (for-loop_0
-                                                                               #t
-                                                                               (hash-iterate-first
-                                                                                v_0))))))
+                                                                     kw2821)
+                                                                    (let ((a-pos_0
+                                                                           (begin-unsafe
+                                                                            (begin
+                                                                              stream-size_0))))
                                                                       (begin
                                                                         (ser-push!_0
-                                                                         'tag
-                                                                         (if as-set?_0
-                                                                           (if (hash-eq?
-                                                                                v_0)
-                                                                             kw3357
-                                                                             (if (hash-eqv?
-                                                                                  v_0)
-                                                                               kw2333
-                                                                               kw2473))
-                                                                           (if (hash-eq?
-                                                                                v_0)
-                                                                             kw2796
-                                                                             (if (hash-eqv?
-                                                                                  v_0)
-                                                                               (if (eq?
-                                                                                    v_0
-                                                                                    phase+space-hasheqv11_0)
-                                                                                 kw2406
-                                                                                 kw3245)
-                                                                               kw2582))))
-                                                                        (begin
-                                                                          (ser-push!_0
-                                                                           'exact
-                                                                           (hash-count
-                                                                            v_0))
-                                                                          (let ((ks_0
-                                                                                 (sorted-hash-keys
-                                                                                  v_0)))
-                                                                            (let ((all-quoted?_0
-                                                                                   (begin
-                                                                                     (letrec*
-                                                                                      ((for-loop_0
-                                                                                        (|#%name|
-                                                                                         for-loop
-                                                                                         (lambda (all-quoted?_0
-                                                                                                  lst_0)
-                                                                                           (begin
-                                                                                             (if (pair?
-                                                                                                  lst_0)
-                                                                                               (let ((k_0
-                                                                                                      (unsafe-car
-                                                                                                       lst_0)))
-                                                                                                 (let ((rest_0
-                                                                                                        (unsafe-cdr
-                                                                                                         lst_0)))
-                                                                                                   (let ((all-quoted?_1
-                                                                                                          (let ((all-quoted?_1
-                                                                                                                 (let ((k-pos_0
-                                                                                                                        (begin-unsafe
-                                                                                                                         (begin
-                                                                                                                           stream-size_0))))
-                                                                                                                   (begin
-                                                                                                                     (ser-push!_0
-                                                                                                                      k_0)
-                                                                                                                     (let ((v-pos_0
-                                                                                                                            (begin-unsafe
-                                                                                                                             (begin
-                                                                                                                               stream-size_0))))
-                                                                                                                       (begin
-                                                                                                                         (if as-set?_0
-                                                                                                                           (void)
-                                                                                                                           (ser-push!_0
-                                                                                                                            (hash-ref
-                                                                                                                             v_0
-                                                                                                                             k_0)))
-                                                                                                                         (if all-quoted?_0
-                                                                                                                           (if (quoted?_0
-                                                                                                                                k-pos_0)
-                                                                                                                             (if as-set?_0
-                                                                                                                               as-set?_0
-                                                                                                                               (quoted?_0
-                                                                                                                                v-pos_0))
-                                                                                                                             #f)
-                                                                                                                           #f)))))))
-                                                                                                            (values
-                                                                                                             all-quoted?_1))))
-                                                                                                     (for-loop_0
-                                                                                                      all-quoted?_1
-                                                                                                      rest_0))))
-                                                                                               all-quoted?_0))))))
-                                                                                      (for-loop_0
-                                                                                       #t
-                                                                                       ks_0)))))
-                                                                              (if all-quoted?_0
-                                                                                (begin
-                                                                                  (ser-reset!_0
-                                                                                   start-pos_0)
-                                                                                  (ser-push-optional-quote!_0)
-                                                                                  (ser-push!_0
-                                                                                   'exact
-                                                                                   v_0))
-                                                                                (void))))))))
-                                                                  (let ((c3_0
-                                                                         (prefab-struct-key
-                                                                          v_0)))
-                                                                    (if c3_0
-                                                                      (let ((vec_0
-                                                                             (struct->vector
-                                                                              v_0)))
-                                                                        (let ((start-pos_0
+                                                                         (car
+                                                                          v_0))
+                                                                        (let ((d-pos_0
                                                                                (begin-unsafe
                                                                                 (begin
                                                                                   stream-size_0))))
                                                                           (begin
                                                                             (ser-push!_0
+                                                                             (cdr
+                                                                              v_0))
+                                                                            (if (if (quoted?_0
+                                                                                     a-pos_0)
+                                                                                  (quoted?_0
+                                                                                   d-pos_0)
+                                                                                  #f)
+                                                                              (begin
+                                                                                (ser-reset!_0
+                                                                                 start-pos_0)
+                                                                                (ser-push-optional-quote!_0)
+                                                                                (ser-push!_0
+                                                                                 'exact
+                                                                                 v_0))
+                                                                              (void))))))))
+                                                                (if (box? v_0)
+                                                                  (let ((start-pos_0
+                                                                         (begin-unsafe
+                                                                          (begin
+                                                                            stream-size_0))))
+                                                                    (begin
+                                                                      (ser-push!_0
+                                                                       'tag
+                                                                       kw2525)
+                                                                      (let ((v-pos_0
+                                                                             (begin-unsafe
+                                                                              (begin
+                                                                                stream-size_0))))
+                                                                        (begin
+                                                                          (ser-push!_0
+                                                                           (unbox
+                                                                            v_0))
+                                                                          (if (quoted?_0
+                                                                               v-pos_0)
+                                                                            (begin
+                                                                              (ser-reset!_0
+                                                                               start-pos_0)
+                                                                              (ser-push-optional-quote!_0)
+                                                                              (ser-push!_0
+                                                                               'exact
+                                                                               v_0))
+                                                                            (void))))))
+                                                                  (if (vector?
+                                                                       v_0)
+                                                                    (let ((start-pos_0
+                                                                           (begin-unsafe
+                                                                            (begin
+                                                                              stream-size_0))))
+                                                                      (begin
+                                                                        (ser-push!_0
+                                                                         'tag
+                                                                         kw2967)
+                                                                        (begin
+                                                                          (ser-push!_0
+                                                                           'exact
+                                                                           (vector-length
+                                                                            v_0))
+                                                                          (let ((all-quoted?_0
+                                                                                 (call-with-values
+                                                                                  (lambda ()
+                                                                                    (begin
+                                                                                      (values
+                                                                                       v_0
+                                                                                       (unsafe-vector-length
+                                                                                        v_0))))
+                                                                                  (lambda (vec_0
+                                                                                           len_0)
+                                                                                    (letrec*
+                                                                                     ((for-loop_0
+                                                                                       (|#%name|
+                                                                                        for-loop
+                                                                                        (lambda (all-quoted?_0
+                                                                                                 pos_0)
+                                                                                          (begin
+                                                                                            (if (unsafe-fx<
+                                                                                                 pos_0
+                                                                                                 len_0)
+                                                                                              (let ((i_0
+                                                                                                     (unsafe-vector-ref
+                                                                                                      vec_0
+                                                                                                      pos_0)))
+                                                                                                (let ((all-quoted?_1
+                                                                                                       (let ((all-quoted?_1
+                                                                                                              (let ((i-pos_0
+                                                                                                                     (begin-unsafe
+                                                                                                                      (begin
+                                                                                                                        stream-size_0))))
+                                                                                                                (begin
+                                                                                                                  (ser-push!_0
+                                                                                                                   i_0)
+                                                                                                                  (if all-quoted?_0
+                                                                                                                    (quoted?_0
+                                                                                                                     i-pos_0)
+                                                                                                                    #f)))))
+                                                                                                         (values
+                                                                                                          all-quoted?_1))))
+                                                                                                  (for-loop_0
+                                                                                                   all-quoted?_1
+                                                                                                   (unsafe-fx+
+                                                                                                    1
+                                                                                                    pos_0))))
+                                                                                              all-quoted?_0))))))
+                                                                                     (for-loop_0
+                                                                                      #t
+                                                                                      0))))))
+                                                                            (if all-quoted?_0
+                                                                              (begin
+                                                                                (ser-reset!_0
+                                                                                 start-pos_0)
+                                                                                (ser-push-optional-quote!_0)
+                                                                                (ser-push!_0
+                                                                                 'exact
+                                                                                 v_0))
+                                                                              (void))))))
+                                                                    (if (hash?
+                                                                         v_0)
+                                                                      (let ((start-pos_0
+                                                                             (begin-unsafe
+                                                                              (begin
+                                                                                stream-size_0))))
+                                                                        (let ((as-set?_0
+                                                                               (begin
+                                                                                 (letrec*
+                                                                                  ((for-loop_0
+                                                                                    (|#%name|
+                                                                                     for-loop
+                                                                                     (lambda (result_0
+                                                                                              i_0)
+                                                                                       (begin
+                                                                                         (if i_0
+                                                                                           (let ((val_0
+                                                                                                  (hash-iterate-value
+                                                                                                   v_0
+                                                                                                   i_0)))
+                                                                                             (let ((result_1
+                                                                                                    (eq?
+                                                                                                     val_0
+                                                                                                     #t)))
+                                                                                               (let ((result_2
+                                                                                                      (values
+                                                                                                       result_1)))
+                                                                                                 (if (if (not
+                                                                                                          (let ((x_0
+                                                                                                                 (list
+                                                                                                                  val_0)))
+                                                                                                            (not
+                                                                                                             result_2)))
+                                                                                                       #t
+                                                                                                       #f)
+                                                                                                   (for-loop_0
+                                                                                                    result_2
+                                                                                                    (hash-iterate-next
+                                                                                                     v_0
+                                                                                                     i_0))
+                                                                                                   result_2))))
+                                                                                           result_0))))))
+                                                                                  (for-loop_0
+                                                                                   #t
+                                                                                   (hash-iterate-first
+                                                                                    v_0))))))
+                                                                          (begin
+                                                                            (ser-push!_0
                                                                              'tag
-                                                                             kw2931)
+                                                                             (if as-set?_0
+                                                                               (if (hash-eq?
+                                                                                    v_0)
+                                                                                 kw3357
+                                                                                 (if (hash-eqv?
+                                                                                      v_0)
+                                                                                   kw2333
+                                                                                   kw2473))
+                                                                               (if (hash-eq?
+                                                                                    v_0)
+                                                                                 kw2796
+                                                                                 (if (hash-eqv?
+                                                                                      v_0)
+                                                                                   (if (eq?
+                                                                                        v_0
+                                                                                        phase+space-hasheqv11_0)
+                                                                                     kw2406
+                                                                                     kw3245)
+                                                                                   kw2582))))
                                                                             (begin
                                                                               (ser-push!_0
                                                                                'exact
-                                                                               c3_0)
-                                                                              (begin
-                                                                                (ser-push!_0
-                                                                                 'exact
-                                                                                 (sub1
-                                                                                  (vector-length
-                                                                                   vec_0)))
+                                                                               (hash-count
+                                                                                v_0))
+                                                                              (let ((ks_0
+                                                                                     (sorted-hash-keys
+                                                                                      v_0)))
                                                                                 (let ((all-quoted?_0
-                                                                                       (call-with-values
-                                                                                        (lambda ()
-                                                                                          (unsafe-normalise-inputs
-                                                                                           unsafe-vector-length
-                                                                                           vec_0
-                                                                                           1
-                                                                                           #f
-                                                                                           1))
-                                                                                        (lambda (v*_0
-                                                                                                 start*_0
-                                                                                                 stop*_0
-                                                                                                 step*_0)
-                                                                                          (letrec*
-                                                                                           ((for-loop_0
-                                                                                             (|#%name|
-                                                                                              for-loop
-                                                                                              (lambda (all-quoted?_0
-                                                                                                       idx_0)
-                                                                                                (begin
-                                                                                                  (if (unsafe-fx<
-                                                                                                       idx_0
-                                                                                                       stop*_0)
-                                                                                                    (let ((i_0
-                                                                                                           (unsafe-vector-ref
-                                                                                                            v*_0
-                                                                                                            idx_0)))
-                                                                                                      (let ((all-quoted?_1
-                                                                                                             (let ((all-quoted?_1
-                                                                                                                    (let ((i-pos_0
-                                                                                                                           (begin-unsafe
-                                                                                                                            (begin
-                                                                                                                              stream-size_0))))
-                                                                                                                      (begin
-                                                                                                                        (ser-push!_0
-                                                                                                                         i_0)
-                                                                                                                        (if all-quoted?_0
-                                                                                                                          (quoted?_0
-                                                                                                                           i-pos_0)
-                                                                                                                          #f)))))
-                                                                                                               (values
-                                                                                                                all-quoted?_1))))
-                                                                                                        (for-loop_0
-                                                                                                         all-quoted?_1
-                                                                                                         (unsafe-fx+
-                                                                                                          idx_0
-                                                                                                          1))))
-                                                                                                    all-quoted?_0))))))
-                                                                                           (for-loop_0
-                                                                                            #t
-                                                                                            start*_0))))))
+                                                                                       (begin
+                                                                                         (letrec*
+                                                                                          ((for-loop_0
+                                                                                            (|#%name|
+                                                                                             for-loop
+                                                                                             (lambda (all-quoted?_0
+                                                                                                      lst_0)
+                                                                                               (begin
+                                                                                                 (if (pair?
+                                                                                                      lst_0)
+                                                                                                   (let ((k_0
+                                                                                                          (unsafe-car
+                                                                                                           lst_0)))
+                                                                                                     (let ((rest_0
+                                                                                                            (unsafe-cdr
+                                                                                                             lst_0)))
+                                                                                                       (let ((all-quoted?_1
+                                                                                                              (let ((all-quoted?_1
+                                                                                                                     (let ((k-pos_0
+                                                                                                                            (begin-unsafe
+                                                                                                                             (begin
+                                                                                                                               stream-size_0))))
+                                                                                                                       (begin
+                                                                                                                         (ser-push!_0
+                                                                                                                          k_0)
+                                                                                                                         (let ((v-pos_0
+                                                                                                                                (begin-unsafe
+                                                                                                                                 (begin
+                                                                                                                                   stream-size_0))))
+                                                                                                                           (begin
+                                                                                                                             (if as-set?_0
+                                                                                                                               (void)
+                                                                                                                               (ser-push!_0
+                                                                                                                                (hash-ref
+                                                                                                                                 v_0
+                                                                                                                                 k_0)))
+                                                                                                                             (if all-quoted?_0
+                                                                                                                               (if (quoted?_0
+                                                                                                                                    k-pos_0)
+                                                                                                                                 (if as-set?_0
+                                                                                                                                   as-set?_0
+                                                                                                                                   (quoted?_0
+                                                                                                                                    v-pos_0))
+                                                                                                                                 #f)
+                                                                                                                               #f)))))))
+                                                                                                                (values
+                                                                                                                 all-quoted?_1))))
+                                                                                                         (for-loop_0
+                                                                                                          all-quoted?_1
+                                                                                                          rest_0))))
+                                                                                                   all-quoted?_0))))))
+                                                                                          (for-loop_0
+                                                                                           #t
+                                                                                           ks_0)))))
                                                                                   (if all-quoted?_0
                                                                                     (begin
                                                                                       (ser-reset!_0
@@ -26378,451 +26597,542 @@
                                                                                        'exact
                                                                                        v_0))
                                                                                     (void))))))))
-                                                                      (if (srcloc?
-                                                                           v_0)
-                                                                        (if (path?
-                                                                             (srcloc-source
-                                                                              v_0))
-                                                                          (begin
-                                                                            (ser-push-optional-quote!_0)
-                                                                            (ser-push!_0
-                                                                             'exact
-                                                                             v_0))
-                                                                          (begin
-                                                                            (ser-push!_0
-                                                                             'tag
-                                                                             kw2496)
-                                                                            (ser-push!_0
-                                                                             (srcloc-source
-                                                                              v_0))
-                                                                            (ser-push!_0
-                                                                             (srcloc-line
-                                                                              v_0))
-                                                                            (ser-push!_0
-                                                                             (srcloc-column
-                                                                              v_0))
-                                                                            (ser-push!_0
-                                                                             (srcloc-position
-                                                                              v_0))
-                                                                            (ser-push!_0
-                                                                             (srcloc-span
-                                                                              v_0))))
-                                                                        (begin
-                                                                          (ser-push-optional-quote!_0)
-                                                                          (ser-push!_0
-                                                                           'exact
-                                                                           v_0)))))))))))))))))
-                                            (ser-push-optional-quote!_0
-                                             (|#%name|
-                                              ser-push-optional-quote!
-                                              (lambda () (begin (void))))))
-                                           (let ((ser-shell!_0
-                                                  (|#%name|
-                                                   ser-shell!
-                                                   (lambda (v_0)
-                                                     (begin
-                                                       (if (serialize-fill!?
-                                                            v_0)
-                                                         (|#%app|
-                                                          (serialize-ref v_0)
-                                                          v_0
-                                                          ser-push!_0
-                                                          state_0)
-                                                         (if (box? v_0)
-                                                           (ser-push!_0
-                                                            'tag
-                                                            kw2525)
-                                                           (if (vector? v_0)
-                                                             (begin
-                                                               (ser-push!_0
-                                                                'tag
-                                                                kw2967)
-                                                               (ser-push!_0
-                                                                'exact
-                                                                (vector-length
-                                                                 v_0)))
-                                                             (if (hash? v_0)
-                                                               (ser-push!_0
-                                                                'tag
-                                                                (if (hash-eq?
-                                                                     v_0)
-                                                                  kw2796
-                                                                  (if (hash-eqv?
-                                                                       v_0)
-                                                                    kw3245
-                                                                    kw2582)))
-                                                               (error
-                                                                'ser-shell
-                                                                "unknown mutable: ~e"
-                                                                v_0))))))))))
-                                             (let ((ser-shell-fill!_0
-                                                    (|#%name|
-                                                     ser-shell-fill!
-                                                     (lambda (v_0)
-                                                       (begin
-                                                         (if (serialize-fill!?
-                                                              v_0)
-                                                           (|#%app|
-                                                            (serialize-fill!-ref
-                                                             v_0)
-                                                            v_0
-                                                            ser-push!_0
-                                                            state_0)
-                                                           (if (box? v_0)
-                                                             (begin
-                                                               (ser-push!_0
-                                                                'tag
-                                                                kw2531)
-                                                               (ser-push!_0
-                                                                (unbox v_0)))
-                                                             (if (vector? v_0)
-                                                               (begin
-                                                                 (ser-push!_0
-                                                                  'tag
-                                                                  kw3046)
-                                                                 (ser-push!_0
-                                                                  'exact
-                                                                  (vector-length
-                                                                   v_0))
-                                                                 (call-with-values
-                                                                  (lambda ()
-                                                                    (begin
-                                                                      (values
-                                                                       v_0
-                                                                       (unsafe-vector-length
-                                                                        v_0))))
-                                                                  (lambda (vec_0
-                                                                           len_0)
-                                                                    (letrec*
-                                                                     ((for-loop_0
-                                                                       (|#%name|
-                                                                        for-loop
-                                                                        (lambda (pos_0)
-                                                                          (begin
-                                                                            (if (unsafe-fx<
-                                                                                 pos_0
-                                                                                 len_0)
-                                                                              (let ((v_1
-                                                                                     (unsafe-vector-ref
-                                                                                      vec_0
-                                                                                      pos_0)))
+                                                                      (let ((c3_0
+                                                                             (prefab-struct-key
+                                                                              v_0)))
+                                                                        (if c3_0
+                                                                          (let ((vec_0
+                                                                                 (struct->vector
+                                                                                  v_0)))
+                                                                            (let ((start-pos_0
+                                                                                   (begin-unsafe
+                                                                                    (begin
+                                                                                      stream-size_0))))
+                                                                              (begin
+                                                                                (ser-push!_0
+                                                                                 'tag
+                                                                                 kw2931)
                                                                                 (begin
                                                                                   (ser-push!_0
-                                                                                   v_1)
-                                                                                  (for-loop_0
-                                                                                   (unsafe-fx+
-                                                                                    1
-                                                                                    pos_0))))
-                                                                              (values)))))))
-                                                                     (for-loop_0
-                                                                      0))))
-                                                                 (void))
-                                                               (if (hash? v_0)
+                                                                                   'exact
+                                                                                   c3_0)
+                                                                                  (begin
+                                                                                    (ser-push!_0
+                                                                                     'exact
+                                                                                     (sub1
+                                                                                      (vector-length
+                                                                                       vec_0)))
+                                                                                    (let ((all-quoted?_0
+                                                                                           (call-with-values
+                                                                                            (lambda ()
+                                                                                              (unsafe-normalise-inputs
+                                                                                               unsafe-vector-length
+                                                                                               vec_0
+                                                                                               1
+                                                                                               #f
+                                                                                               1))
+                                                                                            (lambda (v*_0
+                                                                                                     start*_0
+                                                                                                     stop*_0
+                                                                                                     step*_0)
+                                                                                              (letrec*
+                                                                                               ((for-loop_0
+                                                                                                 (|#%name|
+                                                                                                  for-loop
+                                                                                                  (lambda (all-quoted?_0
+                                                                                                           idx_0)
+                                                                                                    (begin
+                                                                                                      (if (unsafe-fx<
+                                                                                                           idx_0
+                                                                                                           stop*_0)
+                                                                                                        (let ((i_0
+                                                                                                               (unsafe-vector-ref
+                                                                                                                v*_0
+                                                                                                                idx_0)))
+                                                                                                          (let ((all-quoted?_1
+                                                                                                                 (let ((all-quoted?_1
+                                                                                                                        (let ((i-pos_0
+                                                                                                                               (begin-unsafe
+                                                                                                                                (begin
+                                                                                                                                  stream-size_0))))
+                                                                                                                          (begin
+                                                                                                                            (ser-push!_0
+                                                                                                                             i_0)
+                                                                                                                            (if all-quoted?_0
+                                                                                                                              (quoted?_0
+                                                                                                                               i-pos_0)
+                                                                                                                              #f)))))
+                                                                                                                   (values
+                                                                                                                    all-quoted?_1))))
+                                                                                                            (for-loop_0
+                                                                                                             all-quoted?_1
+                                                                                                             (unsafe-fx+
+                                                                                                              idx_0
+                                                                                                              1))))
+                                                                                                        all-quoted?_0))))))
+                                                                                               (for-loop_0
+                                                                                                #t
+                                                                                                start*_0))))))
+                                                                                      (if all-quoted?_0
+                                                                                        (begin
+                                                                                          (ser-reset!_0
+                                                                                           start-pos_0)
+                                                                                          (ser-push-optional-quote!_0)
+                                                                                          (ser-push!_0
+                                                                                           'exact
+                                                                                           v_0))
+                                                                                        (void))))))))
+                                                                          (if (srcloc?
+                                                                               v_0)
+                                                                            (if (path?
+                                                                                 (srcloc-source
+                                                                                  v_0))
+                                                                              (begin
+                                                                                (ser-push-optional-quote!_0)
+                                                                                (ser-push!_0
+                                                                                 'exact
+                                                                                 v_0))
+                                                                              (begin
+                                                                                (ser-push!_0
+                                                                                 'tag
+                                                                                 kw2496)
+                                                                                (ser-push!_0
+                                                                                 (srcloc-source
+                                                                                  v_0))
+                                                                                (ser-push!_0
+                                                                                 (srcloc-line
+                                                                                  v_0))
+                                                                                (ser-push!_0
+                                                                                 (srcloc-column
+                                                                                  v_0))
+                                                                                (ser-push!_0
+                                                                                 (srcloc-position
+                                                                                  v_0))
+                                                                                (ser-push!_0
+                                                                                 (srcloc-span
+                                                                                  v_0))))
+                                                                            (begin
+                                                                              (ser-push-optional-quote!_0)
+                                                                              (ser-push!_0
+                                                                               'exact
+                                                                               v_0)))))))))))))))))
+                                                (ser-push-optional-quote!_0
+                                                 (|#%name|
+                                                  ser-push-optional-quote!
+                                                  (lambda () (begin (void))))))
+                                               (let ((ser-shell!_0
+                                                      (|#%name|
+                                                       ser-shell!
+                                                       (lambda (v_0)
+                                                         (begin
+                                                           (if (serialize-fill!?
+                                                                v_0)
+                                                             (|#%app|
+                                                              (serialize-ref
+                                                               v_0)
+                                                              v_0
+                                                              ser-push!_0
+                                                              state_0)
+                                                             (if (box? v_0)
+                                                               (ser-push!_0
+                                                                'tag
+                                                                kw2525)
+                                                               (if (vector?
+                                                                    v_0)
                                                                  (begin
                                                                    (ser-push!_0
                                                                     'tag
-                                                                    kw2194)
+                                                                    kw2967)
+                                                                   (ser-push!_0
+                                                                    'exact
+                                                                    (vector-length
+                                                                     v_0)))
+                                                                 (if (hash?
+                                                                      v_0)
+                                                                   (ser-push!_0
+                                                                    'tag
+                                                                    (if (hash-eq?
+                                                                         v_0)
+                                                                      kw2796
+                                                                      (if (hash-eqv?
+                                                                           v_0)
+                                                                        kw3245
+                                                                        kw2582)))
+                                                                   (error
+                                                                    'ser-shell
+                                                                    "unknown mutable: ~e"
+                                                                    v_0))))))))))
+                                                 (let ((ser-shell-fill!_0
+                                                        (|#%name|
+                                                         ser-shell-fill!
+                                                         (lambda (v_0)
+                                                           (begin
+                                                             (if (serialize-fill!?
+                                                                  v_0)
+                                                               (|#%app|
+                                                                (serialize-fill!-ref
+                                                                 v_0)
+                                                                v_0
+                                                                ser-push!_0
+                                                                state_0)
+                                                               (if (box? v_0)
+                                                                 (begin
+                                                                   (ser-push!_0
+                                                                    'tag
+                                                                    kw2531)
+                                                                   (ser-push!_0
+                                                                    (unbox
+                                                                     v_0)))
+                                                                 (if (vector?
+                                                                      v_0)
                                                                    (begin
                                                                      (ser-push!_0
+                                                                      'tag
+                                                                      kw3046)
+                                                                     (ser-push!_0
                                                                       'exact
-                                                                      (hash-count
+                                                                      (vector-length
                                                                        v_0))
-                                                                     (let ((ks_0
-                                                                            (sorted-hash-keys
-                                                                             v_0)))
-                                                                       (begin
-                                                                         (begin
-                                                                           (letrec*
-                                                                            ((for-loop_0
-                                                                              (|#%name|
-                                                                               for-loop
-                                                                               (lambda (lst_0)
-                                                                                 (begin
-                                                                                   (if (pair?
-                                                                                        lst_0)
-                                                                                     (let ((k_0
-                                                                                            (unsafe-car
-                                                                                             lst_0)))
-                                                                                       (let ((rest_0
-                                                                                              (unsafe-cdr
-                                                                                               lst_0)))
-                                                                                         (begin
-                                                                                           (begin
-                                                                                             (ser-push!_0
-                                                                                              k_0)
-                                                                                             (ser-push!_0
-                                                                                              (hash-ref
-                                                                                               v_0
-                                                                                               k_0)))
-                                                                                           (for-loop_0
-                                                                                            rest_0))))
-                                                                                     (values)))))))
-                                                                            (for-loop_0
-                                                                             ks_0)))
-                                                                         (void)))))
-                                                                 (error
-                                                                  'ser-shell-fill
-                                                                  "unknown mutable: ~e"
-                                                                  v_0))))))))))
-                                               (let ((table_0 hash2589))
-                                                 (let ((rev-mutables_0
-                                                        (let ((table_1
-                                                               table_0))
-                                                          (begin
-                                                            (letrec*
-                                                             ((for-loop_0
-                                                               (|#%name|
-                                                                for-loop
-                                                                (lambda (table_2
-                                                                         i_0)
-                                                                  (begin
-                                                                    (if i_0
-                                                                      (call-with-values
-                                                                       (lambda ()
-                                                                         (hash-iterate-key+value
-                                                                          mutables_0
-                                                                          i_0))
-                                                                       (lambda (k_0
-                                                                                v_0)
-                                                                         (let ((table_3
-                                                                                (let ((table_3
-                                                                                       (call-with-values
-                                                                                        (lambda ()
-                                                                                          (values
-                                                                                           v_0
-                                                                                           k_0))
-                                                                                        (lambda (key_0
-                                                                                                 val_0)
-                                                                                          (hash-set
-                                                                                           table_2
-                                                                                           key_0
-                                                                                           val_0)))))
-                                                                                  (values
-                                                                                   table_3))))
-                                                                           (for-loop_0
-                                                                            table_3
-                                                                            (hash-iterate-next
-                                                                             mutables_0
-                                                                             i_0)))))
-                                                                      table_2))))))
-                                                             (for-loop_0
-                                                              table_1
-                                                              (hash-iterate-first
-                                                               mutables_0)))))))
-                                                   (let ((mutable-shell-bindings_0
-                                                          (begin
-                                                            (begin
-                                                              (let ((end_0
-                                                                     (hash-count
-                                                                      mutables_0)))
-                                                                (begin
-                                                                  (letrec*
-                                                                   ((for-loop_0
-                                                                     (|#%name|
-                                                                      for-loop
-                                                                      (lambda (pos_0)
+                                                                     (call-with-values
+                                                                      (lambda ()
                                                                         (begin
-                                                                          (if (<
-                                                                               pos_0
-                                                                               end_0)
-                                                                            (begin
-                                                                              (ser-shell!_0
-                                                                               (hash-ref
-                                                                                rev-mutables_0
-                                                                                pos_0))
-                                                                              (for-loop_0
-                                                                               (+
-                                                                                pos_0
-                                                                                1)))
-                                                                            (values)))))))
-                                                                   (for-loop_0
-                                                                    0))))
-                                                              (void))
-                                                            (reap-stream!_0))))
-                                                     (let ((table_1
-                                                            hash2589))
-                                                       (let ((rev-shares_0
-                                                              (let ((table_2
-                                                                     table_1))
-                                                                (begin
-                                                                  (letrec*
-                                                                   ((for-loop_0
-                                                                     (|#%name|
-                                                                      for-loop
-                                                                      (lambda (table_3
-                                                                               i_0)
-                                                                        (begin
-                                                                          (if i_0
-                                                                            (let ((obj_0
-                                                                                   (hash-iterate-key
-                                                                                    shares_0
-                                                                                    i_0)))
-                                                                              (let ((table_4
-                                                                                     (let ((table_4
-                                                                                            (call-with-values
-                                                                                             (lambda ()
-                                                                                               (values
-                                                                                                (hash-ref
-                                                                                                 share-step-positions_0
-                                                                                                 (hash-ref
-                                                                                                  objs_0
-                                                                                                  obj_0))
-                                                                                                obj_0))
-                                                                                             (lambda (key_0
-                                                                                                      val_0)
-                                                                                               (hash-set
-                                                                                                table_3
-                                                                                                key_0
-                                                                                                val_0)))))
-                                                                                       (values
-                                                                                        table_4))))
-                                                                                (for-loop_0
-                                                                                 table_4
-                                                                                 (hash-iterate-next
-                                                                                  shares_0
-                                                                                  i_0))))
-                                                                            table_3))))))
-                                                                   (for-loop_0
-                                                                    table_2
-                                                                    (hash-iterate-first
-                                                                     shares_0)))))))
-                                                         (let ((shared-bindings_0
-                                                                (begin
-                                                                  (begin
-                                                                    (let ((end_0
-                                                                           (+
-                                                                            num-mutables_0
-                                                                            (hash-count
-                                                                             shares_0))))
-                                                                      (begin
+                                                                          (values
+                                                                           v_0
+                                                                           (unsafe-vector-length
+                                                                            v_0))))
+                                                                      (lambda (vec_0
+                                                                               len_0)
                                                                         (letrec*
                                                                          ((for-loop_0
                                                                            (|#%name|
                                                                             for-loop
                                                                             (lambda (pos_0)
                                                                               (begin
-                                                                                (if (<
+                                                                                (if (unsafe-fx<
                                                                                      pos_0
-                                                                                     end_0)
-                                                                                  (begin
-                                                                                    (ser-push-encoded!_0
-                                                                                     (hash-ref
-                                                                                      rev-shares_0
-                                                                                      pos_0))
-                                                                                    (for-loop_0
-                                                                                     (+
-                                                                                      pos_0
-                                                                                      1)))
+                                                                                     len_0)
+                                                                                  (let ((v_1
+                                                                                         (unsafe-vector-ref
+                                                                                          vec_0
+                                                                                          pos_0)))
+                                                                                    (begin
+                                                                                      (ser-push!_0
+                                                                                       v_1)
+                                                                                      (for-loop_0
+                                                                                       (unsafe-fx+
+                                                                                        1
+                                                                                        pos_0))))
                                                                                   (values)))))))
                                                                          (for-loop_0
-                                                                          num-mutables_0))))
-                                                                    (void))
-                                                                  (reap-stream!_0))))
-                                                           (let ((mutable-fills_0
-                                                                  (begin
-                                                                    (begin
-                                                                      (let ((end_0
-                                                                             (hash-count
-                                                                              mutables_0)))
-                                                                        (begin
-                                                                          (letrec*
-                                                                           ((for-loop_0
-                                                                             (|#%name|
-                                                                              for-loop
-                                                                              (lambda (pos_0)
-                                                                                (begin
-                                                                                  (if (<
-                                                                                       pos_0
-                                                                                       end_0)
-                                                                                    (begin
-                                                                                      (ser-shell-fill!_0
-                                                                                       (hash-ref
-                                                                                        rev-mutables_0
-                                                                                        pos_0))
-                                                                                      (for-loop_0
-                                                                                       (+
-                                                                                        pos_0
-                                                                                        1)))
-                                                                                    (values)))))))
-                                                                           (for-loop_0
-                                                                            0))))
-                                                                      (void))
-                                                                    (reap-stream!_0))))
-                                                             (let ((result_0
-                                                                    (begin
-                                                                      (ser-push!_0
-                                                                       v18_0)
-                                                                      (reap-stream!_0))))
-                                                               (if as-data?7_0
-                                                                 (let ((app_0
-                                                                        (hash-count
-                                                                         mutables_0)))
-                                                                   (vector
-                                                                    app_0
-                                                                    mutable-shell-bindings_0
-                                                                    (hash-count
-                                                                     shares_0)
-                                                                    shared-bindings_0
-                                                                    mutable-fills_0
-                                                                    result_0))
-                                                                 (let ((finish_0
-                                                                        (|#%name|
-                                                                         finish
-                                                                         (lambda (mutable-shell-bindings-expr_0
-                                                                                  shared-bindings-expr_0
-                                                                                  mutable-fills-expr_0
-                                                                                  result-expr_0)
+                                                                          0))))
+                                                                     (void))
+                                                                   (if (hash?
+                                                                        v_0)
+                                                                     (begin
+                                                                       (ser-push!_0
+                                                                        'tag
+                                                                        kw2194)
+                                                                       (begin
+                                                                         (ser-push!_0
+                                                                          'exact
+                                                                          (hash-count
+                                                                           v_0))
+                                                                         (let ((ks_0
+                                                                                (sorted-hash-keys
+                                                                                 v_0)))
                                                                            (begin
-                                                                             (let ((app_0
+                                                                             (begin
+                                                                               (letrec*
+                                                                                ((for-loop_0
+                                                                                  (|#%name|
+                                                                                   for-loop
+                                                                                   (lambda (lst_0)
+                                                                                     (begin
+                                                                                       (if (pair?
+                                                                                            lst_0)
+                                                                                         (let ((k_0
+                                                                                                (unsafe-car
+                                                                                                 lst_0)))
+                                                                                           (let ((rest_0
+                                                                                                  (unsafe-cdr
+                                                                                                   lst_0)))
+                                                                                             (begin
+                                                                                               (begin
+                                                                                                 (ser-push!_0
+                                                                                                  k_0)
+                                                                                                 (ser-push!_0
+                                                                                                  (hash-ref
+                                                                                                   v_0
+                                                                                                   k_0)))
+                                                                                               (for-loop_0
+                                                                                                rest_0))))
+                                                                                         (values)))))))
+                                                                                (for-loop_0
+                                                                                 ks_0)))
+                                                                             (void)))))
+                                                                     (error
+                                                                      'ser-shell-fill
+                                                                      "unknown mutable: ~e"
+                                                                      v_0))))))))))
+                                                   (let ((table_0 hash2589))
+                                                     (let ((rev-mutables_0
+                                                            (let ((table_1
+                                                                   table_0))
+                                                              (begin
+                                                                (letrec*
+                                                                 ((for-loop_0
+                                                                   (|#%name|
+                                                                    for-loop
+                                                                    (lambda (table_2
+                                                                             i_0)
+                                                                      (begin
+                                                                        (if i_0
+                                                                          (call-with-values
+                                                                           (lambda ()
+                                                                             (hash-iterate-key+value
+                                                                              mutables_0
+                                                                              i_0))
+                                                                           (lambda (k_0
+                                                                                    v_0)
+                                                                             (let ((table_3
+                                                                                    (let ((table_3
+                                                                                           (call-with-values
+                                                                                            (lambda ()
+                                                                                              (values
+                                                                                               v_0
+                                                                                               k_0))
+                                                                                            (lambda (key_0
+                                                                                                     val_0)
+                                                                                              (hash-set
+                                                                                               table_2
+                                                                                               key_0
+                                                                                               val_0)))))
+                                                                                      (values
+                                                                                       table_3))))
+                                                                               (for-loop_0
+                                                                                table_3
+                                                                                (hash-iterate-next
+                                                                                 mutables_0
+                                                                                 i_0)))))
+                                                                          table_2))))))
+                                                                 (for-loop_0
+                                                                  table_1
+                                                                  (hash-iterate-first
+                                                                   mutables_0)))))))
+                                                       (let ((mutable-shell-bindings_0
+                                                              (begin
+                                                                (begin
+                                                                  (let ((end_0
+                                                                         (hash-count
+                                                                          mutables_0)))
+                                                                    (begin
+                                                                      (letrec*
+                                                                       ((for-loop_0
+                                                                         (|#%name|
+                                                                          for-loop
+                                                                          (lambda (pos_0)
+                                                                            (begin
+                                                                              (if (<
+                                                                                   pos_0
+                                                                                   end_0)
+                                                                                (begin
+                                                                                  (ser-shell!_0
+                                                                                   (hash-ref
+                                                                                    rev-mutables_0
+                                                                                    pos_0))
+                                                                                  (for-loop_0
+                                                                                   (+
+                                                                                    pos_0
+                                                                                    1)))
+                                                                                (values)))))))
+                                                                       (for-loop_0
+                                                                        0))))
+                                                                  (void))
+                                                                (reap-stream!_0))))
+                                                         (let ((table_1
+                                                                hash2589))
+                                                           (let ((rev-shares_0
+                                                                  (let ((table_2
+                                                                         table_1))
+                                                                    (begin
+                                                                      (letrec*
+                                                                       ((for-loop_0
+                                                                         (|#%name|
+                                                                          for-loop
+                                                                          (lambda (table_3
+                                                                                   i_0)
+                                                                            (begin
+                                                                              (if i_0
+                                                                                (let ((obj_0
+                                                                                       (hash-iterate-key
+                                                                                        shares_0
+                                                                                        i_0)))
+                                                                                  (let ((table_4
+                                                                                         (let ((table_4
+                                                                                                (call-with-values
+                                                                                                 (lambda ()
+                                                                                                   (values
+                                                                                                    (hash-ref
+                                                                                                     share-step-positions_0
+                                                                                                     (hash-ref
+                                                                                                      objs_0
+                                                                                                      obj_0))
+                                                                                                    obj_0))
+                                                                                                 (lambda (key_0
+                                                                                                          val_0)
+                                                                                                   (hash-set
+                                                                                                    table_3
+                                                                                                    key_0
+                                                                                                    val_0)))))
+                                                                                           (values
+                                                                                            table_4))))
+                                                                                    (for-loop_0
+                                                                                     table_4
+                                                                                     (hash-iterate-next
+                                                                                      shares_0
+                                                                                      i_0))))
+                                                                                table_3))))))
+                                                                       (for-loop_0
+                                                                        table_2
+                                                                        (hash-iterate-first
+                                                                         shares_0)))))))
+                                                             (let ((shared-bindings_0
+                                                                    (begin
+                                                                      (begin
+                                                                        (let ((end_0
+                                                                               (+
+                                                                                num-mutables_0
+                                                                                (hash-count
+                                                                                 shares_0))))
+                                                                          (begin
+                                                                            (letrec*
+                                                                             ((for-loop_0
+                                                                               (|#%name|
+                                                                                for-loop
+                                                                                (lambda (pos_0)
+                                                                                  (begin
+                                                                                    (if (<
+                                                                                         pos_0
+                                                                                         end_0)
+                                                                                      (begin
+                                                                                        (ser-push-encoded!_0
+                                                                                         (hash-ref
+                                                                                          rev-shares_0
+                                                                                          pos_0))
+                                                                                        (for-loop_0
+                                                                                         (+
+                                                                                          pos_0
+                                                                                          1)))
+                                                                                      (values)))))))
+                                                                             (for-loop_0
+                                                                              num-mutables_0))))
+                                                                        (void))
+                                                                      (reap-stream!_0))))
+                                                               (let ((mutable-fills_0
+                                                                      (begin
+                                                                        (begin
+                                                                          (let ((end_0
+                                                                                 (hash-count
+                                                                                  mutables_0)))
+                                                                            (begin
+                                                                              (letrec*
+                                                                               ((for-loop_0
+                                                                                 (|#%name|
+                                                                                  for-loop
+                                                                                  (lambda (pos_0)
+                                                                                    (begin
+                                                                                      (if (<
+                                                                                           pos_0
+                                                                                           end_0)
+                                                                                        (begin
+                                                                                          (ser-shell-fill!_0
+                                                                                           (hash-ref
+                                                                                            rev-mutables_0
+                                                                                            pos_0))
+                                                                                          (for-loop_0
+                                                                                           (+
+                                                                                            pos_0
+                                                                                            1)))
+                                                                                        (values)))))))
+                                                                               (for-loop_0
+                                                                                0))))
+                                                                          (void))
+                                                                        (reap-stream!_0))))
+                                                                 (let ((result_0
+                                                                        (begin
+                                                                          (ser-push!_0
+                                                                           v24_0)
+                                                                          (reap-stream!_0))))
+                                                                   (if as-data?7_0
+                                                                     (let ((app_0
+                                                                            (hash-count
+                                                                             mutables_0)))
+                                                                       (vector
+                                                                        app_0
+                                                                        mutable-shell-bindings_0
+                                                                        (hash-count
+                                                                         shares_0)
+                                                                        shared-bindings_0
+                                                                        mutable-fills_0
+                                                                        result_0))
+                                                                     (let ((finish_0
+                                                                            (|#%name|
+                                                                             finish
+                                                                             (lambda (mutable-shell-bindings-expr_0
+                                                                                      shared-bindings-expr_0
+                                                                                      mutable-fills-expr_0
+                                                                                      result-expr_0)
+                                                                               (begin
+                                                                                 (let ((app_0
+                                                                                        (list
+                                                                                         'quote
+                                                                                         (hash-count
+                                                                                          mutables_0))))
+                                                                                   (list
+                                                                                    'deserialize
+                                                                                    mpi-vector-id
+                                                                                    (if syntax-support?8_0
+                                                                                      inspector-id
+                                                                                      #f)
+                                                                                    (if syntax-support?8_0
+                                                                                      bulk-binding-registry-id
+                                                                                      #f)
+                                                                                    app_0
+                                                                                    mutable-shell-bindings-expr_0
                                                                                     (list
                                                                                      'quote
                                                                                      (hash-count
-                                                                                      mutables_0))))
+                                                                                      shares_0))
+                                                                                    shared-bindings-expr_0
+                                                                                    mutable-fills-expr_0
+                                                                                    result-expr_0)))))))
+                                                                       (let ((app_0
+                                                                              (list
                                                                                (list
-                                                                                'deserialize
-                                                                                mpi-vector-id
-                                                                                (if syntax-support?8_0
-                                                                                  inspector-id
-                                                                                  #f)
-                                                                                (if syntax-support?8_0
-                                                                                  bulk-binding-registry-id
-                                                                                  #f)
-                                                                                app_0
-                                                                                mutable-shell-bindings-expr_0
+                                                                                '(data)
                                                                                 (list
                                                                                  'quote
-                                                                                 (hash-count
-                                                                                  shares_0))
-                                                                                shared-bindings-expr_0
-                                                                                mutable-fills-expr_0
-                                                                                result-expr_0)))))))
-                                                                   (let ((app_0
-                                                                          (list
-                                                                           (list
-                                                                            '(data)
-                                                                            (list
-                                                                             'quote
-                                                                             (vector
-                                                                              mutable-shell-bindings_0
-                                                                              shared-bindings_0
-                                                                              mutable-fills_0
-                                                                              result_0))))))
-                                                                     (list
-                                                                      'let-values
-                                                                      app_0
-                                                                      (finish_0
-                                                                       '(unsafe-vector*-ref
-                                                                         data
-                                                                         0)
-                                                                       '(unsafe-vector*-ref
-                                                                         data
-                                                                         1)
-                                                                       '(unsafe-vector*-ref
-                                                                         data
-                                                                         2)
-                                                                       '(unsafe-vector*-ref
-                                                                         data
-                                                                         3)))))))))))))))))))))))))))))))))))))))
+                                                                                 (vector
+                                                                                  mutable-shell-bindings_0
+                                                                                  shared-bindings_0
+                                                                                  mutable-fills_0
+                                                                                  result_0))))))
+                                                                         (list
+                                                                          'let-values
+                                                                          app_0
+                                                                          (finish_0
+                                                                           '(unsafe-vector*-ref
+                                                                             data
+                                                                             0)
+                                                                           '(unsafe-vector*-ref
+                                                                             data
+                                                                             1)
+                                                                           '(unsafe-vector*-ref
+                                                                             data
+                                                                             2)
+                                                                           '(unsafe-vector*-ref
+                                                                             data
+                                                                             3)))))))))))))))))))))))))))))))))))))))))
 (define sorted-hash-keys
   (lambda (ht_0)
     (let ((ks_0 (hash-keys ht_0)))
@@ -26833,7 +27143,7 @@
           (if (andmap_2344 symbol? ks_0)
             (sort.1 #f #f ks_0 symbol<?)
             (if (andmap_2344 scope? ks_0)
-              (let ((scope<?39_0 scope<?)) (sort.1 #f #f ks_0 scope<?39_0))
+              (let ((scope<?45_0 scope<?)) (sort.1 #f #f ks_0 scope<?45_0))
               (if (andmap_2344 shifted-multi-scope? ks_0)
                 (sort.1 #f #f ks_0 shifted-multi-scope<?)
                 (if (andmap_2344 real? ks_0)
@@ -28215,7 +28525,7 @@
                    "bad fill encoding: ~v"
                    (unsafe-vector*-ref vec_0 pos_0)))))))))))
 (define find-reachable-scopes
-  (lambda (v_0 bulk-shifts_0)
+  (lambda (v_0 bulk-shifts_0 report-mpi-shifts_0)
     (let ((seen_0 (make-hasheq)))
       (let ((reachable-scopes_0 (interned-scopes)))
         (let ((get-reachable-scopes_0
@@ -28223,215 +28533,267 @@
                 get-reachable-scopes
                 (lambda () (begin reachable-scopes_0)))))
           (let ((scope-triggers_0 (make-hasheq)))
-            (begin
-              (letrec*
-               ((loop_0
-                 (|#%name|
-                  loop
-                  (lambda (v_1 bulk-shifts_1)
-                    (begin
-                      (if (interned-literal? v_1)
-                        (void)
-                        (if (hash-ref seen_0 v_1 #f)
+            (let ((report-shifts_0
+                   (if report-mpi-shifts_0
+                     (|#%name|
+                      report-shifts
+                      (lambda (mpi_0 bulk-shifts_1)
+                        (begin
+                          (|#%app|
+                           report-mpi-shifts_0
+                           mpi_0
+                           (apply-syntax-shifts mpi_0 (cdr bulk-shifts_1))))))
+                     #f)))
+              (begin
+                (letrec*
+                 ((loop_0
+                   (|#%name|
+                    loop
+                    (lambda (v_1 bulk-shifts_1)
+                      (begin
+                        (if (interned-literal? v_1)
                           (void)
-                          (begin
-                            (hash-set! seen_0 v_1 #t)
-                            (if (scope-with-bindings? v_1)
-                              (begin
-                                (set! reachable-scopes_0
-                                  (let ((s_0 reachable-scopes_0))
-                                    (begin-unsafe (hash-set s_0 v_1 #t))))
-                                (|#%app|
-                                 (reach-scopes-ref v_1)
-                                 v_1
-                                 bulk-shifts_1
-                                 loop_0)
-                                (let ((lst_0
-                                       (hash-ref scope-triggers_0 v_1 null)))
-                                  (begin
-                                    (letrec*
-                                     ((for-loop_0
-                                       (|#%name|
-                                        for-loop
-                                        (lambda (lst_1)
-                                          (begin
-                                            (if (pair? lst_1)
-                                              (let ((proc_0
-                                                     (unsafe-car lst_1)))
-                                                (let ((rest_0
-                                                       (unsafe-cdr lst_1)))
-                                                  (begin
-                                                    (|#%app| proc_0 loop_0)
-                                                    (for-loop_0 rest_0))))
-                                              (values)))))))
-                                     (for-loop_0 lst_0))))
-                                (void)
-                                (hash-remove! scope-triggers_0 v_1)
-                                (|#%app|
-                                 (scope-with-bindings-ref v_1)
-                                 v_1
-                                 get-reachable-scopes_0
-                                 bulk-shifts_1
-                                 loop_0
-                                 (lambda (sc-unreachable_0 b_0)
-                                   (let ((xform_0
-                                          (lambda (l_0) (cons b_0 l_0))))
-                                     (begin-unsafe
-                                      (do-hash-update
-                                       'hash-update!
-                                       #t
-                                       hash-set!
-                                       scope-triggers_0
-                                       sc-unreachable_0
-                                       xform_0
-                                       null))))))
-                              (if (reach-scopes? v_1)
-                                (|#%app|
-                                 (reach-scopes-ref v_1)
-                                 v_1
-                                 bulk-shifts_1
-                                 loop_0)
-                                (if (pair? v_1)
-                                  (begin
-                                    (loop_0 (car v_1) bulk-shifts_1)
-                                    (loop_0 (cdr v_1) bulk-shifts_1))
-                                  (if (vector? v_1)
+                          (if (hash-ref seen_0 v_1 #f)
+                            (void)
+                            (begin
+                              (hash-set! seen_0 v_1 #t)
+                              (if (scope-with-bindings? v_1)
+                                (begin
+                                  (set! reachable-scopes_0
+                                    (let ((s_0 reachable-scopes_0))
+                                      (begin-unsafe (hash-set s_0 v_1 #t))))
+                                  (|#%app|
+                                   (reach-scopes-ref v_1)
+                                   v_1
+                                   bulk-shifts_1
+                                   loop_0)
+                                  (let ((lst_0
+                                         (hash-ref scope-triggers_0 v_1 null)))
                                     (begin
-                                      (call-with-values
-                                       (lambda ()
-                                         (begin
-                                           (values
-                                            v_1
-                                            (unsafe-vector-length v_1))))
-                                       (lambda (vec_0 len_0)
-                                         (letrec*
-                                          ((for-loop_0
-                                            (|#%name|
-                                             for-loop
-                                             (lambda (pos_0)
-                                               (begin
-                                                 (if (unsafe-fx< pos_0 len_0)
-                                                   (let ((e_0
-                                                          (unsafe-vector-ref
-                                                           vec_0
-                                                           pos_0)))
-                                                     (begin
-                                                       (loop_0
-                                                        e_0
-                                                        bulk-shifts_1)
-                                                       (for-loop_0
-                                                        (unsafe-fx+ 1 pos_0))))
-                                                   (values)))))))
-                                          (for-loop_0 0))))
-                                      (void))
-                                    (if (box? v_1)
-                                      (loop_0 (unbox v_1) bulk-shifts_1)
-                                      (if (hash? v_1)
-                                        (begin
+                                      (letrec*
+                                       ((for-loop_0
+                                         (|#%name|
+                                          for-loop
+                                          (lambda (lst_1)
+                                            (begin
+                                              (if (pair? lst_1)
+                                                (let ((proc_0
+                                                       (unsafe-car lst_1)))
+                                                  (let ((rest_0
+                                                         (unsafe-cdr lst_1)))
+                                                    (begin
+                                                      (|#%app| proc_0 loop_0)
+                                                      (for-loop_0 rest_0))))
+                                                (values)))))))
+                                       (for-loop_0 lst_0))))
+                                  (void)
+                                  (hash-remove! scope-triggers_0 v_1)
+                                  (|#%app|
+                                   (scope-with-bindings-ref v_1)
+                                   v_1
+                                   get-reachable-scopes_0
+                                   bulk-shifts_1
+                                   loop_0
+                                   (lambda (sc-unreachable_0 b_0)
+                                     (let ((xform_0
+                                            (lambda (l_0) (cons b_0 l_0))))
+                                       (begin-unsafe
+                                        (do-hash-update
+                                         'hash-update!
+                                         #t
+                                         hash-set!
+                                         scope-triggers_0
+                                         sc-unreachable_0
+                                         xform_0
+                                         null))))
+                                   report-shifts_0))
+                                (if (reach-scopes? v_1)
+                                  (|#%app|
+                                   (reach-scopes-ref v_1)
+                                   v_1
+                                   bulk-shifts_1
+                                   loop_0)
+                                  (if (pair? v_1)
+                                    (begin
+                                      (loop_0 (car v_1) bulk-shifts_1)
+                                      (loop_0 (cdr v_1) bulk-shifts_1))
+                                    (if (vector? v_1)
+                                      (begin
+                                        (call-with-values
+                                         (lambda ()
+                                           (begin
+                                             (values
+                                              v_1
+                                              (unsafe-vector-length v_1))))
+                                         (lambda (vec_0 len_0)
+                                           (letrec*
+                                            ((for-loop_0
+                                              (|#%name|
+                                               for-loop
+                                               (lambda (pos_0)
+                                                 (begin
+                                                   (if (unsafe-fx< pos_0 len_0)
+                                                     (let ((e_0
+                                                            (unsafe-vector-ref
+                                                             vec_0
+                                                             pos_0)))
+                                                       (begin
+                                                         (loop_0
+                                                          e_0
+                                                          bulk-shifts_1)
+                                                         (for-loop_0
+                                                          (unsafe-fx+
+                                                           1
+                                                           pos_0))))
+                                                     (values)))))))
+                                            (for-loop_0 0))))
+                                        (void))
+                                      (if (box? v_1)
+                                        (loop_0 (unbox v_1) bulk-shifts_1)
+                                        (if (hash? v_1)
                                           (begin
-                                            (letrec*
-                                             ((for-loop_0
-                                               (|#%name|
-                                                for-loop
-                                                (lambda (i_0)
-                                                  (begin
-                                                    (if i_0
-                                                      (call-with-values
-                                                       (lambda ()
-                                                         (hash-iterate-key+value
-                                                          v_1
-                                                          i_0))
-                                                       (lambda (k_0 v_2)
-                                                         (begin
+                                            (begin
+                                              (letrec*
+                                               ((for-loop_0
+                                                 (|#%name|
+                                                  for-loop
+                                                  (lambda (i_0)
+                                                    (begin
+                                                      (if i_0
+                                                        (call-with-values
+                                                         (lambda ()
+                                                           (hash-iterate-key+value
+                                                            v_1
+                                                            i_0))
+                                                         (lambda (k_0 v_2)
                                                            (begin
-                                                             (loop_0
-                                                              k_0
-                                                              bulk-shifts_1)
-                                                             (loop_0
-                                                              v_2
-                                                              bulk-shifts_1))
-                                                           (for-loop_0
-                                                            (hash-iterate-next
-                                                             v_1
-                                                             i_0)))))
-                                                      (values)))))))
-                                             (for-loop_0
-                                              (hash-iterate-first v_1))))
-                                          (void))
-                                        (if (prefab-struct-key v_1)
-                                          (begin
-                                            (call-with-values
-                                             (lambda ()
-                                               (unsafe-normalise-inputs
-                                                unsafe-vector-length
-                                                (struct->vector v_1)
-                                                1
-                                                #f
-                                                1))
-                                             (lambda (v*_0
-                                                      start*_0
-                                                      stop*_0
-                                                      step*_0)
-                                               (letrec*
-                                                ((for-loop_0
-                                                  (|#%name|
-                                                   for-loop
-                                                   (lambda (idx_0)
-                                                     (begin
-                                                       (if (unsafe-fx<
-                                                            idx_0
-                                                            stop*_0)
-                                                         (let ((e_0
-                                                                (unsafe-vector-ref
-                                                                 v*_0
-                                                                 idx_0)))
-                                                           (begin
-                                                             (loop_0
-                                                              e_0
-                                                              bulk-shifts_1)
+                                                             (begin
+                                                               (loop_0
+                                                                k_0
+                                                                bulk-shifts_1)
+                                                               (loop_0
+                                                                v_2
+                                                                bulk-shifts_1))
                                                              (for-loop_0
-                                                              (unsafe-fx+
-                                                               idx_0
-                                                               1))))
-                                                         (values)))))))
-                                                (for-loop_0 start*_0))))
+                                                              (hash-iterate-next
+                                                               v_1
+                                                               i_0)))))
+                                                        (values)))))))
+                                               (for-loop_0
+                                                (hash-iterate-first v_1))))
                                             (void))
-                                          (if (srcloc? v_1)
-                                            (loop_0
-                                             (srcloc-source v_1)
-                                             bulk-shifts_1)
-                                            (void)))))))))))))))))
-               (loop_0 v_0 bulk-shifts_0))
-              reachable-scopes_0)))))))
+                                          (if (prefab-struct-key v_1)
+                                            (begin
+                                              (call-with-values
+                                               (lambda ()
+                                                 (unsafe-normalise-inputs
+                                                  unsafe-vector-length
+                                                  (struct->vector v_1)
+                                                  1
+                                                  #f
+                                                  1))
+                                               (lambda (v*_0
+                                                        start*_0
+                                                        stop*_0
+                                                        step*_0)
+                                                 (letrec*
+                                                  ((for-loop_0
+                                                    (|#%name|
+                                                     for-loop
+                                                     (lambda (idx_0)
+                                                       (begin
+                                                         (if (unsafe-fx<
+                                                              idx_0
+                                                              stop*_0)
+                                                           (let ((e_0
+                                                                  (unsafe-vector-ref
+                                                                   v*_0
+                                                                   idx_0)))
+                                                             (begin
+                                                               (loop_0
+                                                                e_0
+                                                                bulk-shifts_1)
+                                                               (for-loop_0
+                                                                (unsafe-fx+
+                                                                 idx_0
+                                                                 1))))
+                                                           (values)))))))
+                                                  (for-loop_0 start*_0))))
+                                              (void))
+                                            (if (srcloc? v_1)
+                                              (loop_0
+                                               (srcloc-source v_1)
+                                               bulk-shifts_1)
+                                              (void)))))))))))))))))
+                 (loop_0 v_0 bulk-shifts_0))
+                reachable-scopes_0))))))))
+(define force-syntax-object
+  (lambda (syntax-literals_0
+           pos_0
+           mpi_0
+           self-mpi_0
+           phase-shift_0
+           inspector_0
+           deserialized-syntax-vector_0
+           bulk-binding-registry_0
+           deserialize-syntax_0)
+    (begin
+      (if (unsafe-vector*-ref deserialized-syntax-vector_0 0)
+        (void)
+        (|#%app| deserialize-syntax_0 bulk-binding-registry_0))
+      (let ((stx_0
+             (let ((temp50_0
+                    (syntax-shift-phase-level$1
+                     (unsafe-vector*-ref deserialized-syntax-vector_0 pos_0)
+                     phase-shift_0)))
+               (syntax-module-path-index-shift.1
+                #f
+                temp50_0
+                mpi_0
+                self-mpi_0
+                inspector_0))))
+        (letrec*
+         ((loop_0
+           (|#%name|
+            loop
+            (lambda ()
+              (begin
+                (begin
+                  (unsafe-vector*-cas! syntax-literals_0 pos_0 #f stx_0)
+                  (let ((new-stx_0
+                         (unsafe-vector*-ref syntax-literals_0 pos_0)))
+                    (if new-stx_0 new-stx_0 (loop_0)))))))))
+         (loop_0))))))
 (define deserialize-imports
   '(deserialize-module-path-indexes
     syntax-module-path-index-shift
     syntax-shift-phase-level
+    force-syntax-object
     module-use
     deserialize))
 (define syntax-module-path-index-shift/no-keywords
   (let ((syntax-module-path-index-shift_0
          (|#%name|
           syntax-module-path-index-shift
-          (lambda (s45_0 from-mpi46_0 to-mpi47_0 inspector44_0)
+          (lambda (s55_0 from-mpi56_0 to-mpi57_0 inspector54_0)
             (begin
               (syntax-module-path-index-shift.1
                #f
-               s45_0
-               from-mpi46_0
-               to-mpi47_0
-               inspector44_0))))))
+               s55_0
+               from-mpi56_0
+               to-mpi57_0
+               inspector54_0))))))
     (|#%name|
      syntax-module-path-index-shift
      (case-lambda
       ((s_0 from-mpi_0 to-mpi_0)
        (begin (syntax-module-path-index-shift_0 s_0 from-mpi_0 to-mpi_0 #f)))
-      ((s_0 from-mpi_0 to-mpi_0 inspector44_0)
+      ((s_0 from-mpi_0 to-mpi_0 inspector54_0)
        (syntax-module-path-index-shift_0
         s_0
         from-mpi_0
         to-mpi_0
-        inspector44_0))))))
+        inspector54_0))))))
 (define deserialize-instance
   (make-instance
    'deserialize
@@ -28443,6 +28805,8 @@
    syntax-module-path-index-shift/no-keywords
    'syntax-shift-phase-level
    syntax-shift-phase-level$1
+   'force-syntax-object
+   force-syntax-object
    'module-use
    module-use1.1
    'deserialize
@@ -37197,71 +37561,19 @@
                     'if
                     'ready-stx
                     'ready-stx
-                    (list*
-                     'begin
-                     (let ((app_4
-                            (if skip-deserialize?4_0
-                              null
-                              (list
-                               (list
-                                'if
-                                (list*
-                                 'unsafe-vector*-ref
-                                 deserialized-syntax-vector-id
-                                 '(0))
-                                '(void)
-                                (list
-                                 deserialize-syntax-id
-                                 bulk-binding-registry-id))))))
-                       (qq-append
-                        app_4
-                        (list
-                         (let ((app_5
-                                (list
-                                 (list
-                                  '(stx)
-                                  (let ((app_5
-                                         (list
-                                          'syntax-shift-phase-level
-                                          (list*
-                                           'unsafe-vector*-ref
-                                           deserialized-syntax-vector-id
-                                           '(pos))
-                                          phase-shift-id)))
-                                    (list
-                                     'syntax-module-path-index-shift
-                                     app_5
-                                     (add-module-path-index! mpis7_0 self8_0)
-                                     self-id
-                                     inspector-id))))))
-                           (list
-                            'let-values
-                            app_5
-                            (list*
-                             'letrec-values
-                             (list
-                              (list
-                               '(loop)
-                               (list
-                                'lambda
-                                '()
-                                (list
-                                 'begin
-                                 (list*
-                                  'vector-cas!
-                                  syntax-literals-id
-                                  '(pos #f stx))
-                                 (list*
-                                  'let-values
-                                  (list
-                                   (list
-                                    '(new-stx)
-                                    (list*
-                                     'unsafe-vector*-ref
-                                     syntax-literals-id
-                                     '(pos))))
-                                  '((if new-stx new-stx (loop))))))))
-                             '((loop))))))))))))))))))))))
+                    (list
+                     'force-syntax-object
+                     syntax-literals-id
+                     'pos
+                     (add-module-path-index! mpis7_0 self8_0)
+                     self-id
+                     phase-shift-id
+                     inspector-id
+                     deserialized-syntax-vector-id
+                     bulk-binding-registry-id
+                     (if skip-deserialize?4_0
+                       #f
+                       deserialize-syntax-id)))))))))))))))
 (define generate-lazy-syntax-literals-data!
   (lambda (sl_0 mpis_0)
     (if (begin-unsafe (null? (syntax-literals-stxes sl_0)))
@@ -37291,9 +37603,12 @@
                           (generate-deserialize.1
                            #f
                            #f
+                           unsafe-undefined
+                           unsafe-undefined
                            mpis_0
                            #f
                            hash2610
+                           #f
                            #t
                            temp21_0)))))))
                (list
@@ -37318,9 +37633,12 @@
                  (generate-deserialize.1
                   #f
                   #f
+                  unsafe-undefined
+                  unsafe-undefined
                   mpis_0
                   #f
                   hash2610
+                  #f
                   #t
                   temp23_0))))))
         (list
@@ -48365,7 +48683,7 @@
                                                                                            'module
                                                                                            full-module-name14_0
                                                                                            'name
-                                                                                           'syntax-literals)))
+                                                                                           '<syntax-literals)))
                                                                                      (compile-linklet
                                                                                       s_0
                                                                                       app_1
@@ -51683,7 +52001,7 @@
         new4_0
         orig-s3_0
         (if track?1_0 orig-s3_0 #f))))))
-(define finish_2886
+(define finish_2888
   (make-struct-type-install-properties
    '(expanded+parsed)
    2
@@ -51703,7 +52021,7 @@
    #f
    #f
    '(2 . 0)))
-(define effect_2270 (finish_2886 struct:expanded+parsed))
+(define effect_2270 (finish_2888 struct:expanded+parsed))
 (define expanded+parsed1.1
   (|#%name|
    expanded+parsed
@@ -75597,281 +75915,521 @@
   (let ((syntax-serialize_0
          (|#%name|
           syntax-serialize
-          (lambda (stx5_0
+          (lambda (stx10_0
                    base-mpi2_0
                    preserve-prop-keys3_0
-                   provides-namespace4_0)
+                   provides-namespace4_0
+                   as-data?5_0
+                   init-mpis6_0
+                   report-mpi-shifts7_0
+                   map-mpi8_0
+                   map-binding-symbol9_0)
             (begin
               (let ((provides-namespace_0
                      (if (eq? provides-namespace4_0 unsafe-undefined)
                        (1/current-namespace)
                        provides-namespace4_0)))
-                (begin
-                  (if (syntax?$1 stx5_0)
-                    (void)
-                    (raise-argument-error 'syntax-serialize "syntax?" stx5_0))
-                  (begin
-                    (if (let ((or-part_0 (not base-mpi2_0)))
-                          (if or-part_0
-                            or-part_0
-                            (1/module-path-index? base-mpi2_0)))
-                      (void)
-                      (raise-argument-error
-                       'syntax-serialize
-                       "(or/c module-path-index? #f)"
-                       base-mpi2_0))
+                (let ((map-mpi_0
+                       (if (eq? map-mpi8_0 unsafe-undefined)
+                         (|#%name| map-mpi (lambda (mpi_0) (begin mpi_0)))
+                         map-mpi8_0)))
+                  (let ((map-binding-symbol_0
+                         (if (eq? map-binding-symbol9_0 unsafe-undefined)
+                           (|#%name|
+                            map-binding-symbol
+                            (lambda (mpi_0 phase_0 sym_0) (begin sym_0)))
+                           map-binding-symbol9_0)))
                     (begin
-                      (if (if (list? preserve-prop-keys3_0)
-                            (andmap_2344 symbol? preserve-prop-keys3_0)
-                            #f)
-                        (void)
-                        (raise-argument-error
-                         'syntax-serialize
-                         "(listof symbol?)"
-                         preserve-prop-keys3_0))
-                      (begin
-                        (if (let ((or-part_0 (not provides-namespace_0)))
-                              (if or-part_0
-                                or-part_0
-                                (1/namespace? provides-namespace_0)))
+                      (if as-data?5_0
+                        (if (syntax?$1 stx10_0)
                           (void)
                           (raise-argument-error
                            'syntax-serialize
-                           "(or/c namespace? #f)"
-                           provides-namespace_0))
-                        (let ((mpis_0 (make-module-path-index-table)))
-                          (let ((base-mpi-pos_0
-                                 (if base-mpi2_0
-                                   (add-module-path-index!/pos
-                                    mpis_0
-                                    base-mpi2_0)
-                                   #f)))
-                            (let ((table_0 hash2610))
-                              (let ((data_0
-                                     (let ((temp13_0
-                                            (let ((table_1 table_0))
-                                              (begin
-                                                (letrec*
-                                                 ((for-loop_0
-                                                   (|#%name|
-                                                    for-loop
-                                                    (lambda (table_2 lst_0)
-                                                      (begin
-                                                        (if (pair? lst_0)
-                                                          (let ((k_0
-                                                                 (unsafe-car
-                                                                  lst_0)))
-                                                            (let ((rest_0
-                                                                   (unsafe-cdr
-                                                                    lst_0)))
-                                                              (let ((table_3
-                                                                     (let ((table_3
-                                                                            (call-with-values
-                                                                             (lambda ()
-                                                                               (values
-                                                                                k_0
-                                                                                #t))
-                                                                             (lambda (key_0
-                                                                                      val_0)
-                                                                               (hash-set
-                                                                                table_2
-                                                                                key_0
-                                                                                val_0)))))
-                                                                       (values
-                                                                        table_3))))
-                                                                (for-loop_0
-                                                                 table_3
-                                                                 rest_0))))
-                                                          table_2))))))
-                                                 (for-loop_0
-                                                  table_1
-                                                  preserve-prop-keys3_0))))))
-                                       (let ((temp14_0
-                                              (if provides-namespace_0
-                                                (|#%name|
-                                                 temp14
-                                                 (lambda (modname_0)
-                                                   (begin
-                                                     (not
-                                                      (namespace->module
-                                                       provides-namespace_0
-                                                       modname_0)))))
-                                                (|#%name|
-                                                 temp14
-                                                 (lambda (modname_0)
-                                                   (begin #t))))))
-                                         (let ((temp13_1 temp13_0))
-                                           (generate-deserialize.1
-                                            #t
-                                            temp14_0
+                           "syntax?"
+                           stx10_0))
+                        (if (vector? stx10_0)
+                          (void)
+                          (raise-argument-error
+                           'syntax-serialize
+                           "vector?"
+                           stx10_0)))
+                      (begin
+                        (if (let ((or-part_0 (not base-mpi2_0)))
+                              (if or-part_0
+                                or-part_0
+                                (1/module-path-index? base-mpi2_0)))
+                          (void)
+                          (raise-argument-error
+                           'syntax-serialize
+                           "(or/c module-path-index? #f)"
+                           base-mpi2_0))
+                        (begin
+                          (if (if (list? preserve-prop-keys3_0)
+                                (andmap_2344 symbol? preserve-prop-keys3_0)
+                                #f)
+                            (void)
+                            (raise-argument-error
+                             'syntax-serialize
+                             "(listof symbol?)"
+                             preserve-prop-keys3_0))
+                          (begin
+                            (if (let ((or-part_0 (not provides-namespace_0)))
+                                  (if or-part_0
+                                    or-part_0
+                                    (1/namespace? provides-namespace_0)))
+                              (void)
+                              (raise-argument-error
+                               'syntax-serialize
+                               "(or/c namespace? #f)"
+                               provides-namespace_0))
+                            (begin
+                              (if (if as-data?5_0
+                                    as-data?5_0
+                                    (eq?
+                                     (current-code-inspector)
+                                     initial-code-inspector))
+                                (void)
+                                (error
+                                 'syntax-serialize
+                                 "internal serialization disallowed by code inspector"))
+                              (let ((mpis_0 (make-module-path-index-table)))
+                                (begin
+                                  (begin
+                                    (letrec*
+                                     ((for-loop_0
+                                       (|#%name|
+                                        for-loop
+                                        (lambda (lst_0)
+                                          (begin
+                                            (if (pair? lst_0)
+                                              (let ((init-mpi_0
+                                                     (unsafe-car lst_0)))
+                                                (let ((rest_0
+                                                       (unsafe-cdr lst_0)))
+                                                  (begin
+                                                    (add-module-path-index!/pos
+                                                     mpis_0
+                                                     init-mpi_0)
+                                                    (for-loop_0 rest_0))))
+                                              (values)))))))
+                                     (for-loop_0 init-mpis6_0)))
+                                  (let ((base-mpi-pos_0
+                                         (if base-mpi2_0
+                                           (add-module-path-index!/pos
                                             mpis_0
-                                            #f
-                                            temp13_1
+                                            base-mpi2_0)
+                                           #f)))
+                                    (let ((table_0 hash2610))
+                                      (let ((data_0
+                                             (let ((temp16_0
+                                                    (let ((table_1 table_0))
+                                                      (begin
+                                                        (letrec*
+                                                         ((for-loop_0
+                                                           (|#%name|
+                                                            for-loop
+                                                            (lambda (table_2
+                                                                     lst_0)
+                                                              (begin
+                                                                (if (pair?
+                                                                     lst_0)
+                                                                  (let ((k_0
+                                                                         (unsafe-car
+                                                                          lst_0)))
+                                                                    (let ((rest_0
+                                                                           (unsafe-cdr
+                                                                            lst_0)))
+                                                                      (let ((table_3
+                                                                             (let ((table_3
+                                                                                    (call-with-values
+                                                                                     (lambda ()
+                                                                                       (values
+                                                                                        k_0
+                                                                                        #t))
+                                                                                     (lambda (key_0
+                                                                                              val_0)
+                                                                                       (hash-set
+                                                                                        table_2
+                                                                                        key_0
+                                                                                        val_0)))))
+                                                                               (values
+                                                                                table_3))))
+                                                                        (for-loop_0
+                                                                         table_3
+                                                                         rest_0))))
+                                                                  table_2))))))
+                                                         (for-loop_0
+                                                          table_1
+                                                          preserve-prop-keys3_0))))))
+                                               (let ((temp17_0
+                                                      (if provides-namespace_0
+                                                        (|#%name|
+                                                         temp17
+                                                         (lambda (modname_0)
+                                                           (begin
+                                                             (not
+                                                              (namespace->module
+                                                               provides-namespace_0
+                                                               modname_0)))))
+                                                        (|#%name|
+                                                         temp17
+                                                         (lambda (modname_0)
+                                                           (begin #t))))))
+                                                 (let ((temp16_1 temp16_0))
+                                                   (generate-deserialize.1
+                                                    as-data?5_0
+                                                    temp17_0
+                                                    map-binding-symbol_0
+                                                    map-mpi_0
+                                                    mpis_0
+                                                    #f
+                                                    temp16_1
+                                                    report-mpi-shifts7_0
+                                                    #t
+                                                    stx10_0))))))
+                                        (if as-data?5_0
+                                          (serialized-syntax1.1
+                                           (version)
+                                           (generate-module-path-index-deserialize.1
                                             #t
-                                            stx5_0))))))
-                                (serialized-syntax1.1
-                                 (version)
-                                 (generate-module-path-index-deserialize.1
-                                  #t
-                                  mpis_0)
-                                 base-mpi-pos_0
-                                 data_0
-                                 (if provides-namespace_0 #t #f))))))))))))))))
+                                            mpis_0)
+                                           base-mpi-pos_0
+                                           data_0
+                                           (if provides-namespace_0 #t #f))
+                                          (values
+                                           data_0
+                                           (module-path-index-table-mpis
+                                            mpis_0)))))))))))))))))))))
     (|#%name|
      syntax-serialize
      (case-lambda
-      ((stx_0) (begin (syntax-serialize_0 stx_0 #f '() unsafe-undefined)))
+      ((stx_0)
+       (begin
+         (syntax-serialize_0
+          stx_0
+          #f
+          '()
+          unsafe-undefined
+          #t
+          '()
+          #f
+          unsafe-undefined
+          unsafe-undefined)))
+      ((stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis_0
+        report-mpi-shifts_0
+        map-mpi_0
+        map-binding-symbol9_0)
+       (syntax-serialize_0
+        stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis_0
+        report-mpi-shifts_0
+        map-mpi_0
+        map-binding-symbol9_0))
+      ((stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis_0
+        report-mpi-shifts_0
+        map-mpi8_0)
+       (syntax-serialize_0
+        stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis_0
+        report-mpi-shifts_0
+        map-mpi8_0
+        unsafe-undefined))
+      ((stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis_0
+        report-mpi-shifts7_0)
+       (syntax-serialize_0
+        stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis_0
+        report-mpi-shifts7_0
+        unsafe-undefined
+        unsafe-undefined))
+      ((stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis6_0)
+       (syntax-serialize_0
+        stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?_0
+        init-mpis6_0
+        #f
+        unsafe-undefined
+        unsafe-undefined))
+      ((stx_0 base-mpi_0 preserve-prop-keys_0 provides-namespace_0 as-data?5_0)
+       (syntax-serialize_0
+        stx_0
+        base-mpi_0
+        preserve-prop-keys_0
+        provides-namespace_0
+        as-data?5_0
+        '()
+        #f
+        unsafe-undefined
+        unsafe-undefined))
       ((stx_0 base-mpi_0 preserve-prop-keys_0 provides-namespace4_0)
        (syntax-serialize_0
         stx_0
         base-mpi_0
         preserve-prop-keys_0
-        provides-namespace4_0))
+        provides-namespace4_0
+        #t
+        '()
+        #f
+        unsafe-undefined
+        unsafe-undefined))
       ((stx_0 base-mpi_0 preserve-prop-keys3_0)
        (syntax-serialize_0
         stx_0
         base-mpi_0
         preserve-prop-keys3_0
+        unsafe-undefined
+        #t
+        '()
+        #f
+        unsafe-undefined
         unsafe-undefined))
       ((stx_0 base-mpi2_0)
-       (syntax-serialize_0 stx_0 base-mpi2_0 '() unsafe-undefined))))))
+       (syntax-serialize_0
+        stx_0
+        base-mpi2_0
+        '()
+        unsafe-undefined
+        #t
+        '()
+        #f
+        unsafe-undefined
+        unsafe-undefined))))))
 (define 1/syntax-deserialize
-  (let ((syntax-deserialize_0
-         (|#%name|
-          syntax-deserialize
-          (lambda (data7_0 base-mpi6_0)
-            (begin
-              (begin
-                (if (let ((or-part_0 (not base-mpi6_0)))
-                      (if or-part_0
-                        or-part_0
-                        (1/module-path-index? base-mpi6_0)))
-                  (void)
-                  (raise-argument-error
-                   'syntax-deserialize
-                   "(or/c module-path-index? #f)"
-                   base-mpi6_0))
-                (begin
-                  (if (serialized-syntax? data7_0)
-                    (void)
-                    (raise-arguments-error
-                     'syntax-deserialize
-                     "invalid serialized form"
-                     "value"
-                     data7_0))
-                  (begin
-                    (if (equal? (version) (serialized-syntax-version data7_0))
-                      (void)
-                      (raise-arguments-error
-                       'syntax-deserialize
-                       "version mismatch"
-                       "expected"
-                       (version)
-                       "found"
-                       (serialized-syntax-version data7_0)))
-                    (begin
-                      (if (eq? (current-code-inspector) initial-code-inspector)
-                        (void)
-                        (error
-                         'syntax-deserialize
-                         "deserialization disallowed by code inspector"))
-                      (let ((orig-mpis_0
-                             (deserialize-module-path-index-data
-                              (serialized-syntax-mpis data7_0))))
-                        (let ((orig-base-mpi_0
-                               (if base-mpi6_0
-                                 (let ((pos_0
-                                        (serialized-syntax-base-mpi-pos
-                                         data7_0)))
-                                   (if pos_0
-                                     (vector-ref orig-mpis_0 pos_0)
-                                     #f))
-                                 #f)))
-                          (let ((shifted-mpis_0
-                                 (if orig-base-mpi_0
-                                   (let ((len_0 (vector-length orig-mpis_0)))
-                                     (begin
-                                       (if (exact-nonnegative-integer? len_0)
-                                         (void)
-                                         (1/raise-argument-error
-                                          'for/vector
-                                          "exact-nonnegative-integer?"
-                                          len_0))
-                                       (let ((v_0 (make-vector len_0 0)))
-                                         (begin
-                                           (if (zero? len_0)
-                                             (void)
-                                             (call-with-values
-                                              (lambda ()
+  (|#%name|
+   syntax-deserialize
+   (case-lambda
+    (()
+     (begin
+       (begin
+         (if (eq? (current-code-inspector) initial-code-inspector)
+           (void)
+           (error
+            'syntax-deserialize
+            "deserialization disallowed by code inspector"))
+         (let ((bulk-binding-registry_0 (make-bulk-binding-registry)))
+           (begin
+             (letrec*
+              ((loop_0
+                (|#%name|
+                 loop
+                 (lambda (mod-name_0)
+                   (begin
+                     (let ((m_0
+                            (namespace->module
+                             (1/current-namespace)
+                             mod-name_0)))
+                       (begin
+                         (let ((self_0 (module-self m_0)))
+                           (let ((provides_0 (module-provides m_0)))
+                             (begin-unsafe
+                              (let ((app_0
+                                     (bulk-binding-registry-table
+                                      bulk-binding-registry_0)))
+                                (hash-set!
+                                 app_0
+                                 mod-name_0
+                                 (bulk-provide13.1 self_0 provides_0))))))
+                         (let ((lst_0 (module-requires m_0)))
+                           (begin
+                             (letrec*
+                              ((for-loop_0
+                                (|#%name|
+                                 for-loop
+                                 (lambda (lst_1)
+                                   (begin
+                                     (if (pair? lst_1)
+                                       (let ((phase+requires_0
+                                              (unsafe-car lst_1)))
+                                         (let ((rest_0 (unsafe-cdr lst_1)))
+                                           (call-with-values
+                                            (lambda ()
+                                              (let ((lst_2
+                                                     (cdr phase+requires_0)))
                                                 (begin
-                                                  (values
-                                                   orig-mpis_0
-                                                   (unsafe-vector-length
-                                                    orig-mpis_0))))
-                                              (lambda (vec_0 len_1)
-                                                (letrec*
-                                                 ((for-loop_0
-                                                   (|#%name|
-                                                    for-loop
-                                                    (lambda (i_0 pos_0)
-                                                      (begin
-                                                        (if (unsafe-fx<
-                                                             pos_0
-                                                             len_1)
-                                                          (let ((mpi_0
-                                                                 (unsafe-vector-ref
-                                                                  vec_0
-                                                                  pos_0)))
-                                                            (let ((i_1
-                                                                   (let ((i_1
-                                                                          (begin
-                                                                            (unsafe-vector*-set!
-                                                                             v_0
-                                                                             i_0
-                                                                             (module-path-index-shift
-                                                                              mpi_0
-                                                                              orig-base-mpi_0
-                                                                              base-mpi6_0))
-                                                                            (unsafe-fx+
-                                                                             1
-                                                                             i_0))))
-                                                                     (values
-                                                                      i_1))))
-                                                              (if (if (not
-                                                                       (let ((x_0
-                                                                              (list
-                                                                               mpi_0)))
-                                                                         (unsafe-fx=
-                                                                          i_1
-                                                                          len_0)))
-                                                                    #t
-                                                                    #f)
-                                                                (for-loop_0
+                                                  (letrec*
+                                                   ((for-loop_1
+                                                     (|#%name|
+                                                      for-loop
+                                                      (lambda (lst_3)
+                                                        (begin
+                                                          (if (pair? lst_3)
+                                                            (let ((req_0
+                                                                   (unsafe-car
+                                                                    lst_3)))
+                                                              (let ((rest_1
+                                                                     (unsafe-cdr
+                                                                      lst_3)))
+                                                                (begin
+                                                                  (loop_0
+                                                                   (1/module-path-index-resolve
+                                                                    req_0))
+                                                                  (for-loop_1
+                                                                   rest_1))))
+                                                            (values)))))))
+                                                   (for-loop_1 lst_2)))))
+                                            (lambda () (for-loop_0 rest_0)))))
+                                       (values)))))))
+                              (for-loop_0 lst_0))))
+                         (void))))))))
+              (loop_0 (1/make-resolved-module-path '|#%builtin|)))
+             (values
+              deserialize-instance
+              bulk-binding-registry_0
+              register-bulk-provide!
+              syntax-shift-module-path-index))))))
+    ((data_0) (1/syntax-deserialize data_0 #f))
+    ((data_0 base-mpi_0)
+     (begin
+       (if (let ((or-part_0 (not base-mpi_0)))
+             (if or-part_0 or-part_0 (1/module-path-index? base-mpi_0)))
+         (void)
+         (raise-argument-error
+          'syntax-deserialize
+          "(or/c module-path-index? #f)"
+          base-mpi_0))
+       (begin
+         (if (serialized-syntax? data_0)
+           (void)
+           (raise-arguments-error
+            'syntax-deserialize
+            "invalid serialized form"
+            "value"
+            data_0))
+         (begin
+           (if (equal? (version) (serialized-syntax-version data_0))
+             (void)
+             (raise-arguments-error
+              'syntax-deserialize
+              "version mismatch"
+              "expected"
+              (version)
+              "found"
+              (serialized-syntax-version data_0)))
+           (begin
+             (if (eq? (current-code-inspector) initial-code-inspector)
+               (void)
+               (error
+                'syntax-deserialize
+                "deserialization disallowed by code inspector"))
+             (let ((orig-mpis_0
+                    (deserialize-module-path-index-data
+                     (serialized-syntax-mpis data_0))))
+               (let ((orig-base-mpi_0
+                      (if base-mpi_0
+                        (let ((pos_0 (serialized-syntax-base-mpi-pos data_0)))
+                          (if pos_0 (vector-ref orig-mpis_0 pos_0) #f))
+                        #f)))
+                 (let ((shifted-mpis_0
+                        (if orig-base-mpi_0
+                          (let ((len_0 (vector-length orig-mpis_0)))
+                            (begin
+                              (if (exact-nonnegative-integer? len_0)
+                                (void)
+                                (1/raise-argument-error
+                                 'for/vector
+                                 "exact-nonnegative-integer?"
+                                 len_0))
+                              (let ((v_0 (make-vector len_0 0)))
+                                (begin
+                                  (if (zero? len_0)
+                                    (void)
+                                    (call-with-values
+                                     (lambda ()
+                                       (begin
+                                         (values
+                                          orig-mpis_0
+                                          (unsafe-vector-length orig-mpis_0))))
+                                     (lambda (vec_0 len_1)
+                                       (letrec*
+                                        ((for-loop_0
+                                          (|#%name|
+                                           for-loop
+                                           (lambda (i_0 pos_0)
+                                             (begin
+                                               (if (unsafe-fx< pos_0 len_1)
+                                                 (let ((mpi_0
+                                                        (unsafe-vector-ref
+                                                         vec_0
+                                                         pos_0)))
+                                                   (let ((i_1
+                                                          (let ((i_1
+                                                                 (begin
+                                                                   (unsafe-vector*-set!
+                                                                    v_0
+                                                                    i_0
+                                                                    (module-path-index-shift
+                                                                     mpi_0
+                                                                     orig-base-mpi_0
+                                                                     base-mpi_0))
+                                                                   (unsafe-fx+
+                                                                    1
+                                                                    i_0))))
+                                                            (values i_1))))
+                                                     (if (if (not
+                                                              (let ((x_0
+                                                                     (list
+                                                                      mpi_0)))
+                                                                (unsafe-fx=
                                                                  i_1
-                                                                 (unsafe-fx+
-                                                                  1
-                                                                  pos_0))
-                                                                i_1)))
-                                                          i_0))))))
-                                                 (for-loop_0 0 0)))))
-                                           v_0))))
-                                   orig-mpis_0)))
-                            (let ((bulk-binding-registry_0
-                                   (if (serialized-syntax-need-registry?
-                                        data7_0)
-                                     (namespace-bulk-binding-registry
-                                      (1/current-namespace))
-                                     #f)))
-                              (deserialize-data
-                               shifted-mpis_0
-                               #f
-                               bulk-binding-registry_0
-                               (serialized-syntax-data data7_0)))))))))))))))
-    (|#%name|
-     syntax-deserialize
-     (case-lambda
-      ((data_0) (begin (syntax-deserialize_0 data_0 #f)))
-      ((data_0 base-mpi6_0) (syntax-deserialize_0 data_0 base-mpi6_0))))))
+                                                                 len_0)))
+                                                           #t
+                                                           #f)
+                                                       (for-loop_0
+                                                        i_1
+                                                        (unsafe-fx+ 1 pos_0))
+                                                       i_1)))
+                                                 i_0))))))
+                                        (for-loop_0 0 0)))))
+                                  v_0))))
+                          orig-mpis_0)))
+                   (let ((bulk-binding-registry_0
+                          (if (serialized-syntax-need-registry? data_0)
+                            (namespace-bulk-binding-registry
+                             (1/current-namespace))
+                            #f)))
+                     (deserialize-data
+                      shifted-mpis_0
+                      #f
+                      bulk-binding-registry_0
+                      (serialized-syntax-data data_0))))))))))))))
+(define syntax-shift-module-path-index
+  (lambda (stx_0 from-mpi_0 to-mpi_0)
+    (syntax-module-path-index-shift.1 #f stx_0 from-mpi_0 to-mpi_0 #f)))
 (define 1/variable-reference->empty-namespace
   (|#%name|
    variable-reference->empty-namespace

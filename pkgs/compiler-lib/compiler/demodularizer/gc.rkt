@@ -10,8 +10,25 @@
 
 (provide gc-definitions)
 
-(define (gc-definitions linkl-mode body internals lifts internals-pos new-internals
+(define (gc-definitions linkl-mode phase-body phase-internals phase-lifts phase-internals-pos phase-merged-internals
                         #:assume-pure? assume-pure?)
+  (for/fold ([phase-new-body (hasheqv)]
+             [phase-new-internals (hasheqv)]
+             [phase-new-lifts (hasheqv)])
+            ([(phase body) (in-hash phase-body)])
+    (define internals (hash-ref phase-internals phase))
+    (define lifts (hash-ref phase-lifts phase))
+    (define internals-pos (hash-ref phase-internals-pos phase))
+    (define merged-internals (hash-ref phase-merged-internals phase))
+    (define-values (new-body new-internals new-lifts)
+      (gc-definitions-one-phase linkl-mode body internals lifts internals-pos merged-internals
+                                #:assume-pure? assume-pure?))
+    (values (hash-set phase-new-body phase new-body)
+            (hash-set phase-new-internals phase new-internals)
+            (hash-set phase-new-lifts phase new-lifts))))
+
+(define (gc-definitions-one-phase linkl-mode body internals lifts internals-pos new-internals
+                                  #:assume-pure? assume-pure?)
   (case linkl-mode
     [(linkl)
      (define used (make-hasheqv)) ; pos -> 'used or thunk

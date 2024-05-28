@@ -14,7 +14,9 @@
          deserialize-requires-and-provides
 
          (struct-out faslable-correlated-linklet)
-         strip-correlated)
+         strip-correlated
+
+         (struct-out provided))
 
 (struct module-use (module phase))
 (struct provided (binding protected? syntax?))
@@ -28,7 +30,9 @@
      i
      (cond
       [(eq? d 'top) (error 'deserialize-module-path-indexes "expected top")]
-      [(box? d) (module-path-index-join #f #f)]
+      [(box? d)
+       (define v (module-path-index-join #f #f))
+       v]
       [else
        (module-path-index-join (vector-ref d 0)
                                (and ((vector-length d) . > . 1)
@@ -141,11 +145,15 @@
 (define (syntax-shift-phase-level . args)
   (error 'syntax-shift-phase-level "not supported"))
 
+(define (force-syntax-object . args)
+  (error 'force-syntax-object "not supported"))
+
 (define deserialize-instance
   (make-instance 'deserialize #f 'constant
                  'deserialize-module-path-indexes deserialize-module-path-indexes
                  'syntax-module-path-index-shift syntax-module-path-index-shift
                  'syntax-shift-phase-level syntax-shift-phase-level
+                 'force-syntax-object force-syntax-object
                  'module-use module-use
                  'deserialize deserialize))
 

@@ -16,7 +16,9 @@
                 [("-M" "--compile-any") "Keep in machine-independent form instead of recompiling"
                  (recompile-enabled #f)]
                 [("-r" "--recompile") "Recompile final module to re-run optimizations"
-                 (recompile-enabled #t)]
+                                      (recompile-enabled #t)]
+                [("-s" "--syntax") "Preserve syntax objects"
+                 (syntax-object-preservation-enabled #t)]
                 [("--work") dir "Cache intermediate compilations in <dir>"
                  (unless (path-string? dir)
                    (raise-user-error (format "~a: invalid work directory: ~a"
