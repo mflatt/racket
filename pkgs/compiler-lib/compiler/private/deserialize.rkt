@@ -14,7 +14,9 @@
          deserialize-requires-and-provides
 
          (struct-out faslable-correlated-linklet)
-         strip-correlated)
+         strip-correlated
+
+         (struct-out provided))
 
 (struct module-use (module phase))
 (struct provided (binding protected? syntax?))
@@ -141,11 +143,15 @@
 (define (syntax-shift-phase-level . args)
   (error 'syntax-shift-phase-level "not supported"))
 
+(define (force-syntax-object . args)
+  (error 'force-syntax-object "not supported"))
+
 (define deserialize-instance
   (make-instance 'deserialize #f 'constant
                  'deserialize-module-path-indexes deserialize-module-path-indexes
                  'syntax-module-path-index-shift syntax-module-path-index-shift
                  'syntax-shift-phase-level syntax-shift-phase-level
+                 'force-syntax-object force-syntax-object
                  'module-use module-use
                  'deserialize deserialize))
 

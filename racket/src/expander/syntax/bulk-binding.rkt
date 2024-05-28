@@ -133,7 +133,7 @@
    (lambda (b mpi-shifts)
      (bulk-binding-module-name b mpi-shifts)))
   #:property prop:serialize
-  ;; Serialization drops the `provides` table and the providing module's `self`
+  ;; Serialization normally drops the `provides` table and the providing module's `self`
   (lambda (b ser-push! state)
     (cond
       [(and (serialize-state-keep-provides? state)

@@ -52,7 +52,7 @@
         (import-shape (hash-ref names (cons key name))))))
 
   ;; Map all syntax-literal references to the same import.
-  ;; We could update each call to the access to use a suitable
+  ;; We'll update each call to access a syntax object to use a suitable
   ;; vector index.
   (for ([(path/submod+phase imports) (in-hash imports)]
         #:when (syntax-literals-import? path/submod+phase)
@@ -106,13 +106,32 @@
       (hash-set! p internal-name pos))
     (values h p))
 
+  ;; Accumulate syntax objects. If would be nice if we didn't
+  ;; keep syntax objects in expressions that are later pruned,
+  ;; but we'll leave that as a future improvement.
+  (define stx-objs (make-hasheq))
+  (define stx-obj-map (make-hasheqv))
+  (define stx-mpi-map (make-hasheq))
+  (define (remap-syntax-object! r i)
+    (define stx-vec (run-stx-vec r))
+    (cond
+      [stx-vec
+       (define stx (vector-ref (run-stx-vec r) i))
+       (or (hash-ref stx-objs stx #f)
+           (let ([j (hash-count stx-objs)])
+             (hash-set! stx-objs stx j)
+             (hash-set! stx-obj-map j stx)
+             (hash-set! stx-mpi-map (run-self-mpi r) (run-path/submod r))
+             j))]
+      [else 0]))
+
   ;; Do we need the implicit initial variable for `(#%variable-reference)`?
   ;; The slot will be reserved whether we use it or not, but the
   ;; slot is not necessarily initialized if we don't need it.
   (define saw-zero-pos-toplevel? #f)
 
   (define linkl-mode #f)
-  
+
   (define body
     (apply
      append
@@ -132,7 +151,7 @@
                (if (import? new-name/import)
                    (import-pos new-name/import)
                    (hash-ref positions new-name/import))]))
-          (when (eq? linkl-mode 's-exp) (error 'demosularize "inconsistent linklet representations"))
+          (when (eq? linkl-mode 's-exp) (error 'demodularize "inconsistent linklet representations"))
           (set! linkl-mode 'linkl)
           (remap-positions (linkl-body linkl)
                            remap-toplevel-pos
@@ -150,9 +169,11 @@
                                        [(and any-syntax-literals?
                                              (eqv? syntax-literals-pos (import-pos i)))
                                         ;; This is a `(.get-syntax-literal! '<pos>)` call
+                                        (unless (and (= 1 (length rands))
+                                                     (exact-nonnegative-integer? (car rands)))
+                                          (error "unrecognized syntax-literal access"))
                                         (application (remap rator)
-                                                     ;; To support syntax objects, change the offset
-                                                     rands)]
+                                                     (list (remap-syntax-object! r (car rands))))]
                                        [(and any-transformer-registers?
                                              (eqv? transformer-register-pos (import-pos i)))
                                         ;; This is a `(.set-transformer! '<sym> <expr>)` call
@@ -183,12 +204,18 @@
                               ;; or a `(.set-transformer! '<sym> <expr>)` call
                               (cond
                                 [(eq? rator '.get-syntax-literal!)
+                                 (unless (and (= 1 (length rands))
+                                              (exact-nonnegative-integer? (car rands)))
+                                   (error "unrecognized syntax-literal access"))
                                  `(,(remap rator)
-                                   ;; To support syntax objects, change the offset
-                                   ,@rands)]
+                                   ,(remap-syntax-object! r (car rands)))]
                                 [(eq? rator '.set-transformer!)
                                  '(void)]
                                 [else #f]))))]))))
+
+  (define new-stx-vec
+    (for/vector ([i (in-range (hash-count stx-obj-map))])
+      (hash-ref stx-obj-map i)))
 
   (values body
           first-internal-pos
@@ -200,6 +227,8 @@
                     import-keys
                     ordered-importss
                     import-shapess
+                    new-stx-vec
+                    stx-mpi-map
                     any-syntax-literals?
                     any-transformer-registers?
                     saw-zero-pos-toplevel?))))

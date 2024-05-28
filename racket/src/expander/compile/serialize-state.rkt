@@ -30,12 +30,14 @@
                          syntax-context         ; used to collapse encoding of syntax literals
                          sharing-syntaxes       ; record which syntax objects are `datum->syntax` form
                          preserve-prop-keys     ; property keys to preserve (that otherwise wouldn't be)
-                         keep-provides?)        ; non-#f => predicate for when to keep bulk provides
+                         keep-provides?         ; non-#f => predicate for when to keep bulk provides
+                         map-binding-symbol)    ; mpi symbol -> symbol, needed by demodularizer
   #:authentic)
 
 (define (make-serialize-state reachable-scopes
                               preserve-prop-keys
-                              keep-provides?)
+                              keep-provides?
+                              map-binding-symbol)
   (define state
     (serialize-state reachable-scopes
                      (make-hasheq)   ; bindings-intern
@@ -50,7 +52,8 @@
                      (box null)      ; syntax-context
                      (make-hasheq)   ; sharing-syntaxes
                      preserve-prop-keys
-                     keep-provides?))
+                     keep-provides?
+                     map-binding-symbol)) ; mpi symbol -> symbol
   ;; Seed intern tables for sets and hashes to use the canonical
   ;; empty version for consistent sharing:
   (define empty-seteq (seteq))

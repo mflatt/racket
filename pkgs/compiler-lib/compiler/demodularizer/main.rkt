@@ -14,11 +14,13 @@
          garbage-collect-toplevels-enabled
          current-excluded-modules
          recompile-enabled
-         current-work-directory)
+         current-work-directory
+         syntax-object-preservation-enabled)
 
 (define garbage-collect-toplevels-enabled (make-parameter #f))
 (define recompile-enabled (make-parameter 'auto))
 (define current-work-directory (make-parameter #f))
+(define syntax-object-preservation-enabled (make-parameter #f))
 
 (define logger (make-logger 'demodularizer (current-logger)))
 
@@ -53,7 +55,8 @@
       (parameterize ([current-compiled-file-roots (if work-directory
                                                       (list (build-path work-directory "linklet"))
                                                       (current-compiled-file-roots))])
-        (find-modules input-file)))
+        (find-modules input-file
+                      #:keep-syntax? (syntax-object-preservation-enabled))))
 
     (when (and work-directory (not given-work-directory))
       (delete-directory/files work-directory))
@@ -72,7 +75,7 @@
 
     (log-info "Bundling linklet")
     (define bundle (wrap-bundle linkl-mode new-body new-internals new-lifts
-                                excluded-module-mpis
+                                excluded-module-mpis names
                                 get-merge-info
                                 (let-values ([(base name dir?) (split-path input-file)])
                                   (string->symbol (path->string name)))))

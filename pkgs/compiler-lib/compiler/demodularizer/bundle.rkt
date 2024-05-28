@@ -4,15 +4,18 @@
          compiler/zo-structs
          "run.rkt"
          "name.rkt"
-         "linklet.rkt")
+         "linklet.rkt"
+         "syntax.rkt")
 
 (provide wrap-bundle)
 
-(define (wrap-bundle linkl-mode body internals lifts excluded-module-mpis get-merge-info name)
+(define (wrap-bundle linkl-mode body internals lifts excluded-module-mpis names get-merge-info name)
   (define-values (runs
                   import-keys
                   ordered-importss
                   import-shapess
+                  stx-vec
+                  stx-mpi-map
                   any-syntax-literals?
                   any-transformer-registers?
                   saw-zero-pos-toplevel?)
@@ -52,44 +55,58 @@
             ,@body))
        (s-exp->linklet module-name e)]))
 
+  (define-values (self-mpi all-mpis serialized-stx)
+    (serialize-syntax stx-vec stx-mpi-map import-keys excluded-module-mpis names))
+
   (define serialized-mpis
     ;; Construct two vectors: one for mpi construction, and
     ;; another for selecting the slots that are externally referenced
-    ;; mpis (where the selection vector matches the `import-keys` order).
+    ;; mpis (where the selection vector matches the `import-keys` order
+    ;; followed by `stx-mpis` in order).
     ;; If all import keys are primitive modules, then we just make
     ;; a vector with those specs in order, but if there's a more
     ;; complex mpi, then we have to insert extra slots in the first
     ;; vector to hold intermediate mpi constructions.
     ;; We could do better here by sharing common tails.
     (let loop ([import-keys import-keys]
-               [specs (list (box module-name))]
-               [results (list 0)])
+               [all-mpis (cdr all-mpis)] ; cdr skips self mpi
+               [specs (list (box module-name))] ; initial spec = self mpi
+               [results (list 0)])              ; initial 0 = self mpi
+      (define (mpi-loop mpi specs)
+        (define-values (name base) (module-path-index-split mpi))
+        (cond
+          [(and (not name) (not base))
+           (values 0 specs)]
+          [(not base)
+           (values (length specs) (cons (vector name) specs))]
+          [else
+           (define-values (next-i next-specs) (mpi-loop base specs))
+           (values (length next-specs) (cons (vector name next-i) next-specs))]))
       (cond
         [(null? import-keys)
-         (list (list->vector (reverse specs))
-               (list->vector (reverse results)))]
+         (let loop ([stx-mpis all-mpis]
+                    [specs specs]
+                    [results results])
+           (cond
+             [(null? stx-mpis)
+              (list (list->vector (reverse specs))
+                    (list->vector (reverse results)))]
+             [else
+              (define-values (i new-specs) (mpi-loop (car stx-mpis) specs))
+              (loop (cdr stx-mpis) new-specs (cons i results))]))]
         [else
          (define path/submod+phase (car import-keys))
          (define path (car path/submod+phase))
          (cond
            [(symbol? path)
             (loop (cdr import-keys)
+                  (cdr all-mpis)
                   (cons (vector `(quote ,path)) specs)
                   (cons (length specs) results))]
            [(path? path)
-            (define-values (i new-specs)
-              (begin
-                (let mpi-loop ([mpi (hash-ref excluded-module-mpis path)])
-                  (define-values (name base) (module-path-index-split mpi))
-                  (cond
-                    [(and (not name) (not base))
-                     (values 0 specs)]
-                    [(not base)
-                     (values (length specs) (cons (vector name) specs))]
-                    [else
-                     (define-values (next-i next-specs) (mpi-loop base))
-                     (values (length next-specs) (cons (vector name next-i) next-specs))]))))
+            (define-values (i new-specs) (mpi-loop (car all-mpis) specs))
             (loop (cdr import-keys)
+                  (cdr all-mpis)
                   new-specs
                   (cons i results))]
            [else
@@ -170,7 +187,7 @@
                                                                        (get-mpi-vector depth)
                                                                        i)))
                                                         (cdr path/submod+phase)))))))))))
-    
+
   (define decl-linkl
     (case linkl-mode
       [(linkl)
@@ -235,15 +252,27 @@
                                           (lambda (depth) '.mpi-vector)))
            (define-values (portal-stxes) '#hasheqv())))]))
 
-  ;; By not including a 'stx-data linklet, we get a default
-  ;; linklet that supplies #f for any syntax-literal reference.
+  (define bundle-ht 
+    (hasheq 0 new-linkl
+            'data data-linkl
+            'decl decl-linkl
+            'name name
+            'vm (case linkl-mode
+                  [(linkl) #"racket"]
+                  [(s-exp) #"linklet"]
+                  [else (error "internal error: unrecognized linklet-representation mode")])))
 
-  (linkl-bundle (hasheq 0 new-linkl
-                        'data data-linkl
-                        'decl decl-linkl
-                        'name name
-                        'vm (case linkl-mode
-                              [(linkl) #"racket"]
-                              [(s-exp) #"linklet"]
-                              [else (error "internal error: unrecognized linklet-representation mode")]))))
+  (define bundle-ht/stx
+    (cond
+      [serialized-stx
+       (define stx-data-linklet (build-stx-data-linklet stx-vec serialized-stx))
+       (define stx-linklet (build-stx-linklet stx-vec))
+       (hash-set (hash-set bundle-ht 'stx-data stx-data-linklet)
+                 'stx
+                 stx-linklet)]
+      [else
+       ;; By not including a 'stx-data linklet, we get a default
+       ;; linklet that supplies #f for any syntax-literal reference.
+       bundle-ht]))
 
+  (linkl-bundle bundle-ht/stx))

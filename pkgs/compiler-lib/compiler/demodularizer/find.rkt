@@ -3,25 +3,34 @@
          compiler/zo-parse
          syntax/modcode
          racket/linklet
+         (only-in '#%kernel [syntax-deserialize kernel:syntax-deserialize])
          "../private/deserialize.rkt"
          "linklet.rkt"
          "module-path.rkt"
-         "run.rkt")
+         "run.rkt"
+         "syntax.rkt")
 
 (provide find-modules
          current-excluded-modules)
 
-(struct mod (compiled zo))          ; includes submodules; `zo` is #f for excluded
-(struct one-mod (compiled zo decl)) ; module without submodules
+(struct mod (compiled zo))                  ; includes submodules; `zo` is #f for excluded
+(struct one-mod (compiled zo decl stx-vec)) ; module without submodules
 
 (define current-excluded-modules (make-parameter (set)))
 
-(define (find-modules orig-path #:submodule [submod '()])
+(define (find-modules orig-path
+                      #:submodule [submod '()]
+                      #:keep-syntax? [keep-syntax? #f])
   (define mods (make-hash))      ; path -> mod 
   (define one-mods (make-hash))  ; path+submod -> one-mod
   (define runs-done (make-hash)) ; path+submod+phase -> #t
   (define runs null)             ; list of `run`
   (define excluded-module-mpis (make-hash)) ; path -> mpi
+
+  ;; deserialization of syntax objects is too tedious to re-implement, so
+  ;; we access the implementation directly from `#%kernel`
+  (define-values (real-deserialize-instance bulk-binding-registry register!)
+    (kernel:syntax-deserialize))
 
   (define (find-modules! orig-path+submod exclude?)
     (define orig-path (if (pair? orig-path+submod) (car orig-path+submod) orig-path+submod))
@@ -77,6 +86,8 @@
       (define h (linklet-bundle->hash one-compiled))
       (define data-linklet (hash-ref h 'data #f))
       (define decl-linklet (hash-ref h 'decl #f))
+      (define stx-data-linklet (and keep-syntax? 
+                                    (hash-ref h 'stx-data #f)))
       (unless data-linklet
         (error 'demodularize "could not find module path metadata\n  path: ~a\n  submod: ~a"
                path submod))
@@ -90,7 +101,14 @@
                                         (list deserialize-instance
                                               data-instance)))
 
-      (hash-set! one-mods (cons path submod) (one-mod one-compiled one-zo decl))
+      (when keep-syntax?
+        (register-provides-for-syntax register! bulk-binding-registry
+                                      orig-path submod
+                                      decl
+                                      ;; use the real deserializer to get the internal form of provides
+                                      (instantiate-linklet decl-linklet
+                                                           (list real-deserialize-instance
+                                                                 data-instance))))
 
       ;; Transitive requires
       
@@ -106,7 +124,14 @@
                          ;; Even if this module is excluded, traverse it to get all
                          ;; modules that it requires, so that we don't duplicate those
                          ;; modules by accessing them directly
-                         (or exclude? (set-member? (current-excluded-modules) req-path)))))))
+                         (or exclude? (set-member? (current-excluded-modules) req-path)))))
+
+      ;; Deserialize syntax objects last, because we may need requires to be registered
+      ;; in `bulk-binding-registry`
+      (define stx-vec (deserialize-syntax real-deserialize-instance stx-data-linklet data-instance
+                                          bulk-binding-registry))
+
+      (hash-set! one-mods (cons path submod) (one-mod one-compiled one-zo decl stx-vec))))
 
   (define (find-phase-runs! orig-path+submod orig-mpi #:phase [phase 0])
     (define orig-path (if (pair? orig-path+submod) (car orig-path+submod) orig-path+submod))
@@ -118,6 +143,7 @@
       (define one-m (hash-ref one-mods (cons path submod) #f))
       (when (one-mod-zo one-m) ; not excluded
         (define decl (one-mod-decl one-m))
+        (define stx-vec (one-mod-stx-vec one-m))
 
         (define linkl (hash-ref (linkl-bundle-table (one-mod-zo one-m)) phase #f))
         (define uses
@@ -139,7 +165,14 @@
 
              (cons path/submod (module-use-phase u)))))
 
-        (define r (run (if (null? submod) path (cons path submod)) phase linkl uses))
+        (define shifted-stx-vec
+          (if (eqv? phase 0)
+              stx-vec
+              (and stx-vec
+                   (for/vector ([e (in-vector stx-vec)]) (syntax-shift-phase-level e (- phase))))))
+    
+        (define r (run (if (null? submod) path (cons path submod)) phase linkl uses
+                       shifted-stx-vec (instance-variable-value decl 'self-mpi)))
         (hash-set! runs-done (cons (cons path submod) phase) #t)
 
         (define reqs (instance-variable-value decl 'requires))
