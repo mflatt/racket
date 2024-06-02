@@ -143,7 +143,8 @@
                    append
                    (for/list ([(phase ht) (in-hash provides)])
                      (phase-wrap phase (hash-keys ht)))))
-       ,@(let loop ([phases phases] [depth 0])
+       ,@(let loop ([phases phases] [depth (apply min 0 phases)])
+           (log-error "~s ~s" (length phases) depth)
            (cond
              [(null? phases) '()]
              [(= depth (car phases))

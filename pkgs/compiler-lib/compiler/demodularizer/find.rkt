@@ -8,13 +8,14 @@
          "linklet.rkt"
          "module-path.rkt"
          "run.rkt"
-         "syntax.rkt")
+         "syntax.rkt"
+         "binding.rkt")
 
 (provide find-modules
          current-excluded-modules)
 
 (struct mod (compiled zo))                  ; includes submodules; `zo` is #f for excluded
-(struct one-mod (compiled zo decl min-phase max-phase stx-vec stx-mpi)) ; module without submodules
+(struct one-mod (compiled zo decl min-phase max-phase provides stx-vec stx-mpi)) ; module without submodules
 
 (define current-excluded-modules (make-parameter (set)))
 
@@ -36,10 +37,13 @@
     (kernel:syntax-deserialize))
 
   ;; returns (values min-phase mx-phase)
-  (define (find-modules! orig-path+submod exclude?)
+  (define (find-modules! orig-path+submod rel-mpi exclude? provides?)
     (define orig-path (if (pair? orig-path+submod) (car orig-path+submod) orig-path+submod))
     (define submod (if (pair? orig-path+submod) (cdr orig-path+submod) '()))
     (define path (normal-case-path (simplify-path (path->complete-path orig-path))))
+
+    (when exclude?
+      (hash-set! excluded-module-mpis orig-path+submod rel-mpi))
 
     (unless (hash-ref mods path #f) 
       (define-values (zo-path kind) (get-module-path path))
@@ -116,6 +120,8 @@
                                                            (list real-deserialize-instance
                                                                  data-instance))))
 
+      (define self-mpi (instance-variable-value decl 'self-mpi))
+
       ;; Transitive requires
       
       (define reqs (instance-variable-value decl 'requires))
@@ -133,12 +139,12 @@
             ;; modules that it requires, so that we don't duplicate those
             ;; modules by accessing them directly                         
             (or exclude? (set-member? (current-excluded-modules) req-path) (symbol? req-path)))
-          (define-values (req-min-phase req-max-phase)
+          (define-values (req-min-phase req-max-phase ignored-provides)
             (if (symbol? req-path)
-                (values 0 0)
-                (find-modules! path/submod exclude-req?)))
+                (values 0 0 #hasheqv())
+                (find-modules! path/submod (module-path-index-reroot req rel-mpi) exclude-req? #f)))
           (values (min min-phase (+ req-phase req-min-phase))
-                  (max max-phase (+ req-phase req-max-phase)))))          
+                  (max max-phase (+ req-phase req-max-phase)))))
 
       ;; Deserialize syntax objects last, because we may need requires to be registered
       ;; in `bulk-binding-registry`
@@ -146,15 +152,32 @@
         (deserialize-syntax real-deserialize-instance stx-data-linklet data-instance
                             bulk-binding-registry
                             syntax-shift-module-path-index
-                            path submod (instance-variable-value decl 'self-mpi)))
+                            path submod self-mpi))
 
-      (hash-set! one-mods (cons path submod) (one-mod one-compiled one-zo decl trans-min-phase trans-max-phase stx-vec stx-mpi)))
+      (define orig-provides (or (and provides?
+                                     (instance-variable-value decl 'provides))
+                                #hasheqv()))
+      (define provides
+        (or (and orig-provides
+                 ((hash-count orig-provides) . > . 0)
+                 (let ([path-mpi (module-path-index-join `(file ,orig-path) #f)])
+                   (for/hasheqv ([(phase provs) (in-hash orig-provides)])
+                     (values phase
+                             (for/hasheq ([(name bind) (in-hash provs)])
+                               (values name
+                                       (binding-module-path-index-shift bind self-mpi path-mpi)))))))
+            orig-provides))
+      
+      (hash-set! one-mods (cons path submod) (one-mod one-compiled one-zo decl
+                                                      trans-min-phase trans-max-phase provides
+                                                      stx-vec stx-mpi)))
 
     (if all-phases?
         (let ([m (hash-ref one-mods (cons path submod) #f)])
           (values (one-mod-min-phase m)
-                  (one-mod-max-phase m)))
-        (values 0 0)))
+                  (one-mod-max-phase m)
+                  (one-mod-provides m)))
+        (values 0 0 #hasheqv())))
 
   (define (find-phase-runs! orig-path+submod orig-mpi
                             #:phase-level [phase-level 0]
@@ -187,17 +210,14 @@
                                    null)])
              (define path/submod (module-path-index->path (module-use-module u) path submod))
 
-             ;; In case the import turns out to stay imported:
-             (define req-path (if (pair? path/submod) (car path/submod) path/submod))
-             (hash-set! excluded-module-mpis req-path (module-path-index-reroot (module-use-module u) orig-mpi))
-
              (cons path/submod (module-use-phase u)))))
 
         (define shifted-stx-vec
-          (if (eqv? phase-level 0)
-              stx-vec
-              (and stx-vec
-                   (for/vector ([e (in-vector stx-vec)]) (syntax-shift-phase-level e (- phase-level))))))
+          (let ([phase-shift (- phase-level root-phase)])
+            (if (eqv? phase-shift 0)
+                stx-vec
+                (and stx-vec
+                     (for/vector ([e (in-vector stx-vec)]) (syntax-shift-phase-level e phase-shift))))))
 
         (define r (run (if (null? submod) path (cons path submod)) phase-level linkl meta-linkl uses
                        shifted-stx-vec stx-mpi))
@@ -230,8 +250,8 @@
         ;; reverse order that we want to emit code
         (when linkl (hash-set! phase-runs root-phase (cons r (hash-ref phase-runs root-phase null)))))))
 
-  (define-values (reachable-min-phase reachable-max-phase)
-    (find-modules! (cons orig-path submod) #f))
+  (define-values (reachable-min-phase reachable-max-phase provides)
+    (find-modules! (cons orig-path submod) (module-path-index-join #f #f) #f #t))
 
   (for ([root-phase (in-range reachable-min-phase (add1 reachable-max-phase))])
     (find-phase-runs! (cons orig-path submod) (module-path-index-join #f #f)
@@ -241,4 +261,5 @@
   (values (for/hasheqv ([(root-phase runs) (in-hash phase-runs)])
             (values root-phase (reverse runs)))
           (hash-keys excluded-modules)
-          excluded-module-mpis))
+          excluded-module-mpis
+          provides))

@@ -53,7 +53,17 @@
     (for/list ([path (in-list import-paths)])
       (cond
         [(symbol? path) (module-path-index-join `(quote ,path) #f)]
-        [else (hash-ref excluded-module-mpis path)])))
+        [else
+         ;; collapse to a simplified MPI early
+         (define mpi (or (hash-ref excluded-module-mpis path #f)
+                         (error 'import-mpis "cannot find module: ~s" path)))
+         (module-path-index-join (collapse-module-path-index mpi)
+                                 ;; keep the "self" mpi, if any:
+                                 (let loop ([mpi mpi])
+                                   (define-values (name base) (module-path-index-split mpi))
+                                   (if (not name)
+                                       mpi
+                                       (and (module-path-index? base) (loop base)))))])))
 
   (define (derived-from-self? mpi)
     (define-values (name base) (module-path-index-split mpi))
@@ -112,7 +122,9 @@
                                      ;; If the result path is to an excluded module, then
                                      ;; we have a replacement mpi to supply the right form
                                      ;; of reference for the excluded module
-                                     (define exp-mpi #f #;(hash-ref excluded-module-mpis path/submod #f))
+                                     (define exp-mpi (if (symbol? path/submod)
+                                                         (module-path-index-join `(quote ,path/submod) #f)
+                                                         (hash-ref excluded-module-mpis path/submod #f)))
                                      (define new-mpi
                                        (cond
                                          [exp-mpi
@@ -125,9 +137,6 @@
                                 ;; map-mpi
                                 (lambda (mpi)
                                   (car (or (hash-ref mpi-map mpi #f)
-                                           (begin
-                                             (log-error "fail ~s ~s" mpi (eq-hash-code mpi))
-                                             (list self-mpi))
                                            (raise-arguments-error 'demodularize
                                                                   "found module path index in syntax without reported resolution"
                                                                   "module path index" mpi))))
@@ -140,16 +149,18 @@
                                                            "module path index" mpi))
                                   (define path/submod (cdr new-mpi+path/submod))
                                   (cond
-                                    #;
                                     [(hash-ref excluded-module-mpis path/submod #f)
                                      sym]
                                     [(symbol? path/submod)
                                      sym]
                                     [else
                                      (or (hash-ref names (cons (cons path/submod phase) sym) #f)
+                                         (begin
+                                           (log-error ">> ~s ~s ~s" sym path/submod phase)
+                                           sym)
                                          (raise-arguments-error 'demodularize
                                                                 "did not find new name for binding in syntax"
-                                                                "module path" (cdr new-mpi+path/submod)
+                                                                "module path" path/submod
                                                                 "name" sym
                                                                 "phase level" phase))])))]))
 

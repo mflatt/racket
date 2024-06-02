@@ -1,3 +1,4 @@
+;; KEEP
 (define hash2610 (hasheq))
 (define hash2725 (hash))
 (define kw2846 (string->keyword "direct"))
@@ -45708,6 +45709,9 @@
                                                                                                                      mutated_0
                                                                                                                      new-env_0
                                                                                                                      body-stk-i_0)))
+                                                                                                               (when (and (pair? ids_0)
+                                                                                                                          (eq? '!= (car ids_0)))
+                                                                                                                 (#%fprintf (#%current-error-port) "~s\n  ~s\n" c-body_0 body_1))
                                                                                                                (let ((pos_0
                                                                                                                       (stack->pos.1
                                                                                                                        #t

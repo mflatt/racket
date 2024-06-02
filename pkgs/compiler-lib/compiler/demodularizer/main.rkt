@@ -15,7 +15,8 @@
          current-excluded-modules
          recompile-enabled
          current-work-directory
-         syntax-object-preservation-enabled)
+         syntax-object-preservation-enabled
+         current-merged-output-file)
 
 (define garbage-collect-toplevels-enabled (make-parameter #f))
 (define recompile-enabled (make-parameter 'auto))
@@ -51,7 +52,7 @@
          (managed-compile-zo input-file))])
 
     (log-info "Finding modules")
-    (define-values (phase-runs excluded-modules excluded-module-mpis)
+    (define-values (phase-runs excluded-modules excluded-module-mpis provides)
       (parameterize ([current-compiled-file-roots (if work-directory
                                                       (list (build-path work-directory "linklet"))
                                                       (current-compiled-file-roots))])
@@ -67,25 +68,29 @@
 
     (log-info "Merging linklets")
     (define-values (phase-body phase-first-internal-pos phase-merged-internals linkl-mode phase-import-keys
+                               phase-defined-names
                                get-merge-info)
       (merge-linklets phase-runs names phase-internals phase-lifts phase-imports))
 
     (log-info "GCing definitions")
-    (define-values (phase-new-body phase-new-internals phase-new-lifts)
+    (define-values (phase-new-body phase-new-internals phase-new-lifts phase-new-defined-names)
       (cond
         [(syntax-object-preservation-enabled)
          ;; any definition might be referenced reflectively
-         (values phase-body phase-internals phase-lifts)]
+         (values phase-body phase-internals phase-lifts phase-defined-names)]
         [else
          (gc-definitions linkl-mode phase-body phase-internals phase-lifts phase-first-internal-pos phase-merged-internals
+                         phase-defined-names
                          #:assume-pure? (garbage-collect-toplevels-enabled))]))
 
     (log-info "Bundling linklet")
     (define bundle (wrap-bundle linkl-mode phase-new-body phase-new-internals phase-new-lifts phase-import-keys
-                                excluded-modules excluded-module-mpis names
+                                phase-new-defined-names
+                                excluded-modules excluded-module-mpis provides names
                                 get-merge-info
                                 (let-values ([(base name dir?) (split-path input-file)])
-                                  (string->symbol (path->string name)))))
+                                  (string->symbol (path->string name)))
+                                #:export? (syntax-object-preservation-enabled)))
 
     (log-info "Writing bytecode")
     (define output-file (or given-output-file

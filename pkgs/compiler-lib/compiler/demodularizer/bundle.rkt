@@ -2,16 +2,24 @@
 (require (only-in '#%linklet primitive->compiled-position)
          racket/set
          compiler/zo-structs
+         racket/pretty
          "run.rkt"
          "name.rkt"
          "linklet.rkt"
-         "syntax.rkt")
+         "syntax.rkt"
+         "binding.rkt"
+         "deshadow.rkt")
 
-(provide wrap-bundle)
+(provide wrap-bundle
+         current-merged-output-file)
+
+(define current-merged-output-file (make-parameter #f))
 
 (define (wrap-bundle linkl-mode phase-body phase-internals phase-lifts phase-import-keys
-                     excluded-modules excluded-module-mpis names
-                     get-merge-info name)
+                     phase-defined-names
+                     excluded-modules excluded-module-mpis provides names
+                     get-merge-info name
+                     #:export? export?)
   (define-values (phase-runs
                   phase-more
                   stx-vec)
@@ -20,16 +28,17 @@
     (for/fold ([min-phase 0] [max-phase 0]) ([phase (in-hash-keys phase-body)])
       (values (min phase min-phase) (max phase max-phase))))
 
-  ;; Gather all paths that are either leftover imports to a linklet
-  ;; or required overall as excluded modules. Leftover imports to a linklet
-  ;; should be transitively required by the excluded modules, bu we don't
-  ;; try to check that.
-  (define-values (import-path-pos import-paths)
+  ;; Gather all paths that are either leftover imports to a linklet,
+  ;; required overall as excluded modules, or mentioned in a provided
+  ;; binding. Leftover imports and provides should be transitively
+  ;; required by the excluded modules, but we don't try to check that.
+  (define-values (external-path-pos external-paths)
     (let ()
-      (define (add-path path ht rev-paths)
-        (if (hash-ref ht path #f)
+      (define (add-path path/submod ht rev-paths)
+        (if (hash-ref ht path/submod #f)
             (values ht rev-paths)
-            (values (hash-set ht path (add1 (hash-count ht))) (cons path rev-paths))))
+            (values (hash-set ht path/submod (add1 (hash-count ht)))
+                    (cons path/submod rev-paths))))
       (define-values (import-ht import-rev-paths)
         (for*/fold ([ht #hash()] [rev-paths '()])
                    ([import-keys (in-hash-values phase-import-keys)]
@@ -41,24 +50,34 @@
                    ([path/submod+phase (in-list excluded-modules)])
           (define path/submod (car path/submod+phase))
           (add-path path/submod ht rev-paths)))
-      (values require-ht (reverse require-rev-paths))))
+      (define-values (provide-ht provide-rev-paths)
+        (for*/fold ([ht require-ht] [rev-paths require-rev-paths])
+                   ([binds (in-hash-values provides)]
+                    [bind (in-hash-values binds)]
+                    [mpi (in-list (binding-mpis bind))]
+                    #:do [(define r (module-path-index-resolve mpi))
+                          (define path/submod (resolved-module-path-name r))]
+                    #:when (or (symbol? path/submod)
+                               (hash-ref excluded-module-mpis path/submod #f)))
+          (add-path path/submod ht rev-paths)))
+      (values provide-ht (reverse provide-rev-paths))))
 
   (define-values (self-mpi all-mpis serialized-stx)
-    (serialize-syntax stx-vec import-paths excluded-module-mpis names))
+    (serialize-syntax stx-vec external-paths excluded-module-mpis names))
 
   (define module-name 'demodularized)
 
   (define serialized-mpis
     ;; Construct two vectors: one for mpi construction, and
     ;; another for selecting the slots that are externally referenced
-    ;; mpis (where the selection vector matches the `import-paths` order
+    ;; mpis (where the selection vector matches the `external-paths` order
     ;; followed by `stx-mpis` in order).
     ;; If all module paths refer to symbol-named primitive modules, then 
     ;; we just make a vector with those specs in order, but if there's a
     ;; more complex mpi, then we have to insert extra slots in the first
     ;; vector to hold intermediate mpi constructions.
     ;; We could do better here by sharing common tails.
-    (let loop ([import-paths import-paths]
+    (let loop ([external-paths external-paths]
                [all-mpis (cdr all-mpis)] ; cdr skips self mpi
                [specs (list (box module-name))] ; initial spec = self mpi
                [results (list 0)])              ; initial 0 = self mpi
@@ -73,7 +92,7 @@
            (define-values (next-i next-specs) (mpi-loop base specs))
            (values (length next-specs) (cons (vector name next-i) next-specs))]))
       (cond
-        [(null? import-paths)
+        [(null? external-paths)
          (let loop ([stx-mpis all-mpis]
                     [specs specs]
                     [results results])
@@ -85,16 +104,16 @@
               (define-values (i new-specs) (mpi-loop (car stx-mpis) specs))
               (loop (cdr stx-mpis) new-specs (cons i results))]))]
         [else
-         (define path (car import-paths))
+         (define path (car external-paths))
          (cond
-           [(symbol? path)
-            (loop (cdr import-paths)
+           [(or (symbol? path) (and (pair? path) (symbol? (car path))))
+            (loop (cdr external-paths)
                   (cdr all-mpis)
                   (cons (vector `(quote ,path)) specs)
                   (cons (length specs) results))]
-           [(path? path)
+           [(or (path? path) (and (pair? path) (path? (car path))))
             (define-values (i new-specs) (mpi-loop (car all-mpis) specs))
-            (loop (cdr import-paths)
+            (loop (cdr external-paths)
                   (cdr all-mpis)
                   new-specs
                   (cons i results))]
@@ -147,7 +166,7 @@
                    (for/list ([path/submod+phase (in-list excluded-modules)]
                               #:when (eqv? phase (cdr path/submod+phase)))
                      (define path/submod (car path/submod+phase))
-                     (define pos (hash-ref import-path-pos path/submod))
+                     (define pos (hash-ref external-path-pos path/submod))
                      `(#:mpi ,pos)))
                   (loop (cdr phases)))]))))
 
@@ -156,6 +175,22 @@
       (for/list ([path/submod+phase (in-list excluded-modules)]
                  #:when (eqv? phase (cdr path/submod+phase)))
         #t)))
+
+  (define serialized-provides
+    (let ([phases (hash-keys provides)]) ; deterministic output would need sorting here
+      (list->vector
+       `(#:hasheqv ,(hash-count provides)
+         ,@(apply
+            append
+            (for/list ([phase (in-list phases)])
+              (define ht (hash-ref provides phase))
+              `(,phase
+                #:hasheq
+                ,(hash-count ht)
+                ,@(apply
+                   append
+                   (for/list ([(name bind) (in-hash ht)])
+                     `(,name ,@(serialize-binding bind external-path-pos)))))))))))
 
   (define (primitive v)
     (primval (or (primitive->compiled-position v)
@@ -175,7 +210,7 @@
                              (make-apply (get-prim 'list list)
                                          (for/list ([path/submod+phase (in-list import-keys)])
                                            (define path/submod (car path/submod+phase))
-                                           (define pos (hash-ref import-path-pos path/submod))
+                                           (define pos (hash-ref external-path-pos path/submod))
                                            (let ([depth (+ depth 2)])
                                              (make-apply (get-module-use depth)
                                                          (list
@@ -243,7 +278,10 @@
                                                   (quote ,serialized-requires)))
            (define-values (recur-requires) (quote ,recur-requires))
            (define-values (flattened-requires) #false)
-           (define-values (provides) '#hasheqv())
+           (define-values (provides) ,(if (= 0 (hash-count provides))
+                                          (quote '#hasheqv())
+                                          `(deserialize .mpi-vector #f #f 0 '#() 0 '#() '#()
+                                                        (quote ,serialized-provides))))
            (define-values (phase-to-link-modules)
              ,(make-phase-to-link-modules cons
                                           (lambda (name prim) name)
@@ -287,14 +325,26 @@
                   saw-zero-pos-toplevel?)]
           [(s-exp)
            (define e
-             `(linklet ,(list* (if any-syntax-literals? '(.get-syntax-literal!) '())
-                               (if any-transformer-registers? '(.set-transformer!) '())
-                               ordered-importss)
-                  () ; exports
-                ,@body))
+             (deshadow-linklet
+              `(linklet ,(list* (if any-syntax-literals? '(.get-syntax-literal!) '())
+                                (if any-transformer-registers? '(.set-transformer!) '())
+                                ordered-importss)
+                   ,(if export?
+                        (hash-keys (hash-ref phase-defined-names root-phase '()))
+                        '())
+                 ,@body)))
            (s-exp->linklet module-name e)]))
 
       (values root-phase new-linkl)))
+
+  (when (current-merged-output-file)
+    (call-with-output-file*
+     (current-merged-output-file)
+     #:exists 'truncate
+     (lambda (o)
+       (for ([root-phase (in-list (hash-keys body-linkl-ht))])
+         (pretty-print root-phase o)
+         (pretty-print (hash-ref body-linkl-ht root-phase) o)))))
 
   (define metadata-ht
     (hasheq 'data data-linkl

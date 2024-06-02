@@ -82,12 +82,13 @@
 
 (define (remap-names body
                      remap-name ; symbol -> symbol-or-import
+                     #:remap-defined-name [remap-defined-name remap-name]
                      #:application-hook [application-hook (lambda (rator rands remap) #f)])
   (for/list ([b (in-list body)])
     (let loop ([b b])
       (match b
         [`(define-values ,ids ,rhs)
-         `(define-values ,(map remap-name ids) ,(loop rhs))]
+         `(define-values ,(map remap-defined-name ids) ,(loop rhs))]
         [`(lambda ,args ,body)
          `(lambda ,args ,(loop body))]
         [`(case-lambda [,argss ,bodys] ...)

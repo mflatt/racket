@@ -27,6 +27,8 @@
   (define phase-lifts (make-table (lambda () (box '()))))
   (define phase-imports (make-table make-hash)) ; root-phase -> path/submod+phase -> list-of-sym
 
+  (define done (make-hash))
+
   ;; choose names in phase 0, first, to bias name choice toward that phase
   (for ([root-phase (cons 0 (remv 0 (hash-keys phase-runs)))])
     (define runs (hash-ref phase-runs root-phase))
@@ -55,29 +57,34 @@
       (define linkl (run-linkl r))
       (define meta-linkl (run-meta-linkl r))
       (define path/submod+phase (cons (run-path/submod r) (run-phase r)))
-      
-      ;; Process local definitions, first
-      (define (select-names! name-list category)
-        (for ([name (in-list name-list)])
-          (define new-name (pick-name name))
-          (hash-set! names (cons path/submod+phase name) new-name)
-          (set-box! category (cons new-name (unbox category)))))
-      
-      (select-names! (linklet*-exports linkl) internals)
-      (select-names! (linklet*-internals linkl) internals)
-      (select-names! (linklet*-lifts linkl) lifts)
 
-      (when meta-linkl
-        (remap-names (linklet*-body meta-linkl)
-                     (lambda (name) name)
-                     #:application-hook
-                     (lambda (rator rands remap)
-                       (cond
-                         [(eq? rator '.set-transformer!)
-                          (match rands
-                            [`((quote ,name) ,_)
-                             (select-names! (list name) internals)]
-                            [_ (error "unrecognized transformer registration")])])))))
+      ;; Same linklet can be used (as shifted) in multiple root phases,
+      ;; so check that we haven't covered this one already:
+      (unless (hash-ref done path/submod+phase #f)
+        (hash-set! done path/submod+phase #t)
+        
+        ;; Process local definitions, first
+        (define (select-names! name-list category)
+          (for ([name (in-list name-list)])
+            (define new-name (pick-name name))
+            (hash-set! names (cons path/submod+phase name) new-name)
+            (set-box! category (cons new-name (unbox category)))))
+        
+        (select-names! (linklet*-exports linkl) internals)
+        (select-names! (linklet*-internals linkl) internals)
+        (select-names! (linklet*-lifts linkl) lifts)
+
+        (when meta-linkl
+          (remap-names (linklet*-body meta-linkl)
+                       (lambda (name) name)
+                       #:application-hook
+                       (lambda (rator rands remap)
+                         (cond
+                           [(eq? rator '.set-transformer!)
+                            (match rands
+                              [`((quote ,name) ,_)
+                               (select-names! (list name) internals)]
+                              [_ (error "unrecognized transformer registration")])]))))))
 
     ;; Record any imports that will remain as imports; anything
     ;; not yet mapped must be a leftover import

@@ -1,5 +1,6 @@
 #lang racket/base
 (require compiler/zo-structs
+         racket/match
          "run.rkt"
          "name.rkt"
          "import.rkt"
@@ -31,6 +32,7 @@
   (define phase-new-internals (make-hasheqv))
   (define phase-import-keys (make-hasheqv))
   (define phase-more (make-hasheqv))
+  (define phase-defined-names (make-hasheqv))
 
   (define linkl-mode #f)
 
@@ -38,6 +40,10 @@
     (define internals (hash-ref phase-internals root-phase))
     (define lifts (hash-ref phase-lifts root-phase))
     (define imports (hash-ref phase-imports root-phase))
+    (define defined-names (or (hash-ref phase-defined-names root-phase #f)
+                              (let ([ht (make-hasheq)])
+                                (hash-set! phase-defined-names root-phase ht)
+                                ht)))
 
     (define (syntax-literals-import? path/submod+phase)
       (eq? (cdr path/submod+phase) 'syntax-literals))
@@ -191,8 +197,14 @@
                                  [else #f])))]
            [(linklet*-body linkl)
             => (lambda (body)
-                 (when (eq? linkl-mode 'linkl) (error 'demosularize "inconsistent linklet representations"))
+                 (when (eq? linkl-mode 'linkl) (error 'demodularize "inconsistent linklet representations"))
                  (set! linkl-mode 's-exp)
+                 #;
+                 (when (eqv? root-phase 1)
+                   (when (and (path? (run-path/submod r))
+                              (regexp-match? #rx"rhombus/private/comparable.rkt" (run-path/submod r)))
+                     (local-require racket/pretty)
+                     (pretty-print linkl)))
                  ;; We can work in terms of names instead of positions
                  (define importss (linklet*-importss linkl))
                  (define (remap-name name)
@@ -205,8 +217,13 @@
                       (cond
                         [(import? n) (import-int-name n)]
                         [else n])]))
+                 (define (remap-defined-name name)
+                   (define new-name (remap-name name))
+                   (hash-set! defined-names new-name #t)
+                   new-name)
                  (remap-names body
                               remap-name
+                              #:remap-defined-name remap-defined-name
                               #:application-hook
                               (lambda (rator rands remap)
                                 ;; Check for a `(.get-syntax-literal! '<pos>)` call
@@ -219,7 +236,11 @@
                                    `(,(remap rator)
                                      ,(remap-syntax-object! r (car rands)))]
                                   [(eq? rator '.set-transformer!)
-                                   '(void)]
+                                   (match rands
+                                     [`((quote ,name) ,rhs)
+                                      `(,(remap rator)
+                                        ',(remap name)
+                                        ,(remap rhs))])]
                                   [else #f]))))]))))
 
     (hash-set! phase-body root-phase body)
@@ -241,6 +262,7 @@
           phase-new-internals
           linkl-mode
           phase-import-keys
+          phase-defined-names
           ;; Communicates into to `wrap-bundle`:
           (lambda ()
             (values phase-runs
