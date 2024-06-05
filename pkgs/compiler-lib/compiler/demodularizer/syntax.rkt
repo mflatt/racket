@@ -2,7 +2,8 @@
 (require (only-in '#%kernel [syntax-serialize kernel:syntax-serialize])
          racket/linklet
          syntax/modcollapse
-         "linklet.rkt")
+         "linklet.rkt"
+         "import.rkt")
 
 (provide register-provides-for-syntax
          deserialize-syntax
@@ -149,17 +150,21 @@
                                                            "module path index" mpi))
                                   (define path/submod (cdr new-mpi+path/submod))
                                   (cond
-                                    [(hash-ref excluded-module-mpis path/submod #f)
-                                     sym]
                                     [(symbol? path/submod)
                                      sym]
+                                    [(hash-ref names (cons (cons path/submod phase) sym) #f)
+                                     => (lambda (new-sym)
+                                          (if (import? new-sym)
+                                              (import-int-name new-sym)
+                                              new-sym))]
+                                    [(hash-ref excluded-module-mpis path/submod #f)
+                                     sym]
                                     [else
-                                     (or (hash-ref names (cons (cons path/submod phase) sym) #f)
-                                         (raise-arguments-error 'demodularize
-                                                                "did not find new name for binding in syntax"
-                                                                "module path" path/submod
-                                                                "name" sym
-                                                                "phase level" phase))])))]))
+                                     (raise-arguments-error 'demodularize
+                                                            "did not find new name for binding in syntax"
+                                                            "module path" path/submod
+                                                            "name" sym
+                                                            "phase level" phase)])))]))
 
   (for ([stx-mpi (in-vector stx-mpis-vec)]
         [orig-mpi (in-list (cons self-mpi import-mpis))])

@@ -9,7 +9,10 @@
 (provide select-names
          find-name)
 
-(define (select-names phase-runs)
+(struct select-state (names used-names))
+
+(define (select-names phase-runs
+                      #:state state)
   (define (make-table make)
     (for/hasheqv ([phase (in-hash-keys phase-runs)])
       (values phase (make))))
@@ -20,12 +23,24 @@
   ;; Don't need a per-root-phase table of names, because
   ;; we'll pick a consistent name for a given module and phase-level
   ;; no matter which root phase it's in
-  (define names (make-hash)) ; path/submod+phase+sym -> symbol
-  (define used-names (make-hasheq))
+  (define names   ; path/submod+phase+sym -> symbol
+    (if state
+        (let ([names (make-hash)])
+          (for ([(k v) (in-hash (select-state-names state))])
+            (hash-set! names k 
+                       (cond
+                         [(import? v) v]
+                         [else (import v #f v #f)])))
+          names)
+        (make-hash)))
+  (define used-names
+    (if state
+        (hash-copy (select-state-used-names state))
+        (make-hasheq)))
 
   (define phase-internals (make-table (lambda () (box '()))))
   (define phase-lifts (make-table (lambda () (box '()))))
-  (define phase-imports (make-table make-hash)) ; root-phase -> path/submod+phase -> list-of-sym
+  (define phase-imports (make-table make-hash)) ; root-phase -> path/submod+phase -> (list (cons path/submod+phase sym) ...)
   (define phase-imports-done (make-table make-hash)) ; root-phase -> path/submod+phase -> set-of-sym
 
   (define done (make-hash))
@@ -100,7 +115,8 @@
       (for ([import-names (in-list (linklet*-importss linkl))]
             [import-internal-names (in-list (linklet*-internal-importss linkl))]
             [import-shapes (in-list (linklet*-import-shapess linkl))]
-            [use (in-list (run-uses r))])
+            [use (in-list (run-uses r))]
+            [import-use (in-list (run-import-uses r))])
         (for ([name (in-list import-names)]
               [internal-name (in-list import-internal-names)]
               [shape (in-list import-shapes)])
@@ -108,7 +124,8 @@
           (unless (symbol? n)
             (define done-names (hash-ref imports-done use #hasheq()))
             (unless (hash-ref done-names name #f)
-              (hash-set! imports use (cons name (hash-ref imports use null)))
+              (hash-set! imports import-use (cons (cons use name)
+                                                  (hash-ref imports import-use null)))
               (hash-set! imports-done use (hash-set done-names name #t))))
           (unless n
             (define new-name ; used for S-expression mode
@@ -117,7 +134,9 @@
                   (pick-name internal-name)))
             (hash-set! names (cons use name) (import name shape new-name #f)))))))
 
-  (values names (phase-map phase-internals unbox) (phase-map phase-lifts unbox) phase-imports))
+  (define new-state (select-state names used-names))
+
+  (values names (phase-map phase-internals unbox) (phase-map phase-lifts unbox) phase-imports new-state))
 
 (define (find-name names use name)
   (hash-ref names (cons use name)))

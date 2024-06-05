@@ -7,12 +7,10 @@
          "remap.rkt"
          "linklet.rkt")
 
-(provide merge-linklets
-         current-maximum-phase)
+(provide merge-linklets)
 
-(define current-maximum-phase (make-parameter 1))
-
-(define (merge-linklets phase-runs names phase-internals phase-lifts phase-imports)
+(define (merge-linklets phase-runs names phase-internals phase-lifts phase-imports
+                        #:maximum-phase given-maximum-root-phase)
   ;; Accumulate syntax objects, which span phases. If would be nice if we didn't
   ;; keep syntax objects in expressions that are later pruned,
   ;; but we'll leave that as a future improvement.
@@ -40,7 +38,7 @@
 
   (define linkl-mode #f)
 
-  (define max-root-phase (current-maximum-phase))
+  (define max-root-phase given-maximum-root-phase)
 
   (for ([(root-phase runs) (in-hash phase-runs)]
         #:when (<= 0 root-phase (or max-root-phase +inf.0)))
@@ -83,31 +81,32 @@
     (define ordered-importss
       (for/list ([key (in-list import-keys)])
         (define ordered-imports (hash-ref imports key))
-        (for/list ([name (in-list ordered-imports)])
-          (define i (hash-ref names (cons key name)))
+        (for/list ([src-key+name (in-list ordered-imports)])
+          (define name (cdr src-key+name))
+          (define i (hash-ref names src-key+name))
           (set-import-pos! i import-counter)
           (set! import-counter (add1 import-counter))
           (list name (import-int-name i)))))
     ;; Keep all the same import shapes
     (define import-shapess
       (for/list ([key (in-list import-keys)])
-        (for/list ([name (in-list (hash-ref imports key))])
-          (import-shape (hash-ref names (cons key name))))))
+        (for/list ([src-key+name (in-list (hash-ref imports key))])
+          (import-shape (hash-ref names src-key+name)))))
 
     ;; Map all syntax-literal references to the same import.
     ;; We'll update each call to access a syntax object to use a suitable
     ;; vector index.
     (for ([(path/submod+phase imports) (in-hash imports)]
           #:when (syntax-literals-import? path/submod+phase)
-          [name (in-list imports)])
-      (define i (hash-ref names (cons path/submod+phase name)))
+          [src-key+name (in-list imports)])
+      (define i (hash-ref names src-key+name))
       (set-import-pos! i syntax-literals-pos))
 
     ;; Map the transformer-register import, if any
     (let* ([path/submod+phase '(#%transformer-register . transformer-register)]
            [imports (hash-ref imports path/submod+phase null)])
-      (for ([name (in-list imports)])
-        (define i (hash-ref names (cons path/submod+phase name)))
+      (for ([src-key+name (in-list imports)])
+        (define i (hash-ref names src-key+name))
         (set-import-pos! i transformer-register-pos)))
 
     ;; Map internals and lifts to positions

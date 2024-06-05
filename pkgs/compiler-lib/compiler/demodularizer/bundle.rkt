@@ -10,16 +10,17 @@
          "binding.rkt"
          "deshadow.rkt")
 
-(provide wrap-bundle
-         current-merged-output-file)
-
-(define current-merged-output-file (make-parameter #f))
+(provide wrap-bundle)
 
 (define (wrap-bundle linkl-mode phase-body phase-internals phase-lifts phase-import-keys
                      portal-stxes phase-defined-names
                      excluded-modules-to-require excluded-module-mpis provides names
                      get-merge-info name
-                     #:export? export?)
+                     #:export? export?
+                     #:external-uses external-uses
+                     #:pre-submodules pre-submodules
+                     #:post-submodules post-submodules
+                     #:dump-output-file dump-output-file)
   (define-values (phase-runs
                   phase-more
                   stx-vec)
@@ -65,7 +66,7 @@
   (define-values (self-mpi all-mpis serialized-stx)
     (serialize-syntax stx-vec external-paths excluded-module-mpis names))
 
-  (define module-name 'demodularized)
+  (define module-name name)
 
   (define serialized-mpis
     ;; Construct two vectors: one for mpi construction, and
@@ -330,17 +331,23 @@
               `(linklet ,(list* (if any-syntax-literals? '(.get-syntax-literal!) '())
                                 (if any-transformer-registers? '(.set-transformer!) '())
                                 ordered-importss)
-                   ,(if export?
-                        (hash-keys (hash-ref phase-defined-names root-phase '()))
-                        '())
+                   ,(cond
+                      [export?
+                       (hash-keys (hash-ref phase-defined-names root-phase '()))]
+                      [external-uses
+                       (for/list ([name (in-hash-keys (hash-ref phase-defined-names root-phase '()))]
+                                  #:when (hash-ref external-uses name #f))
+                         name)]
+                      [else
+                       '()])
                  ,@body)))
            (s-exp->linklet module-name e)]))
 
       (values root-phase new-linkl)))
 
-  (when (current-merged-output-file)
+  (when dump-output-file
     (call-with-output-file*
-     (current-merged-output-file)
+     dump-output-file
      #:exists 'truncate
      (lambda (o)
        (define (path/submod->mpi path/submod)
@@ -371,17 +378,25 @@
                      o))))
 
   (define metadata-ht
-    (hasheq 'data data-linkl
-            'decl decl-linkl
-            'name name
-            'min-phase min-phase
-            'max-phase max-phase
-            'portal-stxes portal-stxes
-            'vm (case linkl-mode
-                  [(linkl) #"racket"]
-                  [(s-exp) #"linklet"]
-                  [else (error "internal error: unrecognized linklet-representation mode")])))
-
+    (let* ([metadata-ht
+            (hasheq 'data data-linkl
+                    'decl decl-linkl
+                    'name name
+                    'min-phase min-phase
+                    'max-phase max-phase
+                    'portal-stxes portal-stxes
+                    'vm (case linkl-mode
+                          [(linkl) #"racket"]
+                          [(s-exp) #"linklet"]
+                          [else (error "internal error: unrecognized linklet-representation mode")]))]
+           [metadata-ht (if (null? pre-submodules)
+                            metadata-ht
+                            (hash-set metadata-ht 'pre pre-submodules))]
+           [metadata-ht (if (null? post-submodules)
+                            metadata-ht
+                            (hash-set metadata-ht 'post post-submodules))])
+      metadata-ht))
+      
   (define metadata-ht/stx
     (cond
       [serialized-stx

@@ -3,7 +3,8 @@
          racket/set
          compiler/zo-structs
          compiler/faslable-correlated
-         "remap.rkt")
+         "remap.rkt"
+         "import.rkt")
 
 ;; Prune unnused definitions,
 ;;  * soundly, with a simple approximation of `pure?`, by default
@@ -12,7 +13,9 @@
 (provide gc-definitions)
 
 (define (gc-definitions linkl-mode phase-body phase-internals phase-lifts phase-internals-pos phase-merged-internals
-                        phase-defined-names
+                        phase-defined-names names
+                        #:initial-uses initial-uses
+                        #:accum-uses accum-uses
                         #:keep-defines? keep-defines?
                         #:assume-pure? assume-pure?)
   (for/fold ([phase-new-body (hasheqv)]
@@ -27,7 +30,9 @@
     (define new-defined-names (make-hasheq))
     (define-values (new-body new-internals new-lifts)
       (gc-definitions-one-phase linkl-mode body internals lifts internals-pos merged-internals new-defined-names
-                                phase
+                                phase names
+                                #:initial-uses initial-uses
+                                #:accum-uses accum-uses
                                 #:keep-defines? keep-defines?
                                 #:assume-pure? assume-pure?))
     (values (hash-set phase-new-body phase new-body)
@@ -36,7 +41,9 @@
             (hash-set phase-new-defined-names phase new-defined-names))))
 
 (define (gc-definitions-one-phase linkl-mode body internals lifts internals-pos new-internals new-defined-names
-                                  phase
+                                  phase names
+                                  #:initial-uses initial-uses
+                                  #:accum-uses accum-uses
                                   #:keep-defines? keep-defines?
                                   #:assume-pure? assume-pure?)
   (case linkl-mode
@@ -202,6 +209,10 @@
     [(s-exp)
      (define used (make-hasheqv)) ; symbol -> 'used or thunk
 
+     (when initial-uses
+       (for ([k (in-hash-keys initial-uses)])
+         (hash-set! used k 'used)))
+
      (define (used-name! name)
        (define v (hash-ref used name #f))
        (hash-set! used name 'used)
@@ -295,17 +306,27 @@
        (for/list ([b (in-list body)]
                   #:when (match b
                            [`(define-values ,ids ,rhs)
-                            (define drop?
+                            (define keep?
                               (for/or ([id (in-list ids)])
                                 (eq? 'used (hash-ref used id #f))))
-                            (unless drop?
+                            (when keep?
                               (for ([id (in-list ids)])
                                 (hash-set! new-defined-names id #t)))
-                            drop?]
+                            keep?]
                            [_ (not (pure? b))]))
          b))
+
+     (when accum-uses
+       ;; propagate any uses that refer to imports
+       (define import-names
+         (for/hasheq ([(k v) (in-hash names)]
+                      #:when (import? v))
+           (values (import-name v) #t)))
+       (for ([(k v) (in-hash used)]
+             #:when (eq? v 'used)
+             #:when (hash-ref import-names k #f))
+         (hash-set! accum-uses k #t)))
 
      (values new-body internals lifts)]
     [else
      (error "internal error: unrecognized linklet-representation mode")]))
-    

@@ -35,7 +35,9 @@
                 [("-M" "--compile-any") "Keep in machine-independent form instead of recompiling"
                  (recompile-enabled #f)]
                 [("-r" "--recompile") "Recompile final module to re-run optimizations"
-                                      (recompile-enabled #t)]
+                 (recompile-enabled #t)]
+                [("--no-recompile") "Skip recompile, even just to platform-dependent form"
+                 (recompile-enabled #f)]
                 [("--work") dir "Cache intermediate compilations in <dir>"
                  (unless (path-string? dir)
                    (raise-user-error (format "~a: invalid work directory: ~a"

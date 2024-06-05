@@ -11,30 +11,117 @@
          "syntax.rkt"
          "binding.rkt")
 
-(provide find-modules
-         current-excluded-modules)
+(provide find-modules)
 
-(struct mod (compiled zo))                  ; includes submodules; `zo` is #f for excluded
-(struct one-mod (excluded? compiled zo decl min-phase max-phase provides stx-vec stx-mpi portal-stxes)) ; module without submodules
+;; includes submodules
+(struct mod (compiled zo))
 
-(define current-excluded-modules (make-parameter (set)))
+;; module without submodules
+(struct one-mod (excluded?
+                 imports-enclosing?
+                 compiled zo
+                 decl
+                 min-phase max-phase
+                 provides
+                 stx-vec stx-mpi portal-stxes))
 
-(define (find-modules orig-path
-                      #:submodule [submod '()]
+(struct find-state (mods one-mods excluded-module-mpis included-modules bulk-binding-registry))
+
+(define (find-modules orig-path/submod
+                      #:exclude-required? exclude-required?
+                      #:state state
+                      #:state-rel-mod-path state-rel-mod-path
+                      #:exclude explicitly-excluded-modules
                       #:keep-syntax? [keep-syntax? #f]
                       #:all-phases? [all-phases? #f])
-  (define mods (make-hash))           ; path -> mod 
-  (define one-mods (make-hash))       ; path+submod -> one-mod
+  (define orig-path (if (pair? orig-path/submod) (car orig-path/submod) orig-path/submod))
+  (define submod (if (pair? orig-path/submod) (cdr orig-path/submod) '()))
+
+  (define can-duplicate-modules #hasheq())
+
+  ;; If we're finding modules for a submodule, then either the
+  ;; submodule imports the supermodule with no phase shift, and we
+  ;; want to treat all modules folded into the supermodule as part of
+  ;; that supermodule, or it doesn't, in which case we'll error if
+  ;; there's an overlap. Either way, it's ok to merge the module and
+  ;; exclusion info from the supermodule as recorded in `state`.
+
+  (define mods      ; path -> mod 
+    (if state
+        (hash-copy (find-state-mods state))
+        (make-hash)))
+  (define one-mods  ; path+submod -> one-mod
+    (if state
+        (hash-copy (find-state-one-mods state))
+        (make-hash)))
+  (define excluded-module-mpis  ; path+submod -> mpi
+    (if state
+        (hash-copy (find-state-excluded-module-mpis state))
+        (make-hash)))
+
+  (define (excluded-via-supermodule? path/submod phase-level root-m)
+    (and state
+         (one-mod-imports-enclosing? root-m)
+         (cond
+           [(hash-ref (find-state-included-modules state) path/submod #f)
+            => (lambda (phase-levels)
+                 (hash-ref phase-levels phase-level #f))]
+           [else #f])))
+  (define (included-in-supermodule? path/submod)
+    (and state
+         (hash-ref (find-state-included-modules state) path/submod #f)
+         #t))
+
+  (define self-mpi (module-path-index-join #f #f))
+
+  (when state
+    (define rel-mpi (module-path-index-join state-rel-mod-path self-mpi))
+    ;; shift MPIs for previously excluded modules
+    (for ([(path mpi) (in-hash excluded-module-mpis)])
+      (hash-set! excluded-module-mpis path (module-path-index-reroot mpi rel-mpi)))
+    ;; every module already in `one-mods` will be excluded; map all of those modules
+    ;; to `state-rel-mod-path`
+    (for ([path+submod (in-hash-keys one-mods)])
+      (unless (hash-ref excluded-module-mpis path+submod #f)
+        (hash-set! excluded-module-mpis path+submod rel-mpi))))
+
   (define phase-runs-done (make-hasheqv)) ; root-phase -> path+submod+phase -> #t
   (define phase-runs (make-hasheqv))      ; root-phase -> list of `run`
-  (define excluded-module-mpis (make-hash)) ; path -> mpi
   (define excluded-modules-to-require (make-hash)) ; path/submod+phase-shift -> #t
 
   ;; deserialization of syntax objects is too tedious to re-implement, so
   ;; we access the implementation directly from `#%kernel`
-  (define-values (real-deserialize-instance bulk-binding-registry register!
+  (define-values (real-deserialize-instance new-bulk-binding-registry register!
                                             syntax-shift-module-path-index)
     (kernel:syntax-deserialize))
+  (define bulk-binding-registry
+    (if state
+        (find-state-bulk-binding-registry state)
+        new-bulk-binding-registry))
+
+  (define (find-submod compiled submod raise-no-submod #:submod-list? submod-list?)
+    (let loop ([compiled compiled] [submod submod])
+      (cond
+        [(linklet-bundle? compiled)
+         (unless (null? submod) (raise-no-submod))
+         (if submod-list?
+             (values null null)
+             compiled)]
+        [else
+         (cond
+           [(null? submod)
+            (define ht (linklet-directory->hash compiled))
+            (define m-compiled (or (hash-ref ht #f #f)
+                                   (raise-no-submod)))
+            (if submod-list?
+                (let ([ht (linklet-bundle->hash m-compiled)])
+                  (values (hash-ref ht 'pre null)
+                          (hash-ref ht 'post null)))
+                m-compiled)]
+           [else
+            (loop (or (hash-ref (linklet-directory->hash compiled) (car submod) #f)
+                      (raise-no-submod))
+                  (cdr submod))])])))
 
   ;; returns (values min-phase mx-phase)
   (define (find-modules! orig-path+submod rel-mpi exclude? provides?)
@@ -43,7 +130,8 @@
     (define path (normal-case-path (simplify-path (path->complete-path orig-path))))
 
     (when exclude?
-      (hash-set! excluded-module-mpis orig-path+submod rel-mpi))
+      (unless (hash-ref excluded-module-mpis orig-path+submod #f)
+        (hash-set! excluded-module-mpis orig-path+submod rel-mpi)))
 
     (unless (hash-ref mods path #f) 
       (define-values (zo-path kind) (get-module-path path))
@@ -71,7 +159,9 @@
           ;; Even if this module is excluded, traverse it to get all
           ;; modules that it requires, so that we don't duplicate those
           ;; modules by accessing them directly                         
-          (or exclude? (set-member? (current-excluded-modules) req-path) (symbol? req-path)))
+          (or exclude?
+              exclude-required?
+              (set-member? explicitly-excluded-modules req-path) (symbol? req-path)))
         (define-values (req-min-phase req-max-phase ignored-provides)
           (if (symbol? req-path)
               (values 0 0 #hasheqv())
@@ -102,20 +192,7 @@
         (error 'demodularize "no such submodule\n  path: ~a\n  submod: ~a"
                path submod))
       (define one-compiled
-        (let loop ([compiled compiled] [submod submod])
-          (cond
-            [(linklet-bundle? compiled)
-             (unless (null? submod) (raise-no-submod))
-             compiled]
-            [else
-             (cond
-               [(null? submod)
-                (or (hash-ref (linklet-directory->hash compiled) #f #f)
-                    (raise-no-submod))]
-               [else
-                (loop (or (hash-ref (linklet-directory->hash compiled) (car submod) #f)
-                          (raise-no-submod))
-                      (cdr submod))])])))
+        (find-submod compiled submod raise-no-submod #:submod-list? #f))
       (define one-zo
         (cond
           [(not zo) #f]
@@ -175,7 +252,7 @@
       (define provides
         (or (and orig-provides
                  ((hash-count orig-provides) . > . 0)
-                 (let ([path-mpi (module-path-index-join `(file ,orig-path) #f)])
+                 (let ([path-mpi (module-path-index-join (if (path? orig-path) orig-path `(file ,orig-path)) #f)])
                    (for/hasheqv ([(phase provs) (in-hash orig-provides)])
                      (values phase
                              (for/hasheq ([(name bind) (in-hash provs)])
@@ -185,7 +262,17 @@
 
       (define portal-stxes (instance-variable-value decl 'portal-stxes))
 
+      (define imports-enclosing?
+        (for/or ([phase+reqs (in-list (instance-variable-value decl 'requires))]                 
+                 #:do [(define req-phase (car phase+reqs))]
+                 #:when (eqv? req-phase 0)
+                 [req (in-list (cdr phase+reqs))])
+          (define-values (name base) (module-path-index-split req))
+          (and (equal? name '(submod ".."))
+               (eq? self-mpi base))))
+
       (hash-set! one-mods (cons path submod) (one-mod exclude?
+                                                      imports-enclosing?
                                                       one-compiled one-zo decl
                                                       trans-min-phase trans-max-phase provides
                                                       stx-vec stx-mpi
@@ -198,9 +285,12 @@
                   (one-mod-provides m)))
         (values 0 0 #hasheqv())))
 
+  (define from-path orig-path/submod)
+  
   (define (find-phase-runs! orig-path+submod orig-mpi
                             #:phase-level [phase-level 0]
-                            #:root-phase [root-phase 0])
+                            #:root-phase [root-phase 0]
+                            #:root-m [in-root-m #f])
     (define orig-path (if (pair? orig-path+submod) (car orig-path+submod) orig-path+submod))
     (define submod (if (pair? orig-path+submod) (cdr orig-path+submod) '()))
     (define path (normal-case-path (simplify-path (path->complete-path orig-path))))
@@ -208,7 +298,24 @@
 
     (unless (hash-ref (hash-ref phase-runs-done root-phase #hash()) (cons (cons path submod) phase-level) #f)
       (define one-m (hash-ref one-mods (cons path submod) #f))
+      (define root-m (or in-root-m one-m))
       (cond
+        [(excluded-via-supermodule? path/submod phase-level root-m)
+         => (lambda (super-path/submod)
+              (hash-set! excluded-modules-to-require (cons super-path/submod 0) #t))]
+        [(and (included-in-supermodule? path/submod)
+              (not (hash-ref can-duplicate-modules path/submod #f)))
+         (error 'demodularize
+                (string-append "submodule references module that used by enclosing module;\n"
+                               " the referenced module is neither excluded nor duplicable\n"
+                               "  submodule: ~a\n"
+                               "  referenced module: ~a")
+                (cond
+                  [(null? (cddr orig-path/submod)) (cadr orig-path/submod)]
+                  [(cdr orig-path/submod)])
+                (if (pair? path/submod)
+                    (cons 'submod path/submod)
+                    path/submod))]
         [(one-mod-excluded? one-m)
          ;; Root of an excluded subtree; keep it as a `require`, even if there
          ;; turn out to be no imported variables at the linklet level. It's
@@ -235,8 +342,17 @@
                                     phase-level
                                     null)])
               (define path/submod (module-path-index->path (module-use-module u) path submod))
-
               (cons path/submod (module-use-phase u)))))
+         (define import-uses
+           ;; rewrite imports of modules that are flattend into a supermodule
+           (if state
+               (for/list ([use (in-list uses)])
+                 (cond
+                   [(excluded-via-supermodule? (car use) (cdr use) root-m)
+                    => (lambda (super-path/submod)
+                         (cons super-path/submod 0))]
+                   [else use]))
+               uses))
 
          (define shifted-stx-vec
            (let ([phase-shift (- phase-level root-phase)])
@@ -247,7 +363,8 @@
 
          (define portal-stxes (hash-ref (one-mod-portal-stxes one-m) phase-level #hasheq()))
 
-         (define r (run (if (null? submod) path (cons path submod)) phase-level linkl meta-linkl uses
+         (define r (run (if (null? submod) path (cons path submod)) phase-level linkl meta-linkl
+                        uses import-uses
                         shifted-stx-vec stx-mpi
                         portal-stxes))
          (define runs-done (or (hash-ref phase-runs-done root-phase #f)
@@ -271,7 +388,8 @@
              [else
               (find-phase-runs! path/submod full-mpi
                                 #:phase-level at-phase-level
-                                #:root-phase root-phase)]))
+                                #:root-phase root-phase
+                                #:root-m root-m)]))
 
          ;; Adding after requires, so that each list in `phase-runs` ends up in the
          ;; reverse order that we want to emit code
@@ -306,7 +424,7 @@
           (hash-set! done path/submod+phase #t)))))
 
   (define-values (reachable-min-phase reachable-max-phase provides)
-    (find-modules! (cons orig-path submod) (module-path-index-join #f #f) #f #t))
+    (find-modules! (cons orig-path submod) self-mpi #f #t))
 
   (for ([root-phase (in-range reachable-min-phase (add1 reachable-max-phase))])
     (find-phase-runs! (cons orig-path submod) (module-path-index-join #f #f)
@@ -315,8 +433,35 @@
 
   (clear-redundant-excluded-to-require!)
 
+  (define-values (pre-submod-names post-submod-names)
+    (find-submod (mod-compiled (hash-ref mods orig-path)) submod void #:submod-list? #t))
+
+  ;; Gather info on included modules to communicate to submodules, which
+  ;; may need to reference exports from other modules from the demodularized
+  ;; encloding module (and should not duplicate modules that are inaccessible
+  ;; via that route)
+  (define included-modules ; path/submod -> phase -> super-path/submod
+    (for/fold ([ht (if state
+                       (let ([included-modules (find-state-included-modules state)])
+                         ;; If this submodule doesn't import its supermodule, then
+                         ;; start with empty phase sets from supermodule
+                         (if (not (one-mod-imports-enclosing?
+                                   (hash-ref one-mods (cons orig-path submod))))
+                             (for/hash ([(k v) (in-hash included-modules)])
+                               (values k #hasheqv()))
+                             included-modules))
+                       #hash())])
+              ([r (in-list (hash-ref phase-runs 0 null))])
+      (hash-set ht (run-path/submod r) (hash-set (hash-ref ht (run-path/submod r) #hasheqv())
+                                                 (run-phase r)
+                                                 orig-path/submod))))
+
+  (define new-state (find-state mods one-mods excluded-module-mpis included-modules bulk-binding-registry))
+
   (values (for/hasheqv ([(root-phase runs) (in-hash phase-runs)])
             (values root-phase (reverse runs)))
           (hash-keys excluded-modules-to-require)
           excluded-module-mpis
-          provides))
+          provides
+          pre-submod-names post-submod-names
+          new-state))
