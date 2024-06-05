@@ -135,8 +135,12 @@
 
   (define mpis (make-module-path-index-table))
   ;; Add current mpis in order, so existing references will stay correct
-  (for ([mpi (in-vector (instance-variable-value data-instance mpi-vector-id))])
-    (add-module-path-index! mpis mpi))
+  (for ([mpi (in-vector (instance-variable-value data-instance mpi-vector-id))]
+        [i (in-naturals)])
+    (unless (eqv? (add-module-path-index!/pos mpis mpi) i)
+      (raise-arguments-error 'compiled-expression-recompile
+                             "invalid or duplicate entry in MPI vector"
+                             "entry" mpi)))
 
   (define self (decl 'self-mpi))
   (define phase-to-link-modules (decl 'phase-to-link-modules))

@@ -1,9 +1,11 @@
 #lang racket/base
 (require racket/match
-         "../private/deserialize.rkt")
+         "../private/deserialize.rkt"
+         "import.rkt")
 
 (provide binding-module-path-index-shift
          binding-mpis
+         binding-sym
          serialize-binding)
 
 (define (binding-module-path-index-shift bind from-mpi to-mpi)
@@ -41,7 +43,19 @@
        [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
         (list mod nom-mod)])]))
 
-(define (serialize-binding bind external-path-pos excluded-module-mpis names)
+(define (binding-sym bind)
+  (cond
+    [(provided? bind) (binding-sym (provided-binding bind))]
+    [else
+     (match (binding-content bind)
+       [`(,mod ,sym ,phase ,nom-mod) sym]
+       [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
+        sym])]))
+
+(define (serialize-binding bind root-phase
+                           external-path-pos excluded-module-mpis included-module-phases
+                           names transformer-names name-imports
+                           mpi-count)
   (let loop ([bind bind])
     (cond
       [(provided? bind)
@@ -52,31 +66,53 @@
       [else
        (define (lookup mpi)
          (define r (module-path-index-resolve mpi))
-         (or (hash-ref external-path-pos (resolved-module-path-name r) #f)
-             ;; self-mpi:
-             0))
+         (define pos
+           (or (hash-ref external-path-pos (resolved-module-path-name r) #f)
+               ;; self-mpi:
+               0))
+         (when (pos . >= . mpi-count)
+           (error 'bundle-binding "nonsense pos: ~a for ~s" pos (resolved-module-path-name r)))
+         pos)
        (define (lookup-sym mpi phase sym)
          (define r (module-path-index-resolve mpi))
          (define path/submod (resolved-module-path-name r))
-         (if (or (symbol? path/submod)
-                 (hash-ref excluded-module-mpis path/submod #f))
-             sym
-             (or (hash-ref names (cons (cons path/submod phase) sym) #f)
-                 (error 'provides
-                        "cannot find name for provided identifier: ~s ~s" sym mpi))))
+         (cond
+           [(symbol? path/submod)
+            (values sym 0)]
+           [(or (hash-ref names (cons (cons path/submod phase) sym) #f)
+                (hash-ref transformer-names (cons (cons path/submod phase) sym) #f))
+            => (lambda (new-sym)
+                 (cond
+                   [(hash-ref name-imports new-sym #f)
+                    => (lambda (i)
+                         (values (import-src-ext-name i) (cdr (import-path/submod+phase i))))]
+                   [else
+                    ;; Get a potential phase shift
+                    (define mpi+phase (hash-ref excluded-module-mpis path/submod #f))
+                    (define phase-shift (if mpi+phase
+                                            (cdr mpi+phase)
+                                            (hash-ref included-module-phases path/submod 0)))
+                    (values new-sym (+ phase phase-shift))]))]
+           [(hash-ref excluded-module-mpis path/submod #f)
+            (values sym phase)]
+           [else
+            (error 'provides
+                   "cannot find name for provided identifier: ~s ~s" sym mpi)]))
        (match (binding-content bind)
          [`(,mod ,sym ,phase ,nom-mod)
+          (define-values (new-sym new-phase) (lookup-sym mod phase sym))
           `(#:simple-module-binding
             #:mpi ,(lookup mod)
-            ,(lookup-sym mod phase sym)
-            ,phase
+            ,new-sym
+            ,new-phase
             #:mpi ,(lookup nom-mod))]
          [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
           ;; Currently dropping free-id=? and extra nominals
+          (define-values (new-sym new-phase) (lookup-sym mod phase sym))
           `(#:module-binding
             #:mpi ,(lookup mod)
-            ,(lookup-sym mod phase sym)
-            ,phase
+            ,new-sym
+            ,new-phase
             #:mpi ,(lookup nom-mod)
             ,nom-phase
             ,nom-sym
