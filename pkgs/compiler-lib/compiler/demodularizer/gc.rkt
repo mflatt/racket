@@ -13,7 +13,7 @@
 (provide gc-definitions)
 
 (define (gc-definitions linkl-mode phase-body phase-internals phase-lifts phase-internals-pos phase-merged-internals
-                        phase-defined-names names
+                        phase-defined-names names phase-name-imports
                         #:initial-uses initial-uses
                         #:accum-uses accum-uses
                         #:keep-defines? keep-defines?
@@ -27,10 +27,11 @@
     (define lifts (hash-ref phase-lifts phase))
     (define internals-pos (hash-ref phase-internals-pos phase))
     (define merged-internals (hash-ref phase-merged-internals phase))
+    (define name-imports (hash-ref phase-name-imports phase))
     (define new-defined-names (make-hasheq))
     (define-values (new-body new-internals new-lifts)
       (gc-definitions-one-phase linkl-mode body internals lifts internals-pos merged-internals new-defined-names
-                                phase names
+                                phase names name-imports
                                 #:initial-uses initial-uses
                                 #:accum-uses accum-uses
                                 #:keep-defines? keep-defines?
@@ -41,7 +42,7 @@
             (hash-set phase-new-defined-names phase new-defined-names))))
 
 (define (gc-definitions-one-phase linkl-mode body internals lifts internals-pos new-internals new-defined-names
-                                  phase names
+                                  phase names name-imports
                                   #:initial-uses initial-uses
                                   #:accum-uses accum-uses
                                   #:keep-defines? keep-defines?
@@ -319,9 +320,9 @@
      (when accum-uses
        ;; propagate any uses that refer to imports
        (define import-names
-         (for/hasheq ([(k v) (in-hash names)]
-                      #:when (import? v))
-           (values (import-name v) #t)))
+         (for/hasheq ([(k new-name) (in-hash names)]
+                      #:when (hash-ref new-name name-imports #f))
+           (values new-name #t)))
        (for ([(k v) (in-hash used)]
              #:when (eq? v 'used)
              #:when (hash-ref import-names k #f))

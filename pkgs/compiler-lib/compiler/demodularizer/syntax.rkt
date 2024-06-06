@@ -47,25 +47,7 @@
        [else (values #f #f)])]
     [else (values #f #f)]))
 
-(define (serialize-syntax stx-vec import-paths excluded-module-mpis names)
-  (define self-mpi (module-path-index-join #f #f))
-
-  (define import-mpis
-    (for/list ([path (in-list import-paths)])
-      (cond
-        [(symbol? path) (module-path-index-join `(quote ,path) #f)]
-        [else
-         ;; collapse to a simplified MPI early
-         (define mpi (or (hash-ref excluded-module-mpis path #f)
-                         (error 'import-mpis "cannot find module: ~s" path)))
-         (module-path-index-join (collapse-module-path-index mpi)
-                                 ;; keep the "self" mpi, if any:
-                                 (let loop ([mpi mpi])
-                                   (define-values (name base) (module-path-index-split mpi))
-                                   (if (not name)
-                                       mpi
-                                       (and (module-path-index? base) (loop base)))))])))
-
+(define (serialize-syntax stx-vec self-mpi import-mpis excluded-module-mpis names)
   (define (derived-from-self? mpi)
     (define-values (name base) (module-path-index-split mpi))
     (if base
@@ -153,10 +135,7 @@
                                     [(symbol? path/submod)
                                      sym]
                                     [(hash-ref names (cons (cons path/submod phase) sym) #f)
-                                     => (lambda (new-sym)
-                                          (if (import? new-sym)
-                                              (import-int-name new-sym)
-                                              new-sym))]
+                                     => (lambda (new-sym) new-sym)]
                                     [(hash-ref excluded-module-mpis path/submod #f)
                                      sym]
                                     [else
@@ -167,13 +146,14 @@
                                                             "phase level" phase)])))]))
 
   (for ([stx-mpi (in-vector stx-mpis-vec)]
-        [orig-mpi (in-list (cons self-mpi import-mpis))])
+        [orig-mpi (in-list (cons self-mpi import-mpis))]
+        [i (in-naturals)])
     (unless (eq? stx-mpi orig-mpi)
-      (error "unexpected MPI for import")))
+      (error 'syntax-bundle "unexpected MPI for import: ~s versus ~s, index ~a" stx-mpi orig-mpi i)))
 
   (define all-mpis (vector->list stx-mpis-vec))
 
-  (values self-mpi all-mpis serialized-stx))
+  (values all-mpis serialized-stx))
 
 (define (build-stx-data-linklet stx-vec serialized-stx)
   (s-exp->linklet

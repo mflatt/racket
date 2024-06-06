@@ -9,7 +9,7 @@
 
 (provide merge-linklets)
 
-(define (merge-linklets phase-runs names phase-internals phase-lifts phase-imports
+(define (merge-linklets phase-runs names phase-internals phase-lifts phase-name-imports phase-imports
                         #:maximum-phase given-maximum-root-phase)
   ;; Accumulate syntax objects, which span phases. If would be nice if we didn't
   ;; keep syntax objects in expressions that are later pruned,
@@ -44,6 +44,7 @@
         #:when (<= 0 root-phase (or max-root-phase +inf.0)))
     (define internals (hash-ref phase-internals root-phase))
     (define lifts (hash-ref phase-lifts root-phase))
+    (define name-imports (hash-ref phase-name-imports root-phase))
     (define imports (hash-ref phase-imports root-phase))
     (define defined-names (or (hash-ref phase-defined-names root-phase #f)
                               (let ([ht (make-hasheq)])
@@ -51,9 +52,9 @@
                                 ht)))
 
     (define (syntax-literals-import? path/submod+phase)
-      (eq? (cdr path/submod+phase) 'syntax-literals))
+      (eq? (car path/submod+phase) '#%syntax-literals))
     (define (transformer-register-import? path/submod+phase)
-      (eq? (cdr path/submod+phase) 'transformer-register))
+      (eq? (car path/submod+phase) '#%transformer-register))
 
     ;; Pick an order for the remaining imports:
     (define import-keys (for/list ([path/submod+phase (in-hash-keys imports)]
@@ -63,13 +64,14 @@
                                    #:unless (or (syntax-literals-import? path/submod+phase)
                                                 (transformer-register-import? path/submod+phase)))
                           path/submod+phase))
-    
+
     (define any-syntax-literals?
       (for/or ([path/submod+phase (in-hash-keys imports)])
         (syntax-literals-import? path/submod+phase)))
     (define any-transformer-registers?
       (for/or ([path/submod+phase (in-hash-keys imports)])
         (transformer-register-import? path/submod+phase)))
+
     (define syntax-literals-pos 1)
     (define transformer-register-pos (+ (if any-syntax-literals? 1 0)
                                         syntax-literals-pos))
@@ -83,15 +85,16 @@
         (define ordered-imports (hash-ref imports key))
         (for/list ([src-key+name (in-list ordered-imports)])
           (define name (cdr src-key+name))
-          (define i (hash-ref names src-key+name))
+          (define new-name (hash-ref names src-key+name))
+          (define i (hash-ref name-imports new-name))
           (set-import-pos! i import-counter)
           (set! import-counter (add1 import-counter))
-          (list name (import-int-name i)))))
+          (list (import-name i) (import-int-name i)))))
     ;; Keep all the same import shapes
     (define import-shapess
       (for/list ([key (in-list import-keys)])
         (for/list ([src-key+name (in-list (hash-ref imports key))])
-          (import-shape (hash-ref names src-key+name)))))
+          (import-shape (hash-ref name-imports (hash-ref names src-key+name))))))
 
     ;; Map all syntax-literal references to the same import.
     ;; We'll update each call to access a syntax object to use a suitable
@@ -99,14 +102,14 @@
     (for ([(path/submod+phase imports) (in-hash imports)]
           #:when (syntax-literals-import? path/submod+phase)
           [src-key+name (in-list imports)])
-      (define i (hash-ref names src-key+name))
+      (define i (hash-ref name-imports (hash-ref names src-key+name)))
       (set-import-pos! i syntax-literals-pos))
 
     ;; Map the transformer-register import, if any
     (let* ([path/submod+phase '(#%transformer-register . transformer-register)]
            [imports (hash-ref imports path/submod+phase null)])
       (for ([src-key+name (in-list imports)])
-        (define i (hash-ref names src-key+name))
+        (define i (hash-ref name-imports (hash-ref names src-key+name)))
         (set-import-pos! i transformer-register-pos)))
 
     ;; Map internals and lifts to positions
@@ -157,7 +160,7 @@
       (apply
        append
        (for/list ([r (in-list runs)])
-         (define-values (pos-to-name/import local-name-to-pos) (make-position-mapping r))
+         (define-values (pos-to-name local-name-to-pos) (make-position-mapping r))
          (define linkl (run-linkl r))
          (cond
            [(linkl? linkl)
@@ -168,10 +171,11 @@
                  (set! saw-zero-pos-toplevel? #t)
                  0]
                 [else
-                 (define new-name/import (hash-ref pos-to-name/import pos))
-                 (if (import? new-name/import)
-                     (import-pos new-name/import)
-                     (hash-ref positions new-name/import))]))
+                 (define new-name (hash-ref pos-to-name pos))
+                 (define new-name-import (hash-ref name-imports new-name #f))
+                 (if (import? new-name-import)
+                     (import-pos new-name-import)
+                     (hash-ref positions new-name))]))
             (when (eq? linkl-mode 's-exp) (error 'demodularize "inconsistent linklet representations"))
             (set! linkl-mode 'linkl)
             (remap-positions (linkl-body linkl)
@@ -182,7 +186,8 @@
                                ;; or a `(.set-transformer! '<sym> <expr>)` call
                                (cond
                                  [(and (toplevel? rator)
-                                       (let ([i (hash-ref pos-to-name/import (toplevel-pos rator))])
+                                       (let* ([name (hash-ref pos-to-name (toplevel-pos rator))]
+                                              [i (hash-ref name-imports name #f)])
                                          (and (import? i)
                                               i)))
                                   => (lambda (i)
@@ -219,10 +224,7 @@
                      [(not pos) ; => primitive
                       name]
                      [else
-                      (define n (hash-ref pos-to-name/import pos))
-                      (cond
-                        [(import? n) (import-int-name n)]
-                        [else n])]))
+                      (hash-ref pos-to-name pos)]))
                  (define (remap-defined-name name)
                    (define new-name (remap-name name))
                    (hash-set! defined-names new-name #t)

@@ -35,10 +35,11 @@
 
 (define (demodularize given-input-file [given-output-file #f]
                       #:submodule-specs [submodule-specs #hash()]
+                      #:demod-submodules? [demod-submodules? #t]
                       #:exclude [given-explicitly-excluded-modules (current-excluded-modules)]
                       #:work-directory [given-work-directory (current-work-directory)]
                       #:keep-syntax? [keep-syntax? (syntax-object-preservation-enabled)]
-                      #:maximum-phase [maximum-phase (current-maximum-phase)]
+                      #:max-phase [maximum-phase (current-maximum-phase)]
                       #:gc-toplevels? [gc-toplevels? (garbage-collect-toplevels-enabled)]
                       #:recompile [recompile-mode (recompile-enabled)]
                       #:return-bundle? [return-bundle? #f]
@@ -58,6 +59,7 @@
   (define-values (bundle linkl-mode)
     (demodularize-tree input-file
                        #:submodule-specs submodule-specs
+                       #:demod-submodules? demod-submodules?
                        #:exclude explicitly-excluded-modules
                        #:work-directory work-directory
                        #:keep-syntax? keep-syntax?
@@ -95,6 +97,7 @@
 
 (define (demodularize-tree input-file
                            #:submodule-specs submodule-specs
+                           #:demod-submodules? demod-submodules?
                            #:exclude explicitly-excluded-modules
                            #:work-directory work-directory
                            #:keep-syntax? keep-syntax?
@@ -144,6 +147,7 @@
                                                         (current-compiled-file-roots))])
           (find-modules input-path/submod
                         #:exclude-required? (and (pair? submod)
+                                                 (not demod-submodules?)
                                                  (let ([v (hash-ref submodule-specs submod #f)])
                                                    (not (and v (hash-ref v 'demod #f)))))
                         #:state find-state-in
@@ -158,7 +162,7 @@
             null))
 
       (log-info (indent "Selecting names"))
-      (define-values (names phase-internals phase-lifts phase-imports select-state)
+      (define-values (names phase-internals phase-lifts phase-name-imports phase-imports select-state)
         (select-names phase-runs
                       #:state select-state-in))
 
@@ -166,7 +170,7 @@
       (define-values (phase-body phase-first-internal-pos phase-merged-internals linkl-mode phase-import-keys
                                  portal-stxes phase-defined-names
                                  get-merge-info)
-        (merge-linklets phase-runs names phase-internals phase-lifts phase-imports
+        (merge-linklets phase-runs names phase-internals phase-lifts phase-name-imports phase-imports
                         #:maximum-phase maximum-phase))
 
       ;; Handle submodules before GCing:
@@ -203,7 +207,7 @@
           [else
            (log-info (indent "GCing definitions"))
            (gc-definitions linkl-mode phase-body phase-internals phase-lifts phase-first-internal-pos phase-merged-internals
-                           phase-defined-names names
+                           phase-defined-names names phase-name-imports
                            #:initial-uses sub-accum-uses
                            #:accum-uses accum-uses
                            #:keep-defines? keep-syntax?

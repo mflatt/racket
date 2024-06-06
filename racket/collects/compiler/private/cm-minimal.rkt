@@ -290,7 +290,9 @@
               [(and cross-deps
                     (not sha1-only?)
                     (not (and (deps-has-machine? cross-deps)
-                              (eq? (cross-system-type 'target-machine) (deps-machine cross-deps)))))
+                              (eq? (and (not (current-multi-compile-any))
+                                        (cross-system-type 'target-machine))
+                                   (deps-machine cross-deps)))))
                (trace-printf "different machine ~a for cross ~a..."
                              (and (deps-has-machine? cross-deps)
                                   (deps-machine cross-deps))

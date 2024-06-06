@@ -3,6 +3,7 @@
          racket/set
          compiler/zo-structs
          racket/pretty
+         syntax/modcollapse
          "run.rkt"
          "name.rkt"
          "linklet.rkt"
@@ -29,30 +30,57 @@
     (for/fold ([min-phase 0] [max-phase 0]) ([phase (in-hash-keys phase-body)])
       (values (min phase min-phase) (max phase max-phase))))
 
+  (define self-mpi (module-path-index-join #f #f))
+
   ;; Gather all paths that are either leftover imports to a linklet,
   ;; required overall as excluded modules, or mentioned in a provided
   ;; binding. Leftover imports and provides should be transitively
   ;; required by the excluded modules, but we don't try to check that.
-  (define-values (external-path-pos external-paths)
+  (define-values (external-path-pos external-mpis)
     (let ()
-      (define (add-path path/submod ht rev-paths)
-        (if (hash-ref ht path/submod #f)
-            (values ht rev-paths)
-            (values (hash-set ht path/submod (add1 (hash-count ht)))
-                    (cons path/submod rev-paths))))
-      (define-values (import-ht import-rev-paths)
-        (for*/fold ([ht #hash()] [rev-paths '()])
+      (define (add-path path/submod ht simple-ht rev-paths)
+        (cond
+          [(hash-ref ht path/submod #f)
+           (values ht simple-ht rev-paths)]
+          [else
+           (define mpi (or (hash-ref excluded-module-mpis path/submod #f)
+                           (and (symbol? path/submod)
+                                (module-path-index-join `(quote ,path/submod) #f))
+                           (error 'import-mpis "cannot find module: ~s" path/submod)))
+           ;; collapse to a simplified MPI
+           (define simple-path (collapse-module-path-index mpi))
+           (define new-mpi
+             (module-path-index-join simple-path
+                                     ;; keep the "self" mpi, if any:
+                                     (let loop ([mpi mpi])
+                                       (define-values (name base) (module-path-index-split mpi))
+                                       (if (not name)
+                                           mpi
+                                           (and (module-path-index? base) (loop base))))))
+           (cond
+             [(hash-ref simple-ht simple-path #f)
+              => (lambda (pos)
+                   (values (hash-set ht path/submod pos)
+                           simple-ht
+                           rev-paths))]
+             [else
+              (define pos (add1 (hash-count simple-ht)))
+              (values (hash-set ht path/submod pos)
+                      (hash-set simple-ht simple-path pos)
+                      (cons new-mpi rev-paths))])]))
+      (define-values (import-ht import-simple-ht import-rev-paths)
+        (for*/fold ([ht #hash()] [simple-ht #hash()] [rev-paths '()])
                    ([import-keys (in-hash-values phase-import-keys)]
                     [path/submod+phase (in-list import-keys)])
           (define path/submod (car path/submod+phase))
-          (add-path path/submod ht rev-paths)))
-      (define-values (require-ht require-rev-paths)
-        (for*/fold ([ht import-ht] [rev-paths import-rev-paths])
+          (add-path path/submod ht simple-ht rev-paths)))
+      (define-values (require-ht require-simple-ht require-rev-paths)
+        (for*/fold ([ht import-ht] [simple-ht import-simple-ht] [rev-paths import-rev-paths])
                    ([path/submod+phase (in-list excluded-modules-to-require)])
           (define path/submod (car path/submod+phase))
-          (add-path path/submod ht rev-paths)))
-      (define-values (provide-ht provide-rev-paths)
-        (for*/fold ([ht require-ht] [rev-paths require-rev-paths])
+          (add-path path/submod ht simple-ht rev-paths)))
+      (define-values (provide-ht provide-simple-ht provide-rev-paths)
+        (for*/fold ([ht require-ht] [simple-ht require-simple-ht] [rev-paths require-rev-paths])
                    ([binds (in-hash-values provides)]
                     [bind (in-hash-values binds)]
                     [mpi (in-list (binding-mpis bind))]
@@ -60,25 +88,25 @@
                           (define path/submod (resolved-module-path-name r))]
                     #:when (or (symbol? path/submod)
                                (hash-ref excluded-module-mpis path/submod #f)))
-          (add-path path/submod ht rev-paths)))
+          (add-path path/submod ht simple-ht rev-paths)))
       (values provide-ht (reverse provide-rev-paths))))
-
-  (define-values (self-mpi all-mpis serialized-stx)
-    (serialize-syntax stx-vec external-paths excluded-module-mpis names))
+  
+  (define-values (all-mpis serialized-stx)
+    (serialize-syntax stx-vec self-mpi external-mpis excluded-module-mpis names))
 
   (define module-name name)
 
   (define serialized-mpis
     ;; Construct two vectors: one for mpi construction, and
     ;; another for selecting the slots that are externally referenced
-    ;; mpis (where the selection vector matches the `external-paths` order
+    ;; mpis (where the selection vector matches the `external-mpis` order
     ;; followed by `stx-mpis` in order).
     ;; If all module paths refer to symbol-named primitive modules, then 
     ;; we just make a vector with those specs in order, but if there's a
     ;; more complex mpi, then we have to insert extra slots in the first
     ;; vector to hold intermediate mpi constructions.
     ;; We could do better here by sharing common tails.
-    (let loop ([external-paths external-paths]
+    (let loop ([external-mpis external-mpis]
                [all-mpis (cdr all-mpis)] ; cdr skips self mpi
                [specs (list (box module-name))] ; initial spec = self mpi
                [results (list 0)])              ; initial 0 = self mpi
@@ -88,12 +116,15 @@
           [(and (not name) (not base))
            (values 0 specs)]
           [(not base)
-           (values (length specs) (cons (vector name) specs))]
+           (values (length specs) (cons (if (symbol? name)
+                                            (vector `(quote ,name))
+                                            (vector name))
+                                        specs))]
           [else
            (define-values (next-i next-specs) (mpi-loop base specs))
            (values (length next-specs) (cons (vector name next-i) next-specs))]))
       (cond
-        [(null? external-paths)
+        [(null? external-mpis)
          (let loop ([stx-mpis all-mpis]
                     [specs specs]
                     [results results])
@@ -105,21 +136,11 @@
               (define-values (i new-specs) (mpi-loop (car stx-mpis) specs))
               (loop (cdr stx-mpis) new-specs (cons i results))]))]
         [else
-         (define path (car external-paths))
-         (cond
-           [(or (symbol? path) (and (pair? path) (symbol? (car path))))
-            (loop (cdr external-paths)
-                  (cdr all-mpis)
-                  (cons (vector `(quote ,path)) specs)
-                  (cons (length specs) results))]
-           [(or (path? path) (and (pair? path) (path? (car path))))
-            (define-values (i new-specs) (mpi-loop (car all-mpis) specs))
-            (loop (cdr external-paths)
-                  (cdr all-mpis)
-                  new-specs
-                  (cons i results))]
-           [else
-            (error 'wrap-bundle "unrecognized import path shape: ~s" path)])])))
+         (define-values (i new-specs) (mpi-loop (car all-mpis) specs))
+         (loop (cdr external-mpis)
+               (cdr all-mpis)
+               new-specs
+               (cons i results))])))
 
   (define data-linkl
     (case linkl-mode
@@ -191,7 +212,8 @@
                 ,@(apply
                    append
                    (for/list ([(name bind) (in-hash ht)])
-                     `(,name ,@(serialize-binding bind external-path-pos excluded-module-mpis names)))))))))))
+                     `(,name ,@(serialize-binding bind external-path-pos excluded-module-mpis names
+                                                  (length all-mpis))))))))))))
 
   (define (primitive v)
     (primval (or (primitive->compiled-position v)

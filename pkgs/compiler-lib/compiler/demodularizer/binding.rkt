@@ -41,7 +41,7 @@
        [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
         (list mod nom-mod)])]))
 
-(define (serialize-binding bind external-path-pos excluded-module-mpis names)
+(define (serialize-binding bind external-path-pos excluded-module-mpis names mpi-count)
   (let loop ([bind bind])
     (cond
       [(provided? bind)
@@ -52,9 +52,13 @@
       [else
        (define (lookup mpi)
          (define r (module-path-index-resolve mpi))
-         (or (hash-ref external-path-pos (resolved-module-path-name r) #f)
-             ;; self-mpi:
-             0))
+         (define pos
+           (or (hash-ref external-path-pos (resolved-module-path-name r) #f)
+               ;; self-mpi:
+               0))
+         (when (pos . >= . mpi-count)
+           (error 'bundle-binding "nonsense pos: ~a for ~s" pos (resolved-module-path-name r)))
+         pos)
        (define (lookup-sym mpi phase sym)
          (define r (module-path-index-resolve mpi))
          (define path/submod (resolved-module-path-name r))
