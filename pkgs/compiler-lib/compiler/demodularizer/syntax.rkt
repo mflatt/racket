@@ -2,6 +2,7 @@
 (require (only-in '#%kernel [syntax-serialize kernel:syntax-serialize])
          racket/linklet
          syntax/modcollapse
+         "path-submod.rkt"
          "linklet.rkt"
          "import.rkt")
 
@@ -12,14 +13,11 @@
          build-stx-linklet)
 
 (define (register-provides-for-syntax register! bulk-binding-registry
-                                      orig-path submod
+                                      path/submod
                                       decl
                                       real-decl)
   (register! bulk-binding-registry
-             (make-resolved-module-path (let ([p (if (string? orig-path)
-                                                     (string->path orig-path)
-                                                     orig-path)])
-                                          (if (pair? submod) (cons p submod) p)))
+             (path/submod->resolved-module-path path/submod)
              (instance-variable-value decl 'self-mpi)
              (instance-variable-value real-decl 'provides)))
 

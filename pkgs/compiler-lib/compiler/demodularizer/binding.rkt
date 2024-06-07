@@ -43,7 +43,7 @@
         (list mod nom-mod)])]))
 
 (define (serialize-binding bind root-phase external-path-pos excluded-module-mpis
-                           names import-names
+                           names name-imports
                            mpi-count)
   (let loop ([bind bind])
     (cond
@@ -70,9 +70,9 @@
             (values sym 0)]
            [(hash-ref names (cons (cons path/submod phase) sym) #f)
             => (lambda (new-sym)
-                 (define i (hash-ref import-names new-sym #f))
+                 (define i (hash-ref name-imports new-sym #f))
                  (if i
-                     (values (import-name i) (import-phase i))
+                     (values (import-name i) (cdr (import-path/submod+phase i)))
                      (values new-sym root-phase)))]
            [(hash-ref excluded-module-mpis path/submod #f)
             (values sym phase)]
