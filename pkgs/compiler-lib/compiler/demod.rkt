@@ -1,6 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base
-                     syntax/parse/pre))
+                     syntax/parse/pre
+                     compiler/cm-accomplice))
 
 (provide (rename-out
           [module-begin #%module-begin]))
@@ -26,10 +27,13 @@
        (dynamic-require 'compiler/demodularizer/main sym))
      (define demodularize (get 'demodularize))
      (define syntax-object-preservation-enabled (get 'syntax-object-preservation-enabled))
+     (register-external-module (collection-file-path "main.rkt" "compiler/demodularizer"))
+     (define src-module (resolved-module-path-name
+                         (module-path-index-resolve
+                          (module-path-index-join (syntax->datum #'mod-path) #f))))
+     (dynamic-require src-module (void)) ; maybe trigger compilation
      (define bundle
-      (demodularize (resolved-module-path-name
-                     (module-path-index-resolve
-                      (module-path-index-join (syntax->datum #'mod-path) #f)))
+      (demodularize src-module
                     #:keep-syntax? #t
                     #:work-directory (build-path (or (current-load-relative-directory)
                                                      (current-directory))
@@ -47,5 +51,6 @@
                                                           #t))))
                     #:max-phase (syntax-e #'max-phase)
                     #:return-bundle? #t))
+     (register-external-module src-module)
      (with-output-to-file "/tmp/dump" #:exists 'truncate (lambda () (write bundle)))
      (datum->syntax #f bundle)]))
