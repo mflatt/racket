@@ -55,6 +55,15 @@
              (derived-from-self? base))
         (not name)))
 
+  (for ([top-mpi (in-list import-mpis)])
+    (let loop ([mpi top-mpi])
+      (unless (eq? mpi self-mpi)
+        (define-values (name base) (module-path-index-split mpi))
+        (if base
+            (loop base)
+            (unless name
+              (error "import MPI is not based on self" top-mpi))))))
+
   ;; Bindings inside of scopes inside of syntax objects each have a
   ;; module path index (MPI) to specify what the binding refers to.
   ;; That MPI is is relative, though, and the path to get to the MPI

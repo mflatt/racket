@@ -44,7 +44,7 @@
           (for/fold ([table table]) ([(phase name-imports) (in-hash (select-state-phase-name-imports state))])
             (hash-set table phase (hash-copy name-imports))))
         (make-table make-hasheq)))
-
+  
   (define phase-internals (make-table (lambda () (box '()))))
   (define phase-lifts (make-table (lambda () (box '()))))
   (define phase-imports (make-table make-hash)) ; root-phase -> path/submod+phase -> (list (cons path/submod+phase sym) ...)
@@ -93,7 +93,7 @@
          => (lambda (run-defined-names)
               (for ([name (in-hash-keys run-defined-names)])
                 (hash-set! defined-names name #t)
-                (hash-set! submod-name-imports name (import name #f name #f))))]
+                (hash-set! submod-name-imports name (import name root-phase #f name #f))))]
         [else
          (define run-defined-names (make-hasheq))
          (hash-set! done path/submod+phase run-defined-names)
@@ -102,7 +102,7 @@
            (hash-set! run-defined-names new-name #t)
            (hash-set! defined-names new-name #t)
            ;; Anything defined in this module becomes an import for submodules:
-           (hash-set! submod-name-imports new-name (import new-name #f new-name #f)))
+           (hash-set! submod-name-imports new-name (import new-name root-phase #f new-name #f)))
       
          ;; Process local definitions, first
          (define (select-names! name-list category)
@@ -171,7 +171,7 @@
                  (hash-set! names (cons use name) n)
                  n]))
             (unless (hash-ref name-imports new-name #f) ; may be propogated for supermodule
-              (hash-set! name-imports new-name (import name shape new-name #f))))))))
+              (hash-set! name-imports new-name (import name (cdr use) shape new-name #f))))))))
 
   ;; Propagate any imports to submodules
   (for ([(root-phase submod-name-imports) (in-hash phase-submod-name-imports)])

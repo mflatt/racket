@@ -216,7 +216,8 @@
       (log-info (indent "Bundling linklet"))
       (define bundle (wrap-bundle linkl-mode phase-new-body phase-new-internals phase-new-lifts phase-import-keys
                                   portal-stxes phase-new-defined-names
-                                  excluded-modules-to-require excluded-module-mpis provides names
+                                  excluded-modules-to-require excluded-module-mpis provides
+                                  names phase-name-imports
                                   get-merge-info
                                   (if (null? submod)
                                       root-sym

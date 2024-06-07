@@ -1,4 +1,3 @@
-;; KEEP
 (export (rename (boot boot)
                 (1/bound-identifier=? bound-identifier=?)
                 (1/compile compile)
@@ -50041,20 +50040,39 @@
                              (begin
                                (values vec_0 (unsafe-vector-length vec_0)))))
                          (lambda (vec_0 len_0)
-                           (letrec*
-                            ((for-loop_0
-                              (|#%name|
-                               for-loop
-                               (lambda (pos_0)
-                                 (begin
-                                   (if (unsafe-fx< pos_0 len_0)
-                                     (let ((mpi_0
-                                            (unsafe-vector-ref vec_0 pos_0)))
+                           (let ((start_0 0))
+                             (let ((vec_1 vec_0) (len_1 len_0))
+                               (begin
+                                 (letrec*
+                                  ((for-loop_0
+                                    (|#%name|
+                                     for-loop
+                                     (lambda (pos_0 pos_1)
                                        (begin
-                                         (add-module-path-index! mpis_0 mpi_0)
-                                         (for-loop_0 (unsafe-fx+ 1 pos_0))))
-                                     (values)))))))
-                            (for-loop_0 0))))
+                                         (if (if (unsafe-fx< pos_0 len_1)
+                                               #t
+                                               #f)
+                                           (let ((mpi_0
+                                                  (unsafe-vector-ref
+                                                   vec_1
+                                                   pos_0)))
+                                             (begin
+                                               (if (eqv?
+                                                    (add-module-path-index!/pos
+                                                     mpis_0
+                                                     mpi_0)
+                                                    pos_1)
+                                                 (void)
+                                                 (raise-arguments-error
+                                                  'compiled-expression-recompile
+                                                  "invalid or duplicate entry in MPI vector"
+                                                  "entry"
+                                                  mpi_0))
+                                               (for-loop_0
+                                                (unsafe-fx+ 1 pos_0)
+                                                (+ pos_1 1))))
+                                           (values)))))))
+                                  (for-loop_0 0 start_0)))))))
                         (let ((self_0
                                (begin-unsafe
                                 (begin
@@ -74628,11 +74646,9 @@
                     (lambda (count_1 accum_0)
                       (begin
                         (if (zero? count_1)
-                            (let ([l (list->bundle-directory
-                                      accum_0
-                                      1/hash->linklet-directory)])
-                              #;(#%fprintf (#%current-error-port) "~s\n" (hash-keys (1/linklet-directory->hash l)))
-                              l)
+                          (list->bundle-directory
+                           accum_0
+                           1/hash->linklet-directory)
                           (let ((name_0
                                  (hash-ref
                                   position-to-name_0

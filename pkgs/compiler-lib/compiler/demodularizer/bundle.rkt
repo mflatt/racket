@@ -4,6 +4,7 @@
          compiler/zo-structs
          racket/pretty
          syntax/modcollapse
+         racket/phase+space
          "run.rkt"
          "name.rkt"
          "linklet.rkt"
@@ -15,7 +16,8 @@
 
 (define (wrap-bundle linkl-mode phase-body phase-internals phase-lifts phase-import-keys
                      portal-stxes phase-defined-names
-                     excluded-modules-to-require excluded-module-mpis provides names
+                     excluded-modules-to-require excluded-module-mpis provides
+                     names phase-name-imports
                      get-merge-info name
                      #:export? export?
                      #:external-uses external-uses
@@ -49,14 +51,7 @@
                            (error 'import-mpis "cannot find module: ~s" path/submod)))
            ;; collapse to a simplified MPI
            (define simple-path (collapse-module-path-index mpi))
-           (define new-mpi
-             (module-path-index-join simple-path
-                                     ;; keep the "self" mpi, if any:
-                                     (let loop ([mpi mpi])
-                                       (define-values (name base) (module-path-index-split mpi))
-                                       (if (not name)
-                                           mpi
-                                           (and (module-path-index? base) (loop base))))))
+           (define new-mpi (module-path-index-join simple-path self-mpi))
            (cond
              [(hash-ref simple-ht simple-path #f)
               => (lambda (pos)
@@ -199,20 +194,24 @@
         #t)))
 
   (define serialized-provides
-    (let ([phases (hash-keys provides)]) ; deterministic output would need sorting here
+    (let ([phase+spaces (hash-keys provides)]) ; deterministic output would need sorting here
       (list->vector
        `(#:hasheqv ,(hash-count provides)
          ,@(apply
             append
-            (for/list ([phase (in-list phases)])
-              (define ht (hash-ref provides phase))
-              `(,phase
+            (for/list ([phase+space (in-list phase+spaces)])
+              (define phase (phase+space-phase phase+space))
+              (define ht (hash-ref provides phase+space))
+              `(,@(if (pair? phase+space)
+                      `(#:cons ,phase ,(phase+space-space phase+space))
+                      (list phase+space))
                 #:hasheq
                 ,(hash-count ht)
                 ,@(apply
                    append
                    (for/list ([(name bind) (in-hash ht)])
-                     `(,name ,@(serialize-binding bind external-path-pos excluded-module-mpis names
+                     `(,name ,@(serialize-binding bind phase external-path-pos excluded-module-mpis
+                                                  names (hash-ref phase-name-imports phase)
                                                   (length all-mpis))))))))))))
 
   (define (primitive v)

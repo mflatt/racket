@@ -1,6 +1,7 @@
 #lang racket/base
 (require racket/match
-         "../private/deserialize.rkt")
+         "../private/deserialize.rkt"
+         "import.rkt")
 
 (provide binding-module-path-index-shift
          binding-mpis
@@ -41,7 +42,9 @@
        [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
         (list mod nom-mod)])]))
 
-(define (serialize-binding bind external-path-pos excluded-module-mpis names mpi-count)
+(define (serialize-binding bind root-phase external-path-pos excluded-module-mpis
+                           names import-names
+                           mpi-count)
   (let loop ([bind bind])
     (cond
       [(provided? bind)
@@ -62,25 +65,35 @@
        (define (lookup-sym mpi phase sym)
          (define r (module-path-index-resolve mpi))
          (define path/submod (resolved-module-path-name r))
-         (if (or (symbol? path/submod)
-                 (hash-ref excluded-module-mpis path/submod #f))
-             sym
-             (or (hash-ref names (cons (cons path/submod phase) sym) #f)
-                 (error 'provides
-                        "cannot find name for provided identifier: ~s ~s" sym mpi))))
+         (cond
+           [(symbol? path/submod)
+            (values sym 0)]
+           [(hash-ref names (cons (cons path/submod phase) sym) #f)
+            => (lambda (new-sym)
+                 (define i (hash-ref import-names new-sym #f))
+                 (if i
+                     (values (import-name i) (import-phase i))
+                     (values new-sym root-phase)))]
+           [(hash-ref excluded-module-mpis path/submod #f)
+            (values sym phase)]
+           [else
+            (error 'provides
+                   "cannot find name for provided identifier: ~s ~s" sym mpi)]))
        (match (binding-content bind)
          [`(,mod ,sym ,phase ,nom-mod)
+          (define-values (new-sym new-phase) (lookup-sym mod phase sym))
           `(#:simple-module-binding
             #:mpi ,(lookup mod)
-            ,(lookup-sym mod phase sym)
-            ,phase
+            ,new-sym
+            ,new-phase
             #:mpi ,(lookup nom-mod))]
          [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
           ;; Currently dropping free-id=? and extra nominals
+          (define-values (new-sym new-phase) (lookup-sym mod phase sym))
           `(#:module-binding
             #:mpi ,(lookup mod)
-            ,(lookup-sym mod phase sym)
-            ,phase
+            ,new-sym
+            ,new-phase
             #:mpi ,(lookup nom-mod)
             ,nom-phase
             ,nom-sym

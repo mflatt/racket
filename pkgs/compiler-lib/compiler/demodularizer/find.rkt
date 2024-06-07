@@ -262,8 +262,8 @@
                                         m-path
                                         `(submod ,m-path ,@submod)))
                                   #f)])
-                   (for/hasheqv ([(phase provs) (in-hash orig-provides)])
-                     (values phase
+                   (for/hasheqv ([(phase+space provs) (in-hash orig-provides)])
+                     (values phase+space
                              (for/hasheq ([(name bind) (in-hash provs)])
                                (values name
                                        (binding-module-path-index-shift bind self-mpi path-mpi)))))))
