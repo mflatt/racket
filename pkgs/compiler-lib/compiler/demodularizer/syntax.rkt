@@ -2,14 +2,10 @@
 (require (only-in '#%kernel [syntax-serialize kernel:syntax-serialize])
          racket/linklet
          syntax/modcollapse
-         (only-in "../private/deserialize.rkt"
-                  provided?
-                  provided-syntax?)
          "path-submod.rkt"
          "linklet.rkt"
          "import.rkt"
-         "one-mod.rkt"
-         "binding.rkt")
+         "one-mod.rkt")
 
 (provide register-provides-for-syntax
          deserialize-syntax
@@ -157,29 +153,14 @@
                                                                                   phase)
                                                                         sym
                                                                         #f)
-                                                              ;; not mapped as a linklet export, so it
-                                                              ;; must be a transformer binding
-                                                              (let ([p (hash-ref (hash-ref (one-mod-provides one-m)
-                                                                                           phase
-                                                                                           #hasheq())
-                                                                                 sym
-                                                                                 #f)])
-                                                                (cond
-                                                                  [p
-                                                                   (unless (and (provided? p)
-                                                                                (provided-syntax? p))
-                                                                     (error 'demodularize
-                                                                            "expected name to be provided as syntax"
-                                                                            "module path" path/submod
-                                                                            "name" sym
-                                                                            "phase level" phase))
-                                                                   (binding-sym p)]
-                                                                  [else
-                                                                   ;; ???
-                                                                   sym]))))
+                                                              ;; not mapped as a linklet export; assume
+                                                              ;; that it's a transformer binding, which
+                                                              ;; doesn't exist at th elinklet level, so
+                                                              ;; internal and external names effectively
+                                                              ;; match
+                                                              sym))
                                      (cond
-                                       [(and src-int-name
-                                             (hash-ref names (cons (cons path/submod phase) src-int-name) #f))
+                                       [(hash-ref names (cons (cons path/submod phase) src-int-name) #f)
                                         => (lambda (new-sym)
                                              ;; Get a potential phase shift
                                              (define mpi+phase (hash-ref excluded-module-mpis path/submod #f))

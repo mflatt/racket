@@ -292,7 +292,7 @@
                                        (lambda (name prim) name)
                                        (lambda (depth) 'module-use)
                                        (lambda (depth) '.mpi-vector)))
-        (define-values (portal-stxes) '#hasheqv()))))
+        (define-values (portal-stxes) ',portal-stxes))))
 
   (define body-linkl-ht
     (for/hasheqv ([(root-phase mgd) (in-hash phase-merged)])
@@ -354,7 +354,6 @@
                     'name module-name
                     'min-phase min-phase
                     'max-phase max-phase
-                    'portal-stxes portal-stxes
                     'vm  #"linklet")]
            [metadata-ht (if (null? pre-submodules)
                             metadata-ht
