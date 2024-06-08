@@ -16,12 +16,8 @@
                          #:defaults ([(exclude-mod-path 1) '()]))
               (~optional (~seq #:max-phase max-phase)
                          #:defaults ([max-phase #'1]))
-              (~optional (~seq (~and demod-submod #:demod-submodules))
-                         #:defaults ([demod-submod #f]))
-              (~optional (~seq #:submodule ([submod-name (~and option (~or #:demod)) ...]
-                                            ...))
-                         #:defaults ([(submod-name 1) '()]
-                                     [(option 2) '()])))
+              (~optional (~seq #:dump-demod dump-demod))
+              (~optional (~seq #:dump-linklet dump-linklet)))
         ...)
      (define (get sym)
        (dynamic-require 'compiler/demodularizer/main sym))
@@ -42,15 +38,10 @@
                                 (resolved-module-path-name
                                  (module-path-index-resolve
                                   (module-path-index-join (syntax->datum mod-path) #f))))
-                    #:demod-submodules? (attribute demod-submod)
-                    #:submodule-specs (for/hash ([submod-name (in-list (syntax->datum #'(submod-name ...)))]
-                                                 [options (in-list (syntax->datum #'((option ...) ...)))])
-                                        (values submod-name
-                                                (for/hasheq ([option (in-list options)])
-                                                  (values (string->symbol (keyword->string option))
-                                                          #t))))
                     #:max-phase (syntax-e #'max-phase)
+                    #:dump-output-file (and (attribute dump-demod) (syntax->datum #'dump-demod))
                     #:return-bundle? #t))
      (register-external-module src-module)
-     (with-output-to-file "/tmp/dump" #:exists 'truncate (lambda () (write bundle)))
+     (when (attribute dump-linklet)
+       (with-output-to-file (syntax->datum #'dump-linklet) #:exists 'truncate (lambda () (write bundle))))
      (datum->syntax #f bundle)]))

@@ -72,7 +72,7 @@
             => (lambda (new-sym)
                  (define i (hash-ref name-imports new-sym #f))
                  (if i
-                     (values (import-name i) (cdr (import-path/submod+phase i)))
+                     (values (import-src-ext-name i) (cdr (import-path/submod+phase i)))
                      (values new-sym root-phase)))]
            [(hash-ref excluded-module-mpis path/submod #f)
             (values sym phase)]

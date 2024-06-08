@@ -13,7 +13,6 @@
 (provide merge-linklets)
 
 (define (merge-linklets phase-runs names
-                        excluded-module-mpis
                         #:maximum-phase max-root-phase)
   ;; Accumulate syntax objects, which span phases. If would be nice if we didn't
   ;; keep syntax objects in expressions that are later pruned,
@@ -51,7 +50,6 @@
 
            (define (remap-name name)
              (cond
-               
                [(hash-ref import-map name #f)
                 => (lambda (i)
                      (cond

@@ -16,6 +16,10 @@
   (define names (make-hash)) ; path/submod+phase+sym -> symbol
   (define used-names (make-hasheq))
 
+  ;; Reserve the syntax-literals and transformer-register names:
+  (define reserved-names '(.get-syntax-literal!
+                           .set-transformer!))
+
   (define (pick-name name)
     (let loop ([try-name name] [i 0])
       (cond
@@ -26,6 +30,17 @@
         [else
          (hash-set! used-names try-name #t)
          try-name])))
+
+  (define (find-or-add-name! names use name)
+    (cond
+      [(hash-ref names (cons use name) #f)
+       => (lambda (new-name) new-name)]
+      [(memq name reserved-names)
+       name]
+      [else
+      (define new-name (pick-name name))
+      (hash-set! names (cons use name) new-name)
+      new-name]))
 
   ;; Names that are defined but not exported from the original
   ;; linklets, so they don't need to be exported after merging:
@@ -39,21 +54,14 @@
     (define portal-stxes (run-portal-stxes r))
     (define path/submod+phase (cons (run-path/submod r) (run-phase r)))
 
-    ;; Reserve the syntax-literals and transformer-register names:
-    (define reserved-names '(.get-syntax-literal!
-                             .set-transformer!))
-
     (define (select-names! name-list category)
       (for ([name (in-list name-list)])
-        (unless (or (hash-ref names (cons path/submod+phase name) #f)
-                    (memq name reserved-names))
-          (define new-name (pick-name name))
-          (hash-set! names (cons path/submod+phase name) new-name)
-          (when category
-            (set-box! category (cons new-name (unbox category)))))))
+        (define new-name (find-or-add-name! names path/submod+phase name))
+        (when category
+          (set-box! category (cons new-name (unbox category))))))
 
     (when linkl
-      (select-names! (linklet*-exports linkl) #f)
+      (select-names! (linklet*-internal-exports linkl) #f)
 
       ;; Since we covered exports first, any other defined name is internal
       (select-names! (linklet*-internals linkl) internals))
@@ -70,12 +78,7 @@
                            (select-names! (list name) #f)]
                           [_ (error "unrecognized transformer registration")])]))))
 
-    (select-names! (hash-keys portal-stxes) #f)
-
-    ;; Pick new names for each import, in case the import is from a linklet
-    ;; that isn't merged with this one:
-    (when linkl
-      (select-names! (apply append (linklet*-internal-importss linkl)) #f)))
+    (select-names! (hash-keys portal-stxes) #f))
 
   (when (log-level? (current-logger) 'debug 'demodularizer)
     (log-demodularizer-debug " Rename:")
@@ -86,7 +89,7 @@
       (define phase (cdr path/submod+phase))
       (log-demodularizer-debug "  ~a ~a ~a -> ~a" name path/submod phase new-name)))
 
-  (values names (unbox internals)))
+  (values names (unbox internals) find-or-add-name!))
 
 (define (find-name names path/submod+phase name)
   (hash-ref names (cons path/submod+phase name)))

@@ -30,7 +30,7 @@
 
   (define mods (make-hash))                 ; path -> mod
   (define one-mods (make-hash))             ; path+submod -> one-mod
-  (define excluded-module-mpis (make-hash)) ; path/submod -> mpi
+  (define excluded-module-mpis (make-hash)) ; path/submod -> (cons mpi phase)
 
   ;; deserialization of syntax objects is too tedious to re-implement, so
   ;; we access the implementation directly from `#%kernel`
@@ -69,7 +69,7 @@
 
     (when exclude?
       (unless (hash-ref excluded-module-mpis path/submod #f)
-        (hash-set! excluded-module-mpis path/submod rel-mpi)))
+        (hash-set! excluded-module-mpis path/submod (cons rel-mpi 0))))
 
     (unless (hash-ref mods path #f) 
       (define-values (zo-path kind) (get-module-path path))
@@ -284,5 +284,5 @@
 
   (values one-mods
           submods
-          (for/hash ([(path/submod mpi) (in-hash excluded-module-mpis)])
-            (values path/submod mpi))))
+          (for/hash ([(path/submod mpi+phase) (in-hash excluded-module-mpis)])
+            (values path/submod mpi+phase))))

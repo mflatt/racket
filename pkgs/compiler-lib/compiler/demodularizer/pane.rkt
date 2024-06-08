@@ -110,8 +110,11 @@
 
   ;; Name the panes, using an existing submodule name if one is within the pane,
   ;; or an external module if there's only one module in the pane
-  (define named-panes ; (list (cons path/submod-or-#f (list (cons path/submod delta) ...)) ...)
-    (for/list ([path/submod+deltas (in-hash-values panes)]
+  (define-values (named-panes ; (list (cons path/submod-or-#f (list (cons path/submod delta) ...)) ...)
+                  added-submods)
+    (for/fold ([named-panes null]
+               [added-submods null])
+              ([(pane path/submod+deltas) (in-hash panes)]
                [i (in-naturals)])
       (define unique-submod
         (for/fold ([submod #f]) ([path/submod+delta (in-list path/submod+deltas)])
@@ -125,17 +128,31 @@
             [else submod])))
       (when (eq? unique-submod 'many)
         (error "two entry-point submodules are in the same pane"))
-      (define name
+      (define-values (name added-submod)
         (cond
-          [unique-submod (path/submod-join top-path unique-submod)]
+          [unique-submod
+           (values (path/submod-join top-path unique-submod)
+                   #f)]
           [(and (null? (cdr path/submod+deltas))
                 external-singletons?)
            ;; one none-submodule; no demodularization is useful
-           #f]
+           (values #f #f)]
           [else
-           (path/submod-join top-path (list (string->symbol (format "demod-pane-~a" i))))]))
-      (cons name
-            path/submod+deltas)))
+           (define added-submod (string->symbol (format "demod-pane-~a" i)))
+           (values (path/submod-join top-path (list added-submod))
+                   added-submod)]))
+
+      (log-demodularizer-debug "  ~a = ~a ~a"
+                               name
+                               (hash-keys (car pane))
+                               (hash-keys (cdr pane)))
+
+      (values (cons (cons name
+                          path/submod+deltas)
+                    named-panes)
+              (if added-submod
+                  (cons added-submod added-submods)
+                  added-submods))))
 
   ;; sort panes based on shallowest (largest order index) module in pane
   (define sorted-panes ; (list (cons path/submod-or-#f (list (cons path/submod delta) ...)) ...)
@@ -148,7 +165,8 @@
                                (define m (hash-ref one-mods path/submod))
                                (one-mod-order m))))))
 
-  sorted-panes)
+  (values sorted-panes
+          added-submods))
 
 ;; Remove panes that have `#f` names, and set the corresponding module in `one-mods`
 ;; to be excluded. For panes that are new, synthesized submodules, create
@@ -166,7 +184,7 @@
                        (define one-m (hash-ref one-mods path/submod))
                        (log-demodularizer-debug " Dropping single-module pane: ~a" path/submod)
                        (set! common-excluded-module-mpis
-                             (hash-set common-excluded-module-mpis path/submod (one-mod-rel-mpi one-m)))
+                             (hash-set common-excluded-module-mpis path/submod (cons (one-mod-rel-mpi one-m) 0)))
                        (hash-set! one-mods path/submod (struct-copy one-mod one-m
                                                                     [excluded? #t])))]
                #:when path/submod)
@@ -230,7 +248,7 @@
         (for/fold ([excluded-module-mpis excluded-module-mpis])
                   ([path/submod+phase (in-list pane-content)])
           (define path/submod (car path/submod+phase))
-          (hash-set excluded-module-mpis path/submod mpi)))))
+          (hash-set excluded-module-mpis path/submod (cons mpi (cdr path/submod+phase)))))))
 
   (log-demodularizer-debug " Panes: ~a" (length new-sorted-panes))
   (for ([phase/submod+content (in-list new-sorted-panes)])

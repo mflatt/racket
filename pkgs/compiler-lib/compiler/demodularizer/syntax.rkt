@@ -4,7 +4,8 @@
          syntax/modcollapse
          "path-submod.rkt"
          "linklet.rkt"
-         "import.rkt")
+         "import.rkt"
+         "one-mod.rkt")
 
 (provide register-provides-for-syntax
          deserialize-syntax
@@ -45,7 +46,7 @@
        [else (values #f #f)])]
     [else (values #f #f)]))
 
-(define (serialize-syntax stx-vec self-mpi import-mpis excluded-module-mpis names)
+(define (serialize-syntax stx-vec self-mpi import-mpis excluded-module-mpis names one-mods)
   (define (derived-from-self? mpi)
     (define-values (name base) (module-path-index-split mpi))
     (if base
@@ -112,13 +113,13 @@
                                      ;; If the result path is to an excluded module, then
                                      ;; we have a replacement mpi to supply the right form
                                      ;; of reference for the excluded module
-                                     (define exp-mpi (if (symbol? path/submod)
-                                                         (module-path-index-join `(quote ,path/submod) #f)
-                                                         (hash-ref excluded-module-mpis path/submod #f)))
+                                     (define exp-mpi+phase (if (symbol? path/submod)
+                                                               (cons (module-path-index-join `(quote ,path/submod) #f) 0)
+                                                               (hash-ref excluded-module-mpis path/submod #f)))
                                      (define new-mpi
                                        (cond
-                                         [exp-mpi
-                                          (module-path-index-join (collapse-module-path-index exp-mpi)
+                                         [exp-mpi+phase
+                                          (module-path-index-join (collapse-module-path-index (car exp-mpi+phase))
                                                                   self-mpi)]
                                          [else
                                           ;; Otherwise, it must be one we want to refer to this module
@@ -138,19 +139,31 @@
                                                            "found module path index in syntax binding without reported resolution"
                                                            "module path index" mpi))
                                   (define path/submod (cdr new-mpi+path/submod))
+                                  (define one-m (and (not (symbol? path/submod))
+                                                     (hash-ref one-mods path/submod)))
                                   (cond
-                                    [(symbol? path/submod)
-                                     sym]
-                                    [(hash-ref names (cons (cons path/submod phase) sym) #f)
-                                     => (lambda (new-sym) new-sym)]
-                                    [(hash-ref excluded-module-mpis path/submod #f)
+                                    [(or (not one-m)
+                                         (one-mod-excluded? one-m))
+                                     ;; non-demodulized mode, so external name is unchanged
                                      sym]
                                     [else
-                                     (raise-arguments-error 'demodularize
-                                                            "did not find new name for binding in syntax"
-                                                            "module path" path/submod
-                                                            "name" sym
-                                                            "phase level" phase)])))]))
+                                     (define src-int-name (or (hash-ref (hash-ref (one-mod-exports one-m)
+                                                                                  phase)
+                                                                        sym
+                                                                        #f)
+                                                              ;; more mapped as a linklet export; assume
+                                                              ;; that it's a transformer binding, where
+                                                              ;; internal and external names match
+                                                              sym))
+                                     (cond
+                                       [(hash-ref names (cons (cons path/submod phase) src-int-name) #f)
+                                        => (lambda (new-sym) new-sym)]
+                                       [else
+                                        (raise-arguments-error 'demodularize
+                                                               "did not find new name for binding in syntax"
+                                                               "module path" path/submod
+                                                               "name" sym
+                                                               "phase level" phase)])])))]))
 
   (for ([stx-mpi (in-vector stx-mpis-vec)]
         [orig-mpi (in-list (cons self-mpi import-mpis))]

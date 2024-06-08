@@ -39,8 +39,6 @@
 (define current-merged-output-file (make-parameter #f))
 
 (define (demodularize given-input-file [given-output-file #f]
-                      #:submodule-specs [submodule-specs #hash()]
-                      #:demod-submodules? [demod-submodules? #t]
                       #:exclude [given-explicitly-excluded-modules (current-excluded-modules)]
                       #:work-directory [given-work-directory (current-work-directory)]
                       #:keep-syntax? [keep-syntax? (syntax-object-preservation-enabled)]
@@ -82,12 +80,12 @@
     (delete-directory/files work-directory))
 
   (log-demodularizer-info "Partitioning modules")
-  (define all-sorted-panes
+  (define-values (all-sorted-panes added-pane-submods)
     (partition-panes all-one-mods input-path submods
                      #:external-singetons? external-singletons?))
   (define-values (top-path/submods excluded-module-mpiss one-mods)
     (reify-panes all-sorted-panes all-one-mods common-excluded-module-mpis))
-
+  
   (log-demodularizer-info "Finding module bodies to merge")
   (define-values (phase-runss excluded-modules-to-requires)
     (for/lists (phase-runss excluded-modules-to-requires)
@@ -98,13 +96,13 @@
                  excluded-module-mpis)))
 
   (log-demodularizer-info "Selecting names")
-  (define-values (names internals)
+  (define-values (names internals find-or-add-name!)
     (select-names one-mods
                   phase-runss))
   (define new-phase-runss
     (for/list ([phase-runs (in-list phase-runss)]
                [excluded-module-mpis (in-list excluded-module-mpiss)])
-      (add-import-maps phase-runs names
+      (add-import-maps phase-runs find-or-add-name! names ; <--- `names` is modified to add new names
                        one-mods excluded-module-mpis
                        #:maximum-phase maximum-phase)))
 
@@ -114,7 +112,6 @@
         ([phase-runs (in-list new-phase-runss)]
          [excluded-module-mpis (in-list excluded-module-mpiss)])
       (merge-linklets phase-runs names
-                      excluded-module-mpis
                       #:maximum-phase maximum-phase)))
 
   (define new-phase-mergeds
@@ -130,6 +127,8 @@
                          #:assume-pure? gc-toplevels?))]))
 
   (log-demodularizer-info "Bundling linklet")
+  (when (and dump-output-file (file-exists? dump-output-file))
+    (delete-file dump-output-file))
   (define dir-ht
     (for/hash ([top-path/submod (in-list top-path/submods)]
                [phase-merged (in-list new-phase-mergeds)]
@@ -151,10 +150,14 @@
         (wrap-bundle module-name phase-merged name-imports
                      stx-vec portal-stxes
                      excluded-modules-to-require excluded-module-mpis (one-mod-provides m)
-                     names
+                     names one-mods
                      #:export? keep-syntax?
                      #:pre-submodules (one-mod-pre-submodules m)
-                     #:post-submodules (one-mod-post-submodules m)
+                     #:post-submodules (append
+                                        (if (null? submod)
+                                            added-pane-submods
+                                            null)
+                                        (one-mod-post-submodules m))
                      #:dump-output-file dump-output-file))
       (values submod bundle)))
 

@@ -19,27 +19,28 @@
                    one-mods
                    excluded-module-mpis)
 
-  (define phase-runs-done (make-hasheqv)) ; root-phase -> path+submod+phase -> #t
   (define phase-rev-runs (make-hasheqv))  ; root-phase -> (list run ...) in reverse order
   (define excluded-modules-to-require (make-hash)) ; path/submod+phase-shift -> #t
 
   (define (find-phase-runs! path/submod
                             #:phase-level [phase-level 0]
                             #:root-phase [root-phase 0])
-    (define check-done (make-hash))
-    
+    (define runs-done (make-hash)) ; path+submod+phase -> #t
+
     (let find-loop ([path/submod path/submod]
+                    ;; phase level within the module; note that this corresponds
+                    ;; to the negation of a phase shift
                     [phase-level phase-level])
-      (unless (hash-ref (hash-ref phase-runs-done root-phase #hash()) (cons path/submod phase-level) #f)
+      (unless (hash-ref runs-done (cons path/submod phase-level) #f)
         (cond
           [(or (symbol? path/submod)
                (hash-ref excluded-module-mpis path/submod #f))
-           => (lambda (excluded-mpi)
+           => (lambda (excluded-mpi+phase)
                 ;; Root of an excluded subtree; keep it as a `require`, even if there
-                ;; turns out to be no imported variables at the linklet level. It's
+                ;; turn out to be no imported variables at the linklet level. It's
                 ;; possible that this subtree is covered by another one, and we clean
-                ;; those up with a second pass
-                (hash-set! excluded-modules-to-require (cons path/submod (- phase-level root-phase)) #t))]
+                ;; those up with a second pass.
+                (hash-set! excluded-modules-to-require (cons path/submod (- root-phase phase-level)) #t))]
           [else
            (define one-m (hash-ref one-mods path/submod))
            (define decl (one-mod-decl one-m))
@@ -66,10 +67,6 @@
                           #f ; import-map filled in later
                           shifted-stx-vec stx-mpi
                           portal-stxes))
-           (define runs-done (or (hash-ref phase-runs-done root-phase #f)
-                                 (let ([ht (make-hash)])
-                                   (hash-set! phase-runs-done root-phase ht)
-                                   ht)))
            (hash-set! runs-done (cons path/submod phase-level) #t)
 
            (for* ([(phase-shift req-path/submods) (in-hash (one-mod-reqs one-m))]
@@ -88,19 +85,23 @@
     (define done (make-hash))
     (for ([path/submod+phase (in-list (hash-keys excluded-modules-to-require))]
           #:unless (symbol? (car path/submod+phase)))
-      (let loop ([path/submod+phase path/submod+phase])
+      (let loop ([path/submod+phase-shift path/submod+phase]
+                 [excluded? #f])
         (unless (hash-ref done path/submod+phase #f)
-          (define path/submod (car path/submod+phase))
-          (define phase (cdr path/submod+phase))
+          (define path/submod (car path/submod+phase-shift))
+          (define phase-shift (cdr path/submod+phase-shift))
           (define one-m (hash-ref one-mods path/submod))
           
           (for* ([(req-phase req-path/submods) (in-hash (one-mod-reqs one-m))]
                  [req-path/submod (in-list req-path/submods)])
-            (define at-phase-level (- phase req-phase))
-            (define req-path/submod+phase (cons req-path/submod at-phase-level))
-            (hash-remove! excluded-modules-to-require req-path/submod+phase)
+            (define at-phase-shift (+ phase-shift req-phase))
+            (define req-path/submod+phase-shift (cons req-path/submod at-phase-shift))
+            (when excluded?
+              (hash-remove! excluded-modules-to-require req-path/submod+phase-shift))
             (unless (symbol? req-path/submod)
-              (loop req-path/submod+phase)))
+              (loop req-path/submod+phase-shift
+                    (or excluded?
+                        (hash-ref excluded-modules-to-require req-path/submod+phase-shift #f)))))
 
           (hash-set! done path/submod+phase #t)))))
 
@@ -115,9 +116,12 @@
   
   (log-demodularizer-debug " Merging for ~a:" top-path/submod)
   (for* ([(phase rev-runs) (in-hash phase-rev-runs)]
-         #:do [(log-debug "  ~a:" phase)]
+         #:do [(log-demodularizer-debug "  ~a:" phase)]
          [r (in-list (reverse rev-runs))])
     (log-demodularizer-debug "    ~a ~a" (run-path/submod r) (run-phase r)))
+  (log-demodularizer-debug "  require:")
+  (for ([path/submod+phase (in-hash-keys excluded-modules-to-require)])
+    (log-demodularizer-debug "    ~a ~a" (car path/submod+phase) (cdr path/submod+phase)))
 
   (values (for/hasheqv ([(root-phase rev-runs) (in-hash phase-rev-runs)])
             (values root-phase (reverse rev-runs)))
