@@ -5,6 +5,7 @@
 
 (provide binding-module-path-index-shift
          binding-mpis
+         binding-sym
          serialize-binding)
 
 (define (binding-module-path-index-shift bind from-mpi to-mpi)
@@ -42,7 +43,17 @@
        [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
         (list mod nom-mod)])]))
 
-(define (serialize-binding bind root-phase external-path-pos excluded-module-mpis
+(define (binding-sym bind)
+  (cond
+    [(provided? bind) (binding-sym (provided-binding bind))]
+    [else
+     (match (binding-content bind)
+       [`(,mod ,sym ,phase ,nom-mod) sym]
+       [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
+        sym])]))
+
+(define (serialize-binding bind root-phase
+                           external-path-pos excluded-module-mpis included-module-phases
                            names name-imports
                            mpi-count)
   (let loop ([bind bind])
@@ -70,10 +81,17 @@
             (values sym 0)]
            [(hash-ref names (cons (cons path/submod phase) sym) #f)
             => (lambda (new-sym)
-                 (define i (hash-ref name-imports new-sym #f))
-                 (if i
-                     (values (import-src-ext-name i) (cdr (import-path/submod+phase i)))
-                     (values new-sym root-phase)))]
+                 (cond
+                   [(hash-ref name-imports new-sym #f)
+                    => (lambda (i)
+                         (values (import-src-ext-name i) (cdr (import-path/submod+phase i))))]
+                   [else
+                    ;; Get a potential phase shift
+                    (define mpi+phase (hash-ref excluded-module-mpis path/submod #f))
+                    (define phase-shift (if mpi+phase
+                                            (cdr mpi+phase)
+                                            (hash-ref included-module-phases path/submod 0)))
+                    (values new-sym (+ root-phase phase-shift))]))]
            [(hash-ref excluded-module-mpis path/submod #f)
             (values sym phase)]
            [else

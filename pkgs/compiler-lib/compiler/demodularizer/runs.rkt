@@ -54,7 +54,7 @@
            (define uses (hash-ref (one-mod-phase-uses one-m) phase-level null))
 
            (define shifted-stx-vec
-             (let ([phase-shift (- phase-level root-phase)])
+             (let ([phase-shift (- root-phase phase-level)])
                (if (eqv? phase-shift 0)
                    stx-vec
                    (and stx-vec

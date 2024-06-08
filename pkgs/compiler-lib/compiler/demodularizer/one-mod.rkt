@@ -10,9 +10,9 @@
                  decl
                  phase-uses  ; phase-level -> (list (cons path/submod phase-level) ...) for linklet imports
                  reqs    ; phase-shift -> (list path/submod ...) preserving original order
-                 exports ; phase-level -> ext-name -> int-name
+                 exports ; phase-level -> ext-name -> int-name for linklet exports
                  min-phase max-phase ; reachable phases via transitive requires
-                 provides
+                 provides ; phase-level -> sym -> provided
                  stx-vec stx-mpi portal-stxes
                  pre-submodules
                  post-submodules))

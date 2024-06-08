@@ -8873,7 +8873,7 @@
   (lambda (b_0)
     (let ((or-part_0 (simple-module-binding? b_0)))
       (if or-part_0 or-part_0 (full-module-binding? b_0)))))
-(define finish_3005
+(define finish_2304
   (make-struct-type-install-properties
    '(full-module-binding)
    9
@@ -8938,30 +8938,37 @@
          (if (full-module-binding? simplified-b_0)
            (begin
              (|#%app| ser-push!_0 'tag kw2804)
-             (|#%app| ser-push!_0 (full-module-binding-module b_0))
-             (|#%app|
-              ser-push!_0
-              (|#%app|
-               (serialize-state-map-binding-symbol state_0)
-               (full-module-binding-module b_0)
-               (full-module-binding-phase b_0)
-               (full-module-binding-sym b_0)))
-             (|#%app| ser-push!_0 (full-module-binding-phase b_0))
-             (|#%app| ser-push!_0 (full-module-binding-nominal-module b_0))
-             (|#%app|
-              ser-push!_0
-              (full-module-binding-nominal-phase+space b_0))
-             (|#%app| ser-push!_0 (full-module-binding-nominal-sym b_0))
-             (|#%app|
-              ser-push!_0
-              (full-module-binding-nominal-require-phase+space-shift b_0))
-             (|#%app| ser-push!_0 (full-binding-free=id b_0))
-             (if (full-module-binding-extra-inspector b_0)
-               (|#%app| ser-push!_0 'tag kw1932)
-               (|#%app| ser-push!_0 #f))
-             (|#%app|
-              ser-push!_0
-              (full-module-binding-extra-nominal-bindings b_0)))
+             (begin
+               (|#%app| ser-push!_0 (full-module-binding-module b_0))
+               (call-with-values
+                (lambda ()
+                  (|#%app|
+                   (serialize-state-map-binding-symbol state_0)
+                   (full-module-binding-module b_0)
+                   (full-module-binding-sym b_0)
+                   (full-module-binding-phase b_0)))
+                (lambda (sym_0 phase_0)
+                  (begin
+                    (|#%app| ser-push!_0 sym_0)
+                    (|#%app| ser-push!_0 phase_0)
+                    (|#%app|
+                     ser-push!_0
+                     (full-module-binding-nominal-module b_0))
+                    (|#%app|
+                     ser-push!_0
+                     (full-module-binding-nominal-phase+space b_0))
+                    (|#%app| ser-push!_0 (full-module-binding-nominal-sym b_0))
+                    (|#%app|
+                     ser-push!_0
+                     (full-module-binding-nominal-require-phase+space-shift
+                      b_0))
+                    (|#%app| ser-push!_0 (full-binding-free=id b_0))
+                    (if (full-module-binding-extra-inspector b_0)
+                      (|#%app| ser-push!_0 'tag kw1932)
+                      (|#%app| ser-push!_0 #f))
+                    (|#%app|
+                     ser-push!_0
+                     (full-module-binding-extra-nominal-bindings b_0)))))))
            (|#%app| ser-push!_0 simplified-b_0))))))
    #f
    #f
@@ -8976,7 +8983,7 @@
    #f
    #f
    '(9 . 0)))
-(define effect_2481 (finish_3005 struct:full-module-binding))
+(define effect_2481 (finish_2304 struct:full-module-binding))
 (define full-module-binding45.1
   (|#%name|
    full-module-binding
@@ -9022,7 +9029,7 @@
   (|#%name|
    full-module-binding-extra-nominal-bindings
    (record-accessor struct:full-module-binding 8)))
-(define finish_2512
+(define finish_2620
   (make-struct-type-install-properties
    '(simple-module-binding)
    4
@@ -9047,16 +9054,22 @@
      (lambda (b_0 ser-push!_0 state_0)
        (begin
          (|#%app| ser-push!_0 'tag kw2755)
-         (|#%app| ser-push!_0 (simple-module-binding-module b_0))
-         (|#%app|
-          ser-push!_0
-          (|#%app|
-           (serialize-state-map-binding-symbol state_0)
-           (simple-module-binding-module b_0)
-           (simple-module-binding-phase b_0)
-           (simple-module-binding-sym b_0)))
-         (|#%app| ser-push!_0 (simple-module-binding-phase b_0))
-         (|#%app| ser-push!_0 (simple-module-binding-nominal-module b_0))))))
+         (begin
+           (|#%app| ser-push!_0 (simple-module-binding-module b_0))
+           (call-with-values
+            (lambda ()
+              (|#%app|
+               (serialize-state-map-binding-symbol state_0)
+               (simple-module-binding-module b_0)
+               (simple-module-binding-sym b_0)
+               (simple-module-binding-phase b_0)))
+            (lambda (sym_0 phase_0)
+              (begin
+                (|#%app| ser-push!_0 sym_0)
+                (|#%app| ser-push!_0 phase_0)
+                (|#%app|
+                 ser-push!_0
+                 (simple-module-binding-nominal-module b_0))))))))))
    #f
    #f
    '(0 1 2 3)
@@ -9070,7 +9083,7 @@
    #f
    #f
    '(4 . 0)))
-(define effect_2891 (finish_2512 struct:simple-module-binding))
+(define effect_2891 (finish_2620 struct:simple-module-binding))
 (define simple-module-binding46.1
   (|#%name|
    simple-module-binding
@@ -26026,7 +26039,8 @@
                 (if (eq? map-binding-symbol13_0 unsafe-undefined)
                   (|#%name|
                    map-binding-symbol
-                   (lambda (mpi_0 phase_0 sym_0) (begin sym_0)))
+                   (lambda (mpi_0 sym_0 phase_0)
+                     (begin (values sym_0 phase_0))))
                   map-binding-symbol13_0)))
            (let ((bulk-shifts_0
                   (if keep-provides?10_0 (list (make-hasheq)) #f)))
@@ -76498,7 +76512,8 @@
                          (if (eq? map-binding-symbol9_0 unsafe-undefined)
                            (|#%name|
                             map-binding-symbol
-                            (lambda (mpi_0 phase_0 sym_0) (begin sym_0)))
+                            (lambda (mpi_0 sym_0 phase_0)
+                              (begin (values sym_0 phase_0))))
                            map-binding-symbol9_0)))
                     (begin
                       (if as-data?5_0

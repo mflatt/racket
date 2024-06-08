@@ -83,7 +83,7 @@
   (define-values (all-sorted-panes added-pane-submods)
     (partition-panes all-one-mods input-path submods
                      #:external-singetons? external-singletons?))
-  (define-values (top-path/submods excluded-module-mpiss one-mods)
+  (define-values (top-path/submods excluded-module-mpiss included-module-phasess one-mods)
     (reify-panes all-sorted-panes all-one-mods common-excluded-module-mpis))
   
   (log-demodularizer-info "Finding module bodies to merge")
@@ -136,7 +136,8 @@
                [stx-vec (in-list stx-vecs)]
                [portal-stxes (in-list portal-stxess)]
                [excluded-modules-to-require (in-list excluded-modules-to-requires)]
-               [excluded-module-mpis (in-list excluded-module-mpiss)])
+               [excluded-module-mpis (in-list excluded-module-mpiss)]
+               [included-module-phases (in-list included-module-phasess)])
       (define m (hash-ref one-mods top-path/submod))
       (define path (path/submod-path top-path/submod))
       (define submod (path/submod-submod top-path/submod))
@@ -149,7 +150,8 @@
       (define bundle
         (wrap-bundle module-name phase-merged name-imports
                      stx-vec portal-stxes
-                     excluded-modules-to-require excluded-module-mpis (one-mod-provides m)
+                     excluded-modules-to-require excluded-module-mpis included-module-phases
+                     (one-mod-provides m)
                      names one-mods
                      #:export? keep-syntax?
                      #:pre-submodules (one-mod-pre-submodules m)

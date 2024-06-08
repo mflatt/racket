@@ -47,7 +47,9 @@
                           #t))))
 
   ;; If two panes have the same entry points and the same phase shifts, but
-  ;; shifted releative to each other, then the panes can be merged
+  ;; shifted releative to each other, then the panes can be merged. This step
+  ;; not only reduces the number of panes, it is needed for the panes to not
+  ;; have import cycles between them.
   (define merges ; pane -> (cons pane-to-merge-key-into phase shift)
     (let loop ([entries+phasess (sort (hash-keys pre-panes)
                                       <
@@ -250,15 +252,23 @@
           (define path/submod (car path/submod+phase))
           (hash-set excluded-module-mpis path/submod (cons mpi (cdr path/submod+phase)))))))
 
+  (define included-module-phasess
+    (for/list ([path/submod+pane-content (in-list new-sorted-panes)])
+      (define content (cdr path/submod+pane-content))
+      (for/hash ([path/submod+phase (in-list content)])
+        (values (car path/submod+phase)
+                (cdr path/submod+phase)))))
+
   (log-demodularizer-debug " Panes: ~a" (length new-sorted-panes))
-  (for ([phase/submod+content (in-list new-sorted-panes)])
-    (define phase/submod (car phase/submod+content))
-    (define content (cdr phase/submod+content))
-    (log-demodularizer-debug "  ~s:" phase/submod)
+  (for ([path/submod+content (in-list new-sorted-panes)])
+    (define path/submod (car path/submod+content))
+    (define content (cdr path/submod+content))
+    (log-demodularizer-debug "  ~s:" path/submod)
     (for ([path/submod+phase (in-list content)])
       (log-demodularizer-debug "    ~a ~a" (car path/submod+phase) (cdr path/submod+phase))))
 
   (values (map car new-sorted-panes)
           excluded-module-mpiss
+          included-module-phasess
           ;; `one-mods` return value is just a hacky hint that this function is meant to change it
           one-mods))

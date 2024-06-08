@@ -18,7 +18,8 @@
 
 (define (wrap-bundle module-name phase-merged name-imports
                      stx-vec portal-stxes
-                     excluded-modules-to-require excluded-module-mpis provides
+                     excluded-modules-to-require excluded-module-mpis included-module-phases
+                     provides
                      names one-mods
                      #:export? export?
                      #:pre-submodules pre-submodules
@@ -83,9 +84,11 @@
                                (hash-ref excluded-module-mpis path/submod #f)))
           (add-path path/submod ht simple-ht rev-paths)))
       (values provide-ht (reverse provide-rev-paths))))
-  
+
   (define-values (all-mpis serialized-stx)
-    (serialize-syntax stx-vec self-mpi external-mpis excluded-module-mpis names one-mods))
+    (serialize-syntax stx-vec self-mpi
+                      external-mpis excluded-module-mpis included-module-phases
+                      names one-mods))
 
   (define serialized-mpis
     ;; Construct two vectors: one for mpi construction, and
@@ -200,7 +203,8 @@
                 ,@(apply
                    append
                    (for/list ([(name bind) (in-hash ht)])
-                     `(,name ,@(serialize-binding bind phase external-path-pos excluded-module-mpis
+                     `(,name ,@(serialize-binding bind phase
+                                                  external-path-pos excluded-module-mpis included-module-phases
                                                   names name-imports
                                                   (length all-mpis))))))))))))
 
