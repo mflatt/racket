@@ -9140,129 +9140,146 @@
   (lambda (module_0 sym_0 phase_0 nominal-module_0)
     (simple-module-binding46.1 module_0 phase_0 sym_0 nominal-module_0)))
 (define module-binding-maybe-intern
-  (lambda (v_0 interns_0 mpi->index_0)
+  (lambda (v_0 interns_0 map-binding-symbol_0 mpi->index_0)
     (let ((key_0
            (if (simple-module-binding? v_0)
-             (let ((app_0
-                    (|#%app| mpi->index_0 (simple-module-binding-module v_0))))
-               (let ((app_1 (simple-module-binding-phase v_0)))
-                 (let ((app_2 (simple-module-binding-sym v_0)))
-                   (list
-                    app_0
-                    app_1
-                    app_2
-                    (|#%app|
-                     mpi->index_0
-                     (simple-module-binding-nominal-module v_0))))))
+             (call-with-values
+              (lambda ()
+                (|#%app|
+                 map-binding-symbol_0
+                 (simple-module-binding-module v_0)
+                 (simple-module-binding-sym v_0)
+                 (simple-module-binding-phase v_0)))
+              (lambda (sym_0 phase_0)
+                (let ((app_0
+                       (|#%app|
+                        mpi->index_0
+                        (simple-module-binding-module v_0))))
+                  (list
+                   app_0
+                   phase_0
+                   sym_0
+                   (|#%app|
+                    mpi->index_0
+                    (simple-module-binding-nominal-module v_0))))))
              (if (full-module-binding? v_0)
-               (let ((app_0
-                      (|#%app| mpi->index_0 (full-module-binding-module v_0))))
-                 (let ((app_1 (full-module-binding-phase v_0)))
-                   (let ((app_2 (full-module-binding-sym v_0)))
-                     (let ((app_3
-                            (|#%app|
-                             mpi->index_0
-                             (full-module-binding-nominal-module v_0))))
-                       (let ((app_4
-                              (full-module-binding-nominal-phase+space v_0)))
-                         (let ((app_5 (full-module-binding-nominal-sym v_0)))
-                           (let ((app_6
-                                  (full-module-binding-nominal-require-phase+space-shift
-                                   v_0)))
-                             (let ((app_7
-                                    (full-module-binding-extra-inspector v_0)))
-                               (list
-                                app_0
-                                app_1
-                                app_2
-                                app_3
-                                app_4
-                                app_5
-                                app_6
-                                app_7
-                                (reverse$1
-                                 (call-with-values
-                                  (lambda ()
-                                    (make-sequence
-                                     '(b)
-                                     (full-module-binding-extra-nominal-bindings
-                                      v_0)))
-                                  (lambda (pos->vals_0
-                                           pos-pre-inc_0
-                                           pos-next_0
-                                           init_0
-                                           pos-cont?_0
-                                           val-cont?_0
-                                           all-cont?_0)
-                                    (letrec*
-                                     ((for-loop_0
-                                       (|#%name|
-                                        for-loop
-                                        (lambda (fold-var_0 pos_0)
-                                          (begin
-                                            (if (if pos-cont?_0
-                                                  (|#%app| pos-cont?_0 pos_0)
-                                                  #t)
-                                              (call-with-values
-                                               (lambda ()
-                                                 (let ((b_0
-                                                        (|#%app|
-                                                         pos->vals_0
+               (call-with-values
+                (lambda ()
+                  (|#%app|
+                   map-binding-symbol_0
+                   (full-module-binding-module v_0)
+                   (full-module-binding-sym v_0)
+                   (full-module-binding-phase v_0)))
+                (lambda (sym_0 phase_0)
+                  (let ((app_0
+                         (|#%app|
+                          mpi->index_0
+                          (full-module-binding-module v_0))))
+                    (let ((app_1
+                           (|#%app|
+                            mpi->index_0
+                            (full-module-binding-nominal-module v_0))))
+                      (let ((app_2
+                             (full-module-binding-nominal-phase+space v_0)))
+                        (let ((app_3 (full-module-binding-nominal-sym v_0)))
+                          (let ((app_4
+                                 (full-module-binding-nominal-require-phase+space-shift
+                                  v_0)))
+                            (let ((app_5
+                                   (full-module-binding-extra-inspector v_0)))
+                              (list
+                               app_0
+                               phase_0
+                               sym_0
+                               app_1
+                               app_2
+                               app_3
+                               app_4
+                               app_5
+                               (reverse$1
+                                (call-with-values
+                                 (lambda ()
+                                   (make-sequence
+                                    '(b)
+                                    (full-module-binding-extra-nominal-bindings
+                                     v_0)))
+                                 (lambda (pos->vals_0
+                                          pos-pre-inc_0
+                                          pos-next_0
+                                          init_0
+                                          pos-cont?_0
+                                          val-cont?_0
+                                          all-cont?_0)
+                                   (letrec*
+                                    ((for-loop_0
+                                      (|#%name|
+                                       for-loop
+                                       (lambda (fold-var_0 pos_0)
+                                         (begin
+                                           (if (if pos-cont?_0
+                                                 (|#%app| pos-cont?_0 pos_0)
+                                                 #t)
+                                             (call-with-values
+                                              (lambda ()
+                                                (let ((b_0
+                                                       (|#%app|
+                                                        pos->vals_0
+                                                        pos_0)))
+                                                  (values
+                                                   b_0
+                                                   (if all-cont?_0
+                                                     (lambda (pos_1)
+                                                       (|#%app|
+                                                        all-cont?_0
+                                                        pos_1
+                                                        b_0))
+                                                     #f))))
+                                              (lambda (b_0 all-cont?/pos_0)
+                                                (let ((pos_1
+                                                       (if pos-pre-inc_0
+                                                         (|#%app|
+                                                          pos-pre-inc_0
+                                                          pos_0)
                                                          pos_0)))
-                                                   (values
-                                                    b_0
-                                                    (if all-cont?_0
-                                                      (lambda (pos_1)
-                                                        (|#%app|
-                                                         all-cont?_0
-                                                         pos_1
-                                                         b_0))
-                                                      #f))))
-                                               (lambda (b_0 all-cont?/pos_0)
-                                                 (let ((pos_1
-                                                        (if pos-pre-inc_0
+                                                  (let ((b_1 b_0)
+                                                        (all-cont?/pos_1
+                                                         all-cont?/pos_0))
+                                                    (if (if val-cont?_0
                                                           (|#%app|
-                                                           pos-pre-inc_0
-                                                           pos_0)
-                                                          pos_0)))
-                                                   (let ((b_1 b_0)
-                                                         (all-cont?/pos_1
-                                                          all-cont?/pos_0))
-                                                     (if (if val-cont?_0
+                                                           val-cont?_0
+                                                           b_1)
+                                                          #t)
+                                                      (let ((fold-var_1
+                                                             (let ((fold-var_1
+                                                                    (cons
+                                                                     (let ((or-part_0
+                                                                            (module-binding-maybe-intern
+                                                                             b_1
+                                                                             interns_0
+                                                                             map-binding-symbol_0
+                                                                             mpi->index_0)))
+                                                                       (if or-part_0
+                                                                         or-part_0
+                                                                         b_1))
+                                                                     fold-var_0)))
+                                                               (values
+                                                                fold-var_1))))
+                                                        (if (if (if all-cont?/pos_1
+                                                                  (|#%app|
+                                                                   all-cont?/pos_1
+                                                                   pos_1)
+                                                                  #t)
+                                                              #t
+                                                              #f)
+                                                          (for-loop_0
+                                                           fold-var_1
                                                            (|#%app|
-                                                            val-cont?_0
-                                                            b_1)
-                                                           #t)
-                                                       (let ((fold-var_1
-                                                              (let ((fold-var_1
-                                                                     (cons
-                                                                      (let ((or-part_0
-                                                                             (module-binding-maybe-intern
-                                                                              b_1
-                                                                              interns_0
-                                                                              mpi->index_0)))
-                                                                        (if or-part_0
-                                                                          or-part_0
-                                                                          b_1))
-                                                                      fold-var_0)))
-                                                                (values
-                                                                 fold-var_1))))
-                                                         (if (if (if all-cont?/pos_1
-                                                                   (|#%app|
-                                                                    all-cont?/pos_1
-                                                                    pos_1)
-                                                                   #t)
-                                                               #t
-                                                               #f)
-                                                           (for-loop_0
-                                                            fold-var_1
-                                                            (|#%app|
-                                                             pos-next_0
-                                                             pos_1))
-                                                           fold-var_1))
-                                                       fold-var_0)))))
-                                              fold-var_0))))))
-                                     (for-loop_0 null init_0))))))))))))))
+                                                            pos-next_0
+                                                            pos_1))
+                                                          fold-var_1))
+                                                      fold-var_0)))))
+                                             fold-var_0))))))
+                                    (for-loop_0 null init_0))))))))))))))
                (void)))))
       (let ((new-v_0 (hash-ref interns_0 key_0 #f)))
         (if (not new-v_0)
@@ -19894,7 +19911,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish840
+  (let ((finish836
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -19914,7 +19931,7 @@
             #f
             #f
             '(1 . 0))))
-      (let ((effect841 (finish840 struct:set!-transformer_0)))
+      (let ((effect837 (finish836 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -26078,6 +26095,7 @@
                                          (module-binding-maybe-intern
                                           v_0
                                           binding-interns_0
+                                          map-binding-symbol_0
                                           (lambda (mpi_0)
                                             (add-module-path-index!/pos
                                              mpis6_0

@@ -38,9 +38,9 @@
       [(memq name reserved-names)
        name]
       [else
-      (define new-name (pick-name name))
-      (hash-set! names (cons use name) new-name)
-      new-name]))
+       (define new-name (pick-name name))
+       (hash-set! names (cons use name) new-name)
+       new-name]))
 
   ;; Names that are defined but not exported from the original
   ;; linklets, so they don't need to be exported after merging:

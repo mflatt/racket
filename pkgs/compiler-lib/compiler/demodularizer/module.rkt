@@ -63,7 +63,7 @@
                   (cdr submod))])])))
 
   ;; returns (values min-phase mx-phase)
-  (define (find-modules! path/submod rel-mpi exclude? provides?)
+  (define (find-modules! path/submod rel-mpi exclude?)
     (define path (path/submod-path path/submod))
     (define submod (path/submod-submod path/submod))
 
@@ -105,7 +105,7 @@
         (define-values (req-min-phase req-max-phase)
           (if (symbol? req-path)
               (values 0 0)
-              (find-modules! req-path/submod (module-path-index-reroot req rel-mpi) exclude-req? #f)))
+              (find-modules! req-path/submod (module-path-index-reroot req rel-mpi) exclude-req?)))
         (values (min min-phase (+ req-phase req-min-phase))
                 (max max-phase (+ req-phase req-max-phase))
                 (hash-update rev-reqs req-phase
@@ -138,14 +138,6 @@
       (find-transitive (one-mod-decl done-m)
                        (one-mod-min-phase done-m)
                        (one-mod-max-phase done-m)))
-
-    (when (and done-m
-               provides?
-               (not (one-mod-provides done-m)))
-      (define decl (one-mod-decl done-m))
-      (define self-mpi (instance-variable-value decl 'self-mpi))
-      (hash-set! one-mods path/submod (struct-copy one-mod done-m
-                                                   [provides (get-provides decl self-mpi)])))
                                          
     (unless done-m
       (define m (hash-ref mods path))
@@ -210,6 +202,8 @@
                             syntax-shift-module-path-index
                             path submod self-mpi))
 
+      (define provides? (equal? top-path path))
+
       (define provides (or (and provides?
                                 (get-provides decl self-mpi))
                            #hasheqv()))
@@ -248,7 +242,8 @@
                                                (for/hasheqv ([(phase rev-path/submods) (in-hash rev-reqs)])
                                                  (values phase (reverse rev-path/submods)))
                                                exports
-                                               trans-min-phase trans-max-phase provides
+                                               trans-min-phase trans-max-phase
+                                               provides
                                                stx-vec stx-mpi
                                                portal-stxes
                                                pre-submodules
@@ -263,7 +258,7 @@
   (define self-mpi (module-path-index-join #f #f))
 
   (define-values (reachable-min-phase reachable-max-phase)
-    (find-modules! top-path/submod self-mpi #f #t))
+    (find-modules! top-path/submod self-mpi #f))
 
   (define submods
     (let ([top-m (hash-ref mods top-path)])
@@ -280,7 +275,7 @@
                  accum))]))))
 
   (for ([submod (in-list submods)])
-    (find-modules! (path/submod-join top-path submod) (module-path-index-join `(submod "." ,@submod) self-mpi) #f #t))
+    (find-modules! (path/submod-join top-path submod) (module-path-index-join `(submod "." ,@submod) self-mpi) #f))
 
   (values one-mods
           submods

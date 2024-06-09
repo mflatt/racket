@@ -155,7 +155,7 @@
                                                                         #f)
                                                               ;; not mapped as a linklet export; assume
                                                               ;; that it's a transformer binding, which
-                                                              ;; doesn't exist at th elinklet level, so
+                                                              ;; doesn't exist at the linklet level, so
                                                               ;; internal and external names effectively
                                                               ;; match
                                                               sym))

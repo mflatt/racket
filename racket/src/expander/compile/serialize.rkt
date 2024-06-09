@@ -329,6 +329,7 @@
     (cond
       [(module-binding? v)
        (module-binding-maybe-intern v binding-interns
+                                    map-binding-symbol
                                     (lambda (mpi) (add-module-path-index!/pos mpis (map-mpi mpi))))]
       [else #f]))
 

@@ -91,7 +91,7 @@
                     (define phase-shift (if mpi+phase
                                             (cdr mpi+phase)
                                             (hash-ref included-module-phases path/submod 0)))
-                    (values new-sym (+ root-phase phase-shift))]))]
+                    (values new-sym (+ phase phase-shift))]))]
            [(hash-ref excluded-module-mpis path/submod #f)
             (values sym phase)]
            [else
