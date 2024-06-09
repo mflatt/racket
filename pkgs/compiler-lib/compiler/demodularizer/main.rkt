@@ -85,6 +85,8 @@
                      #:external-singetons? external-singletons?))
   (define-values (top-path/submods excluded-module-mpiss included-module-phasess one-mods)
     (reify-panes all-sorted-panes all-one-mods common-excluded-module-mpis))
+  (log-demodularizer-info " introduced partitions: ~a" (- (length top-path/submods)
+                                                          (length submods)))
   
   (log-demodularizer-info "Finding module bodies to merge")
   (define-values (phase-runss excluded-modules-to-requires)
