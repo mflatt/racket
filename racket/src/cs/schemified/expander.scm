@@ -14865,7 +14865,7 @@
                   unsafe-undefined
                   unsafe-undefined
                   binding_0))))))))))
-(define finish_3010
+(define finish_2189
   (make-struct-type-install-properties
    '(bulk-binding)
    8
@@ -14876,21 +14876,29 @@
     (cons
      prop:serialize
      (lambda (b_0 ser-push!_0 state_0)
-       (begin
-         (if (if (serialize-state-keep-provides? state_0)
-               (|#%app| (serialize-state-keep-provides? state_0) b_0)
-               #f)
-           (begin
-             (|#%app| ser-push!_0 'tag kw2882)
-             (|#%app| ser-push!_0 (bulk-binding-provides b_0))
-             (|#%app| ser-push!_0 (bulk-binding-self b_0)))
-           (|#%app| ser-push!_0 'tag kw2762))
-         (|#%app| ser-push!_0 (bulk-binding-prefix b_0))
-         (|#%app| ser-push!_0 (bulk-binding-excepts b_0))
-         (|#%app| ser-push!_0 (bulk-binding-mpi b_0))
-         (|#%app| ser-push!_0 (bulk-binding-provide-phase+space b_0))
-         (|#%app| ser-push!_0 (bulk-binding-phase+space-shift b_0))
-         (|#%app| ser-push!_0 'tag kw2607))))
+       (let ((clear-registry?_0
+              (if (let ((or-part_0
+                         (not (bulk-binding-bulk-binding-registry b_0))))
+                    (if or-part_0
+                      or-part_0
+                      (if (serialize-state-keep-provides? state_0)
+                        (|#%app| (serialize-state-keep-provides? state_0) b_0)
+                        #f)))
+                (begin
+                  (|#%app| ser-push!_0 'tag kw2882)
+                  (|#%app| ser-push!_0 (bulk-binding-provides b_0))
+                  (|#%app| ser-push!_0 (bulk-binding-self b_0))
+                  #t)
+                (begin (|#%app| ser-push!_0 'tag kw2762) #f))))
+         (begin
+           (|#%app| ser-push!_0 (bulk-binding-prefix b_0))
+           (|#%app| ser-push!_0 (bulk-binding-excepts b_0))
+           (|#%app| ser-push!_0 (bulk-binding-mpi b_0))
+           (|#%app| ser-push!_0 (bulk-binding-provide-phase+space b_0))
+           (|#%app| ser-push!_0 (bulk-binding-phase+space-shift b_0))
+           (if clear-registry?_0
+             (|#%app| ser-push!_0 #f)
+             (|#%app| ser-push!_0 'tag kw2607))))))
     (cons
      prop:bulk-binding
      (bulk-binding-class3.1
@@ -15032,7 +15040,7 @@
    #f
    #f
    '(8 . 9)))
-(define effect_2834 (finish_3010 struct:bulk-binding))
+(define effect_2834 (finish_2189 struct:bulk-binding))
 (define bulk-binding12.1
   (|#%name|
    bulk-binding

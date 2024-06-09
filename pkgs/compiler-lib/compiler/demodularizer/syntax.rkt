@@ -89,7 +89,7 @@
        (kernel:syntax-serialize stx-vec
                                 #f ; base-mpi
                                 '() ; preserve-prop-keys
-                                #f ; provides-namespace
+                                #f ; provides-namespace; #f => inline bulk bindings
                                 #f ; as-data?
                                 (cons self-mpi import-mpis) ;; these mpis first, needed for imports
                                 ;; report-shift

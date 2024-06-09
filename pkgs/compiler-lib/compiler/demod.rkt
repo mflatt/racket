@@ -5,11 +5,17 @@
 
 (provide (rename-out
           [module-begin #%module-begin]))
+
+(module+ module-begin
+  (provide (for-syntax demod-module-begin)))
  
 (module reader syntax/module-reader
   compiler/demod)
 
 (define-syntax (module-begin stx)
+  (demod-module-begin stx))
+
+(define-for-syntax (demod-module-begin stx)
   (syntax-parse stx
     [(_ mod-path
         (~alt (~optional (~seq #:exclude (exclude-mod-path ...))
