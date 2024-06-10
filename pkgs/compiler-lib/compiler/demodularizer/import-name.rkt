@@ -7,7 +7,8 @@
          "import.rkt"
          "remap.rkt"
          "linklet.rkt"
-         "log.rkt")
+         "log.rkt"
+         "at-phase-level.rkt")
 
 (provide add-import-maps)
 
@@ -49,7 +50,8 @@
                                                ext-name))
                 (define src-new-name (find-name names use src-int-name))
                 (cond
-                  [(hash-ref excluded-module-mpis import-path/submod #f)
+                  [(or (hash-ref excluded-module-mpis import-path/submod #f)
+                       (hash-ref excluded-module-mpis (at-phase-level import-path/submod phase-level) #f))
                    ;; Not merged here, but demodularized form will export using
                    ;; the new internal name; the import locally can use
                    ;; the internal name, which is the same as the linklet export name

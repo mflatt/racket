@@ -50162,56 +50162,61 @@
                                                            app_0
                                                            (root-of_0
                                                             self-l_0)))
-                                                      (let ((r_0
-                                                             (|#%app|
-                                                              get-submodule-recompiled_0
-                                                              (if (pair?
-                                                                   find-l_0)
-                                                                (cdr find-l_0)
-                                                                '()))))
-                                                        (begin
-                                                          (if (eq?
-                                                               r_0
-                                                               'in-process)
-                                                            (raise-arguments-error
-                                                             'compiled-expression-recompile
-                                                             "cycle in linklet imports")
-                                                            (void))
-                                                          (let ((b_1
-                                                                 (recompiled-bundle
-                                                                  r_0)))
-                                                            (let ((linklet_0
-                                                                   (let ((or-part_0
-                                                                          (hash-ref
-                                                                           (1/linklet-bundle->hash
-                                                                            b_1)
-                                                                           phase_0
-                                                                           #f)))
-                                                                     (if or-part_0
-                                                                       or-part_0
-                                                                       (raise-arguments-error
-                                                                        'compiled-expression-recompile
-                                                                        "cannot find submodule at phase"
-                                                                        "submodule"
-                                                                        mod-name_0
-                                                                        "phase"
-                                                                        phase_0)))))
-                                                              (let ((app_0
-                                                                     (hash-ref
-                                                                      (recompiled-phase-to-link-module-uses
-                                                                       r_0)
-                                                                      phase_0
-                                                                      #f)))
-                                                                (let ((app_1
-                                                                       (recompiled-self
-                                                                        r_0)))
-                                                                  (module-linklet-info2.1
-                                                                   linklet_0
-                                                                   app_0
-                                                                   app_1
-                                                                   #f
-                                                                   (current-code-inspector)
-                                                                   #f)))))))
+                                                      (let ((submod_0
+                                                             (if (pair?
+                                                                  find-l_0)
+                                                               (cdr find-l_0)
+                                                               '())))
+                                                        (let ((r_0
+                                                               (|#%app|
+                                                                get-submodule-recompiled_0
+                                                                submod_0)))
+                                                          (begin
+                                                            (if (eq?
+                                                                 r_0
+                                                                 'in-process)
+                                                              (raise-arguments-error
+                                                               'compiled-expression-recompile
+                                                               "cycle in linklet imports")
+                                                              (void))
+                                                            (let ((b_1
+                                                                   (recompiled-bundle
+                                                                    r_0)))
+                                                              (let ((linklet_0
+                                                                     (let ((or-part_0
+                                                                            (hash-ref
+                                                                             (1/linklet-bundle->hash
+                                                                              b_1)
+                                                                             phase_0
+                                                                             #f)))
+                                                                       (if or-part_0
+                                                                         or-part_0
+                                                                         (raise-arguments-error
+                                                                          'compiled-expression-recompile
+                                                                          "cannot find (sub)module at phase"
+                                                                          "module"
+                                                                          (unquoted-printing-string
+                                                                           (format
+                                                                            "~a"
+                                                                            mod-name_0))
+                                                                          "phase"
+                                                                          phase_0)))))
+                                                                (let ((app_0
+                                                                       (hash-ref
+                                                                        (recompiled-phase-to-link-module-uses
+                                                                         r_0)
+                                                                        phase_0
+                                                                        #f)))
+                                                                  (let ((app_1
+                                                                         (recompiled-self
+                                                                          r_0)))
+                                                                    (module-linklet-info2.1
+                                                                     linklet_0
+                                                                     app_0
+                                                                     app_1
+                                                                     #f
+                                                                     (current-code-inspector)
+                                                                     #f))))))))
                                                       #f)))))))))
                                     (let ((table_1 hash2725))
                                       (let ((body-linklets+module-use*s_0

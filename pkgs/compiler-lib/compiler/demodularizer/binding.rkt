@@ -1,10 +1,11 @@
 #lang racket/base
 (require racket/match
          "../private/deserialize.rkt"
-         "import.rkt")
+         "import.rkt"
+         "at-phase-level.rkt")
 
 (provide binding-module-path-index-shift
-         binding-mpis
+         binding-mpi+phases
          binding-sym
          serialize-binding)
 
@@ -34,14 +35,14 @@
      (struct-copy binding bind
                   [content new-content])]))
 
-(define (binding-mpis bind)
+(define (binding-mpi+phases bind)
   (cond
-    [(provided? bind) (binding-mpis (provided-binding bind))]
+    [(provided? bind) (binding-mpi+phases (provided-binding bind))]
     [else
      (match (binding-content bind)
-       [`(,mod ,sym ,phase ,nom-mod) (list mod nom-mod)]
+       [`(,mod ,sym ,phase ,nom-mod) (list (cons mod phase) (cons nom-mod phase))]
        [`(,mod ,sym ,phase ,nom-mod ,nom-phase ,nom-sym ,req-phase ,free-id ,insp ,more-noms)
-        (list mod nom-mod)])]))
+        (list (cons mod phase) (cons nom-mod nom-phase))])]))
 
 (define (binding-sym bind)
   (cond
@@ -88,12 +89,14 @@
                          (values (import-src-ext-name i) (cdr (import-path/submod+phase i))))]
                    [else
                     ;; Get a potential phase shift
-                    (define mpi+phase (hash-ref excluded-module-mpis path/submod #f))
+                    (define mpi+phase (or (hash-ref excluded-module-mpis path/submod #f)
+                                          (hash-ref excluded-module-mpis (at-phase-level path/submod phase) #f)))
                     (define phase-shift (if mpi+phase
                                             (cdr mpi+phase)
                                             (hash-ref included-module-phases path/submod 0)))
                     (values new-sym (+ phase phase-shift))]))]
-           [(hash-ref excluded-module-mpis path/submod #f)
+           [(or (hash-ref excluded-module-mpis path/submod #f)
+                (hash-ref excluded-module-mpis (at-phase-level path/submod phase) #f))
             (values sym phase)]
            [else
             (error 'provides

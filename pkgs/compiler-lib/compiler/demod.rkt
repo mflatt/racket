@@ -101,5 +101,5 @@
                         #:return-bundle? #t))
         (register-external-module src-module)
         (when (attribute dump-mi-demod)
-          (with-output-to-file (syntax->datum #'dump-di-demod) #:exists 'truncate (lambda () (write bundle))))
+          (with-output-to-file (syntax->datum #'dump-mi-demod) #:exists 'truncate (lambda () (write bundle))))
         (datum->syntax #f bundle)])]))

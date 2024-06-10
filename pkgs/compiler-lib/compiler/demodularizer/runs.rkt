@@ -11,7 +11,8 @@
          "syntax.rkt"
          "binding.rkt"
          "one-mod.rkt"
-         "log.rkt")
+         "log.rkt"
+         "at-phase-level.rkt")
 
 (provide find-runs)
 
@@ -22,6 +23,9 @@
 
   (define phase-rev-runs (make-hasheqv))  ; root-phase -> (list run ...) in reverse order
   (define excluded-modules-to-require (make-hash)) ; path/submod+phase-shift -> #t
+  ;;                                                  where the phase shift is relative to
+  ;;                                                  the root phase --- but that's the same
+  ;;                                                  as absolute in slice mode
 
   (define (find-phase-runs! path/submod
                             #:phase-level [phase-level 0]
@@ -35,13 +39,15 @@
       (unless (hash-ref runs-done (cons path/submod phase-level) #f)
         (cond
           [(or (symbol? path/submod)
-               (hash-ref excluded-module-mpis path/submod #f))
+               (hash-ref excluded-module-mpis path/submod #f)
+               (hash-ref excluded-module-mpis (at-phase-level path/submod phase-level) #f))
            => (lambda (excluded-mpi+phase)
                 ;; Root of an excluded subtree; keep it as a `require`, even if there
                 ;; turn out to be no imported variables at the linklet level. It's
                 ;; possible that this subtree is covered by another one, and we clean
                 ;; those up with a second pass.
-                (hash-set! excluded-modules-to-require (cons path/submod (- root-phase phase-level)) #t))]
+                (define rel-phase-level (- root-phase phase-level))
+                (hash-set! excluded-modules-to-require (cons path/submod rel-phase-level) #t))]
           [else
            (define one-m (hash-ref one-mods path/submod))
            (define decl (one-mod-decl one-m))
@@ -84,31 +90,34 @@
     ;; We'll leave it to a later pass that maps source modules to panes to remove
     ;; duplicate panes.
     (define done (make-hash))
-    (for ([path/submod+phase (in-list (hash-keys excluded-modules-to-require))]
-          #:unless (symbol? (car path/submod+phase)))
-      (let loop ([path/submod+phase-shift path/submod+phase]
+    (for ([path/submod+phase-level (in-list (hash-keys excluded-modules-to-require))]
+          #:unless (symbol? (car path/submod+phase-level)))
+      (let loop ([path/submod+phase-level path/submod+phase-level]
                  [excluded? #f])
-        (unless (hash-ref done path/submod+phase #f)
-          (define path/submod (car path/submod+phase-shift))
-          (define phase-shift (cdr path/submod+phase-shift))
+        (unless (hash-ref done path/submod+phase-level #f)
+          (define path/submod (car path/submod+phase-level))
+          (define phase-level (cdr path/submod+phase-level))
           (define one-m (hash-ref one-mods path/submod))
           
-          (for* ([(req-phase req-path/submods) (in-hash (one-mod-reqs one-m))]
+          (for* ([(req-phase-shift req-path/submods) (in-hash (one-mod-reqs one-m))]
                  [req-path/submod (in-list req-path/submods)])
-            (define at-phase-shift (+ phase-shift req-phase))
-            (define req-path/submod+phase-shift (cons req-path/submod at-phase-shift))
+            (define at-phase-level (- phase-level req-phase-shift))
+            (define req-path/submod+phase-level (cons req-path/submod at-phase-level))
             (when excluded?
-              (hash-remove! excluded-modules-to-require req-path/submod+phase-shift))
+              (hash-remove! excluded-modules-to-require req-path/submod+phase-level))
             (unless (symbol? req-path/submod)
-              (loop req-path/submod+phase-shift
+              (loop req-path/submod+phase-level
                     (or excluded?
-                        (hash-ref excluded-modules-to-require req-path/submod+phase-shift #f)))))
+                        (hash-ref excluded-modules-to-require req-path/submod+phase-level #f)))))
 
-          (hash-set! done path/submod+phase #t)))))
+          (hash-set! done path/submod+phase-level #t)))))
 
   (define top-m (hash-ref one-mods top-path/submod))
 
-  (for ([root-phase (in-range (one-mod-min-phase top-m) (add1 (one-mod-max-phase top-m)))])
+  (for ([root-phase (in-range (one-mod-min-phase top-m)                              
+                              (add1 (if max-phase
+                                        (min max-phase (one-mod-max-phase top-m))
+                                         (one-mod-max-phase top-m))))])
     (find-phase-runs! top-path/submod
                       #:phase-level root-phase
                       #:root-phase root-phase))

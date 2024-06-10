@@ -12,7 +12,8 @@
          "import.rkt"
          "binding.rkt"
          "deshadow.rkt"
-         "merged.rkt")
+         "merged.rkt"
+         "at-phase-level.rkt")
 
 (provide wrap-bundle)
 
@@ -38,12 +39,15 @@
   ;; required by the excluded modules, but we don't try to check that.
   (define-values (external-path-pos external-mpis)
     (let ()
-      (define (add-path path/submod ht simple-ht rev-paths)
+      (define (add-path path/submod+phase ht simple-ht rev-paths)
         (cond
-          [(hash-ref ht path/submod #f)
+          [(hash-ref ht path/submod+phase #f)
            (values ht simple-ht rev-paths)]
           [else
+           (define path/submod (car path/submod+phase))
+           (define phase (cdr path/submod+phase))
            (define mpi+phase (or (hash-ref excluded-module-mpis path/submod #f)
+                                 (hash-ref excluded-module-mpis (at-phase-level path/submod phase) #f)
                                  (and (symbol? path/submod)
                                       (cons (module-path-index-join `(quote ,path/submod) #f) 0))
                                  (error 'import-mpis "cannot find module: ~s" path/submod)))
@@ -67,22 +71,24 @@
                    ([mgd (in-hash-values phase-merged)]
                     [new-name (in-hash-keys (merged-used-import-names mgd))])
           (define i (hash-ref name-imports new-name))
-          (add-path (car (import-path/submod+phase i)) ht simple-ht rev-paths)))
+          (add-path (import-path/submod+phase i) ht simple-ht rev-paths)))
       (define-values (require-ht require-simple-ht require-rev-paths)
         (for*/fold ([ht import-ht] [simple-ht import-simple-ht] [rev-paths import-rev-paths])
                    ([path/submod+phase (in-hash-keys excluded-modules-to-require)])
-          (define path/submod (car path/submod+phase))
-          (add-path path/submod ht simple-ht rev-paths)))
+          (add-path path/submod+phase ht simple-ht rev-paths)))
       (define-values (provide-ht provide-simple-ht provide-rev-paths)
         (for*/fold ([ht require-ht] [simple-ht require-simple-ht] [rev-paths require-rev-paths])
                    ([binds (in-hash-values provides)]
                     [bind (in-hash-values binds)]
-                    [mpi (in-list (binding-mpis bind))]
-                    #:do [(define r (module-path-index-resolve mpi))
+                    [mpi+phase (in-list (binding-mpi+phases bind))]
+                    #:do [(define mpi (car mpi+phase))
+                          (define phase (cdr mpi+phase))
+                          (define r (module-path-index-resolve mpi))
                           (define path/submod (resolved-module-path-name r))]
                     #:when (or (symbol? path/submod)
-                               (hash-ref excluded-module-mpis path/submod #f)))
-          (add-path path/submod ht simple-ht rev-paths)))
+                               (hash-ref excluded-module-mpis path/submod #f)
+                               (hash-ref excluded-module-mpis (at-phase-level path/submod phase) #f)))
+          (add-path (cons path/submod phase) ht simple-ht rev-paths)))
       (values provide-ht (reverse provide-rev-paths))))
 
   (define-values (all-mpis serialized-stx)
@@ -153,7 +159,8 @@
               ([path/submod+phase (in-hash-keys excluded-modules-to-require)])
       (define path/submod (car path/submod+phase))
       (define phase (cdr path/submod+phase))
-      (define maybe-mpi+phase (hash-ref excluded-module-mpis path/submod #f))
+      (define maybe-mpi+phase (or (hash-ref excluded-module-mpis path/submod #f)
+                                  (hash-ref excluded-module-mpis (at-phase-level path/submod phase) #f)))
       (define pos (hash-ref external-path-pos path/submod))
       (define new-phase (if maybe-mpi+phase
                             (- phase (cdr maybe-mpi+phase))
@@ -210,12 +217,11 @@
 
   (define (path/submod+phase->mpi-pos+phase path/submod+phase)
     (define path/submod (car path/submod+phase))
-    (define maybe-mpi+phase (hash-ref excluded-module-mpis path/submod #f))
-    (cons (hash-ref external-path-pos path/submod)
-          (+ (cdr path/submod+phase)
-             (if maybe-mpi+phase
-                 (cdr maybe-mpi+phase)
-                 0))))
+    (define phase (cdr path/submod+phase))
+    (define maybe-mpi+phase (or (hash-ref excluded-module-mpis path/submod #f)
+                                (hash-ref excluded-module-mpis (at-phase-level path/submod phase) #f)))
+    (define phase-shift (if maybe-mpi+phase (cdr maybe-mpi+phase) 0))
+    (cons (hash-ref external-path-pos path/submod) (+ phase phase-shift)))
 
   (define phase-import-keys
     (for/hasheqv ([(root-phase mgd) (in-hash phase-merged)])

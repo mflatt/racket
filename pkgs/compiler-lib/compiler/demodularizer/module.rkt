@@ -228,10 +228,12 @@
       ;; Deserialize syntax objects last, because we may need requires to be registered
       ;; in `bulk-binding-registry`
       (define-values (stx-vec stx-mpi)
-        (deserialize-syntax real-deserialize-instance stx-data-linklet data-instance
-                            bulk-binding-registry
-                            syntax-shift-module-path-index
-                            path submod self-mpi))
+        (if keep-syntax?
+            (deserialize-syntax real-deserialize-instance stx-data-linklet data-instance
+                                bulk-binding-registry
+                                syntax-shift-module-path-index
+                                path submod self-mpi)
+            (values #f #f)))
 
       (define provides? (equal? top-path path))
 

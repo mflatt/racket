@@ -117,6 +117,9 @@
                                      ;; of reference for the excluded module
                                      (define exp-mpi+phase (if (symbol? path/submod)
                                                                (cons (module-path-index-join `(quote ,path/submod) #f) 0)
+                                                               ;; Note: don't need to check for `in-phase-level` mapping,
+                                                               ;; because that's only for a slice mode that doesn't keep
+                                                               ;; syntax objects
                                                                (hash-ref excluded-module-mpis path/submod #f)))
                                      (define new-mpi
                                        (cond

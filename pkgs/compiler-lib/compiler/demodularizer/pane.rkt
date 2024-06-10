@@ -4,7 +4,8 @@
          "module-path.rkt"
          "path-submod.rkt"
          "one-mod.rkt"
-         "log.rkt")
+         "log.rkt"
+         "at-phase-level.rkt")
 
 (provide partition-panes
          reify-panes)
@@ -134,7 +135,8 @@
                #:unless (hash-ref merges pane #f))
       (define path/submod+shifts
         (append (for/list ([origin (in-hash-keys origins)])
-                  (cons (origin-path/submod origin) 0))
+                  (cons (origin-path/submod origin)
+                        (origin-phase-shift origin)))
                 (apply
                  append
                  (for/list ([pane+delta (in-list (hash-ref merge-ins pane null))])
@@ -267,14 +269,22 @@
 
   ;; For each pane submodule, build an exclusion list that points to the other submodules
   (define self-mpi (module-path-index-join #f #f))
-  (define excluded-module-mpiss
+  (define excluded-module-mpiss ; key -> (cons mpi phase-shift)
+    ;;                            where a key can be a path/submod (always for non-slice mode)
+    ;;                                  or it can be a (at-phase-level path/submod phase)
+    ;;                                        to indicate omission at a specific phase level
+    ;;                           The phase-shift is how much to add to a
+    ;;                           phase level of the module to select the right phase level
+    ;;                           of the pane that owns that path/submod+phase
     (for/list ([path/submod+pane-content (in-list new-sorted-panes)])
       (define path/submod (car path/submod+pane-content))
       (define submod (path/submod-submod path/submod))
       (define dots (map (lambda (s) "..") submod))
       (define included (and slice?
                             (for/hash ([path/submod+phase (in-list (cdr path/submod+pane-content))])
-                              (values (car path/submod+phase) #t))))
+                              (define path/submod (car path/submod+phase))
+                              (define phase (cdr path/submod+phase))
+                              (values (cons path/submod (- phase)) #t))))
       (for/fold ([excluded-module-mpis common-excluded-module-mpis])
                 ([other-path/submod+pane-content (in-list new-sorted-panes)]
                  #:do [(define other-path/submod (car other-path/submod+pane-content))
@@ -291,10 +301,12 @@
                       mpi))
         (for/fold ([excluded-module-mpis excluded-module-mpis])
                   ([path/submod+phase (in-list pane-content)])
-          (define path/submod (car path/submod+phase))
           (cond
-            [(or (not slice?) (not (hash-ref included path/submod #f)))
-             (hash-set excluded-module-mpis path/submod (cons mpi (cdr path/submod+phase)))]
+            [(or (not slice?) (not (hash-ref included path/submod+phase #f)))
+             (define path/submod (car path/submod+phase))
+             (define phase (cdr path/submod+phase))
+             (define key (if slice? (at-phase-level path/submod+phase phase) path/submod))
+             (hash-set excluded-module-mpis key (cons mpi (if slice? (- phase) phase)))]
             [else excluded-module-mpis])))))
 
   (define included-module-phasess
@@ -305,12 +317,16 @@
                 (cdr path/submod+phase)))))
 
   (log-demodularizer-debug " Panes: ~a" (length new-sorted-panes))
-  (for ([path/submod+content (in-list new-sorted-panes)])
+  (for ([path/submod+content (in-list new-sorted-panes)]
+        [excluded-module-mpis (in-list excluded-module-mpiss)])
     (define path/submod (car path/submod+content))
     (define content (cdr path/submod+content))
     (log-demodularizer-debug "  ~s:" path/submod)
     (for ([path/submod+phase (in-list content)])
-      (log-demodularizer-debug "    ~a ~a" (car path/submod+phase) (cdr path/submod+phase))))
+      (log-demodularizer-debug "    ~a ~a" (car path/submod+phase) (cdr path/submod+phase)))
+    (log-demodularizer-debug "   NOT")
+    (for ([(key phase-shift) (in-hash excluded-module-mpis)])
+      (log-demodularizer-debug "    ~a ~a" key phase-shift)))
 
   (values (map car new-sorted-panes)
           excluded-module-mpiss

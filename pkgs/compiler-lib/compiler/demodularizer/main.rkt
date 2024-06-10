@@ -112,8 +112,7 @@
   (log-demodularizer-info "Merging linklets")
   (define-values (phase-mergeds name-importss stx-vecs portal-stxess)
     (for/lists (phase-mergeds name-importss stx-vecs portal-stxess)
-        ([phase-runs (in-list new-phase-runss)]
-         [excluded-module-mpis (in-list excluded-module-mpiss)])
+        ([phase-runs (in-list new-phase-runss)])
       (merge-linklets phase-runs names transformer-names)))
 
   ;; Connects GC to needed exports in bundle
@@ -164,12 +163,12 @@
                      names transformer-names one-mods
                      #:export-only (and (not keep-syntax?)
                                         used-externally)
-                     #:pre-submodules (one-mod-pre-submodules m)
-                     #:post-submodules (append
-                                        (if (null? submod)
-                                            added-pane-submods
-                                            null)
-                                        (one-mod-post-submodules m))
+                     #:pre-submodules (append
+                                       (if (null? submod)
+                                           added-pane-submods
+                                           null)
+                                       (one-mod-pre-submodules m))
+                     #:post-submodules (one-mod-post-submodules m)
                      #:dump-output-file dump-output-file))
       (values submod bundle)))
 
