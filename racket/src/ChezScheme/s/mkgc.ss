@@ -1045,46 +1045,99 @@
      (S_error_abort "sweep_stack(gc): malformed stack"))
    (set! fp (- fp (ENTRYFRAMESIZE ret)))
    (let* ([oldret : iptr ret]
-          [num : ptr (ENTRYLIVEMASK oldret)] ; keep close to `ENTRYFRAMESIZE`
+          [livemask : ptr (ENTRYLIVEMASK oldret)] ; keep close to `ENTRYFRAMESIZE`
           [pp : ptr* (cast ptr* (TO_VOIDP fp))])
      (set! ret (cast iptr (* pp)))
      (trace-return NO-COPY-MODE (* pp))
      (cond
-       [(Sfixnump num)
-        (let* ([mask : uptr (UNFIX num)])
+       [(Sfixnump livemask)
+        (let* ([mask : uptr (UNFIX livemask)])
           (while
            :? (!= mask 0)
            (set! pp += 1)
            (when (& mask #x0001)
              (trace-pure (* pp)))
            (set! mask >>= 1)))]
+       [(Spairp livemask)
+        (trace-pure (* (ENTRYNONCOMPACTLIVEMASKADDR oldret)))
+        (let* ([livemask : ptr (ENTRYLIVEMASK oldret)])
+          (trace-pure (INITCDR livemask))
+          (trace-live-tree (UNFIX (Scar livemask)) (Scdr livemask) pp))]
        [else
         (case-mode
-         [(check) (check-bignum num)]
+         [(check) (check-bignum livemask)]
          [else
-          (define n_si : seginfo* (SegInfo (ptr_get_segment num)))
+          (define n_si : seginfo* (SegInfo (ptr_get_segment livemask)))
           (cond
             [(! (-> n_si old_space))]
-            [(SEGMENT_IS_LOCAL n_si num)
+            [(SEGMENT_IS_LOCAL n_si livemask)
              (trace-pure (* (ENTRYNONCOMPACTLIVEMASKADDR oldret)))
-             (set! num  (ENTRYLIVEMASK oldret))]
+             (set! livemask  (ENTRYLIVEMASK oldret))]
             [else
              (case-mode
               [(measure)]
               [else (RECORD_REMOTE n_si)])
-             (set! num S_G.zero_length_bignum)])])
-        (let* ([index : iptr (BIGLEN num)])
+             (set! livemask S_G.zero_length_bignum)])])
+        (let* ([index : iptr (BIGLEN livemask)])
           (while
            :? (!= index 0)
            (set! index -= 1)
            (let* ([bits : INT bigit_bits]
-                  [mask : bigit (bignum-data num index)])
+                  [mask : bigit (bignum-data livemask index)])
              (while
               :? (> bits 0)
               (set! bits -= 1)
               (set! pp += 1)
               (when (& mask 1) (trace-pure (* pp)))
               (set! mask >>= 1)))))]))))
+
+(define-trace-macro (trace-live-tree range-expr tree-expr pp-expr)
+  ;; A tree is either a fixnum, #t, or a pair of two trees, with
+  ;; half of the range on the left and the rest on the right.
+  ;; A #t corresponds to all bits set in the subtree (and 0
+  ;; means no bits set, of course).
+  (let* ([range_stack : (array uptr ptr_bits)] ; tree depth is limited by word width
+         [tree_stack : (array ptr ptr_bits)]
+         [pp_stack : (array ptr* ptr_bits)]
+         [stack_count : int 1])
+    (set! (array-ref range_stack 0) range-expr)
+    (set! (array-ref tree_stack 0) tree-expr)
+    (set! (array-ref pp_stack 0) pp-expr)
+    (while
+     :? (> stack_count 0)
+     (set! stack_count -= 1)
+     (let* ([range : uptr (array-ref range_stack stack_count)]
+            [tree : ptr (array-ref tree_stack stack_count)]
+            [pp : ptr* (array-ref pp_stack stack_count)])
+       (cond
+         [(Sfixnump tree)
+          (let* ([mask : uptr (UNFIX tree)])
+            (while
+             :? (!= mask 0)
+             (set! pp += 1)
+             (when (& mask #x0001)
+               (trace-pure (* pp)))
+             (set! mask >>= 1)))]
+         [(== tree Strue)
+          (while
+           :? (> range 0)
+           (set! range -= 1)
+           (set! pp += 1)
+           (trace-pure (* pp)))]
+         [else
+          (let* ([split : uptr (>> range 1)])
+            (trace-pure (INITCAR tree))
+            (trace-pure (INITCDR tree))
+
+            (set! (array-ref range_stack stack_count) split)
+            (set! (array-ref tree_stack stack_count) (Scar tree))
+            (set! (array-ref pp_stack stack_count) pp)
+            (set! stack_count += 1)
+            
+            (set! (array-ref range_stack stack_count) (- range split))
+            (set! (array-ref tree_stack stack_count) (Scdr tree))
+            (set! (array-ref pp_stack stack_count) (+ pp split))
+            (set! stack_count += 1))])))))
 
 (define-trace-macro (trace-return copy-field field)
   (case-mode
@@ -1867,6 +1920,9 @@
               (let loop ([binds binds])
                 (match binds
                   [`() (statements body config)]
+                  [`([,id : (array ,type ,N)] . ,binds)
+                   (code (format "~a ~a[~a];" type id N)
+                         (loop binds))]
                   [`([,id : ,type ,rhs] . ,binds)
                    (code (code-indent (format "~a ~a = " type id)
                                       (expression rhs config #f #t)
