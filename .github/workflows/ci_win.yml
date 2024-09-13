@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - winci
   pull_request:
 
 permissions:
