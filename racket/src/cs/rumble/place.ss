@@ -35,16 +35,24 @@
               (place-local-default-v pl)
               v)))))
 
+(define (check-index i who)
+  (when (= i LOCAL_TABLE-INDEX)
+    (#%printf "ZERO ~s\n" who)
+    (abort)))
+
 (define (unsafe-place-local-set! pl v)
   (hash-set! (#%vector-ref (place-registers) LOCAL_TABLE-INDEX) pl v))
 
 (define (place-local-register-ref i)
+  (check-index i 'place-local-register-ref)
   (#%vector-ref (place-registers) i))
 
 (define (place-local-register-set! i v)
+  (check-index i 'place-local-register-set!)
   (#%vector-set! (place-registers) i v))
 
 (define (place-local-register-init! i v)
+  (check-index i 'place-local-register-init!)
   (place-local-register-set! i v)
   (#%vector-set! place-register-inits i v))
 
