@@ -26,10 +26,17 @@
   (make-place-local v))
 
 (define (unsafe-place-local-ref pl)
-  (let ([v (hash-ref (#%vector-ref (place-registers) LOCAL_TABLE-INDEX) pl none)])
-    (if (eq? v none)
-        (place-local-default-v pl)
-        v)))
+  (let* ([pr (place-registers)]
+         [t (#%vector-ref pr LOCAL_TABLE-INDEX)])
+    (if (vector? t)
+        (begin
+          (#%printf "yikes ~s\n" pr)
+          (#%printf "yikes! ~s\n" (place-registers))
+          (abort))
+        (let ([v (hash-ref t pl none)])
+          (if (eq? v none)
+              (place-local-default-v pl)
+              v)))))
 
 (define (unsafe-place-local-set! pl v)
   (hash-set! (#%vector-ref (place-registers) LOCAL_TABLE-INDEX) pl v))
