@@ -905,6 +905,12 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
     for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
       ptr t_tc = (ptr)THREADTC(Scar(ls));
       S_flush_instruction_cache(t_tc);
+      if (Svectorp(VIRTREG(t_tc, 10))) {
+        if (Svectorp(INITVECTIT(VIRTREG(t_tc, 10), 0))) {
+          printf("pre vec of vec\n");
+          abort();
+        }          
+      }
     }
 
     tlcs_to_rehash = Snil;
@@ -1790,6 +1796,16 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
 
     ACCUM_REAL_TIME(all_accum, astep, astart);
     REPORT_TIME(fprintf(stderr, "%d all   +%ld ms  %ld ms  [real time]\n", MAX_CG, astep, all_accum));
+
+    for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
+      ptr t_tc = (ptr)THREADTC(Scar(ls));
+      if (Svectorp(VIRTREG(t_tc, 10))) {
+        if (Svectorp(INITVECTIT(VIRTREG(t_tc, 10), 0))) {
+          printf("post vec of vec\n");
+          abort();
+        }          
+      }
+    }
 
     if (count_roots_ls != Sfalse) {
 #ifdef ENABLE_OBJECT_COUNTS
