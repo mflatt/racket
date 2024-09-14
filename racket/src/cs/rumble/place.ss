@@ -29,10 +29,7 @@
   (let* ([pr (place-registers)]
          [t (#%vector-ref pr LOCAL_TABLE-INDEX)])
     (if (vector? t)
-        (begin
-          (#%printf "yikes ~s\n" pr)
-          (#%printf "yikes! ~s\n" (place-registers))
-          (abort))
+        (abort)
         (let ([v (hash-ref t pl none)])
           (if (eq? v none)
               (place-local-default-v pl)
@@ -55,6 +52,10 @@
   (place-registers))
 
 (define (set-place-registers! vec)
+  (when (or (not (#%vector? vec))
+            (#%vector? (#%vector-ref vec 0)))
+    (#%printf "VEC or VEC\n")
+    (abort))
   (place-registers vec))
 
 ;; ----------------------------------------
