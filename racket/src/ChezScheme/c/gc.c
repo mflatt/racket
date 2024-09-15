@@ -1800,8 +1800,15 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
     for (ls = S_threads; ls != Snil; ls = Scdr(ls)) {
       ptr t_tc = (ptr)THREADTC(Scar(ls));
       if (Svectorp(VIRTREG(t_tc, 10))) {
-        if (Svectorp(INITVECTIT(VIRTREG(t_tc, 10), 0))) {
-          printf("post vec of vec\n");
+        ptr vec = VIRTREG(t_tc, 10);
+        ptr e = INITVECTIT(vec, 0);
+        if (Svectorp(e)) {
+          seginfo *si, *esi;
+          si = SegInfo(ptr_get_segment(vec));
+          esi = SegInfo(ptr_get_segment(e));
+          printf("post vec of vec %d -> %d-%d\n", MAX_CG, MIN_TG, MAX_TG);
+          printf(" %p %d [%d, %d]\n", TO_VOIDP(vec), si->generation, si->old_space, si->use_marks);
+          printf(" %p %d [%d, %d]\n", TO_VOIDP(e), esi->generation, esi->old_space, esi->use_marks);
           abort();
         }          
       }
