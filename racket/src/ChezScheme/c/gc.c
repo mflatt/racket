@@ -1806,9 +1806,9 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
           seginfo *si, *esi;
           si = SegInfo(ptr_get_segment(vec));
           esi = SegInfo(ptr_get_segment(e));
-          printf("post vec of vec %d -> %d-%d\n", MAX_CG, MIN_TG, MAX_TG);
-          printf(" %p %d [%d, %d]\n", TO_VOIDP(vec), si->generation, si->old_space, si->use_marks);
-          printf(" %p %d [%d, %d]\n", TO_VOIDP(e), esi->generation, esi->old_space, esi->use_marks);
+          printf("post vec of vec %d -> %d-%d (%d)\n", MAX_CG, MIN_TG, MAX_TG, S_num_preserve_ownership_threads);
+          printf(" %p %d [%d, %d] @ %p\n", TO_VOIDP(vec), si->generation, si->old_space, si->use_marks, si->creator);
+          printf(" %p %d [%d, %d] @ %p\n", TO_VOIDP(e), esi->generation, esi->old_space, esi->use_marks, si->creator);
           abort();
         }          
       }
