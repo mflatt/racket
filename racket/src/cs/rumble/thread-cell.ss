@@ -16,18 +16,11 @@
   (check who thread-cell? c)
   (unsafe-thread-cell-ref c))
 
-(define abort
-  (begin
-    (load-shared-object "libc.dylib")
-    (foreign-procedure "abort" () void)))
-
 (define (unsafe-thread-cell-ref c)
   (if (thread-cell-mutated? c)
       (let* ([t (current-engine-thread-cell-values)])
         (if t
-            (if (vector? t)
-                (abort)
-                (eq-hashtable-ref t c (thread-cell-default-value c)))
+            (eq-hashtable-ref t c (thread-cell-default-value c))
             (thread-cell-default-value c)))
       (thread-cell-default-value c)))
 

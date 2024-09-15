@@ -48,10 +48,6 @@
   (place-registers))
 
 (define (set-place-registers! vec)
-  (when (or (not (#%vector? vec))
-            (#%vector? (#%vector-ref vec 0)))
-    (#%printf "VEC or VEC\n")
-    (abort))
   (place-registers vec))
 
 ;; ----------------------------------------
