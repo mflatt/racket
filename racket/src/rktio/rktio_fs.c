@@ -832,14 +832,14 @@ rktio_stat_t *file_or_directory_or_fd_stat(rktio_t *rktio,
 
   if (fd) {
     HANDLE h;
-    if (!DuplicateHandle(GetCurrentProcess(), rktio_fd_system_fd(rktio, fd),
+    if (!DuplicateHandle(GetCurrentProcess(), (HANDLE)rktio_fd_system_fd(rktio, fd),
                          GetCurrentProcess(), &h,
                          0, FALSE, DUPLICATE_SAME_ACCESS)) {
       get_windows_error();
       return NULL;
     }
-    hfd = _open_osfhandle(h);
-    if (h == -1) {
+    hfd = _open_osfhandle((intptr_t)h, 0);
+    if (hfd == -1) {
       get_posix_error();
       CloseHandle(h);
       return NULL;
