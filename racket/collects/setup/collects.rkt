@@ -1,7 +1,5 @@
 #lang racket/base
-(require racket/list
-         racket/string
-         setup/collection-name
+(require setup/collection-name
          pkg/path)
 
 (provide path->module-path
@@ -15,8 +13,11 @@
   (define (make-result new-c-l file)
     (let ([norm-file (regexp-replace #rx"[.]ss$" file ".rkt")])
       (if (eq? mode 'module-path)
-          `(lib ,(string-join (append new-c-l (list norm-file))
-                              "/"))
+          `(lib ,(apply string-append
+                        (let loop ([new-c-l new-c-l])
+                          (if (null? new-c-l)
+                              (list norm-file)
+                              (list* (car new-c-l) "/" (loop (cdr new-c-l)))))))
           `(collects ,@(map string->bytes/utf-8 new-c-l) ,(string->bytes/utf-8 norm-file)))))
   (define (try-pkg)
     (define-values (pkg subpath pkg-collect) 
@@ -76,14 +77,19 @@
          ((length p) . >= . 3)
          (eq? 'collects (car p))
          (andmap bytes? (cdr p)))
-    (define fn (bytes->string/utf-8 (last p)))
-    (define coll (map bytes->string/utf-8 (drop-right (cdr p) 1)))
+    (define-values (fn coll)
+      (let loop ([p (cdr p)])
+        (cond
+          [(null? (cdr p)) (values (bytes->string/utf-8 (car p)) null)]
+          [else
+           (define-values (fn coll) (loop (cdr p)))
+           (values fn (cons (bytes->string/utf-8 (car p)) coll))])))
     (apply collection-file-path 
            fn
            coll
            #:fail (lambda (s)
                     (define l (current-library-collection-paths))
-                    (build-path (apply build-path (if (pair? l) (first l) (current-directory)) 
+                    (build-path (apply build-path (if (pair? l) (car l) (current-directory))
                                        coll)
                                 fn)))]
    [(path-string? p) p]

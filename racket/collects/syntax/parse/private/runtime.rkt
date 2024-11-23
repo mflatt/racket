@@ -2,7 +2,6 @@
 (require racket/stxparam
          "residual.rkt"
          (for-syntax racket/base
-                     racket/list
                      syntax/kerncase
                      syntax/strip-context
                      racket/private/sc

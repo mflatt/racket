@@ -8,10 +8,16 @@ Use syntax/modcollapse instead.
 
 |#
 
-(require racket/string
-         racket/list
-         racket/path
+(require racket/path
          "modhelp.rkt")
+
+(define (last l) (if (null? (cdr l)) (car l) (last (cdr l))))
+(define (drop-rightmost l) (if (null? (cdr l)) null (cons (car l) (drop-rightmost (cdr l)))))
+(define (string-join l sep) (apply string-append
+                                   (let loop ([l l]) ; assumes nonempty l
+                                     (if (null? (cdr l))
+                                         l
+                                         (list* (car l) sep (loop (cdr l)))))))
 
 (define (collapse-module-path s relto-mp)
   ;; relto-mp should be a path, '(lib relative-path collection) or symbol,
@@ -19,7 +25,7 @@ Use syntax/modcollapse instead.
   ;;   or a thunk that produces one of those
 
   (define relto-submod '())
-  
+
   ;; Used for 'lib paths, so it's always Unix-style
   (define (attach-to-relative-path-string elements relto)
     (let ([elem-str
@@ -264,7 +270,7 @@ Use syntax/modcollapse instead.
                         (caddr s)
                         (append
                          (apply append rests)
-                         (drop-right bases 1)))))
+                         (drop-rightmost bases)))))
              ;; already in normal form:
              (let* ([e (cadr s)]
                     [e2 (ss->rkt e)])
@@ -421,7 +427,7 @@ Use syntax/modcollapse instead.
                 ;; Unix-style relative path string
                 (cond
                  [(string? prev)
-                  (define l (drop-right (explode-relpath-string prev) 1))
+                  (define l (drop-rightmost (explode-relpath-string prev)))
                   (if (null? l)
                       s
                       (string-join (append

@@ -104,8 +104,7 @@
 ;; Run-time
 
 (module progress racket/base
-  (require racket/list
-           "minimatch.rkt")
+  (require "minimatch.rkt")
   (provide ps-empty
            ps-add-car
            ps-add-cdr
@@ -221,7 +220,11 @@
   ;; ps-context-syntax : Progress -> Syntax
   (define (ps-context-syntax ps)
     ;; Bottom frame is always syntax
-    (last ps))
+    (let last ([ps ps])
+      (define next (cdr ps))
+      (if (null? next)
+          (car ps)
+          (last next))))
 
   ;; ps-difference : Progress Progress -> Nat
   ;; Returns N s.t. B = (ps-add-cdr^N A)
@@ -701,7 +704,6 @@
 
 (module parse-util racket/base
   (require (for-syntax racket/base)
-           racket/list
            racket/lazy-require
            syntax/stx
            (submod ".." 3d-stx)
@@ -722,6 +724,7 @@
            predicate-ellipsis-parser)
 
   (define (list->values n vs)
+    (define (take vs n) (if (= n 0) null (cons (car vs) (take (cdr vs) (sub1 n)))))
     (apply values (if n (take vs n) vs)))
 
   ;; stx-list-take : Stx Nat -> Syntax

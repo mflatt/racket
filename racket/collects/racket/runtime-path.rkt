@@ -2,8 +2,7 @@
 
 ;; Library for accessing paths relative to a source file at runtime
 
-(require racket/list
-         racket/private/link-path
+(require racket/private/link-path
          "private/so-search.rkt"
          "private/share-search.rkt"
          "private/this-expression-source-directory.rkt"
@@ -113,11 +112,17 @@
                                             (if (regexp-match? #rx"[./]" s)
                                                 s
                                                 (string-append s "/main.rkt"))))])
-                 (let ([file (last strs)]
-                       [coll (if (and (null? (cddr p))
-                                      (null? (cdr strs)))
-                                 (list "mzlib")
-                                 (append (cddr p) (drop-right strs 1)))])
+                 (let-values ([(file coll)
+                               (cond
+                                 [(and (null? (cddr p))
+                                       (null? (cdr strs)))
+                                  (values (car strs) (list "mzlib"))]
+                                 [else
+                                  (let loop ([strs (cdr strs)] [coll-accum null])
+                                    (cond
+                                      [(null? (cdr strs)) (values (car strs)
+                                                                  (append (cddr p) (reverse coll-accum)))]
+                                      [else (loop (cdr strs) (cons (car strs) coll-accum))]))])])
                    (let ([file (if (regexp-match? #rx#"[.]ss$" file)
                                    ;; normalize to ".rkt":
                                    (path-replace-extension file #".rkt")

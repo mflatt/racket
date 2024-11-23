@@ -1,5 +1,5 @@
 #lang racket/base
-(require (for-syntax racket/base racket/list racket/struct-info))
+(require (for-syntax racket/base racket/struct-info))
 (provide match match-lambda ?)
 
 (define-syntax (match-lambda stx)
@@ -58,7 +58,7 @@
     [(match-p x (list* p1 p ...) success failure)
      #'(match-p x (cons p1 (list* p ...)) success failure)]
     [(match-p x (vector p ...) success failure)
-     (with-syntax ([(i ...) (range (length (syntax->list #'(p ...))))])
+     (with-syntax ([(i ...) (for/list ([i (in-range (length (syntax->list #'(p ...))))]) i)])
        #'(if (and (vector? x) (= (vector-length x) (length '(p ...))))
              (match-ep* ([(vector-ref x 'i) p] ...) success failure)
              failure))]

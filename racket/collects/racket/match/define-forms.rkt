@@ -2,7 +2,6 @@
 
 (require (for-syntax racket/base
                      racket/syntax
-                     (only-in racket/list append* remove-duplicates)
                      syntax/parse/pre
                      racket/lazy-require
                      syntax/parse/lib/function-header))
@@ -100,7 +99,7 @@
               (values ids #`[#,ids #,rhs])))
           (quasisyntax/loc stx
             (let-values #,let-clauses
-              (match*/derived #,(append* idss) #,stx
+              (match*/derived #,(apply append idss) #,stx
                 [(patss ... ...) (let () body1 body ...)])))]))
 
      ;; note: match-let*-values/derived is *not* provided

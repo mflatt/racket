@@ -23,8 +23,7 @@
                [(s1 s2 s3 s4 strs) (apply string-append s1 s2 s3 s4 strs)]
                [(str . strss) (apply apply string-append str strss)]))
 
-(require (only-in racket/list add-between)
-         (only-in racket/unsafe/undefined [unsafe-undefined none]))
+(require (only-in racket/unsafe/undefined [unsafe-undefined none]))
 
 (define (string-join strs [sep " "]
                      #:before-first [before-first none]
@@ -52,7 +51,17 @@
                           (cons before-last
                                 (cdr rev-strs))))
                   (reverse rev-assembled)])]
-              [else (add-between strs sep #:before-last before-last)])]
+              [else
+               (let loop ([strs strs])
+                 (cond
+                   [(null? (cdr strs)) strs]
+                   [else
+                    (define next (cdr strs))
+                    (list* (car strs)
+                           (if (null? (cdr next))
+                               before-last
+                               sep)
+                           (loop next))]))])]
          [r (if (eq? after-last   none) r (append r (list after-last)))]
          [r (if (eq? before-first none) r (cons before-first r))])
     (apply string-append r)))

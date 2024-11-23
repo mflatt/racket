@@ -2,7 +2,6 @@
 (require racket/match/match-expander
          (for-syntax racket/base
                      racket/struct-info
-                     racket/list
                      "../private/struct-util.rkt"))
 
 (define-for-syntax (extract-field-names orig-stx the-struct-info)
@@ -14,7 +13,10 @@
         (length (cadddr (id->struct-info parent orig-stx)))
         0))
   (define num-own-fields (- num-fields num-super-fields))
-  (define own-accessors (take accessors num-own-fields))
+  (define own-accessors (let take ([accessors accessors] [num-own-fields num-own-fields])
+                          (if (= 0 num-own-fields)
+                              null
+                              (cons (car accessors) (take (cdr accessors) (sub1 num-own-fields))))))
   (define struct-name (predicate->struct-name 'struct* orig-stx (list-ref the-struct-info 2)))
   (for/list ([accessor (in-list own-accessors)])
     ;; add1 for hyphen

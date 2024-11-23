@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require syntax/parse/pre
-         racket/list)
+(require syntax/parse/pre)
 
 (provide function-header formal formals formals-no-rest)
 
@@ -17,9 +16,10 @@
            #:attr params #'(arg.name ...)
            #:fail-when (check-duplicate-identifier (syntax->list #'params))
                        "duplicate argument name"
-           #:fail-when (check-duplicates (attribute arg.kw)
-                                         (lambda (x y)
-                                           (and x y (equal? (syntax-e x) (syntax-e y)))))
+           #:fail-when (not (for/fold ([ht #hasheq()]) ([x (in-list (attribute arg.kw))]
+                                                        #:when x)
+                              (define kw (syntax-e x))
+                              (and ht (not (hash-ref ht kw #f)) (hash-set ht kw #t))))
                        "duplicate keyword for argument"
            #:fail-when (invalid-option-placement
                         (attribute arg.kw) (attribute arg.name) (attribute arg.default))

@@ -1,6 +1,5 @@
 #lang racket/base
-(require racket/list
-         racket/syntax
+(require racket/syntax
          "residual.rkt"
          "minimatch.rkt"
          (submod "rep-patterns.rkt" simple)
