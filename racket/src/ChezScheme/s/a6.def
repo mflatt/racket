@@ -7,6 +7,8 @@
 
 (define-constant native-endianness 'little)
 
+(define-constant immediate-flonums #t)
+
 (define-constant unaligned-floats #t)
 (define-constant unaligned-integers #t)
 (define-constant integer-divide-instruction #t)

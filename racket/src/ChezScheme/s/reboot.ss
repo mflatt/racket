@@ -349,6 +349,15 @@
   (fxpopcount32 (bitwise-and x #xffff)))
 
 (meta-cond
+ [(top-level-bound? 'flbit-field) (begin)]
+ [else
+  (define flbit-field
+    (lambda (d start end)
+      (let ([bv (make-bytevector 8)])
+        (bytevector-ieee-double-native-set! bv 0 d)
+        (bitwise-bit-field (bytevector-u64-native-ref bv 0) start end))))])
+
+(meta-cond
  [(#%$top-level-bound? 'flvector?)
   (define need-vector-filter? #f)
   (define $the-empty-flvector (make-flvector 0))]
@@ -530,7 +539,7 @@
 
 (define-primitive ($make-source-oops who . args)
   (($top-level-value 'datum->syntax) (or who ($make-interaction-syntax 'unknown))
-                                     `(error 'source "oops ~s" '(,who . ,args))))
+                                     `(error 'source "oops ~s" '(,who . ,(($top-level-value 'syntax->datum) args)))))
 
 (define-primitive ($source-warning . args)
   (printf "~s\n" args))

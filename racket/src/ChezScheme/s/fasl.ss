@@ -638,9 +638,8 @@
 (define wrf-flonum
    (lambda (x p t a?)
      (put-u8 p (constant fasl-type-flonum))
-     (let ([n ($object-ref 'unsigned-64 x (constant flonum-data-disp))])
-       (put-uptr p (ash n -32))
-       (put-uptr p (logand n #xFFFFFFFF)))))
+     (put-uptr p (flbit-field x 32 64))
+     (put-uptr p (flbit-field x 0 32))))
 
 (define wrf-phantom
   (lambda (x p t a?)

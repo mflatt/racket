@@ -114,6 +114,14 @@
               ,(make-info-alloc (constant tag) save-flrv? save-asm-ra?)
               (immediate ,(c-alloc-align size))))])))
 
+(define-syntax %immediate-flonum-unpack
+  (lambda (x)
+    (syntax-case x ()
+      [(k e)
+       (with-implicit (k %inline quasiquote)
+         #'(%inline ror ,(%inline sra e (immediate ,(constant immediate-flonum-mask-bits)))
+                    (immediate ,(constant immediate-flonum-hi-bits))))])))
+
 (define-syntax %mv-jump
   (lambda (x)
     (syntax-case x ()
@@ -187,6 +195,9 @@
       [(bwp-object? x) (constant sbwp)]
       [(eq? x '#1=#1#) (constant black-hole)]
       [(target-fixnum? x) (fix x)]
+      [(flonum? x) (let ()
+                     (include "flonum-encode.ss")
+                     (flonum-encode-immediate x))]
       [(char? x) (+ (* (constant char-factor) (char->integer x)) (constant type-char))]
       [else #f])))
 

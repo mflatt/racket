@@ -742,6 +742,7 @@
   (declare-primitive srl value #t)
   (declare-primitive sra value #t)
   (declare-primitive slol value #t) ; runtime-detemined endianness only: shift toward lo byte
+  (declare-primitive ror value #t)
   (declare-primitive zext8 value #t)
   (declare-primitive zext16 value #t)
   (declare-primitive zext32 value #t) ; 64-bit only

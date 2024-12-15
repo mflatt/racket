@@ -104,6 +104,18 @@
      [(e) (ensure-single-valued e (fx= (optimize-level) 3))]))
   (define-pass np-expand-primitives : L7 (ir) -> L9 ()
     (definitions
+      (define-$type-check (L9 Expr))
+      (define (build-flonum-unpack e)
+        (with-output-language (L9 Expr)
+          (constant-case immediate-flonums
+            [(#t)
+             (let ([p (make-tmp 'p)])
+               `(let ([,p ,e])
+                  (if ,(%type-check mask-immediate-flonum type-immediate-flonum ,p)
+                      (inline ,null-info ,%fpcastfrom ,(%immediate-flonum-unpack ,p))
+                      ,(%mref ,p ,%zero ,(constant flonum-data-disp) fp))))]
+            [else
+             (%mref ,e ,%zero ,(constant flonum-data-disp) fp)])))
       (define Expr1
         (lambda (e)
           (let-values ([(e unboxed-fp?) (Expr e #f)])
@@ -115,10 +127,30 @@
         (lambda (e)
           (let ([t (make-tmp 't)])
             (with-output-language (L9 Expr)
-              `(let ([,t ,(%constant-alloc type-flonum (constant size-flonum))])
-                 (seq
-                  (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp) fp) ,e)
-                  ,t))))))
+              (constant-case immediate-flonums
+                [(#t)
+                 (let ([n (make-tmp 'n)]
+                       [m (make-tmp 'm)])
+                   `(let ([,n (inline ,(make-info-unboxed-args '(#t)) ,%fpcastto ,e)])
+                      (let ([,m ,(%inline logand ,n (immediate ,(constant immediate-flonum-drop-mask)))])
+                        (if ,(%inline eq? ,m (immediate ,(constant immediate-flonum-drop-mask)))
+                            ,(%inline logxor
+                                      ,(%inline ror ,n (immediate ,(constant immediate-flonum-offset)))
+                                      (immediate ,(logxor (sub1 (expt 2 (constant immediate-flonum-mask-bits)))
+                                                          (constant type-immediate-flonum))))
+                            (if ,(%inline eq? ,m (immediate 0))
+                                ,(%inline logor
+                                          ,(%inline ror ,n (immediate ,(constant immediate-flonum-offset)))
+                                          (immediate ,(constant type-immediate-flonum)))
+                                (let ([,t ,(%constant-alloc type-flonum (constant size-flonum))])
+                                  (seq
+                                   (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp)) ,n)
+                                   ,t)))))))]
+                [else
+                 `(let ([,t ,(%constant-alloc type-flonum (constant size-flonum))])
+                    (seq
+                     (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp) fp) ,e)
+                     ,t))])))))
       (define (fp-lvalue? lvalue)
         (nanopass-case (L9 Lvalue) lvalue
           [,x (and (uvar? x) (eq? (uvar-type x) 'fp))]
@@ -137,10 +169,23 @@
     ;; be a boxed expression (even if `can-unbox-fp?` is #t)
     (Expr : Expr (ir [can-unbox-fp? #f]) -> Expr (#f)
       [(quote ,d)
-       (values (cond
-                 [(ptr->imm d) => (lambda (i) `(immediate ,i))]
-                 [else `(literal ,(make-info-literal #f 'object d 0))])
-               #f)]
+       (cond
+         [(and can-unbox-fp? (flonum? d) (constant immediate-flonums))
+          (constant-case architecture
+            [(arm64)
+             ;; back end supports direct load of a literal into a fp register
+             (values `(literal ,(make-info-literal #f 'flonum d 0))
+                     #t)]
+            [else
+             ;; use an `flvector` so that we don't have to predict the flonum representation
+             (let ([flv `(literal ,(make-info-literal #f 'object (flvector d) 0))])
+               (values (%mref ,flv ,%zero ,(constant flvector-data-disp) fp)
+                       #t))])]
+         [else
+          (values (cond
+                    [(ptr->imm d) => (lambda (i) `(immediate ,i))]
+                    [else `(literal ,(make-info-literal #f 'object d 0))])
+                  #f)])]
       [,pr (values (Symref (primref-name pr)) #f)]
       [(unboxed-fp ,[e #t -> e unboxed-fp?])
        (if can-unbox-fp?
@@ -190,7 +235,7 @@
                           (let-values ([(e unboxed-fp?) (Expr e unbox?)])
                             (cond
                               [(and unbox? (not unboxed-fp?))
-                               (%mref ,e ,%zero ,(constant flonum-data-disp) fp)]
+                               (build-flonum-unpack e)]
                               [else e]))))
                       (uvar-location x) e*)])
          (values `(call ,info ,mdcl ,x ,e* ...) #f))]
@@ -204,7 +249,7 @@
           (let ([e* (map (lambda (e unbox-arg?)
                            (let-values ([(e unboxed-arg?) (Expr e unbox-arg?)])
                              (if (and unbox-arg? (not unboxed-arg?))
-                                 (%mref ,e ,%zero ,(constant flonum-data-disp) fp)
+                                 (build-flonum-unpack e)
                                  e)))
                          e*
                          (info-unboxed-args-unboxed?* info))])
@@ -218,7 +263,7 @@
        (let ([fp? (fp-lvalue? lvalue)])
          (let-values ([(e unboxed?) (Expr e fp?)])
            (let ([e (if (and fp? (not unboxed?))
-                        (%mref ,e ,%zero ,(constant flonum-data-disp) fp)
+                        (build-flonum-unpack e)
                         e)])
              (values `(set! ,lvalue ,e) #f))))]
       [(values ,info ,[e* #f -> e* unboxed-fp?*] ...) (values `(values ,info ,e* ...) #f)]
@@ -226,10 +271,10 @@
       [(if ,[e0 #f -> e0 unboxed-fp?0] ,[e1 can-unbox-fp? -> e1 unboxed-fp?1] ,[e2 can-unbox-fp? -> e2 unboxed-fp?2])
        (let* ([unboxed-fp? (or unboxed-fp?1 unboxed-fp?2)]
               [e1 (if (and unboxed-fp? (not unboxed-fp?1))
-                      (%mref ,e1 ,%zero ,(constant flonum-data-disp) fp)
+                      (build-flonum-unpack e1)
                       e1)]
               [e2 (if (and unboxed-fp? (not unboxed-fp?2))
-                      (%mref ,e2 ,%zero ,(constant flonum-data-disp) fp)
+                      (build-flonum-unpack e2)
                       e2)])
          (values `(if ,e0 ,e1 ,e2) unboxed-fp?))]
       [(seq ,[e0 #f -> e0 unboxed-fp?0] ,[e1 can-unbox-fp? -> e1 unboxed-fp?])
@@ -239,7 +284,7 @@
                         (if (eq? (uvar-type x) 'fp)
                             (let-values ([(e unboxed?) (Expr e #t)])
                               (if (not unboxed?)
-                                  (%mref ,e ,%zero ,(constant flonum-data-disp) fp)
+                                  (build-flonum-unpack e)
                                   e))
                             (Expr1 e)))
                       x* e*)])
@@ -263,7 +308,7 @@
                             (let ([unbox-arg? (fp-type? type)])
                               (let-values ([(e unboxed-fp?) (Expr  e unbox-arg?)])
                                 (if (and unbox-arg? (not unboxed-fp?))
-                                    (%mref ,e ,%zero ,(constant flonum-data-disp) fp)
+                                    (build-flonum-unpack e)
                                     e))))
                           e*
                           (info-foreign-arg-type* info))
@@ -734,14 +779,91 @@
                 `(if ,(%type-check mask-flonum type-flonum ,x)
                      ,x
                      ,(build-libcall #t src sexpr real->flonum x who)))))))
+    (define (build-flonum-allocation n)
+      (constant-case immediate-flonums
+        [(#t)
+         (bind #t ([m (%inline logand ,n (immediate ,(constant immediate-flonum-drop-mask)))])
+           `(if ,(%inline eq? ,m (immediate ,(constant immediate-flonum-drop-mask)))
+                ,(%inline logxor
+                          ,(%inline ror ,n (immediate ,(constant immediate-flonum-offset)))
+                          (immediate ,(logxor (sub1 (expt 2 (constant immediate-flonum-mask-bits)))
+                                              (constant type-immediate-flonum))))
+                (if ,(%inline eq? ,m (immediate 0))
+                    ,(%inline logor
+                              ,(%inline ror ,n (immediate ,(constant immediate-flonum-offset)))
+                              (immediate ,(constant type-immediate-flonum)))
+                    ,(bind #t ([t (%constant-alloc type-flonum (constant size-flonum))])
+                       `(seq
+                         (set! ,(%mref ,t ,(constant flonum-data-disp)) ,n)
+                         ,t)))))]
+        [else
+         (bind #t ([t (%constant-alloc type-flonum (constant size-flonum))])
+           (%seq
+            (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp)) ,n)
+            ,t))]))
+    (define build-flonum-allocation-from-mem
+      (lambda (base index offset swapped?)
+        (bind #f (base index)
+          (constant-case immediate-flonums
+            [(#t)
+             (bind #t ([n `(inline ,(make-info-load 'unsigned-64 swapped?) ,%load ,base ,index
+                                   (immediate ,offset))])
+               (build-flonum-allocation n))]
+            [else
+             (bind #t ([t (%constant-alloc type-flonum (constant size-flonum))])
+               `(seq
+                 (set! ,(%mref ,t ,(constant flonum-data-disp))
+                       (inline ,(make-info-load 'unsigned-64 swapped?) ,%load ,base ,index
+                               (immediate ,offset)))
+                 ,t))]))))
+    (define build-flonum-allocation-from-unboxed
+      (lambda (n-e)
+        (constant-case immediate-flonums
+          [(#t)
+           (bind #t ([n `(inline ,(make-info-unboxed-args '(#t)) ,%fpcastto ,n-e)])
+             (build-flonum-allocation n))]
+          [else
+           (bind #t ([t (%constant-alloc type-flonum (constant size-flonum))])
+             (%seq
+              (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp) fp) ,n-e)
+              ,t))])))
+    (define build-flonum-unpack
+      (lambda (e)
+        (constant-case immediate-flonums
+          [(#t)
+           (bind #t ([p e])
+             `(if ,(%type-check mask-immediate-flonum type-immediate-flonum ,p)
+                  (unboxed-fp
+                   (inline ,null-info ,%fpcastfrom ,(%immediate-flonum-unpack ,p)))
+                  ,(%mref ,p ,%zero ,(constant flonum-data-disp) fp)))]
+          [else
+           (%mref ,e ,%zero ,(constant flonum-data-disp) fp)])))
+    (define build-flonum-unpack-as-int
+      (lambda (e)
+        (constant-case immediate-flonums
+          [(#t)
+           (bind #t ([p e])
+             `(if ,(%type-check mask-immediate-flonum type-immediate-flonum ,p)
+                  ,(%immediate-flonum-unpack ,p)
+                  ,(%mref ,p ,%zero ,(constant flonum-data-disp))))]
+          [else
+           (%mref ,e ,%zero ,(constant flonum-data-disp))])))
     (define build-$inexactnum-real-part
       (lambda (e)
-        (%lea ,e (fx+ (constant inexactnum-real-disp)
-                   (fx- (constant type-flonum) (constant typemod))))))
+        (constant-case immediate-flonums
+          [(#t)
+           (build-flonum-allocation-from-mem e %zero (constant inexactnum-real-disp) #f)]
+          [else
+            (%lea ,e (fx+ (constant inexactnum-real-disp)
+                          (fx- (constant type-flonum) (constant typemod))))])))
     (define build-$inexactnum-imag-part
       (lambda (e)
-        (%lea ,e (fx+ (constant inexactnum-imag-disp)
-                   (fx- (constant type-flonum) (constant typemod))))))
+        (constant-case immediate-flonums
+          [(#t)
+           (build-flonum-allocation-from-mem e %zero (constant inexactnum-imag-disp) #f)]
+          [else
+           (%lea ,e (fx+ (constant inexactnum-imag-disp)
+                         (fx- (constant type-flonum) (constant typemod))))])))
     (define make-build-fill
       (lambda (elt-bytes data-disp)
         (define ptr-bytes (constant ptr-bytes))
@@ -753,7 +875,7 @@
                    ,(constant-case ptr-bytes
                       [(4)
                        (case elt-bytes
-                         [(1) (let ([imm (logand imm #xff)])<
+                         [(1) (let ([imm (logand imm #xff)])
                                 (let ([imm (logor (ash imm 8) imm)])
                                   (logor (ash imm 16) imm)))]
                          [(2) (let ([imm (logand imm #xffff)])
@@ -1094,13 +1216,7 @@
                              (immediate ,offset)))
                          ,t)))]
                   [(64)
-                   (bind #f (base index)
-                     (bind #t ([t (%constant-alloc type-flonum (constant size-flonum))])
-                       `(seq
-                          (set! ,(%mref ,t ,(constant flonum-data-disp))
-                            (inline ,(make-info-load 'unsigned-64 #t) ,%load ,base ,index
-                              (immediate ,offset)))
-                          ,t)))])
+                   (build-flonum-allocation-from-mem base index offset #t)])
                 (bind #f (base index)
                   (%mref ,base ,index ,offset fp)))]
            [(single-float)
@@ -1119,15 +1235,12 @@
                                                 ,(%mref ,t ,%zero ,(constant flonum-data-disp) fp))))
                       ,t)))
                 (bind #f (base index)
-                  (bind #t ([t (%constant-alloc type-flonum (constant size-flonum))])
-                    (%seq
-                      (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp) fp)
-                            (unboxed-fp (inline ,(make-info-unboxed-args '(#t))
-                                                ,%load-single->double
-                                                ;; slight abuse to call this "unboxed", but `load-single->double`
-                                                ;; wants an FP-flavored address
-                                                ,(%mref ,base ,index ,offset fp))))
-                      ,t))))]
+                  (build-flonum-allocation-from-unboxed
+                   `(unboxed-fp (inline ,(make-info-unboxed-args '(#t))
+                                        ,%load-single->double
+                                        ;; slight abuse to call this "unboxed", but `load-single->double`
+                                        ;; wants an FP-flavored address
+                                        ,(%mref ,base ,index ,offset fp))))))]
            [(integer-8 integer-16 integer-24 integer-32 integer-40 integer-48 integer-56 integer-64)
             (build-int-load swapped? type base index offset
               (if (and (eqv? (constant ptr-bits) 32) (memq type '(integer-40 integer-48 integer-56 integer-64)))
@@ -1217,7 +1330,7 @@
                        ;; slight abuse to call this "unboxed", but `store-double->single`
                        ;; wants an FP-flavored address
                        ,(%mref ,base ,index ,offset fp)
-                       (raw ,(%mref ,value ,%zero ,(constant flonum-data-disp) fp))))]
+                       (raw ,(build-flonum-unpack value))))]
            ; 40-bit+ only on 64-bit machines
            [(integer-8 integer-16 integer-24 integer-32 integer-40 integer-48 integer-56 integer-64
              unsigned-8 unsigned-16 unsigned-24 unsigned-32 unsigned-40 unsigned-48 unsigned-56 unsigned-64)
@@ -1237,7 +1350,7 @@
            [(double-float)
             `(inline ,(make-info-load 'unsigned-64 #t) ,%store
                ,base ,index (immediate ,offset)
-               (raw ,(%mref ,value ,(constant flonum-data-disp))))]
+               (raw ,(build-flonum-unpack-as-int value)))]
            ; 40-bit+ only on 64-bit machines
            [(integer-8 integer-16 integer-24 integer-32 integer-40 integer-48 integer-56 integer-64
              unsigned-8 unsigned-16 unsigned-24 unsigned-32 unsigned-40 unsigned-48 unsigned-56 unsigned-64)
@@ -3887,10 +4000,16 @@
                                                      ,(%mref ,e2 ,(fx+ (constant flonum-data-disp) 4))
                                                      (immediate ,word2)))))]
                                       [(64)
-                                       (let ([word ($object-ref 'integer-64 d (constant flonum-data-disp))])
-                                         (%inline eq?
-                                                  ,(%mref ,e2 ,(constant flonum-data-disp))
-                                                  (immediate ,word)))]
+                                       (let ([word (flbit-field d 0 64)])
+                                         (constant-case immediate-flonums
+                                           [(#t)
+                                            (%inline eq?
+                                                     ,(build-flonum-unpack-as-int e2)
+                                                     (immediate ,word))]
+                                           [else
+                                            (%inline eq?
+                                                     ,(%mref ,e2 ,(constant flonum-data-disp))
+                                                     (immediate ,word))]))]
                                       [else ($oops 'compiler-internal
                                                    "eqv doesn't handle ptr-bits = ~s"
                                                    (constant ptr-bits))])))))]
@@ -4629,7 +4748,7 @@
                         [(32) (%inline +
                                  ,(%mref ,e ,(constant flonum-data-disp))
                                  ,(%mref ,e ,(fx+ (constant flonum-data-disp) 4)))]
-                        [(64) (%mref ,e ,(constant flonum-data-disp))])
+                        [(64) (build-flonum-unpack-as-int e)])
                      (immediate 1))
                    (immediate ,(- (constant fixnum-factor))))
                ;; +nan.0
@@ -4644,14 +4763,18 @@
                              [(unknown)
                               (constant-case ptr-bits
                                 [(64)
-                                 (%inline srl ,(%mref ,e1 ,(constant flonum-data-disp)) (immediate 32))]
+                                 (%inline srl ,(build-flonum-unpack-as-int e1) (immediate 32))]
                                 [(32)
                                  (inline ,(make-info-unboxed-args '(#t)) ,%fpcastto/hi ,e)])]
                              [else
-                              `(inline ,(make-info-load 'integer-32 #f) ,%load ,e1 ,%zero
-                                       (immediate ,(constant-case native-endianness
-                                                     [(little) (fx+ (constant flonum-data-disp) 4)]
-                                                     [(big) (constant flonum-data-disp)])))])])
+                              (constant-case immediate-flonums
+                                [(#t)
+                                 (%inline srl ,(build-flonum-unpack-as-int e1) (immediate 32))]
+                                [else
+                                 `(inline ,(make-info-load 'integer-32 #f) ,%load ,e1 ,%zero
+                                          (immediate ,(constant-case native-endianness
+                                                        [(little) (fx+ (constant flonum-data-disp) 4)]
+                                                        [(big) (constant flonum-data-disp)])))])])])
                  (let ([body (if (fx> cnt 0)
                                  (%inline srl ,body (immediate ,cnt))
                                  body)])
@@ -4738,8 +4861,8 @@
                             (raw ,(%mref ,e1 ,(fx+ (constant flonum-data-disp) 4)))
                             (raw ,(%mref ,e2 ,(fx+ (constant flonum-data-disp) 4))))))]
                 [(64) (%inline eq?
-                        (raw ,(%mref ,e1 ,(constant flonum-data-disp)))
-                        (raw ,(%mref ,e2 ,(constant flonum-data-disp))))]
+                        (raw ,(build-flonum-unpack-as-int e1))
+                        (raw ,(build-flonum-unpack-as-int e2)))]
                 [else ($oops 'compiler-internal
                              "$fleqv doesn't handle ptr-bits = ~s"
                              (constant ptr-bits))])
@@ -4874,9 +4997,9 @@
                    (set! ,(%mref ,t ,(constant inexactnum-type-disp))
                      ,(%constant type-inexactnum))
                    (set! ,(%mref ,t ,%zero ,(constant inexactnum-real-disp) fp)
-                         ,(%mref ,e1 ,%zero ,(constant flonum-data-disp) fp))
+                         ,(build-flonum-unpack e1))
                    (set! ,(%mref ,t ,%zero ,(constant inexactnum-imag-disp) fp)
-                         ,(%mref ,e2 ,%zero ,(constant flonum-data-disp) fp))
+                         ,(build-flonum-unpack e2))
                    ,t)))))
 
         (define-inline 3 fl-make-rectangular
@@ -5258,11 +5381,8 @@
                           ,(build-fix
                             `(inline ,(make-info-unboxed-args '(#t)) ,%fptrunc ,e-x))
                           ;; We have to box the flonum to report an error:
-                          ,(let ([t (make-tmp 't)])
-                             `(let ([,t ,(%constant-alloc type-flonum (constant size-flonum))])
-                                (seq
-                                 (set! ,(%mref ,t ,%zero ,(constant flonum-data-disp) fp) ,e-x)
-                                 ,(build-libcall #t src sexpr flonum->fixnum t)))))))
+                          ,(build-libcall #t src sexpr flonum->fixnum
+                                          (build-flonum-allocation-from-unboxed e-x)))))
                  (lambda (e-x)
                    (build-libcall #t src sexpr flonum->fixnum e-x)))])))
 

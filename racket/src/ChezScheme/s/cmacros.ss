@@ -357,7 +357,7 @@
 ;; ---------------------------------------------------------------------
 ;; Version and machine types:
 
-(define-constant scheme-version #x0a020001)
+(define-constant scheme-version #x0a020002)
 
 (define-syntax define-machine-types
   (lambda (x)
@@ -471,7 +471,7 @@
 ; We must have room for forward marker and forward pointer, hence two ptrs.
 ; We sometimes violate this for flonums since we "extract" the real
 ; and imag part by returning pointers into the inexactnum structure.
-; This is safe since we never forward flonums.
+; This is safe since we don't try to use a forwarding pointer for flonums.
 (define-constant byte-alignment
   (max (constant typemod) (* 2 (constant ptr-bytes))))
 (define-constant ptr-alignment
@@ -1086,6 +1086,9 @@
   (fxlogor
     (constant mask-bignum)
     (constant mask-bignum-sign)))
+(define-constant immediate-flonum-bit #b1000)
+(define-constant mask-immediate-flonum (fx+ (constant immediate-flonum-bit) (constant mask-flonum)))
+(define-constant type-immediate-flonum (constant type-flonum))
 (define-constant mask-ratnum       (constant byte-constant-mask))
 (define-constant mask-inexactnum   (constant byte-constant-mask))
 (define-constant mask-exactnum     (constant byte-constant-mask))
@@ -1503,6 +1506,21 @@
 
 (define-constant flonum-bytes 8)
 (define-constant flonum-bits (* 8 (constant flonum-bytes)))
+
+;; `immediate-flonum-mask-bits` starting at `immediate-flonum-offset` are dropped
+;; when converting a flonum to an immediate reresentation
+(define-constant immediate-flonum-mask-bits (integer-length (constant mask-immediate-flonum)))
+(define-constant immediate-flonum-hi-bits 2) ; sign bit + high bit of exponent 
+(define-constant immediate-flonum-offset (- (constant flonum-bits)
+                                            (constant immediate-flonum-hi-bits)
+                                            (constant immediate-flonum-mask-bits)))
+;; includes the bits that are dropped in a representation:
+(define-constant immediate-flonum-lo-bits (- (constant flonum-bits)
+                                             (constant immediate-flonum-hi-bits)))
+
+;; The bits that must be all 0s or all 1s in a flonum to be represented immediately
+(define-constant immediate-flonum-drop-mask (ash (sub1 (expt 2 (+ 1 (constant immediate-flonum-mask-bits))))
+                                                 (- (constant immediate-flonum-offset) 1)))
 
 ; on 32-bit systems, the iptr pad will have no effect above and
 ; beyond the normal padding.  on 64-bit systems, the pad

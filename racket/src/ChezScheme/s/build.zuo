@@ -128,7 +128,7 @@
   (list "x86.ss" "x86_64.ss" "arm32.ss" "arm64.ss" "ppc32.ss" "riscv64.ss" "loongarch64.ss" "pb.ss"
         "np-languages.ss" "fxmap.ss" "cptypes-lattice.ss"
         "np-register.ss" "np-info.ss" "np-help.ss"
-        "ffi-help.ss"))
+        "ffi-help.ss" "flonum-encode.ss"))
 
 (define unicode-src-names
   '("../unicode/unicode-char-cases.ss"
@@ -591,7 +591,7 @@
        ,(include-dep "cptypes" (list "fxmap.ss" "cptypes-lattice.ss"))
        ,(include-dep "5_4" unicode-src-names)
        ,(include-dep "strip" (list "strip-types.ss"))
-       ,(include-dep "vfasl" (list "strip-types.ss"))
+       ,(include-dep "vfasl" (list "strip-types.ss" "flonum-encode.ss"))
        ,(include-dep "pbchunk" (list "strip-types.ss"))
        ,(include-dep "cpnanopass" cpnanopass-src-names)
        ,(include-dep "cpprim" cpnanopass-src-names)

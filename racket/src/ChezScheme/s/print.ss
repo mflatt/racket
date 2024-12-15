@@ -644,6 +644,7 @@ floating point returns with (-1 0 -1 ...).
           [(black-hole?) (wrblack-hole x r lev len d? env p)]
           [else (display-string "#<garbage>" p)])]
        [(fixnum? x) (wrfixnum x r d? p)]
+       [(flonum? x) (wrflonum #f x r d? p)]
        [($object-in-heap? x)
         (type-case x
           [(symbol?)

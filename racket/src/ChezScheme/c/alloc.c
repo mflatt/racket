@@ -870,7 +870,11 @@ ptr S_mkcontinuation(ISPC s, IGEN g, ptr nuate, ptr stack, iptr length, iptr cle
     return p;
 }
 
-ptr Sflonum(double x) {
+#if !defined(scheme_feature_immed_flonum)
+# define S_boxed_flonum Sflonum
+#endif
+
+ptr S_boxed_flonum(double x) {
     ptr tc = get_thread_context();
     ptr p;
 
@@ -878,6 +882,22 @@ ptr Sflonum(double x) {
     FLODAT(p) = x;
     return p;
 }
+
+#if defined(scheme_feature_immed_flonum)
+ptr Sflonum(double d) {
+    ptr x;
+    uptr mask;
+    memcpy(&x, &d, sizeof(double));
+    mask = (uptr)x & immediate_flonum_drop_mask;
+    if (mask == 0 || mask == immediate_flonum_drop_mask) {
+      uptr u = (uptr)x;
+      return (ptr)((u << (flonum_bits - immediate_flonum_offset))
+                   | ((u >> immediate_flonum_lo_bits) << immediate_flonum_mask_bits)
+                   | type_immediate_flonum);
+    } else
+      return S_boxed_flonum(d);
+}
+#endif
 
 ptr S_inexactnum(double rp, double ip) {
     ptr tc = get_thread_context();

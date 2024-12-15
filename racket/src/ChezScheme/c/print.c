@@ -272,7 +272,7 @@ static void pbytevector(ptr x) {
 }
 
 static void pflonum(ptr x) {
-  pflodat(FLODAT(x));
+  pflodat(Sflonum_value(x));
 }
 
 static void pflodat(double x) {

@@ -1060,7 +1060,7 @@ static void faslin(ptr tc, ptr *x, ptr t, ptr *pstrbuf, faslFile f) {
             ptr rp, ip;
             faslin(tc, &rp, t, pstrbuf, f);
             faslin(tc, &ip, t, pstrbuf, f);
-            *x = S_inexactnum(FLODAT(rp), FLODAT(ip));
+            *x = S_inexactnum(Sflonum_value(rp), Sflonum_value(ip));
             return;
         }
         case fasl_type_string:

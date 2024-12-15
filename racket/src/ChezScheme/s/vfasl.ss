@@ -382,6 +382,14 @@
     (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
       (set-int32! bv offset uptr))]))
 
+(define get-int32
+  (case-lambda
+   [(bv i)
+    (bytevector-s32-ref bv i (constant native-endianness))]
+   [(p delta vfi)
+    (let-values ([(bv offset) (vptr->bytevector+offset p delta vfi)])
+      (get-int32 bv offset))]))
+
 ;; Overloaded in the same way as `set-uptr!`
 (define set-char!
   (case-lambda
@@ -536,13 +544,21 @@
     [(large-integer sign vuptr)
      (exact-integer-copy v (build-exact-integer sign vuptr) vfi)]
     [(flonum high low)
-     (let ([new-p (find-room 'flonum vfi
-                             (constant vspace-data)
-                             (constant size-flonum)
-                             (constant type-flonum))])
-       (graph! v new-p vfi)
-       (set-double! new-p (constant flonum-data-disp) (build-flonum high low) vfi)
-       new-p)]
+     (let ([d (build-flonum high low)])
+       (include "flonum-encode.ss")
+       (cond
+         [(flonum-encode-immediate d)
+          => (lambda (imm)
+               ;; Note: immediate flonums should never be in a reloc
+               imm)]
+         [else
+          (let ([new-p (find-room 'flonum vfi
+                                  (constant vspace-data)
+                                  (constant size-flonum)
+                                  (constant type-flonum))])
+            (graph! v new-p vfi)
+            (set-double! new-p (constant flonum-data-disp) d vfi)
+            new-p)]))]
     [(pair vec)
      (let ([len (vector-length vec)]
            [vspc (constant vspace-impure)])
@@ -1096,7 +1112,9 @@
              ;; overwrites constant-loading instructions in the code, so the
              ;; linking protocol needs to be able to deal with that, possibly using
              ;; later instructions to infer the right repair:
-             (set-int32! code-p a new-elem vfi)
+             (set-int32! code-p a new-elem vfi)<
+             (unless (= new-elem (get-int32 code-p a vfi))
+               ($oops 'vfasl "relocation bits would get dropped ~s" new-elem))
              (loop n a (fx+ i 1)))]
           [else ($oops 'vfasl "expected a relocation")])))
     new-p))

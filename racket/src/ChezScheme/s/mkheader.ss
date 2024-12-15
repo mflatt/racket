@@ -303,7 +303,11 @@
         (defref Scar pair car)
         (defref Scdr pair cdr)
 
-        (defref Sflonum_value flonum data)
+        (case (constant immediate-flonums)
+          [(#t)
+           (export "double" "Sflonum_value" "(ptr)")]
+          [else
+           (defref Sflonum_value flonum data)])
   
         (def "Svector_length(x)"
           (format "((iptr)((uptr)~a>>~d))"
@@ -1195,6 +1199,12 @@
         (nl)
         (comment "predicates")
         (deftypep "Simmediatep" ($ mask-immediate) ($ type-immediate))
+        (case (constant immediate-flonums)
+          [(#t)
+           (deftypep "Simmedflonump" ($ mask-immediate-flonum) ($ type-immediate-flonum))
+           (def "scheme_feature_immed_flonum" "1")]
+          [else
+           (def "Simmedflonump" "(x)" "0")])
         (deftotypep "Sportp" ($ mask-port) ($ type-port))
         (deftotypep "Scodep" ($ mask-code) ($ type-code))
 

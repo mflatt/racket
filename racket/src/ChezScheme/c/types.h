@@ -113,7 +113,7 @@ typedef int IFASLCODE;      /* fasl type codes */
 #define newspace_find_room(tc, t, n, x) newspace_find_room_T(tc, t, n, ALREADY_PTR, x)
 #define newspace_find_room_voidp(tc, n, x) newspace_find_room_T(tc, type_untyped, n, TO_VOIDP, x)
 
-#ifndef NO_PRESERVE_FLONUM_EQ
+#if !defined(NO_PRESERVE_FLONUM_EQ) && !defined(scheme_feature_immed_flonum)
 # define PRESERVE_FLONUM_EQ
 #endif
 
@@ -554,7 +554,7 @@ typedef struct thread_gc {
 #define SETPTRFIELD(x,disp,y) DIRTYSET(((ptr *)TO_VOIDP((uptr)(x)+disp)),(y))
 
 #define INCRGEN(g) (g = g == S_G.max_nonstatic_generation ? static_generation : g+1)
-#define FIXMEDIATE(x) (Sfixnump(x) || Simmediatep(x))
+#define FIXMEDIATE(x) (Sfixnump(x) || Simmediatep(x) || Simmedflonump(x))
 
 #define Sbytevector_reference_length(p) (Sbytevector_length(p) >> log2_ptr_bytes)
 #define INITBVREFIT(p, i) (*(ptr *)(&BVIT(p, (i) << log2_ptr_bytes)))

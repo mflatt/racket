@@ -468,7 +468,7 @@
         `(set! ,(make-live-info) ,z (asm ,info ,asm-lognot ,z)))])
 
   ; TODO: use lea for certain constant shifts when x != z
-  (define-instruction value (sll srl sra)
+  (define-instruction value (sll srl sra ror)
     (definitions
       (define go
         (lambda (info op z x y)
@@ -968,9 +968,11 @@
   (define-op asl  (*) unary-op  #b1101001 #b100) ; shifts by CL
   (define-op lsr  (*) unary-op  #b1101001 #b101) ; shifts by CL
   (define-op asr  (*) unary-op  #b1101001 #b111) ; shifts by CL
+  (define-op ror  (*) unary-op  #b1101001 #b001) ; shifts by CL
   (define-op asli (*) shifti-op #b1100000 #b100)
   (define-op lsri (*) shifti-op #b1100000 #b101)
   (define-op asri (*) shifti-op #b1100000 #b111)
+  (define-op rori (*) shifti-op #b1100000 #b001)
 
   (define-op addi (#;b *) addi-op   #b100000 #b000)
   (define-op subi (#;b *) addi-op   #b100000 #b101)
@@ -2087,6 +2089,7 @@
         [(sll) asm-sll]
         [(srl) asm-srl]
         [(sra) asm-sra]
+        [(ror) asm-ror]
         [else ($oops who "unsupported op ~s" op)])))
 
   (define asm-sll
@@ -2118,6 +2121,16 @@
           [else
             (safe-assert (ax-register? src1 %rcx))
             (emit asr dest code*)]))))
+
+  (define asm-ror
+    (lambda (code* dest src0 src1)
+      (Trivit (dest src1)
+        (safe-assert (equal? (Triv->rand src0) dest))
+        (record-case src1
+          [(imm literal) stuff (emit rori src1 dest code*)]
+          [else
+            (safe-assert (ax-register? src1 %rcx))
+            (emit ror dest code*)]))))
 
   (define asm-logand
     (lambda (code* dest src0 src1)
@@ -3319,14 +3332,26 @@ incoming           |   incoming return address | one quad
                          '())])]
               [(fp-double-float)
                (values
-                (lambda (x) ; boxed (always a var)
-                  `(set! ,%Cfpretval ,(%mref ,x ,%zero ,(constant flonum-data-disp) fp)))
+                (lambda (x)
+                  (constant-case immediate-flonums
+                    [(#t)
+                     ;; unboxed, `x` is a Triv
+                     `(set! ,%Cfpretval ,x)]
+                    [else
+                     ;; boxed, `x` is a var
+                     `(set! ,%Cfpretval ,(%mref ,x ,%zero ,(constant flonum-data-disp) fp))]))
                 '()
                 (list %Cfpretval))]
               [(fp-single-float)
                (values
-                (lambda (x) ; boxed (always a var)
-                  `(set! ,%Cfpretval ,(%inline double->single ,(%mref ,x ,%zero ,(constant flonum-data-disp) fp))))
+                (lambda (x)
+                  (constant-case immediate-flonums
+                    [(#t)
+                     ;; unboxed, `x` is a Triv
+                     `(set! ,%Cfpretval ,(%inline double->single ,x))]
+                    [else
+                     ;; boxed, `x` is a var
+                     `(set! ,%Cfpretval ,(%inline double->single ,(%mref ,x ,%zero ,(constant flonum-data-disp) fp)))]))
                 '()
                 (list %Cfpretval))]
               [(fp-void)

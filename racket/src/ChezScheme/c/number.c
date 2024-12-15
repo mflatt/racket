@@ -1268,10 +1268,23 @@ static double floatify_ratnum(ptr tc, ptr p) {
     return big_floatify(tc, x, y, xl, yl, xs);
 }
 
+#if defined(scheme_feature_immed_flonum)
+double Sflonum_value(ptr x) {
+  if (((uptr)x & mask_immediate_flonum) == type_immediate_flonum) {
+    double d;
+    x = (ptr)((((uptr)((iptr)x >> immediate_flonum_mask_bits)) >> immediate_flonum_hi_bits)
+              | (((uptr)x >> immediate_flonum_mask_bits) << immediate_flonum_lo_bits));
+    memcpy(&d, &x, sizeof(double));
+    return d;
+  } else
+    return FLODAT(x);
+}
+#endif
+
 double S_floatify(ptr x) {
   ptr tc = get_thread_context();
 
-  if (Sflonump(x)) return FLODAT(x);
+  if (Sflonump(x)) return Sflonum_value(x);
   else if (Sfixnump(x)) return (double)UNFIX(x);
   else if (Sbignump(x)) return big_short_floatify(tc, x, 1, BIGLEN(x), BIGSIGN(x));
   else if (Sratnump(x)) return floatify_ratnum(tc, x);

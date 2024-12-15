@@ -548,6 +548,16 @@ static int flonum_is_forwarded_p(ptr p, seginfo *si) {
 
 # define FORWARDEDP(p, si) ((TYPEBITS(p) == type_flonum) ? flonum_is_forwarded_p(p, si) : (FWDMARKER(p) == forward_marker))
 # define GET_FWDADDRESS(p) ((TYPEBITS(p) == type_flonum) ? FLONUM_FWDADDRESS(p) : FWDADDRESS(p))
+# define FORWARDING_USES_SEGINFO
+#elif defined(scheme_feature_immed_flonum)
+/* When immediate flonums are supported, flonum pointers must be
+   doubleword-aligned and do not overlap with inexactnums,
+   so we can forward them the usual way */
+# define FORWARDEDP(p, si) (FWDMARKER(p) == forward_marker)
+# define GET_FWDADDRESS(p) FWDADDRESS(p)
+# define FLONUM_FWDADDRESS(p) GET_FWDADDRESS(p)
+# define flonum_set_forwarded(tgc, p, si) FWDMARKER(p) = forward_marker
+# define flonum_is_forwarded_p(p, si) FORWARDEDP(p, si)
 #else
 # define FORWARDEDP(p, si) (FWDMARKER(p) == forward_marker && TYPEBITS(p) != type_flonum)
 # define GET_FWDADDRESS(p) FWDADDRESS(p)
@@ -1401,7 +1411,9 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
                      representative can't itself be a tconc, so we
                      won't discover any new tconcs at that point. */
                   ptr obj = GUARDIANOBJ(ls);
+#if defined(FORWARDING_USES_SEGINFO) || !defined(NO_NEWSPACE_MARKS)
                   seginfo *o_si = SegInfo(ptr_get_segment(obj));
+#endif
                   if (FORWARDEDP(obj, o_si) || new_marked(o_si, obj)) {
                     /* Object is reachable, so we might as well move
                        this one to the hold list --- via pend_hold_ls, which
@@ -1499,7 +1511,9 @@ ptr GCENTRY(ptr tc, ptr count_roots_ls) {
               ls = maybe_final_ordered_ls; maybe_final_ordered_ls = Snil;
               for (; ls != Snil; ls = next) {
                 ptr obj = GUARDIANOBJ(ls);
+#if defined(FORWARDING_USES_SEGINFO) || !defined(NO_NEWSPACE_MARKS)
                 seginfo *o_si = SegInfo(ptr_get_segment(obj));
+#endif
                 next = GUARDIANNEXT(ls);
                 if (FORWARDEDP(obj, o_si) || new_marked(o_si, obj)) {
                   /* Will defintely move to hold_ls, but the entry

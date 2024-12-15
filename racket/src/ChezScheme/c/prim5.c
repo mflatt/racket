@@ -199,7 +199,7 @@ static ptr s_trunc_rem(ptr x, ptr y) {
 }
 
 static ptr s_fltofx(ptr x) {
-    return FIX((iptr)FLODAT(x));
+    return FIX((iptr)Sflonum_value(x));
 }
 
 static ptr s_weak_pairp(ptr p) {
@@ -318,7 +318,7 @@ static ptr s_float(ptr x) {
 
 static ptr s_decode_float(ptr x) {
     require(Sflonump(x),"decode-float","~s is not a float",x);
-    return S_decode_float(FLODAT(x));
+    return S_decode_float(Sflonum_value(x));
 }
 
 #define FMTBUFSIZE 120
@@ -1109,7 +1109,7 @@ static ptr s_flrandom(ptr x) {
     t2 = RANDOMSEED(tc) = RANDOMSEED(tc) * 72931 + 90763387;
     t3 = RANDOMSEED(tc) = RANDOMSEED(tc) * 72931 + 90763387;
     t4 = RANDOMSEED(tc) = RANDOMSEED(tc) * 72931 + 90763387;
-    return Sflonum(S_random_double(t1, t2, t3, t4, FLODAT(x)));
+    return Sflonum(S_random_double(t1, t2, t3, t4, Sflonum_value(x)));
 }
 
 static U32 s_random_seed() {

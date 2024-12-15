@@ -2050,7 +2050,7 @@
     (define-record-type vfasl-demo
       (fields x y)
       (nongenerative #{vfasl-demo pfwhk286n2j894o33awcq9er4-0}))
-    (define vfasl-content (list 1 1/2 3.0 4+5i 6.0+7.0i
+    (define vfasl-content (list 1 1/2 3.0 4+5i 6.0+7.0i 1e100
                                 "apple" 'banana (string->uninterned-symbol "coconut")
                                 (make-vfasl-demo 10 "11")
                                 (vector 1 'two "three")

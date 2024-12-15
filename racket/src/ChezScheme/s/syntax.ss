@@ -10324,7 +10324,7 @@
   (lambda (x)
     (syntax-case x ()
       [(_ expr)
-       #`(or expr #,($make-source-oops #f "failed assertion" #'expr))])))
+       #`(or expr #,($make-source-oops #f "failed assertion" (syntax->datum #'expr)))])))
 
 (let ()
   (module types (source make-source source? source-sfd source-bfp source-efp
