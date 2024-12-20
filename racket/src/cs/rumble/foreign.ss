@@ -50,10 +50,15 @@
 
 (define null-fptr (make-ftype-pointer integer-8 0))
 
-;; Follows `prop:cpointer` properties as needed.
+;; Follows `prop:cpointer` properties as needed, in two parts to
+;; encourage inlining of the common case
 (define (cptr->fptr who p)
   (cond
-   [(authentic-cpointer? p) (cpointer-fptr p)]
+    [(authentic-cpointer? p) (cpointer-fptr p)]
+    [else (#%$app/no-inline other-cptr->fptr who p)]))
+
+(define (other-cptr->fptr who p)
+  (cond
    [(not p) null-fptr]
    [(bytes? p) (make-ftype-object-pointer p)]
    [else (let ([v (cpointer-property-ref p none)])
@@ -355,7 +360,7 @@
 (define-ctype _bool boolean 'bool)
 (define-ctype _double double 'double * (checker who flonum?))
 (define-ctype _fixnum fixnum 'fixnum * (checker who fixnum?))
-(define-ctype _float float 'float * * (checker who flonum?))
+(define-ctype _float float 'float * (checker who flonum?))
 (define-ctype _int8 integer-8 'int8 * (integer-checker who signed 8 fixnum?))
 (define-ctype _int16 integer-16 'int16 * (integer-checker who signed 16 fixnum?))
 (define-ctype _int32 integer-32 'int32 * (integer-checker who signed 32 exact-integer?))
@@ -612,9 +617,7 @@
                                (lambda (for-whom s) (cptr->fptr for-whom s))
                                ;; `ref` just returns the pointer, which is maybe an
                                ;; offset into another structure
-                               (lambda (c offset) (if (eqv? offset 0)
-                                                      c
-                                                      (do-ptr-add c offset #f)))
+                               (lambda (c offset) (do-ptr-add c offset #f))
                                (lambda (for-whom dest-c offset s)
                                  ;; `set!` corresponds to a copy
                                  (memcpy* (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s) 0 size #f))
@@ -644,7 +647,7 @@
                            ;; same implementation as `struct`:
                            (lambda (c) (fptr->cptr c))
                            (lambda (for-whom s) (cptr->fptr for-whom s))
-                           (lambda (c offset) (if (eqv? offset 0) c (do-ptr-add c offset #f)))
+                           (lambda (c offset) (do-ptr-add c offset #f))
                            (lambda (for-whom dest-c offset s) (memcpy* (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s) 0 size #f))
                            make-decls
                            size
@@ -673,7 +676,7 @@
                            ;; same implementation as `struct`:
                            (lambda (c) (fptr->cptr c))
                            (lambda (for-whom s) (cptr->fptr for-whom s))
-                           (lambda (c offset) (if (eqv? offset 0) c (do-ptr-add c offset #f)))
+                           (lambda (c offset) (do-ptr-add c offset #f))
                            (lambda (for-whom dest-c offset s) (memcpy* (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s) 0 size #f))
                            make-decls
                            size
@@ -970,16 +973,18 @@
          #'(let ([x p]
                  [o offset])
              (unless (fixnum? o) (bad-ptr-ref-offset o))
-             (if (and (bytes? x) (fx= 0 (fxand o (fx- (fxsll 1 type-bits) 1))))
-                 (bytes-ref x (fxsrl o type-bits))
-                 (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) o)))]
+             (begin-unsafe
+              (if (and (bytes? x) (fx= 0 (fxand o (fx- (fxsll 1 type-bits) 1))))
+                  (bytes-ref x o)
+                  (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) o))))]
         [(_ p offset #f)
          #'(let ([x p]
                  [o offset])
              (unless (fixnum? o) (bad-ptr-ref-offset o))
-             (if (bytes? x)
-                 (bytes-ref x o)
-                 (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) (fxsll o type-bits))))]
+             (begin-unsafe
+              (if (bytes? x)
+                  (bytes-ref x (fxsll o type-bits))
+                  (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) (fxsll o type-bits)))))]
         [(_ arg (...  ...)) #'(noninline-ref arg (... ...))]
         [_ #'noninline-ref]))
     (define-syntax (set stx)
@@ -990,18 +995,20 @@
                  [v val])
              (unless (fixnum? o) (bad-ptr-set!-offset o))
              (unless (ok-v? v) (bad-ptr-set!-val '_type v))
-             (if (and (bytes? x) (fx= 0 (fxand offset (fx- (fxsll 1 type-bits) 1))))
-                 (bytes-set x (fxsrl o type-bits) v)
-                 (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) o v)))]
+             (begin-unsafe
+              (if (and (bytes? x) (fx= 0 (fxand offset (fx- (fxsll 1 type-bits) 1))))
+                  (bytes-set x o v)
+                  (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) o v))))]
         [(_ p offset val #f)
          #'(let ([x p]
                  [o offset]
                  [v val])
              (unless (fixnum? o) (bad-ptr-ref-offset o))
              (unless (ok-v? v) (bad-ptr-set!-val '_type v))
-             (if (bytes? x)
-                 (bytes-set x o v)
-                 (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) (fxsll o type-bits) v)))]
+             (begin-unsafe
+              (if (bytes? x)
+                  (bytes-set x (fxsll o type-bits) v)
+                  (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) (fxsll o type-bits) v))))]
         [(_ arg (... ...)) #'(noninline-set arg (... ...))]
         [_ #'noninline-set]))
     (define noninline-ref
@@ -1250,9 +1257,7 @@
    [(eq? mode 'raw)
     (fptr->cptr (make-ftype-pointer integer-8 (foreign-alloc size)))]
    [(eq? mode 'atomic)
-    (let ([p (make-ftype-object-pointer (make-bytevector size))])
-      (collect)
-      (fptr->cptr p))]
+    (fptr->cptr (make-ftype-object-pointer (make-bytevector size)))]
    [(eq? mode 'nonatomic)
     (fptr->cptr (make-ftype-object-pointer (make-reference-bytevector size)))]
    [(eq? mode 'atomic-interior)

@@ -126,8 +126,7 @@ In both cases, it works like `test` but uses `compare` instead of `equal?`.
                        (λ (e)
                          (printf "GOT EXN ~s\n" e)
                          (record-error (list `(EXN ,e) expect form))
-                         (printf "  BUT EXPECTED ~s\n" expect)
-                         (exit))])
+                         (printf "  BUT EXPECTED ~s\n" expect))])
         (let ([res (if (procedure? fun)
                        (if kws (keyword-apply fun kws kvs args) (apply fun args))
                        (car args))])
@@ -143,7 +142,6 @@ In both cases, it works like `test` but uses `compare` instead of `equal?`.
                (unless ok?
                  (record-error (list res expect form))
                  (printf "  BUT EXPECTED ~s~a\n" expect compare))
-               (unless ok? (exit))
                ok?])))))
     (define (test/kw kws kvs expect fun . args) (test* expect fun args kws kvs #f))
     (define (test    expect fun         . args) (test* expect fun args #f #f #f))
