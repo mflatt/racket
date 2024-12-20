@@ -77,7 +77,7 @@
 
 ;; Never fails, even if a `prop:cpointer` result is broken
 (define (extract-authentic-cpointer p)
-  (let ([v (cpointer-property-ref p)])
+  (let ([v (cpointer-property-ref p #f)])
     (cond
       [(exact-nonnegative-integer? v)
        (let ([v (unsafe-struct-ref p v)])
@@ -137,25 +137,28 @@
                    (cptr->fptr who p2)))
 
 (define/who (ptr-offset p)
-  (let ([p (cptr->fptr who p)])
-    (ptr-offset* p)))
+  (cond
+    [(cpointer+offset? p)
+     (let ([m (cpointer-fptr p)]
+           [m2 (cpointer+offset-base-fptr p)])
+       (cond
+         [(ftype-object-pointer? m) (- (ftype-pointer-offset m)
+                                       (ftype-pointer-offset m2))]
+         [else (- (ftype-pointer-address m)
+                  (ftype-pointer-address m2))]))]
+    [(cpointer? p)
+     (let ([p (extract-authentic-cpointer p)])
+       (if (cpointer+offset? p)
+           (ptr-offset p)
+           0))]
+    [else
+     (raise-argument-error who "cpointer?" p)]))
 
-(define (ptr-offset* p)
-  (if (cpointer+offset? p)
-      (let ([m (cpointer-fptr p)]
-            [m2 (cpointer+offset-base-fptr p)])
-        (cond
-          [(ftype-object-pointer? m) (- (ftype-pointer-offset m)
-                                        (ftype-pointer-offset m2))]
-          [else (- (ftype-pointer-address m)
-                   (ftype-pointer-address m2))]))
-      0))
-
-(define (set-ptr-offset! p n)
+(define/who (set-ptr-offset! p n)
   (unless (cpointer+offset? p)
-    (raise-argument-error 'ptr-offset "(and/c cpointer? ptr-offset?)" p))
+    (raise-argument-error who "(and/c cpointer? ptr-offset?)" p))
   (unless (exact-integer? n)
-    (raise-argument-error 'ptr-offset "exact-integer?" n))
+    (raise-argument-error who "exact-integer?" n))
   (cpointer-fptr-set! p (let ([m (cpointer+offset-base-fptr p)])
                           (cond
                             [(ftype-object-pointer? m)
@@ -236,6 +239,8 @@
           in-host-rep ; usually  the same as `host-rep`, but may be generic instade of GCable
           our-rep     ; Racket representation description
           basetype    ; parent ctype or the same as `our-rep`
+          c->scheme   ; immediate layer of c->s
+          scheme->c   ; immediate later of s->c
           c->s        ; converter of values from `basetype`
           s->c        ; converter of values to `basetype`
           ref         ; pointer-referencing operation, includes `c->s` step
@@ -275,6 +280,8 @@
                               (ctype-in-host-rep type)
                               (ctype-our-rep type)
                               type
+                              c-to-racket
+                              racket-to-c
                               new-c->s
                               new-s->c
                               new-ref
@@ -288,10 +295,15 @@
                      (ctype-in-host-rep type)
                      (ctype-our-rep type)
                      type
+                     c-to-racket
+                     racket-to-c
                      new-c->s
                      new-s->c
                      new-ref
                      new-set)])))
+
+(define (identity-scheme->c v) v)
+(define (identity-c->scheme v) v)
 
 ;; ----------------------------------------
 
@@ -303,25 +315,31 @@
      (define-ctype id host-rep host-rep basetype c->s s->c/whom)]
     [(_ id host-rep in-host-rep basetype * *)
      (define/who id (create-ctype 'host-rep 'in-host-rep basetype basetype
+                                  identity-c->scheme
+                                  identity-scheme->c
                                   (lambda (c) c)
                                   (lambda (for-whom s) s)
                                   (lambda (c offset) (ftype-any-ref host-rep () (cptr->fptr who c) offset))
                                   (lambda (for-whom dest-c offset s)
                                     (ftype-any-set! host-rep () (cptr->fptr for-whom dest-c) offset s))))]
     [(_ id host-rep in-host-rep basetype * s->c/whom)
-      (define/who id (create-ctype 'host-rep 'in-host-rep basetype basetype
-                                   (lambda (c) c)
-                                   s->c/whom
-                                   (lambda (c offset) (ftype-any-ref host-rep () (cptr->fptr who c) offset))
-                                   (lambda (for-whom dest-c offset s)
-                                     (ftype-any-set! host-rep () (cptr->fptr for-whom dest-c) offset (s->c/whom for-whom s)))))]
-     [(_ id host-rep in-host-rep basetype c->s s->c/whom)
-      (define/who id (create-ctype 'host-rep 'in-host-rep basetype basetype
-                                   c->s
-                                   s->c/whom
-                                   (lambda (c offset) (c->s (ftype-any-ref host-rep () (cptr->fptr who c) offset)))
-                                   (lambda (for-whom dest-c offset s)
-                                     (ftype-set! host-rep () (cptr->fptr for-whom dest-c) offset (s->c/whom for-whom s)))))]))
+     (define/who id (create-ctype 'host-rep 'in-host-rep basetype basetype
+                                  identity-c->scheme
+                                  identity-scheme->c
+                                  (lambda (c) c)
+                                  s->c/whom
+                                  (lambda (c offset) (ftype-any-ref host-rep () (cptr->fptr who c) offset))
+                                  (lambda (for-whom dest-c offset s)
+                                    (ftype-any-set! host-rep () (cptr->fptr for-whom dest-c) offset (s->c/whom for-whom s)))))]
+    [(_ id host-rep in-host-rep basetype c->s s->c/whom)
+     (define/who id (create-ctype 'host-rep 'in-host-rep basetype basetype
+                                  identity-c->scheme
+                                  identity-scheme->c
+                                  c->s
+                                  s->c/whom
+                                  (lambda (c offset) (c->s (ftype-any-ref host-rep () (cptr->fptr who c) offset)))
+                                  (lambda (for-whom dest-c offset s)
+                                    (ftype-any-set! host-rep () (cptr->fptr for-whom dest-c) offset (s->c/whom for-whom s)))))]))
 
 ;; We need `s->c` checks, even if they seem redundant, to make sure
 ;; that the checks happen early enough --- outside of atomic and
@@ -349,6 +367,8 @@
 
 (define/who _void
   (create-ctype 'void 'void 'void 'void
+                identity-c->scheme
+                identity-scheme->c
                 (lambda (c) c)
                 (lambda (for-whom s) s)
                 (lambda (c offset)
@@ -358,12 +378,15 @@
 
 (define/who _scheme
   (create-ctype 'scheme-object 'scheme-object 'scheme 'scheme
+                identity-c->scheme
+                identity-scheme->c
                 (lambda (c) c)
                 (lambda (for-whom s) s)
                 (lambda (c offset)
-                  ;; It's not clear that this makes sense, but we can at least
-                  ;; store and load a byte string
-                  (ftype-any-ref ftype-object-pointer () (cptr->fptr who c) offset))
+                  ;; only sensible if c is nonatomic memory or the retrived object
+                  ;; is immobile
+                  (ftype-pointer-object
+                   (ftype-any-ref ftype-object-pointer () (cptr->fptr who c) offset)))
                 (lambda (for-whom dest-c offset s)
                   (let ([m (cptr->fptr for-whom dest-c)])
                     (if (and (ftype-object-pointer? m)
@@ -371,8 +394,9 @@
                         ;; use `bytevector-reference-set!` to get write barrier
                         (let ([offset (+ offset (ftype-pointer-offset m))])
                           (bytevector-reference-set! (ftype-pointer-object m) offset s))
-                        ;; no good in general, but maybe the caller knows that `s` is immobile
-                        (ftype-any-set! ftype-pointer () (cptr->fptr for-whom dest-c) offset s))))))
+                        ;; only sensible if `s` is immobile
+                        (ftype-any-set! ftype-object-pointer () (cptr->fptr for-whom dest-c) offset
+                                        (make-ftype-object-pointer s)))))))
 
 (define (bad-ctype-value who type-name v)
   (raise-arguments-error who
@@ -384,6 +408,8 @@
   (syntax-rules (*)
     [(_ id basetype c->s s->c/whom)
      (define/who id (create-ctype 'ftype-pointer 'ftype-pointer basetype basetype
+                                  identity-c->scheme
+                                  identity-scheme->c
                                   c->s
                                   s->c/whom
                                   (lambda (c offset) (let ([m (cptr->fptr who c)])
@@ -393,7 +419,7 @@
                                                             (ftype-any-ref ftype-object-pointer () m offset)
                                                             (ftype-any-ref ftype-pointer () m offset)))))
                                   (lambda (for-whom dest-c offset s)
-                                    (ftype-set! ftype-pointer () (cptr->fptr for-whom dest-c) offset (s->c/whom for-whom s)))))]))
+                                    (ftype-any-set! ftype-pointer () (cptr->fptr for-whom dest-c) offset (s->c/whom for-whom s)))))]))
 
 (define (fptr->bytevector/nul m)
   (cond
@@ -512,8 +538,10 @@
 
 (define/who _pointer
   (create-ctype 'ftype-pointer 'ftype-pointer 'pointer 'pointer
-                (lambda (c) (fptr->cptr c))
-                (checker who cpointer?)
+                identity-c->scheme
+                identity-scheme->c
+                fptr->cptr
+                cptr->fptr
                 (lambda (c offset)
                   ;; It would make sense to promote to `_gcpointer` if
                   ;; `c` refers to GCable memory, as below, but we preserve
@@ -531,8 +559,10 @@
 
 (define/who _fpointer
   (create-ctype 'ftype-pointer 'ftype-pointer 'fpointer 'fpointer
-                (lambda (c) (fptr->cptr c))
-                (checker who cpointer?)
+                identity-c->scheme
+                identity-scheme->c
+                fptr->cptr
+                cptr->fptr
                 (lambda (c offset)
                   (if (and (ffi-obj? c) (eqv? offset 0))
                       ;; Special case for `ptr-ref` on a function-type ffi-object:
@@ -544,9 +574,11 @@
                   (ftype-any-set! ftype-pointer () (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s)))))
 
 (define/who _gcpointer
-  (create-ctype 'ftype-pointer 'ftype-pointer 'pointer 'pointer
-                (lambda (c) (fptr->cptr c))
-                (checker who cpointer?)
+  (create-ctype 'ftype-object-pointer 'ftype-object-pointer 'pointer 'pointer
+                identity-c->scheme
+                identity-scheme->c
+                fptr->cptr
+                cptr->fptr
                 (lambda (c offset)
                   (fptr->cptr (ftype-any-ref ftype-object-pointer () (cptr->fptr who c) offset)))
                 pointer-set!))
@@ -574,6 +606,8 @@
         (create-compound-ctype 'struct 'struct
                                'struct
                                types
+                               identity-scheme->c
+                               identity-c->scheme
                                (lambda (c) (fptr->cptr c))
                                (lambda (for-whom s) (cptr->fptr for-whom s))
                                ;; `ref` just returns the pointer, which is maybe an
@@ -583,7 +617,7 @@
                                                       (do-ptr-add c offset #f)))
                                (lambda (for-whom dest-c offset s)
                                  ;; `set!` corresponds to a copy
-                                 (memcpy* dest-c offset (cptr->fptr for-whom s) 0 size #f))
+                                 (memcpy* (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s) 0 size #f))
                                make-decls
                                size
                                alignment
@@ -605,11 +639,13 @@
     (create-compound-ctype 'union 'union
                            'union
                            types
+                           identity-scheme->c
+                           identity-c->scheme
                            ;; same implementation as `struct`:
                            (lambda (c) (fptr->cptr c))
                            (lambda (for-whom s) (cptr->fptr for-whom s))
                            (lambda (c offset) (if (eqv? offset 0) c (do-ptr-add c offset #f)))
-                           (lambda (for-whom dest-c offset s) (memcpy* dest-c offset (cptr->fptr for-whom s) 0 size #f))
+                           (lambda (for-whom dest-c offset s) (memcpy* (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s) 0 size #f))
                            make-decls
                            size
                            alignment
@@ -632,11 +668,13 @@
     (create-compound-ctype 'array 'array
                            'array
                            (vector type count)
+                           identity-scheme->c
+                           identity-c->scheme
                            ;; same implementation as `struct`:
                            (lambda (c) (fptr->cptr c))
                            (lambda (for-whom s) (cptr->fptr for-whom s))
                            (lambda (c offset) (if (eqv? offset 0) c (do-ptr-add c offset #f)))
-                           (lambda (for-whom dest-c offset s) (memcpy* dest-c offset (cptr->fptr for-whom s) 0 size #f))
+                           (lambda (for-whom dest-c offset s) (memcpy* (cptr->fptr for-whom dest-c) offset (cptr->fptr for-whom s) 0 size #f))
                            make-decls
                            size
                            alignment
@@ -796,12 +834,11 @@
   (let ([p (cptr->fptr who p)])
     (ftype-object-pointer? p)))
 
-(define (ctype-c->scheme type)
-  (ctype-c->s type))
-
-(define (ctype-scheme->c type)
-  (let ([s->c (ctype-s->c type)])
-    (lambda (v) (s->c 'external v))))
+(define (ctype-pointer-rep? type)
+  (case (ctype-host-rep type)
+    [(ftype-pointer ftype-object-pointer struct array union)
+     #t]
+    [else #f]))
 
 ;; ----------------------------------------
 
@@ -933,16 +970,16 @@
          #'(let ([x p]
                  [o offset])
              (unless (fixnum? o) (bad-ptr-ref-offset o))
-             (if (bytes? x)
-                 (bytes-ref x o)
+             (if (and (bytes? x) (fx= 0 (fxand o (fx- (fxsll 1 type-bits) 1))))
+                 (bytes-ref x (fxsrl o type-bits))
                  (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) o)))]
         [(_ p offset #f)
          #'(let ([x p]
                  [o offset])
              (unless (fixnum? o) (bad-ptr-ref-offset o))
-             (if (and (bytes? x) (fx= 0 (fxand o (fx- (fxsll 1 type-bits) 1))))
-                 (bytes-ref x (fxsll o type-bits))
-                 (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) o)))]
+             (if (bytes? x)
+                 (bytes-ref x o)
+                 (ftype-any-ref ftype () (cptr->fptr 'ptr-ref x) (fxsll o type-bits))))]
         [(_ arg (...  ...)) #'(noninline-ref arg (... ...))]
         [_ #'noninline-ref]))
     (define-syntax (set stx)
@@ -953,8 +990,8 @@
                  [v val])
              (unless (fixnum? o) (bad-ptr-set!-offset o))
              (unless (ok-v? v) (bad-ptr-set!-val '_type v))
-             (if (bytes? x)
-                 (bytes-set x o v)
+             (if (and (bytes? x) (fx= 0 (fxand offset (fx- (fxsll 1 type-bits) 1))))
+                 (bytes-set x (fxsrl o type-bits) v)
                  (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) o v)))]
         [(_ p offset val #f)
          #'(let ([x p]
@@ -962,9 +999,9 @@
                  [v val])
              (unless (fixnum? o) (bad-ptr-ref-offset o))
              (unless (ok-v? v) (bad-ptr-set!-val '_type v))
-             (if (and (bytes? x) (fx= 0 (fxand offset (fx- (fxsll 1 type-bits) 1))))
-                 (bytes-set x (fxsll o type-bits) v)
-                 (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) o v)))]
+             (if (bytes? x)
+                 (bytes-set x o v)
+                 (ftype-any-set! ftype () (cptr->fptr 'ptr-ref x) (fxsll o type-bits) v)))]
         [(_ arg (... ...)) #'(noninline-set arg (... ...))]
         [_ #'noninline-set]))
     (define noninline-ref
@@ -1032,7 +1069,7 @@
       (check who exact-integer? offset/src-cptr/src-cptr)
       (check who cpointer? src-cptr/offset/count)
       (check who exact-nonnegative-integer? count/count/type)
-      (memcpy* (cptr->fptr who cptr) offset/src-cptr/src-cptr src-cptr/offset/count 0 count/count/type (eq? who 'memmove))])]
+      (memcpy* (cptr->fptr who cptr) offset/src-cptr/src-cptr (cptr->fptr who src-cptr/offset/count) 0 count/count/type (eq? who 'memmove))])]
    [(who cptr offset src-cptr src-offset/count count/type)
     (check who cpointer? cptr)
     (check who exact-integer? offset)
@@ -1042,12 +1079,12 @@
       ;; use y of x/y
       (check who exact-nonnegative-integer? src-offset/count)
       (let ([sz (ctype-sizeof count/type)])
-        (memcpy* (cptr->fptr who cptr) (* sz offset) src-cptr 0 (* src-offset/count sz) (eq? who 'memmove)))]
+        (memcpy* (cptr->fptr who cptr) (* sz offset) (cptr->fptr who src-cptr) 0 (* src-offset/count sz) (eq? who 'memmove)))]
      [else
       ;; use x of x/y
       (check who exact-integer? src-offset/count)
       (check who exact-nonnegative-integer? count/type)
-      (memcpy* (cptr->fptr who cptr) offset src-cptr src-offset/count count/type (eq? who 'memmove))])]
+      (memcpy* (cptr->fptr who cptr) offset (cptr->fptr who src-cptr) src-offset/count count/type (eq? who 'memmove))])]
    [(who cptr offset src-cptr src-offset count type)
     (check who cpointer? cptr)
     (check who exact-integer? offset)
@@ -1055,7 +1092,7 @@
     (check who exact-integer? src-offset)
     (check who ctype? type)
     (let ([sz (ctype-sizeof type)])
-      (memcpy* (cptr->fptr who cptr) (* offset sz) src-cptr (* src-offset sz) (* count sz) (eq? who 'memmove)))]))
+      (memcpy* (cptr->fptr who cptr) (* offset sz) (cptr->fptr who src-cptr) (* src-offset sz) (* count sz) (eq? who 'memmove)))]))
 
 (define/who memcpy
   (case-lambda
@@ -1085,7 +1122,7 @@
   (let ([to (cptr->fptr 'memset to)])
     (let loop ([i to-offset] [len len])
       (unless (fx= len 0)
-        (ftype-set! unsigned-8 () to i byte)
+        (ftype-any-set! unsigned-8 () to i byte)
         (loop (+ i 1) (fx- len 1))))))
 
 (define/who memset
@@ -1213,7 +1250,9 @@
    [(eq? mode 'raw)
     (fptr->cptr (make-ftype-pointer integer-8 (foreign-alloc size)))]
    [(eq? mode 'atomic)
-    (fptr->cptr (make-ftype-object-pointer (make-bytevector size)))]
+    (let ([p (make-ftype-object-pointer (make-bytevector size))])
+      (collect)
+      (fptr->cptr p))]
    [(eq? mode 'nonatomic)
     (fptr->cptr (make-ftype-object-pointer (make-reference-bytevector size)))]
    [(eq? mode 'atomic-interior)
@@ -1237,14 +1276,10 @@
     (foreign-free (ftype-pointer-address p))))
 
 (define/who (lock-cpointer p)
-  (when (authentic-cpointer? p)
-    (let ([p (cptr->fptr who p)])
-      (lock-object (ftype-pointer-object p)))))
+  (lock-object (ftype-pointer-object p)))
 
 (define/who (unlock-cpointer p)
-  (when (authentic-cpointer? p)
-    (let ([p (cptr->fptr who p)])
-      (unlock-object (ftype-pointer-object p)))))
+  (unlock-object (ftype-pointer-object p)))
 
 (define-record-type (cpointer/cell make-cpointer/cell cpointer/cell?)
   (parent cpointer)
@@ -1566,7 +1601,9 @@
                                  orig-args in-types)]
                       [r (let ([ret-ptr (and ret-size
                                              ;; result is a struct type; need to allocate space for it
-                                             (normalized-malloc ret-size ret-malloc-mode))])
+                                             (cptr->fptr
+                                              'ret
+                                              (normalized-malloc ret-size ret-malloc-mode)))])
                            (let ([go (lambda ()
                                        (when lock (mutex-acquire lock))
                                        (with-interrupts-disabled*
