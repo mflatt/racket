@@ -44127,7 +44127,7 @@
                               (namespace->definitions ns_2 0))
                              #f
                              core-mpi
-                             #f
+                             insp_0
                              #f
                              #f)
                             #f))
