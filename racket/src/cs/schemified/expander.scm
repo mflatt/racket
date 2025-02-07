@@ -44111,27 +44111,30 @@
                                      table_2)))))
                               (for-loop_0 table_1 lst_2 lst_1))))))))))
              (let ((temp21_0
-                    (lambda (phase-level_0 ns_1 insp_0)
-                      (if (zero? phase-level_0)
-                        (let ((ns_2
-                               (namespace->module-namespace.1
+                    (let ((insp_0 (current-code-inspector)))
+                      (|#%name|
+                       temp21
+                       (lambda (phase-level_0 ns_1 insp_1)
+                         (if (zero? phase-level_0)
+                           (let ((ns_2
+                                  (namespace->module-namespace.1
+                                   #f
+                                   #f
+                                   void
+                                   ns_1
+                                   core-module-name
+                                   0)))
+                             (if ns_2
+                               (module-linklet-info2.1
+                                (definitions-variables
+                                 (namespace->definitions ns_2 0))
                                 #f
+                                core-mpi
+                                insp_1
                                 #f
-                                void
-                                ns_1
-                                core-module-name
-                                0)))
-                          (if ns_2
-                            (module-linklet-info2.1
-                             (definitions-variables
-                              (namespace->definitions ns_2 0))
-                             #f
-                             core-mpi
-                             #f
-                             #f
-                             #f)
-                            #f))
-                        #f))))
+                                #f)
+                               #f))
+                           #f))))))
                (let ((temp22_0
                       (lambda (data-box_0
                                ns_1
