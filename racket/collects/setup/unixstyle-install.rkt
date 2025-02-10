@@ -205,10 +205,13 @@
       (run "mv" "--" src dst))))
 
 ;; list of changes, so we can undo them in case of an error and so we can
-;; create an uninstaller
+;; create an uninstaller; the last argument to `register-change!` must be
+;; a destination path
 (define path-changes '())
+(define changed-paths (make-hash))
 (define (register-change! op . args)
-  (set! path-changes (cons (cons op args) path-changes)))
+  (set! path-changes (cons (cons op args) path-changes))
+  (hash-set! changed-paths (last args) #t))
 
 ;; like `mv', but also record moves
 (define (mv* src dst)
@@ -466,8 +469,11 @@
     (register-change! 'md dir)))
 
 (define yes-to-all? #f)
-(define (ask-overwrite kind path)
-  (let ([rm (lambda () (rm path))])
+(define (ask-overwrite kind path #:merge? merge?)
+  (let ([rm (lambda ()
+              (when (and merge? (hash-ref changed-paths path))
+                (error 'merge "merge would overwrite previous path: ~a" path))
+              (rm path))])
     (if yes-to-all?
       (rm)
       (begin (printf "Overwrite ~a \"~a\"?\n" kind path)
@@ -504,12 +510,11 @@
              [dst-f? (file-exists? dst)])
          (unless (skip-filter src)
            (when (and src-d? (not lvl) (not dst-d?))
-             (unless merge?
-               (when (or dst-l? dst-f?) (ask-overwrite "file or link" dst)))
+             (when (or dst-l? dst-f?) (ask-overwrite "file or link" dst #:merge? merge?))
              (make-directory dst)
              (register-change! 'md dst)
              (set! dst-d? #t) (set! dst-l? #f) (set! dst-f? #f))
-           (cond [dst-l? (unless merge? (ask-overwrite "symlink" dst)) (doit)]
+           (cond [dst-l? (ask-overwrite "symlink" dst #:merge? merge?) (doit)]
                  [dst-d? (if (and src-d? (or (not lvl) (< 0 lvl)))
                            ;; recur only when source is dir, & not too deep
                            (for-each (lambda (name)
@@ -517,8 +522,8 @@
                                              (make-path dst name)
                                              (and lvl (sub1 lvl))))
                                      (ls src))
-                           (begin (unless merge? (ask-overwrite "dir" dst)) (doit)))]
-                 [dst-f? (unless merge? (ask-overwrite "file" dst)) (doit)]
+                           (begin (ask-overwrite "dir" dst #:merge? merge?) (doit)))]
+                 [dst-f? (ask-overwrite "file" dst #:merge? merge?) (doit)]
                  [else (doit)]))))
      (when move? (remove-empty-dirs src))]
     [(eq? missing 'error)
