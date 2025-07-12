@@ -51,7 +51,9 @@
            poll-custodian-will-executor))
 
 (module+ for-future
-  (provide set-custodian-future-callbacks!))
+  (provide set-custodian-future-callbacks!
+           current-custodian
+           custodian-will-executor))
 
 ;; For `(struct custodian ...)`, see "custodian-object.rkt"
 
@@ -233,7 +235,7 @@
 
 (define/who (custodian-shutdown-all c)
   (check who custodian? c)
-  (atomically
+  (atomically/no-exit-barrier
    (do-custodian-shutdown-all c))
   ;; Set in "thread.rkt" to check whether the current thread
   ;; should be swapped out

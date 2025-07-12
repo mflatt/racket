@@ -205,6 +205,9 @@
   (let ([fp (strip-impersonator (current-future-prompt))]
         [tag (strip-impersonator tag)])
     (cond
+     [(not fp)
+      ;; no need for barrier
+      (void)]
      [(eq? fp tag)
       ;; shortcut: boundary is the future prompt
       (void)]
@@ -409,6 +412,8 @@
     (start-uninterrupted 'abort)
     (do-abort-current-continuation who tag args #t)))
 
+;; This "no-wind" version also doesn't check for a break transition,
+;; since we want to use this in the thread scheduler
 (define/who (unsafe-abort-current-continuation/no-wind tag arg)
   (let ([args (apply-impersonator-abort-wrapper tag (list arg))]
         [tag (strip-impersonator tag)])
@@ -435,7 +440,9 @@
            (metacontinuation-frame-resume-k mf)
            (metacontinuation-frame-marks mf)
            (lambda ()
-             (end-uninterrupted/call-hook 'handle)
+             (if wind?
+                 (end-uninterrupted/call-hook 'handle)
+                 (end-uninterrupted 'handle))
              (if (#%procedure? args)
                  (args) ; assuming that handler is `values`
                  (apply (metacontinuation-frame-handler mf)
@@ -538,6 +545,8 @@
        tag
        wind?)))))
 
+;; This "no-wind" version also doesn't check for a break transition,
+;; since we want to use this in the thread scheduler
 (define (unsafe-call-with-composable-continuation/no-wind p tag)
   (call-with-composable-continuation* p tag #f))
 
@@ -708,7 +717,7 @@
   (current-winders (full-continuation-winders c))
   (current-mark-splice (full-continuation-mark-splice c))
   (end-uninterrupted 'cc)
-  (apply-with-break-transition (full-continuation-k c) (full-continuation-mark-stack c) args))
+  (apply-without-break-transition (full-continuation-k c) (full-continuation-mark-stack c) args))
 
 ;; Used as a "handler" for a prompt without a tag, which is used for
 ;; composable continuations
@@ -1500,7 +1509,7 @@
 
 (define/who current-continuation-marks
   (case-lambda
-    [() (current-continuation-marks the-default-continuation-prompt-tag)]
+   [() (current-continuation-marks the-default-continuation-prompt-tag)]
     [(tag)
      (check who continuation-prompt-tag? tag)
      (maybe-future-barricade tag)
@@ -2109,6 +2118,15 @@
    all-marks
    (lambda ()
      (break-enabled-transition-hook)
+     (if (#%procedure? args)
+         (args)
+         (#%apply values args)))))
+
+(define (apply-without-break-transition k all-marks args)
+  (#%$call-in-continuation
+   k
+   all-marks
+   (lambda ()
      (if (#%procedure? args)
          (args)
          (#%apply values args)))))

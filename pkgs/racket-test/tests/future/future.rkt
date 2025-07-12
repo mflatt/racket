@@ -543,7 +543,7 @@ We should also test deep continuations.
     (check-equal? #t (fsemaphore-try-wait? m1)) 
     (check-equal? #f (fsemaphore-try-wait? m2)))
   
-  ;Test for errors when passing bad arguments 
+  ;Test for errors when passing bad arguments
   (check-exn exn:fail:contract? (λ () (make-fsemaphore -1)))
   (check-exn exn:fail:contract? (λ () (make-fsemaphore (cons "a" "b"))))
   (check-exn exn:fail:contract? (λ () (fsemaphore-count (cons "foo" "goo"))))

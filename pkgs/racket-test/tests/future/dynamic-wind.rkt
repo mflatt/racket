@@ -16,7 +16,7 @@
         (lambda ()
           (memory-order-release)
           (vector-set! bs i #t)
-          (current-continuation-marks))
+          (current-thread))
         (lambda ()
           (vector-set! ns i (sub1 (vector-ref ns i)))))))))
 

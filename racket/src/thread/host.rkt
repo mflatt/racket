@@ -34,6 +34,8 @@
 
 (bounce #%engine
         make-engine
+        make-engine-thread-cell-state
+        set-engine-thread-cell-state!
         engine-timeout
         engine-return
         engine-roots
