@@ -155,7 +155,6 @@
     [(current-future)
      (future-barrier)
      (define t (current-thread/in-atomic))
-     #;
      (future-exit-barrier)
      t]
     [else

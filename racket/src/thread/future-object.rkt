@@ -12,7 +12,8 @@
 (struct future* (id
                  lock
                  custodian          ; don't run in future pthread if custodian is shut down
-                 [thread #:mutable] ; #f, a thread for unblocking, or a parameterization to create a thread
+                 scheduler          ; futures scheduler that manages the future
+                 [thread #:mutable] ; #f or a thread for unblocking
                  [would-be? #:mutable] ; transitions from #t to 'blocked after blocked
                  [thunk #:mutable]  ; thunk or continuation
                  [prev #:mutable]   ; queue previous
