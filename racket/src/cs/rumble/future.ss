@@ -7,11 +7,13 @@
            #'(virtual-register pos))]))
 
 (define block-future (lambda () (void)))
+(define unblock-future (lambda () (void)))
 (define sync-future (lambda (who thunk) (thunk)))
 (define current-future-prompt (lambda () (void)))
 
-(define (set-future-callbacks! block sync current-prompt)
+(define (set-future-callbacks! block unblock sync current-prompt)
   (set! block-future block)
+  (set! block-future unblock)
   (set! sync-future sync)
   (set! current-future-prompt current-prompt))
 

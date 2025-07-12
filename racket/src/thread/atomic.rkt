@@ -24,6 +24,7 @@
          in-atomic-mode?
 
          future-barrier
+         future-exit-barrier
 
          add-end-atomic-callback!
          flush-end-atomic-callbacks!
@@ -85,7 +86,8 @@
      ;; time interrupt.
      (if (eq? 0 (end-atomic-callback))
          (current-atomic n)
-         (do-end-atomic-callback))]
+         (do-end-atomic-callback))
+     (future-exit-barrier)]
     [(fx< n 0) (bad-end-atomic)]
     [else
      (current-atomic n)]))
@@ -133,6 +135,9 @@
 (define (future-barrier)
   (when (current-future)
     (future-block-for-atomic)))
+(define (future-exit-barrier)
+  (when (current-future)
+    (future-unblock-for-atomic)))
 
 ;; ----------------------------------------
 
@@ -167,9 +172,11 @@
 ;; ----------------------------------------
 
 (define future-block-for-atomic (lambda () (void)))
+(define future-unblock-for-atomic (lambda () (void)))
 
-(define (set-future-block! block)
-  (set! future-block-for-atomic block))
+(define (set-future-block! block unblock)
+  (set! future-block-for-atomic block)
+  (set! future-unblock-for-atomic unblock))
 
 ;; ----------------------------------------
 

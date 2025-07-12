@@ -16,7 +16,8 @@
 
 ;; Normally #f for a place's main pthread (running a Racket thread)
 ;; and non-#f for a future pthread, but can be a would-be future
-;; in the main pthread
+;; in the main pthread, and can be a future for an automatically generated
+;; unblock thread
 (define current-future (make-pthread-parameter #f))
 
 ;; Calling `(current-thread/in-atomic)` is faster than

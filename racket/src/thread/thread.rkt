@@ -151,8 +151,15 @@
 (define-place-local root-thread #f)
 
 (define (current-thread)
-  (future-barrier)
-  (current-thread/in-atomic))
+  (cond
+    [(current-future)
+     (future-barrier)
+     (define t (current-thread/in-atomic))
+     #;
+     (future-exit-barrier)
+     t]
+    [else
+     (current-thread/in-atomic)]))
 
 ;; ----------------------------------------
 ;; Thread creation
