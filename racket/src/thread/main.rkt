@@ -209,6 +209,9 @@
          fsemaphore-try-wait?
          fsemaphore-count
 
+         thread/parallel
+         make-parallel-pool
+
          unsafe-os-thread-enabled?
          unsafe-call-in-os-thread
          unsafe-make-os-semaphore

@@ -133,7 +133,7 @@
        (do-custodian-shutdown-all orig-cust)
        (for ([proc (in-list (place-post-shutdown new-place))])
          (proc))
-       (kill-future-scheduler)
+       (kill-future-schedulers)
        (host:mutex-acquire lock)
        (set-place-result! new-place result)
        (host:mutex-release lock)

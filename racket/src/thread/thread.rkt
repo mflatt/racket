@@ -98,7 +98,10 @@
            thread-did-work!))
 
 (module* for-future #f
-  (provide break-enabled-default-cell))
+  (provide break-enabled-default-cell
+           do-make-thread
+           thread-descheduled?
+           thread-suspended?))
 
 (module* for-stats #f
   (provide thread-descheduled?
@@ -305,9 +308,9 @@
 ;; Thread termination
 
 ;; Called in atomic mode:
-(define (thread-push-kill-callback! cb)
+(define (thread-push-kill-callback! cb [t-in #f])
   (assert-atomic-mode)
-  (define t (current-thread/in-atomic))
+  (define t (or t-in (current-thread/in-atomic)))
   (set-thread-kill-callbacks! t (cons cb (thread-kill-callbacks t))))
 
 ;; Called in atomic mode:
@@ -520,7 +523,7 @@
 ;; "internal"-resumed normally instead of by a break signal of a
 ;; `thread-resume`.
 (define (thread-deschedule! t timeout-at interrupt-callback)
-  (define  retry-callback #f)
+  (define retry-callback #f)
   (atomically
    (set-thread-interrupt-callback! t (lambda ()
                                        ;; If the interrupt callback gets invoked,

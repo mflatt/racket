@@ -51,7 +51,9 @@
            poll-custodian-will-executor))
 
 (module+ for-future
-  (provide set-custodian-future-callbacks!))
+  (provide set-custodian-future-callbacks!
+           current-custodian
+           custodian-will-executor))
 
 ;; For `(struct custodian ...)`, see "custodian-object.rkt"
 

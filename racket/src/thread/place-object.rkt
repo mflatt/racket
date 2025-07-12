@@ -28,7 +28,8 @@
                done-waiting              ; hash table of places to ping when this one ends
                [wakeup-handle #:mutable]
                [dequeue-semas #:mutable] ; semaphores reflecting place-channel waits to recheck
-               [future-scheduler #:mutable]) ; #f or a scheduler of futures
+               [future-scheduler #:mutable] ; #f or a scheduler of futures
+               [schedulers #:mutable])   ; a hash table of additional future schedulers
   #:authentic
   #:property host:prop:unsafe-authentic-override #t ; allow evt chaperone
   #:property prop:evt (struct-field-index pch)
@@ -55,7 +56,8 @@
          (make-hasheq)        ; done-waiting
          #f                   ; wakeup-handle
          '()                  ; dequeue-semas
-         #f))                 ; future scheduler
+         #f                   ; future scheduler
+         (hasheq)))           ; schedulers
 
 (define initial-place (make-place (host:make-mutex)
                                   root-custodian))
