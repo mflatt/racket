@@ -6404,12 +6404,16 @@
   (|#%name|
    current-thread
    (lambda ()
-     (if (1/current-future)
-       (begin
-         (future-barrier)
-         (let ((t_0 (current-thread/in-atomic)))
-           (begin (future-exit-barrier) t_0)))
-       (current-thread/in-atomic)))))
+     (let ((c1_0 (1/current-future)))
+       (if c1_0
+         (let ((or-part_0 (|#%app| future->thread c1_0)))
+           (if or-part_0
+             or-part_0
+             (begin
+               (future-barrier)
+               (let ((t_0 (current-thread/in-atomic)))
+                 (begin (future-exit-barrier) t_0)))))
+         (current-thread/in-atomic))))))
 (define do-make-thread.1
   (|#%name|
    do-make-thread
@@ -7814,9 +7818,9 @@
          (begin0
            (if (1/thread-dead? t_0)
              void
-             (let ((c1_0 (thread-forward-break-to t_0)))
-               (if c1_0
-                 (lambda () (do-break-thread c1_0 kind_0 check-t_0))
+             (let ((c2_0 (thread-forward-break-to t_0)))
+               (if c2_0
+                 (lambda () (do-break-thread c2_0 kind_0 check-t_0))
                  (begin
                    (if (if (thread-pending-break t_0)
                          (break>? kind_0 (thread-pending-break t_0))
@@ -8087,6 +8091,8 @@
           #f))))))
 (define 1/thread-receive-evt
   (|#%name| thread-receive-evt (lambda () (thread-receiver-evt30.1))))
+(define future->thread (lambda (f_0) #f))
+(define set-future->thread! (lambda (f->t_0) (set! future->thread f->t_0)))
 (define effect_2329
   (begin
     (void
@@ -12433,6 +12439,7 @@
       futures-sync-for-shutdown
       scheduler-add-thread-custodian-mapping!))
     (void)))
+(define effect_2320 (begin (void (set! future->thread future*-thread)) (void)))
 (define call-in-main-thread
   (lambda (thunk_0)
     (call-in-new-main-thread

@@ -151,6 +151,8 @@
     (log-future 'complete (future*-id f)))
   (cond
     [(current-future-in-future-thread)
+     (when (thread? (future*-thread f))
+       (set-engine-thread-cell-state! (thread-cells (future*-thread f))))
      ;; An attempt to escape will cause the future to block, so
      ;; we only need to handle success
      (call-with-values (lambda ()
@@ -166,6 +168,7 @@
      ;; result is ignored, and will not block, but might suspend
      ;; to be rescheduled to run in a future pthread
      (current-future f)
+     (set-engine-thread-cell-state! (thread-cells (future*-thread f)))
      ;; unblock thread's start has `future-start-prompt-tag` prompt:
      (thunk)]
     [(eq? (future*-would-be? f) #t)
@@ -511,6 +514,7 @@
 (define (unblock-thread me-f)
   (define th (future*-thread me-f))
   (when (thread? th)
+    (set-engine-thread-cell-state! #f)
     (host:post-as-asynchronous-callback
      (lambda ()
        ;; in atomic mode and in scheduler thread
@@ -821,7 +825,8 @@
                            (run-future f))
                          future-scheduler-prompt-tag
                          void
-                         break-enabled-default-cell
+                         (make-engine-thread-cell-state break-enabled-default-cell
+                                                        #t)
                          #t))
   (current-atomic (add1 (current-atomic)))
   (call-with-engine-completion
@@ -858,6 +863,7 @@
                 (define stop? (eq? (future*-thread f) 'stop))
                 (future-suspend
                  #:reschedule (lambda ()
+                                (set-engine-thread-cell-state! #f)
                                 (unless stop? (schedule-future! f))
                                 (unsafe-abort-current-continuation/no-wind future-scheduler-prompt-tag (void))))
                 (void))))
@@ -972,3 +978,6 @@
 ;; tell "custodian.rkt" how to sync and map pthreads to custodians:
 (void (set-custodian-future-callbacks! futures-sync-for-shutdown
                                        scheduler-add-thread-custodian-mapping!))
+
+;; tell "thread.rkt" layer how to maybe extract a thread from `(current-future)`:
+(void (set-future->thread! future*-thread))

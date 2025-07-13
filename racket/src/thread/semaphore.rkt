@@ -102,9 +102,8 @@
   (define c (semaphore-count s))
   (cond
     [(and (c . >= . 0)
-          (not (current-future))
           (unsafe-struct*-cas! s count-field-pos c (add1 c)))
-     (void)]
+     (memory-order-release)]
     [else
      (atomically
       (semaphore-post/atomic s)
@@ -166,9 +165,8 @@
   (define c (semaphore-count s))
   (cond
     [(and (positive? c)
-          (not (current-future))
           (unsafe-struct*-cas! s count-field-pos c (sub1 c)))
-     (void)]
+     (memory-order-acquire)]
     [else
      ((atomically
        (define c (semaphore-count s))

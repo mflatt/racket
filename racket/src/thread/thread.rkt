@@ -101,7 +101,9 @@
   (provide break-enabled-default-cell
            do-make-thread
            thread-descheduled?
-           thread-suspended?))
+           thread-suspended?
+           thread-cells
+           set-future->thread!))
 
 (module* for-stats #f
   (provide thread-descheduled?
@@ -139,7 +141,8 @@
 
                      [cpu-time #:mutable] ; accumulates CPU time in milliseconds
 
-                     [future #:mutable])  ; current would-be future
+                     [future #:mutable]   ; current would-be future
+                     cells) ; thread-cell state
   #:authentic
   #:sealed
   #:property host:prop:unsafe-authentic-override #t ; allow evt chaperone
@@ -156,10 +159,13 @@
 (define (current-thread)
   (cond
     [(current-future)
-     (future-barrier)
-     (define t (current-thread/in-atomic))
-     (future-exit-barrier)
-     t]
+     => (lambda (f)
+          (or (future->thread f)
+              (let ()
+                (future-barrier)
+                (define t (current-thread/in-atomic))
+                (future-exit-barrier)
+                t)))]
     [else
      (current-thread/in-atomic)]))
 
@@ -176,12 +182,15 @@
   (define p (if (or at-root? initial?)
                 root-thread-group
                 (current-thread-group)))
+  (define cells (make-engine-thread-cell-state
+                 (if (or initial? at-root?)
+                     break-enabled-default-cell
+                     (current-break-enabled-cell))
+                 at-root?))
   (define e (make-engine proc
                          (default-continuation-prompt-tag)
                          #f
-                         (if (or initial? at-root?)
-                             break-enabled-default-cell
-                             (current-break-enabled-cell))
+                         cells
                          at-root?))
   (define t (thread 'none ; node prev
                     'none ; node next
@@ -217,6 +226,7 @@
                     0 ; cpu-time
 
                     #f ; future
+                    cells ; thread-cell state
                     )) 
   ((atomically
     (define cref (and c (custodian-register-thread c t remove-thread-custodian)))
@@ -1147,6 +1157,11 @@
   (thread-receiver-evt))
 
 ;; ----------------------------------------
+
+(define future->thread (lambda (f) #f))
+
+(define (set-future->thread! f->t)
+  (set! future->thread f->t))
 
 (void (set-immediate-allocation-check-proc!
        ;; Called to check large vector, string, and byte-string allocations
