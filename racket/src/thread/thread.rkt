@@ -103,7 +103,9 @@
            thread-descheduled?
            thread-suspended?
            thread-cells
-           set-future->thread!))
+           set-future->thread!
+           current-break-enabled-cell
+           parallel-break-disabled-cell))
 
 (module* for-stats #f
   (provide thread-descheduled?
@@ -141,7 +143,7 @@
 
                      [cpu-time #:mutable] ; accumulates CPU time in milliseconds
 
-                     [future #:mutable]   ; current would-be future
+                     [future #:mutable]   ; saved would-be future or parallel-thread future
                      cells) ; thread-cell state
   #:authentic
   #:sealed
@@ -163,9 +165,7 @@
           (or (future->thread f)
               (let ()
                 (future-barrier)
-                (define t (current-thread/in-atomic))
-                (future-exit-barrier)
-                t)))]
+                (current-thread/in-atomic))))]
     [else
      (current-thread/in-atomic)]))
 
@@ -177,15 +177,16 @@
                         #:custodian [c (current-custodian)] ; can be #f
                         #:at-root? [at-root? #f]
                         #:initial? [initial? #f]
-                        #:suspend-to-kill? [suspend-to-kill? #f])
+                        #:suspend-to-kill? [suspend-to-kill? #f]
+                        #:break-enabled-cell [break-enabled-cell (if (or initial? at-root?)
+                                                                     break-enabled-default-cell
+                                                                     (current-break-enabled-cell))])
   (check who (procedure-arity-includes/c 0) proc)
   (define p (if (or at-root? initial?)
                 root-thread-group
                 (current-thread-group)))
   (define cells (make-engine-thread-cell-state
-                 (if (or initial? at-root?)
-                     break-enabled-default-cell
-                     (current-break-enabled-cell))
+                 break-enabled-cell
                  at-root?))
   (define e (make-engine proc
                          (default-continuation-prompt-tag)
@@ -218,7 +219,7 @@
 
                     #f ; pending-break
                     #f ; ignore-thread-cells
-                    #f; forward-break-to
+                    #f ; forward-break-to
 
                     (make-queue) ; mailbox
                     void ; mailbox-wakeup
@@ -881,6 +882,8 @@
 ;; A continuation-mark key (not made visible to regular Racket code):
 (define break-enabled-default-cell (make-thread-cell #t))
 
+(define parallel-break-disabled-cell (make-thread-cell #f))
+
 ;; For enable breaks despite atomic mode, such as through
 ;; `unsafe-start-breakable-atomic`; breaks are enabled as long as
 ;; `current-atomic` does not exceed `current-breakable-atomic`:
@@ -904,36 +907,49 @@
 ;; changed, or when a thread is just swapped in, then
 ;; `check-for-break` should be called.
 (define (check-for-break)
-  (unless (current-future)
+  (unless (and (current-future)
+               ;; in a future pthread?
+               (not (current-thread/in-atomic))
+               ;; but not a future pthread that is running a parallel-thread future?
+               (or (not (future->thread (current-future)))
+                   ;; and not when the future is already trying to swap out
+                   (future-swapping-out? (current-future))))
     (define t (current-thread))
     (when (and
            ;; allow `check-for-break` before threads are running:
            t
            ;; quick pre-test before going atomic:
            (thread-pending-break t))
-      ((atomically
-        (cond
-          [(and (thread-pending-break t)
-                ;; check atomicity early to avoid nested break checks,
-                ;; since `continuation-mark-set-first` inside `break-enabled`
-                ;; can take a while
-                (>= (add1 (current-breakable-atomic)) (current-atomic))
-                (break-enabled)
-                (not (thread-ignore-break-cell? t (current-break-enabled-cell))))
-           (define exn:break* (case (thread-pending-break t)
-                                [(hang-up) exn:break:hang-up/non-engine]
-                                [(terminate) exn:break:terminate/non-engine]
-                                [else exn:break/non-engine]))
-           (set-thread-pending-break! t #f)
-           (lambda ()
-             ;; Out of atomic mode
-             (call-with-escape-continuation
-              (lambda (k)
-                (raise (exn:break*
-                        (error-message->string #f "user break")
-                        (current-continuation-marks)
-                        k)))))]
-          [else void]))))))
+      (define exit-barrier? (and (current-future) #t))
+      ((let ()
+         (start-atomic)
+         (define finish
+           (cond
+             [(and (thread-pending-break t)
+                   ;; check atomicity early to avoid nested break checks,
+                   ;; since `continuation-mark-set-first` inside `break-enabled`
+                   ;; can take a while
+                   (>= (add1 (current-breakable-atomic)) (current-atomic))
+                   (break-enabled)
+                   (not (thread-ignore-break-cell? t (current-break-enabled-cell))))
+              (define exn:break* (case (thread-pending-break t)
+                                   [(hang-up) exn:break:hang-up/non-engine]
+                                   [(terminate) exn:break:terminate/non-engine]
+                                   [else exn:break/non-engine]))
+              (set-thread-pending-break! t #f)
+              (lambda ()
+                ;; Out of atomic mode
+                (call-with-escape-continuation
+                 (lambda (k)
+                   (raise (exn:break*
+                           (error-message->string #f "user break")
+                           (current-continuation-marks)
+                           k)))))]
+             [else void]))
+         (if exit-barrier?
+             (end-atomic)
+             (end-atomic/no-exit-barrier))
+         finish)))))
 
 ;; The break-enabled transition hook is called by the host
 ;; system when a control transfer (such as a continuation jump)
@@ -1159,9 +1175,11 @@
 ;; ----------------------------------------
 
 (define future->thread (lambda (f) #f))
+(define future-swapping-out? (lambda (f) #f))
 
-(define (set-future->thread! f->t)
-  (set! future->thread f->t))
+(define (set-future->thread! f->t swapping-out?)
+  (set! future->thread f->t)
+  (set! future-swapping-out? swapping-out?))
 
 (void (set-immediate-allocation-check-proc!
        ;; Called to check large vector, string, and byte-string allocations

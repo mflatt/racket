@@ -255,6 +255,7 @@
     [else
      (define cust (current-custodian))
      (define paramz (current-parameterization))
+     (define break-enabled (current-break-enabled-cell))
      (define thunk-in-prompt
        (lambda ()
          ;; Use the default prompt tag inside a prompt with
@@ -267,11 +268,15 @@
           (lambda ()
             (with-continuation-mark
                 parameterization-key paramz
-                (|#%app| thunk)))
+                (with-continuation-mark
+                    break-enabled-key
+                  break-enabled
+                  (|#%app| thunk))))
           (default-continuation-prompt-tag))))
      (define me-f (create-future thunk-in-prompt cust #f pool #f))
      (define th
        (do-make-thread who
+                       #:break-enabled-cell parallel-break-disabled-cell
                        #:custodian cust
                        (lambda ()
                          (let loop ()
@@ -466,12 +471,14 @@
       [(continuation-prompt-available? future-start-prompt-tag)
        (lock-acquire (future*-lock me-f))
        (set-future*-state! me-f #f)
-       (future-suspend #:reschedule (lambda ()
-                                      (schedule-future! me-f)
-                                      (current-future #f)
-                                      ;; back to start, which will suspend and then
-                                      ;; loop to potentially (if resumed) unblock again
-                                      (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void))))]
+       (with-continuation-mark
+         break-enabled-key parallel-break-disabled-cell
+         (future-suspend #:reschedule (lambda ()
+                                        (schedule-future! me-f)
+                                        (current-future #f)
+                                        ;; back to start, which will suspend and then
+                                        ;; loop to potentially (if resumed) unblock again
+                                        (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void)))))]
       [else
        ;; thread has jumped outside of the future prompt; switch to being
        ;; a plain thread running the future's continuation
@@ -494,6 +501,12 @@
         (set-future*-thunk! me-f (lambda ()
                                    (current-atomic (+ n (current-atomic)))
                                    (k)))])
+     ;; no future-scheduler swap out from here on:
+     (unless (current-thread/in-atomic)
+       (define pool (future*-pool me-f))
+       (when pool
+         (set-scheduler-round-robin! (parallel-pool-scheduler pool) 'pause)))
+     ;; Release lock and go out of atomic mode:
      (lock-release (future*-lock me-f))
      (when touching-f
        (log-future 'touch (future*-id me-f) #:data (future*-id touching-f)))
@@ -510,14 +523,18 @@
         (unsafe-abort-current-continuation/no-wind future-scheduler-prompt-tag (void))]))
    future-start-prompt-tag))
 
+(define (future-swapping-out? f)
+  (eq? (scheduler-round-robin (parallel-pool-scheduler (future*-pool f))) 'pause))
+
 ;; in any pthread and potentially in atomic mode
 (define (unblock-thread me-f)
   (define th (future*-thread me-f))
   (when (thread? th)
+    ;; Assert: (not (current-thread/in-atomic))
     (set-engine-thread-cell-state! #f)
     (host:post-as-asynchronous-callback
      (lambda ()
-       ;; in atomic mode and in scheduler thread
+       ;; in atomic mode and in arbitrary Racket thread selected by scheduler
        (when (thread-descheduled? th)
          (unless (or (thread-dead? th)
                      (thread-suspended? th))
@@ -595,7 +612,7 @@
                    mutex   ; guards futures chain; see "future-lock.rkt" for discipline
                    cond    ; signaled when chain goes from empty to non-empty
                    ping-cond
-                   round-robin?
+                   [round-robin #:mutable] ; #f, 'round, 'pause
                    [capacity #:mutable])
   #:authentic)
 
@@ -641,7 +658,7 @@
                        (host:make-mutex)
                        (host:make-condition)
                        (host:make-condition)
-                       round-robin?
+                       (and round-robin? 'round)
                        pthread-count))
   (define workers
     (for/list ([id (in-range 1 (add1 pthread-count))])
@@ -767,6 +784,7 @@
   (define th
     (fork-pthread
      (lambda ()
+       (current-thread/in-atomic #f)
        (current-future 'worker)
        (host:mutex-acquire (scheduler-mutex s))
        (let loop ()
@@ -850,7 +868,7 @@
               (set-future*-state! f #f)
               (on-transition-to-unfinished)
               (future-suspend))
-            (when (and (scheduler-round-robin? s)
+            (when (and (eq? (scheduler-round-robin s) 'round)
                        (zero? (current-atomic)))
               (host:mutex-acquire (scheduler-mutex s))
               (define others? (and (scheduler-futures-head s)
@@ -875,7 +893,9 @@
                (done (void))]))))))
   (log-future 'end-work (future*-id f))
   (current-future 'worker)
-  (set-box! (worker-current-future-box w) #f))
+  (set-box! (worker-current-future-box w) #f)
+  (when (scheduler-round-robin s)
+    (set-scheduler-round-robin! s 'round)))
 
 ;; in atomic mode
 (define (futures-sync-for-shutdown)
@@ -980,4 +1000,4 @@
                                        scheduler-add-thread-custodian-mapping!))
 
 ;; tell "thread.rkt" layer how to maybe extract a thread from `(current-future)`:
-(void (set-future->thread! future*-thread))
+(void (set-future->thread! future*-thread future-swapping-out?))

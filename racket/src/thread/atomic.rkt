@@ -14,6 +14,8 @@
          end-atomic
          abort-atomic
 
+         end-atomic/no-exit-barrier
+
          atomically/no-interrupts
          start-atomic/no-interrupts
          end-atomic/no-interrupts
@@ -80,10 +82,10 @@
      ;; before we exit atomic mode. Make sure that rare
      ;; possibility remains ok. There are also places that
      ;; exit atomic mode by decrementing `(current-atomic)`
-     ;; directly; those are places where an arbitrar ycallback
+     ;; directly; those are places where an arbitrary callback
      ;; is not allowed, such as in a foreign callbacks, and in
      ;; that case, we end up delaying the callback until a
-     ;; time interrupt.
+     ;; timer interrupt.
      (if (eq? 0 (end-atomic-callback))
          (current-atomic n)
          (do-end-atomic-callback))
@@ -91,6 +93,21 @@
     [(fx< n 0) (bad-end-atomic)]
     [else
      (current-atomic n)]))
+
+;; like `end-atomic`, but for use by anything
+;; potentially on the path to an block-handling operation
+;; in a Racket thread for a parallel thread, but where an atomic
+;; region was created for the handling thread's own purposes and
+;; not to act as an atomic region for the parallel thread
+(define (end-atomic/no-exit-barrier)
+  (define n (fx- (current-atomic) 1))
+  (cond
+    [(fx= n 0)
+     (if (eq? 0 (end-atomic-callback))
+         (current-atomic n)
+         (do-end-atomic-callback))]
+    [(fx< n 0) (bad-end-atomic)]
+    [else (current-atomic n)]))
 
 ;; intended to avoid an infinite loop of "can't do that in atomic
 ;; mode" exceptions when things have gone terribly wrong, assume that

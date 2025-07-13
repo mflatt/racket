@@ -272,7 +272,7 @@
   (start-atomic)
   (for ([callback (in-list callbacks)])
     (callback))
-  (end-atomic))
+  (end-atomic/no-exit-barrier))
 
 ;; ----------------------------------------
 
