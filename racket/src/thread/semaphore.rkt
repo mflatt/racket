@@ -36,6 +36,9 @@
   (provide (struct-out custodian-accessible-semaphore)
            semaphore))
 
+(module+ for-future
+  (provide set-future-can-take-lock?!))
+
 (struct semaphore queue ([count #:mutable]) ; -1 => non-empty queue
   #:authentic
   #:property host:prop:unsafe-authentic-override #t ; allow evt chaperone
@@ -102,6 +105,9 @@
   (define c (semaphore-count s))
   (cond
     [(and (c . >= . 0)
+          (let ([f (current-future)])
+            (or (not f)
+                (future-can-take-lock? f)))
           (unsafe-struct*-cas! s count-field-pos c (add1 c)))
      (memory-order-release)]
     [else
@@ -165,6 +171,9 @@
   (define c (semaphore-count s))
   (cond
     [(and (positive? c)
+          (let ([f (current-future)])
+            (or (not f)
+                (future-can-take-lock? f)))
           (unsafe-struct*-cas! s count-field-pos c (sub1 c)))
      (memory-order-acquire)]
     [else
@@ -244,3 +253,8 @@
      (set-semaphore-count! s (sub1 c))]
     [else
      (internal-error "semaphore-wait/atomic: cannot decrement semaphore")]))
+
+(define future-can-take-lock? (lambda (f) #f))
+
+(define (set-future-can-take-lock?! pred)
+  (set! future-can-take-lock? pred))

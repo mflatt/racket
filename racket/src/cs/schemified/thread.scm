@@ -4105,7 +4105,15 @@
 (define unsafe-semaphore-post
   (lambda (s_0)
     (let ((c_0 (semaphore-count s_0)))
-      (if (if (>= c_0 0) (unsafe-struct*-cas! s_0 2 c_0 (add1 c_0)) #f)
+      (if (if (>= c_0 0)
+            (if (let ((f_0 (1/current-future)))
+                  (let ((or-part_0 (not f_0)))
+                    (if or-part_0
+                      or-part_0
+                      (|#%app| future-can-take-lock? f_0))))
+              (unsafe-struct*-cas! s_0 2 c_0 (add1 c_0))
+              #f)
+            #f)
         (memory-order-release)
         (begin (start-atomic) (semaphore-post/atomic s_0) (end-atomic))))))
 (define semaphore-post/atomic
@@ -4169,7 +4177,15 @@
 (define unsafe-semaphore-wait
   (lambda (s_0)
     (let ((c_0 (semaphore-count s_0)))
-      (if (if (positive? c_0) (unsafe-struct*-cas! s_0 2 c_0 (sub1 c_0)) #f)
+      (if (if (positive? c_0)
+            (if (let ((f_0 (1/current-future)))
+                  (let ((or-part_0 (not f_0)))
+                    (if or-part_0
+                      or-part_0
+                      (|#%app| future-can-take-lock? f_0))))
+              (unsafe-struct*-cas! s_0 2 c_0 (sub1 c_0))
+              #f)
+            #f)
         (memory-order-acquire)
         (|#%app|
          (begin
@@ -4243,6 +4259,9 @@
         (set-semaphore-count! s_0 (sub1 c_0))
         (internal-error
          "semaphore-wait/atomic: cannot decrement semaphore")))))
+(define future-can-take-lock? (lambda (f_0) #f))
+(define set-future-can-take-lock?!
+  (lambda (pred_0) (set! future-can-take-lock? pred_0)))
 (define finish_2317
   (make-struct-type-install-properties
    '(node)
@@ -12537,6 +12556,8 @@
   (begin
     (void (set-future->thread! future*-thread future-swapping-out?))
     (void)))
+(define effect_2228
+  (begin (void (set! future-can-take-lock? future*-thread)) (void)))
 (define call-in-main-thread
   (lambda (thunk_0)
     (call-in-new-main-thread

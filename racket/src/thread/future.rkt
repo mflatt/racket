@@ -11,6 +11,7 @@
          "thread.rkt"
          (submod "thread.rkt" for-future)
          (submod "custodian.rkt" for-future)
+         (submod "semaphore.rkt" for-future)
          "sync.rkt"
          "evt.rkt"
          "future-object.rkt"
@@ -1004,3 +1005,5 @@
 
 ;; tell "thread.rkt" layer how to maybe extract a thread from `(current-future)`:
 (void (set-future->thread! future*-thread future-swapping-out?))
+
+(void (set-future-can-take-lock?! future*-thread))
