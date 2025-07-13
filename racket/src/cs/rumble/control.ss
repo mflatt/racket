@@ -1500,7 +1500,7 @@
 
 (define/who current-continuation-marks
   (case-lambda
-    [() (current-continuation-marks the-default-continuation-prompt-tag)]
+   [() (current-continuation-marks the-default-continuation-prompt-tag)]
     [(tag)
      (check who continuation-prompt-tag? tag)
      (maybe-future-barricade tag)

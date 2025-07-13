@@ -2,4 +2,5 @@
 (require '#%futures)
 
 (provide thread/parallel
-         make-parallel-pool)
+         make-parallel-thread-pool
+         parallel-thread-pool?)

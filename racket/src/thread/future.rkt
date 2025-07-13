@@ -34,7 +34,8 @@
          would-be-future
          touch
          thread/parallel
-         make-parallel-pool
+         make-parallel-thread-pool
+         parallel-thread-pool?
          future-block
          future-sync
          current-future-prompt
@@ -94,16 +95,18 @@
 (define (future? v)
   (future*? v))
 
-(define (current-future-in-future-thread)
+(define (current-future-in-future-thread) ; includes would-be futures
   (define f (current-future))
   (and f
-       (not (eq? (future*-thread f) (current-thread/in-atomic)))
+       (or (not (current-thread/in-atomic))
+           (future*-would-be? f))
        f))
 
 (define (current-future-in-unblock-thread)
   (define f (current-future))
   (and f
-       (eq? (future*-thread f) (current-thread/in-atomic))
+       (let ([t (current-thread/in-atomic)])
+         (and t (eq? (future*-thread f) t)))
        f))
 
 (define future-scheduler-prompt-tag (make-continuation-prompt-tag 'future-scheduler))
@@ -232,23 +235,23 @@
       (future*-custodian me-f)
       (thread-representative-custodian (current-thread/in-atomic))))
 
-(define/who (make-parallel-pool [n pthread-count])
+(define/who (make-parallel-thread-pool [n pthread-count])
   (check who exact-positive-integer? n)
   (make-phantom-bytes (* n 1024)) ; intended to make sure that `n` is reasonable 
   (atomically
    (define s (start-scheduler n #t))
    (set-place-schedulers! current-place (hash-set (place-schedulers current-place) s #t))
-   (define pool (parallel-pool s))
+   (define pool (parallel-thread-pool s))
    (host:will-register custodian-will-executor pool
                        (lambda (pool)
-                         (define s (parallel-pool-scheduler pool))
+                         (define s (parallel-thread-pool-scheduler pool))
                          (kill-future-scheduler s)
                          (set-place-schedulers! current-place (hash-remove (place-schedulers current-place) s))))
    pool))
 
-(define/who (thread/parallel thunk [pool (make-parallel-pool)])
+(define/who (thread/parallel thunk [pool (make-parallel-thread-pool)])
   (check who (procedure-arity-includes/c 0) thunk)
-  (check who parallel-pool? pool)
+  (check who parallel-thread-pool? pool)
   (cond
     [(not (futures-enabled?))
      (thread thunk)]
@@ -505,7 +508,7 @@
      (unless (current-thread/in-atomic)
        (define pool (future*-pool me-f))
        (when pool
-         (set-scheduler-round-robin! (parallel-pool-scheduler pool) 'pause)))
+         (set-scheduler-round-robin! (parallel-thread-pool-scheduler pool) 'pause)))
      ;; Release lock and go out of atomic mode:
      (lock-release (future*-lock me-f))
      (when touching-f
@@ -524,7 +527,7 @@
    future-start-prompt-tag))
 
 (define (future-swapping-out? f)
-  (eq? (scheduler-round-robin (parallel-pool-scheduler (future*-pool f))) 'pause))
+  (eq? (scheduler-round-robin (parallel-thread-pool-scheduler (future*-pool f))) 'pause))
 
 ;; in any pthread and potentially in atomic mode
 (define (unblock-thread me-f)
@@ -631,7 +634,7 @@
 (define (future-scheduler f)
   (define pool (future*-pool f))
   (if pool
-      (parallel-pool-scheduler pool)
+      (parallel-thread-pool-scheduler pool)
       ;; We use `#f` for the default scheduler to avoid directly
       ;; referencing it and making it reachable for memory accounting
       (current-scheduler)))

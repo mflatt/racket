@@ -210,7 +210,8 @@
          fsemaphore-count
 
          thread/parallel
-         make-parallel-pool
+         make-parallel-thread-pool
+         parallel-thread-pool?
 
          unsafe-os-thread-enabled?
          unsafe-call-in-os-thread

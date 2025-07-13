@@ -3,7 +3,7 @@
          "parameter.rkt")
 
 (provide (struct-out future*)
-         (struct-out parallel-pool)
+         (struct-out parallel-thread-pool)
 
          currently-running-future-key
          currently-running-future)
@@ -26,15 +26,14 @@
   #:authentic
   #:reflection-name 'future)
 
-(struct parallel-pool (scheduler)
+(struct parallel-thread-pool (scheduler)
   #:authentic
-  #:reflection-name 'parallel-pool)
+  #:reflection-name 'parallel-thread-pool)
 
 ;; ----------------------------------------
 
 (define currently-running-future-key (gensym 'future))
 
-;; Only called in a Racket thread:
 (define (currently-running-future)
   (define f (current-future))
   (cond

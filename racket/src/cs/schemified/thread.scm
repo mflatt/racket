@@ -68,7 +68,7 @@
                 (1/make-custodian-box make-custodian-box)
                 (1/make-fsemaphore make-fsemaphore)
                 (1/make-late-will-executor make-late-will-executor)
-                (make-parallel-pool make-parallel-pool)
+                (1/make-parallel-thread-pool make-parallel-thread-pool)
                 (1/make-plumber make-plumber)
                 (1/make-semaphore make-semaphore)
                 (1/make-thread-group make-thread-group)
@@ -76,6 +76,7 @@
                 (1/mark-future-trace-end! mark-future-trace-end!)
                 (1/nack-guard-evt nack-guard-evt)
                 (the-never-evt never-evt)
+                (1/parallel-thread-pool? parallel-thread-pool?)
                 (1/place-break place-break)
                 (1/place-channel place-channel)
                 (1/place-channel-get place-channel-get)
@@ -131,7 +132,7 @@
                 (1/thread-suspend-evt thread-suspend-evt)
                 (1/thread-try-receive thread-try-receive)
                 (1/thread-wait thread-wait)
-                (thread/parallel thread/parallel)
+                (1/thread/parallel thread/parallel)
                 (1/thread/suspend-to-kill thread/suspend-to-kill)
                 (1/thread? thread?)
                 (1/touch touch)
@@ -10770,9 +10771,9 @@
   (|#%name| set-future-state! (record-mutator struct:future* 10)))
 (define set-future*-dependents!
   (|#%name| set-future-dependents! (record-mutator struct:future* 11)))
-(define finish_2029
+(define finish_2768
   (make-struct-type-install-properties
-   '(parallel-pool)
+   '(parallel-thread-pool)
    1
    0
    #f
@@ -10781,25 +10782,29 @@
    #f
    '(0)
    #f
-   'parallel-pool))
-(define struct:parallel-pool
+   'parallel-thread-pool))
+(define struct:parallel-thread-pool
   (make-record-type-descriptor
-   'parallel-pool
+   'parallel-thread-pool
    #f
-   (|#%nongenerative-uid| parallel-pool)
+   (|#%nongenerative-uid| parallel-thread-pool)
    #f
    #f
    '(1 . 0)))
-(define effect_2546 (finish_2029 struct:parallel-pool))
-(define parallel-pool2.1
+(define effect_2753 (finish_2768 struct:parallel-thread-pool))
+(define parallel-thread-pool2.1
   (|#%name|
-   parallel-pool
+   parallel-thread-pool
    (record-constructor
-    (make-record-constructor-descriptor struct:parallel-pool #f #f))))
-(define parallel-pool?
-  (|#%name| parallel-pool? (record-predicate struct:parallel-pool)))
-(define parallel-pool-scheduler
-  (|#%name| parallel-pool-scheduler (record-accessor struct:parallel-pool 0)))
+    (make-record-constructor-descriptor struct:parallel-thread-pool #f #f))))
+(define 1/parallel-thread-pool?
+  (|#%name|
+   parallel-thread-pool?
+   (record-predicate struct:parallel-thread-pool)))
+(define parallel-thread-pool-scheduler
+  (|#%name|
+   parallel-thread-pool-scheduler
+   (record-accessor struct:parallel-thread-pool 0)))
 (define currently-running-future-key (gensym 'future))
 (define currently-running-future
   (lambda ()
@@ -11214,9 +11219,8 @@
   (lambda ()
     (let ((f_0 (1/current-future)))
       (if f_0
-        (if (not
-             (let ((app_0 (future*-thread f_0)))
-               (eq? app_0 (current-thread/in-atomic))))
+        (if (let ((or-part_0 (not (current-thread/in-atomic))))
+              (if or-part_0 or-part_0 (future*-would-be? f_0)))
           f_0
           #f)
         #f))))
@@ -11224,8 +11228,8 @@
   (lambda ()
     (let ((f_0 (1/current-future)))
       (if f_0
-        (if (let ((app_0 (future*-thread f_0)))
-              (eq? app_0 (current-thread/in-atomic)))
+        (if (let ((t_0 (current-thread/in-atomic)))
+              (if t_0 (eq? (future*-thread f_0) t_0) #f))
           f_0
           #f)
         #f))))
@@ -11413,17 +11417,17 @@
     (if me-f_0
       (future*-custodian me-f_0)
       (thread-representative-custodian (current-thread/in-atomic)))))
-(define make-parallel-pool
-  (let ((make-parallel-pool_0
+(define 1/make-parallel-thread-pool
+  (let ((make-parallel-thread-pool_0
          (|#%name|
-          make-parallel-pool
+          make-parallel-thread-pool
           (lambda (n8_0)
             (let ((n_0 (if (eq? n8_0 unsafe-undefined) pthread-count n8_0)))
               (begin
                 (if (exact-positive-integer? n_0)
                   (void)
                   (raise-argument-error
-                   'make-parallel-pool
+                   'make-parallel-thread-pool
                    "exact-positive-integer?"
                    n_0))
                 (make-phantom-bytes (* n_0 1024))
@@ -11437,14 +11441,15 @@
                         (place-schedulers (unsafe-place-local-ref cell.1$2))
                         s_0
                         #t))
-                      (let ((pool_0 (parallel-pool2.1 s_0)))
+                      (let ((pool_0 (parallel-thread-pool2.1 s_0)))
                         (begin
                           (|#%app|
                            host:will-register
                            (unsafe-place-local-ref cell.1$4)
                            pool_0
                            (lambda (pool_1)
-                             (let ((s_1 (parallel-pool-scheduler pool_1)))
+                             (let ((s_1
+                                    (parallel-thread-pool-scheduler pool_1)))
                                (begin
                                  (kill-future-scheduler s_1)
                                  (set-place-schedulers!
@@ -11455,17 +11460,19 @@
                                    s_1))))))
                           pool_0))))
                   (end-atomic))))))))
-    (case-lambda
-     (() (make-parallel-pool_0 unsafe-undefined))
-     ((n8_0) (make-parallel-pool_0 n8_0)))))
-(define thread/parallel
+    (|#%name|
+     make-parallel-thread-pool
+     (case-lambda
+      (() (make-parallel-thread-pool_0 unsafe-undefined))
+      ((n8_0) (make-parallel-thread-pool_0 n8_0))))))
+(define 1/thread/parallel
   (let ((thread/parallel_0
          (|#%name|
           thread/parallel
           (lambda (thunk10_0 pool9_0)
             (let ((pool_0
                    (if (eq? pool9_0 unsafe-undefined)
-                     (make-parallel-pool)
+                     (1/make-parallel-thread-pool)
                      pool9_0)))
               (begin
                 (if (if (procedure? thunk10_0)
@@ -11476,11 +11483,11 @@
                    'thread/parallel
                    "(procedure-arity-includes/c 0)"
                    thunk10_0))
-                (if (parallel-pool? pool_0)
+                (if (1/parallel-thread-pool? pool_0)
                   (void)
                   (raise-argument-error
                    'thread/parallel
-                   "parallel-pool?"
+                   "parallel-thread-pool?"
                    pool_0))
                 (if (not (1/futures-enabled?))
                   (make-thread thunk10_0)
@@ -11541,9 +11548,11 @@
                                     (end-atomic))
                                   (schedule-future!.1 #f me-f_0)
                                   th_0)))))))))))))))
-    (case-lambda
-     ((thunk_0) (thread/parallel_0 thunk_0 unsafe-undefined))
-     ((thunk_0 pool9_0) (thread/parallel_0 thunk_0 pool9_0)))))
+    (|#%name|
+     thread/parallel
+     (case-lambda
+      ((thunk_0) (thread/parallel_0 thunk_0 unsafe-undefined))
+      ((thunk_0 pool9_0) (thread/parallel_0 thunk_0 pool9_0))))))
 (define lock-acquire-both
   (lambda (f_0)
     (let ((me-f_0 (current-future-in-future-thread)))
@@ -11747,7 +11756,7 @@
               (let ((pool_0 (future*-pool me-f_0)))
                 (if pool_0
                   (set-scheduler-round-robin!
-                   (parallel-pool-scheduler pool_0)
+                   (parallel-thread-pool-scheduler pool_0)
                    'pause)
                   (void))))
             (lock-release (future*-lock me-f_0))
@@ -11777,7 +11786,8 @@
 (define future-swapping-out?
   (lambda (f_0)
     (eq?
-     (scheduler-round-robin (parallel-pool-scheduler (future*-pool f_0)))
+     (scheduler-round-robin
+      (parallel-thread-pool-scheduler (future*-pool f_0)))
      'pause)))
 (define unblock-thread
   (lambda (me-f_0)
@@ -11979,7 +11989,9 @@
 (define future-scheduler
   (lambda (f_0)
     (let ((pool_0 (future*-pool f_0)))
-      (if pool_0 (parallel-pool-scheduler pool_0) (current-scheduler)))))
+      (if pool_0
+        (parallel-thread-pool-scheduler pool_0)
+        (current-scheduler)))))
 (define make-worker (lambda (id_0) (worker16.1 id_0 #f (box #f) #f (box #f))))
 (define maybe-start-scheduler
   (lambda ()

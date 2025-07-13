@@ -17,7 +17,7 @@
 
 (define (set-future-callbacks! block unblock sync current-prompt)
   (set! block-future block)
-  (set! block-future unblock)
+  (set! unblock-future unblock)
   (set! sync-future sync)
   (set! current-future-prompt current-prompt))
 

@@ -60,7 +60,7 @@
                     (syntax-rules ()
                       [(_) (virtual-register n)]
                       [(_ v) (set-virtual-register! n v)]))))])
-      (syntax-case stx (current-atomic end-atomic-callback current-future$1
+      (syntax-case stx (current-atomic end-atomic-callback 1/current-future
                                        lambda make-pthread-parameter unsafe-make-place-local)
         ;; Recognize definition of `current-atomic`:
         [(_ current-atomic (make-pthread-parameter 0))
@@ -69,7 +69,7 @@
         [(_ end-atomic-callback (make-pthread-parameter 0))
          (define-as-virtual-register stx end-atomic-virtual-register)]
         ;; Recognize definition of `current-future`:
-        [(_ current-future$1 (make-pthread-parameter #f))
+        [(_ 1/current-future (make-pthread-parameter #f))
          (define-as-virtual-register stx current-future-virtual-register)]
         ;; Force-inline `start-atomic`, `end-atomic`, `future-barrier`, and `future-exit-barrier`,
         ;; at least within the core layers:

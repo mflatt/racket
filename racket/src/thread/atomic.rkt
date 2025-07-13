@@ -148,7 +148,19 @@
 (define (in-atomic-mode?)
   (positive? (current-atomic)))
 
-;; inlined in Chez Scheme embedding:
+;; inlined in Chez Scheme embedding;
+;; calling `future-barrier` kicks a future computation that is running
+;; in a futher pthread over to a Racket thread, either by blocking a
+;; future to movning the continuation of a parallel thread (which is
+;; implemented in part by a future) over to its Racket thread half;
+;; a `future-exit-barrier` call can move the continuation back to
+;; a future pthread; if a `future-barrier` call does not have a
+;; `future-exit-barrier` later, then a continuation may stay in a
+;; Racket thread, which should be ok, and it can get migrated by
+;; some later `future-exit-barrier` (after another `future-barrier`);
+;; there's also the special case of `end-atomic/no-exit-barrier`,
+;; which avoids `future-exit-barrier` because atomic mode was not
+;; entered on behalf of a future
 (define (future-barrier)
   (when (current-future)
     (future-block-for-atomic)))
