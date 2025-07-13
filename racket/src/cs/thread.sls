@@ -10,6 +10,8 @@
                   [unsafe-place-local-set! rumble:unsafe-place-local-set!]
                   ;; These are extracted via `#%linklet`:
                   [make-engine rumble:make-engine]
+                  [make-engine-thread-cell-state rumble:make-engine-thread-cell-state]
+                  [set-engine-thread-cell-state! rumble:set-engine-thread-cell-state!]
                   [engine-timeout rumble:engine-timeout]
                   [engine-return rumble:engine-return]
                   [engine-roots rumble:engine-roots]
@@ -139,6 +141,8 @@
       [(|#%engine|)
        (hasheq
         'make-engine rumble:make-engine
+        'make-engine-thread-cell-state rumble:make-engine-thread-cell-state
+        'set-engine-thread-cell-state! rumble:set-engine-thread-cell-state!
         'engine-timeout rumble:engine-timeout
         'engine-return rumble:engine-return
         'engine-roots rumble:engine-roots

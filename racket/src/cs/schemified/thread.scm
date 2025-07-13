@@ -1184,6 +1184,10 @@
 (define 1/break-enabled-key break-enabled-key)
 (define 1/engine-block engine-block)
 (define make-engine (hash-ref (primitive-table '|#%engine|) 'make-engine #f))
+(define make-engine-thread-cell-state
+  (hash-ref (primitive-table '|#%engine|) 'make-engine-thread-cell-state #f))
+(define set-engine-thread-cell-state!
+  (hash-ref (primitive-table '|#%engine|) 'set-engine-thread-cell-state! #f))
 (define engine-timeout
   (hash-ref (primitive-table '|#%engine|) 'engine-timeout #f))
 (define engine-return
@@ -4092,12 +4096,8 @@
 (define unsafe-semaphore-post
   (lambda (s_0)
     (let ((c_0 (semaphore-count s_0)))
-      (if (if (>= c_0 0)
-            (if (not (1/current-future))
-              (unsafe-struct*-cas! s_0 2 c_0 (add1 c_0))
-              #f)
-            #f)
-        (void)
+      (if (if (>= c_0 0) (unsafe-struct*-cas! s_0 2 c_0 (add1 c_0)) #f)
+        (memory-order-release)
         (begin (start-atomic) (semaphore-post/atomic s_0) (end-atomic))))))
 (define semaphore-post/atomic
   (lambda (s_0)
@@ -4160,12 +4160,8 @@
 (define unsafe-semaphore-wait
   (lambda (s_0)
     (let ((c_0 (semaphore-count s_0)))
-      (if (if (positive? c_0)
-            (if (not (1/current-future))
-              (unsafe-struct*-cas! s_0 2 c_0 (sub1 c_0))
-              #f)
-            #f)
-        (void)
+      (if (if (positive? c_0) (unsafe-struct*-cas! s_0 2 c_0 (sub1 c_0)) #f)
+        (memory-order-acquire)
         (|#%app|
          (begin
            (start-atomic)
@@ -6261,10 +6257,10 @@
                   (void)))
               (void))))))
        (loop_0 mref_0)))))
-(define finish_3171
+(define finish_2149
   (make-struct-type-install-properties
    '(thread)
-   23
+   24
    0
    struct:node
    (let ((app_0 (cons prop:sealed #t)))
@@ -6296,7 +6292,7 @@
               (cons host:prop:unsafe-authentic-override #t)))))))
    (current-inspector)
    #f
-   '(0 2 7)
+   '(0 2 7 23)
    #f
    'thread))
 (define struct:thread
@@ -6306,8 +6302,8 @@
    (|#%nongenerative-uid| thread)
    #t
    #f
-   '(23 . 8388474)))
-(define effect_2668 (finish_3171 struct:thread))
+   '(24 . 8388474)))
+(define effect_2668 (finish_2149 struct:thread))
 (define thread1.1
   (|#%name|
    thread
@@ -6359,6 +6355,8 @@
   (|#%name| thread-cpu-time (record-accessor struct:thread 21)))
 (define thread-future
   (|#%name| thread-future (record-accessor struct:thread 22)))
+(define thread-cells
+  (|#%name| thread-cells (record-accessor struct:thread 23)))
 (define set-thread-engine!
   (|#%name| set-thread-engine! (record-mutator struct:thread 1)))
 (define set-thread-sleeping!
@@ -6438,72 +6436,78 @@
                 (if (if at-root?3_0 at-root?3_0 initial?4_0)
                   (unsafe-place-local-ref cell.1)
                   (1/current-thread-group))))
-           (let ((e_0
+           (let ((cells_0
                   (|#%app|
-                   make-engine
-                   proc11_0
-                   (default-continuation-prompt-tag)
-                   #f
+                   make-engine-thread-cell-state
                    (if (if initial?4_0 initial?4_0 at-root?3_0)
                      break-enabled-default-cell
                      (current-break-enabled-cell))
                    at-root?3_0)))
-             (let ((t_0
-                    (let ((app_0 (object-name proc11_0)))
-                      (thread1.1
-                       'none
-                       'none
-                       app_0
-                       e_0
-                       p_0
-                       #f
-                       #f
-                       null
-                       null
-                       suspend-to-kill?5_0
-                       null
-                       null
-                       #f
-                       #f
-                       #f
-                       #f
-                       #f
-                       #f
-                       #f
-                       #f
-                       #f
-                       (make-queue)
-                       void
-                       0
-                       #f))))
-               (begin
-                 (|#%app|
-                  (begin
-                    (start-atomic)
-                    (begin0
-                      (let ((cref_0
-                             (if c_0
-                               (custodian-register-thread
-                                c_0
-                                t_0
-                                remove-thread-custodian)
-                               #f)))
-                        (if (let ((or-part_0 (not c_0)))
-                              (if or-part_0 or-part_0 cref_0))
-                          (begin
-                            (set-thread-custodian-references!
-                             t_0
-                             (list cref_0))
-                            (thread-group-add! p_0 t_0)
-                            void)
-                          (lambda ()
-                            (raise-arguments-error
-                             who10_0
-                             "the custodian has been shut down"
-                             "custodian"
-                             c_0))))
-                      (end-atomic))))
-                 t_0)))))))))
+             (let ((e_0
+                    (|#%app|
+                     make-engine
+                     proc11_0
+                     (default-continuation-prompt-tag)
+                     #f
+                     cells_0
+                     at-root?3_0)))
+               (let ((t_0
+                      (let ((app_0 (object-name proc11_0)))
+                        (thread1.1
+                         'none
+                         'none
+                         app_0
+                         e_0
+                         p_0
+                         #f
+                         #f
+                         null
+                         null
+                         suspend-to-kill?5_0
+                         null
+                         null
+                         #f
+                         #f
+                         #f
+                         #f
+                         #f
+                         #f
+                         #f
+                         #f
+                         #f
+                         (make-queue)
+                         void
+                         0
+                         #f
+                         cells_0))))
+                 (begin
+                   (|#%app|
+                    (begin
+                      (start-atomic)
+                      (begin0
+                        (let ((cref_0
+                               (if c_0
+                                 (custodian-register-thread
+                                  c_0
+                                  t_0
+                                  remove-thread-custodian)
+                                 #f)))
+                          (if (let ((or-part_0 (not c_0)))
+                                (if or-part_0 or-part_0 cref_0))
+                            (begin
+                              (set-thread-custodian-references!
+                               t_0
+                               (list cref_0))
+                              (thread-group-add! p_0 t_0)
+                              void)
+                            (lambda ()
+                              (raise-arguments-error
+                               who10_0
+                               "the custodian has been shut down"
+                               "custodian"
+                               c_0))))
+                        (end-atomic))))
+                   t_0))))))))))
 (define make-thread
   (|#%name|
    thread
@@ -11236,18 +11240,29 @@
                                             'complete
                                             temp32_0)))))))))))))
                    (if (current-future-in-future-thread)
-                     (call-with-values
-                      (lambda ()
-                        (call-with-continuation-prompt
-                         (lambda ()
-                           (begin
-                             (current-atomic (sub1 (current-atomic)))
-                             (|#%app| thunk_0)))
-                         future-start-prompt-tag
-                         (lambda args_0 (void))))
-                      (lambda results_0 (finish!_0 results_0 'done)))
+                     (begin
+                       (if (1/thread? (future*-thread f6_0))
+                         (|#%app|
+                          set-engine-thread-cell-state!
+                          (thread-cells (future*-thread f6_0)))
+                         (void))
+                       (call-with-values
+                        (lambda ()
+                          (call-with-continuation-prompt
+                           (lambda ()
+                             (begin
+                               (current-atomic (sub1 (current-atomic)))
+                               (|#%app| thunk_0)))
+                           future-start-prompt-tag
+                           (lambda args_0 (void))))
+                        (lambda results_0 (finish!_0 results_0 'done))))
                      (if as-unblock?3_0
-                       (begin (1/current-future f6_0) (|#%app| thunk_0))
+                       (begin
+                         (1/current-future f6_0)
+                         (|#%app|
+                          set-engine-thread-cell-state!
+                          (thread-cells (future*-thread f6_0)))
+                         (|#%app| thunk_0))
                        (if (eq? (future*-would-be? f6_0) #t)
                          (call-with-values
                           (lambda ()
@@ -11686,15 +11701,17 @@
   (lambda (me-f_0)
     (let ((th_0 (future*-thread me-f_0)))
       (if (1/thread? th_0)
-        (|#%app|
-         host:post-as-asynchronous-callback
-         (lambda ()
-           (if (thread-descheduled? th_0)
-             (if (let ((or-part_0 (1/thread-dead? th_0)))
-                   (if or-part_0 or-part_0 (thread-suspended? th_0)))
-               (void)
-               (thread-reschedule! th_0))
-             (void))))
+        (begin
+          (|#%app| set-engine-thread-cell-state! #f)
+          (|#%app|
+           host:post-as-asynchronous-callback
+           (lambda ()
+             (if (thread-descheduled? th_0)
+               (if (let ((or-part_0 (1/thread-dead? th_0)))
+                     (if or-part_0 or-part_0 (thread-suspended? th_0)))
+                 (void)
+                 (thread-reschedule! th_0))
+               (void)))))
         (void)))))
 (define future-stop
   (lambda (f_0)
@@ -12131,7 +12148,10 @@
                 (lambda () (run-future.1 #f #f f_0))
                 future-scheduler-prompt-tag
                 void
-                break-enabled-default-cell
+                (|#%app|
+                 make-engine-thread-cell-state
+                 break-enabled-default-cell
+                 #t)
                 #t)))
           (begin
             (current-atomic (add1 (current-atomic)))
@@ -12208,6 +12228,9 @@
                                               (let ((temp90_0
                                                      (lambda ()
                                                        (begin
+                                                         (|#%app|
+                                                          set-engine-thread-cell-state!
+                                                          #f)
                                                          (if stop?_0
                                                            (void)
                                                            (schedule-future!.1
