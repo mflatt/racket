@@ -177,12 +177,12 @@
           (unsafe-struct*-cas! s count-field-pos c (sub1 c)))
      (memory-order-acquire)]
     [else
-     ((atomically
+     ((atomically/no-exit-barrier
        (define c (semaphore-count s))
        (cond
          [(positive? c)
           (set-semaphore-count! s (sub1 c))
-          void]
+          future-exit-barrier]
          [else
           (ready-nonempty-queue s)
           (define w (current-thread/in-atomic))

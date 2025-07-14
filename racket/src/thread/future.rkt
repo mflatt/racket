@@ -114,10 +114,12 @@
 (define future-start-prompt-tag (make-continuation-prompt-tag 'future-start))
 
 (define (current-future-prompt)
-  (if (current-future-in-future-thread)
-      future-scheduler-prompt-tag
-      ;; indicates that `(current-future)` is just indicating an unblock thread
-      #f))
+  (define f (current-future))
+  (if (future*-thread f)
+      ;; in a parallel thread, the future sees the full continuation,
+      ;; whether it's running in a future pthread or as a Racket thread
+      #f
+      future-scheduler-prompt-tag))
 
 ;; called with lock on f held;
 ;; in a non-main pthread, caller is responsible for logging 'end-work;

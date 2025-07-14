@@ -4193,7 +4193,9 @@
            (begin0
              (let ((c_1 (semaphore-count s_0)))
                (if (positive? c_1)
-                 (begin (set-semaphore-count! s_0 (sub1 c_1)) void)
+                 (begin
+                   (set-semaphore-count! s_0 (sub1 c_1))
+                   future-exit-barrier)
                  (begin
                    (ready-nonempty-queue s_0)
                    (let ((w_0 (current-thread/in-atomic)))
@@ -4208,7 +4210,7 @@
                           (waiter-methods-suspend (waiter-ref w_0))
                           w_0
                           interrupt-cb_0)))))))
-             (end-atomic))))))))
+             (end-atomic/no-exit-barrier))))))))
 (define semaphore-wait/poll.1
   (|#%name|
    semaphore-wait/poll
@@ -5347,7 +5349,7 @@
          (void)
          (raise-argument-error 'custodian-shutdown-all "custodian?" c_0))
        (start-atomic)
-       (begin0 (do-custodian-shutdown-all c_0) (end-atomic))
+       (begin0 (do-custodian-shutdown-all c_0) (end-atomic/no-exit-barrier))
        (|#%app| post-shutdown-action)))))
 (define custodian-shutdown-root-at-exit
   (lambda ()
@@ -6439,6 +6441,8 @@
              or-part_0
              (begin (future-barrier) (current-thread/in-atomic))))
          (current-thread/in-atomic))))))
+(define thread-engine-block
+  (lambda () (begin (future-barrier) (engine-block) (future-exit-barrier))))
 (define do-make-thread.1
   (|#%name|
    do-make-thread
@@ -6736,12 +6740,12 @@
            (start-atomic)
            (do-kill-thread t_0)
            (end-atomic)
-           (if (eq? t_0 (current-thread/in-atomic))
+           (if (eq? t_0 (1/current-thread))
              (begin
                (if (eq? t_0 (unsafe-place-local-ref cell.1$1))
                  (force-exit 0)
                  (void))
-               (engine-block))
+               (thread-engine-block))
              (void))
            (1/check-for-break)))))))
 (define do-kill-thread
@@ -6878,7 +6882,7 @@
       (void)
       (set-thread-kill-callbacks! t_0 null))))
 (define check-for-break-after-kill (lambda () (1/check-for-break)))
-(define effect_2660
+(define effect_2616
   (begin
     (void
      (let ((proc_0
@@ -6890,7 +6894,7 @@
                           (if or-part_0
                             or-part_0
                             (null? (thread-custodian-references t_0))))
-                      (engine-block)
+                      (thread-engine-block)
                       (void))
                     (1/check-for-break))
                   (void))))))
@@ -7078,7 +7082,7 @@
                          "attempt to deschedule the current thread in atomic mode")))
                     (void))))))
              (loop_0))
-            (engine-block))
+            (thread-engine-block))
           (void))))))
 (define thread-deschedule!
   (lambda (t_0 timeout-at_0 interrupt-callback_0)
@@ -7094,9 +7098,12 @@
             (let ((finish_0 (do-thread-deschedule! t_0 timeout-at_0)))
               (lambda ()
                 (begin
+                  (if (eq? t_0 (1/current-thread))
+                    (void)
+                    (future-exit-barrier))
                   (|#%app| finish_0)
                   (if retry-callback_0 (|#%app| retry-callback_0) (void))))))
-          (end-atomic))))))
+          (end-atomic/no-exit-barrier))))))
 (define thread-reschedule!
   (lambda (t_0)
     (begin
@@ -7708,7 +7715,7 @@
             (thread-poll-done! (current-thread/in-atomic)))
           (set-thread-sched-info! (current-thread/in-atomic) sched-info_0))
         (end-atomic))
-      (engine-block))))
+      (thread-engine-block))))
 (define 1/sleep
   (let ((sleep_0
          (|#%name|
@@ -10364,7 +10371,7 @@
                                          result_1))))
                                  result_0)))))
                           (for-loop_0 #f nss_0))))
-                   void
+                   future-exit-barrier
                    (let ((t_0 (current-thread/in-atomic)))
                      (begin
                        (set-syncing-wakeup!
@@ -10394,9 +10401,9 @@
                                        (void)
                                        (syncing-retry! s_0))
                                      (retry_0))
-                                   (end-atomic))))))))))))))))
+                                   (end-atomic/no-exit-barrier))))))))))))))))
           (retry_0))
-         (end-atomic))))))
+         (end-atomic/no-exit-barrier))))))
 (define finish_2891
   (make-struct-type-install-properties
    '(evt)
@@ -11257,7 +11264,8 @@
 (define future-start-prompt-tag (make-continuation-prompt-tag 'future-start))
 (define current-future-prompt
   (lambda ()
-    (if (current-future-in-future-thread) future-scheduler-prompt-tag #f)))
+    (let ((f_0 (1/current-future)))
+      (if (future*-thread f_0) #f future-scheduler-prompt-tag))))
 (define run-future.1
   (|#%name|
    run-future
@@ -13102,7 +13110,7 @@
                                                               'value)
                                                             (thread-dead! t_0))
                                                           (end-atomic)))
-                                                      (engine-block))))))))))))
+                                                      (thread-engine-block))))))))))))
                                  (do-make-thread.1
                                   #f
                                   unsafe-undefined

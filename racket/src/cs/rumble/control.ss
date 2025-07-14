@@ -205,6 +205,9 @@
   (let ([fp (strip-impersonator (current-future-prompt))]
         [tag (strip-impersonator tag)])
     (cond
+     [(not fp)
+      ;; no need for barrier
+      (void)]
      [(eq? fp tag)
       ;; shortcut: boundary is the future prompt
       (void)]

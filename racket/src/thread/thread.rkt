@@ -83,6 +83,8 @@
 
            poll-done-threads
 
+           thread-engine-block
+
            current-break-enabled-cell
            check-for-break
 
@@ -168,6 +170,11 @@
                 (current-thread/in-atomic))))]
     [else
      (current-thread/in-atomic)]))
+
+(define (thread-engine-block)
+  (future-barrier)
+  (engine-block)
+  (future-exit-barrier))
 
 ;; ----------------------------------------
 ;; Thread creation
@@ -341,10 +348,10 @@
      (atomically
       (do-kill-thread t)
       (void))
-     (when (eq? t (current-thread/in-atomic))
+     (when (eq? t (current-thread))
        (when (eq? t root-thread)
          (force-exit 0))
-       (engine-block))
+       (thread-engine-block))
      (check-for-break-after-kill)]))
 
 ;; Called in atomic mode:
@@ -421,7 +428,7 @@
            (when t ; in case custodians used (for testing) without threads
              (when (or (thread-dead? t)
                        (null? (thread-custodian-references t)))
-               (engine-block))
+               (thread-engine-block))
              (check-for-break-after-kill))))))
 
 ;; ----------------------------------------
@@ -523,7 +530,7 @@
                 (abort-atomic)
                 (internal-error "attempt to deschedule the current thread in atomic mode")))))
       ;; implies `(check-for-break)`:
-      (engine-block))))
+      (thread-engine-block))))
 
 ;; Extends `do-thread-deschdule!` where `t` is always `(current-thread)`.
 ;; The `interrupt-callback` is called if the thread receives a break
@@ -535,7 +542,7 @@
 ;; `thread-resume`.
 (define (thread-deschedule! t timeout-at interrupt-callback)
   (define retry-callback #f)
-  (atomically
+  (atomically/no-exit-barrier
    (set-thread-interrupt-callback! t (lambda ()
                                        ;; If the interrupt callback gets invoked,
                                        ;; then remember that we need a retry
@@ -545,6 +552,8 @@
    ;; outside the atomic region, because we'd
    ;; swap it out anyway
    (lambda ()
+     (unless (eq? t (current-thread))
+       (future-exit-barrier))
      ;; In non-atomic mode:
      (finish)
      (when retry-callback
@@ -821,7 +830,7 @@
      (thread-did-work!)]
     [else (thread-poll-done! (current-thread/in-atomic))])
    (set-thread-sched-info! (current-thread/in-atomic) sched-info))
-  (engine-block))
+  (thread-engine-block))
 
 ;; Sleep for a while
 (define/who (sleep [secs 0])

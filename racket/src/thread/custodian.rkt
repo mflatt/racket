@@ -235,7 +235,7 @@
 
 (define/who (custodian-shutdown-all c)
   (check who custodian? c)
-  (atomically
+  (atomically/no-exit-barrier
    (do-custodian-shutdown-all c))
   ;; Set in "thread.rkt" to check whether the current thread
   ;; should be swapped out

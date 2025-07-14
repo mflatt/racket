@@ -27,6 +27,7 @@
 
          future-barrier
          future-exit-barrier
+         atomically/no-exit-barrier
 
          add-end-atomic-callback!
          flush-end-atomic-callbacks!
@@ -61,6 +62,13 @@
     (begin0
      (let () expr ...)
      (end-atomic/no-interrupts))))
+
+(define-syntax-rule (atomically/no-exit-barrier expr ...)
+  (begin
+    (start-atomic)
+    (begin0
+     (let () expr ...)
+     (end-atomic/no-exit-barrier))))
 
 ;; inlined in Chez Scheme embedding:
 (define (start-atomic)
