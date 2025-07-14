@@ -7100,7 +7100,9 @@
                 (begin
                   (if (eq? t_0 (1/current-thread))
                     (void)
-                    (future-exit-barrier))
+                    (if (eqv? 0 (current-atomic))
+                      (future-exit-barrier)
+                      (void)))
                   (|#%app| finish_0)
                   (if retry-callback_0 (|#%app| retry-callback_0) (void))))))
           (end-atomic/no-exit-barrier))))))
@@ -7800,7 +7802,8 @@
        (void)
        (let ((t_0 (1/current-thread)))
          (if (if t_0 (thread-pending-break t_0) #f)
-           (let ((exit-barrier?_0 (if (1/current-future) #t #f)))
+           (let ((exit-barrier?_0
+                  (if (1/current-future) (not (current-thread/in-atomic)) #f)))
              (|#%app|
               (begin
                 (start-atomic)
@@ -7916,14 +7919,14 @@
                              (thread-reschedule! t_0)))
                          (void))))
                    void))))
-           (end-atomic))))
+           (end-atomic/no-exit-barrier))))
       (if (eq? t_0 check-t_0)
         (begin
           (1/check-for-break)
           (if (in-atomic-mode?)
             (add-end-atomic-callback! 1/check-for-break)
             (void)))
-        (void)))))
+        (if (eqv? 0 (current-atomic)) (future-exit-barrier) (void))))))
 (define break>?
   (lambda (k1_0 k2_0)
     (if (eq? k1_0 'break)
@@ -11271,7 +11274,7 @@
    run-future
    (lambda (as-unblock?3_0 was-blocked?2_0 f6_0)
      (begin
-       (set-future*-state! f6_0 'running)
+       (set-future*-state! f6_0 (if as-unblock?3_0 #f 'running))
        (let ((thunk_0 (future*-thunk f6_0)))
          (begin
            (set-future*-thunk! f6_0 #f)
@@ -11743,7 +11746,6 @@
         (if (continuation-prompt-available? future-start-prompt-tag)
           (begin
             (lock-acquire (future*-lock me-f_0))
-            (set-future*-state! me-f_0 #f)
             (with-continuation-mark*
              authentic
              break-enabled-key
@@ -11900,19 +11902,21 @@
                 (log-future.1 #f #f 'result temp78_0))
               (1/current-future me-f_0)
               v_0)))
-        (begin
-          (engine-block)
-          (|#%app|
-           host:call-as-asynchronous-callback
-           (lambda ()
-             (begin
-               (let ((temp80_0 (future*-id me-f_0)))
-                 (log-future.1 #f who_0 'sync temp80_0))
-               (let ((v_0 (|#%app| thunk_0)))
-                 (begin
-                   (let ((temp83_0 (future*-id me-f_0)))
-                     (log-future.1 #f #f 'result temp83_0))
-                   v_0))))))))))
+        (if (current-thread/in-atomic)
+          (|#%app| thunk_0)
+          (begin
+            (engine-block)
+            (|#%app|
+             host:call-as-asynchronous-callback
+             (lambda ()
+               (begin
+                 (let ((temp80_0 (future*-id me-f_0)))
+                   (log-future.1 #f who_0 'sync temp80_0))
+                 (let ((v_0 (|#%app| thunk_0)))
+                   (begin
+                     (let ((temp83_0 (future*-id me-f_0)))
+                       (log-future.1 #f #f 'result temp83_0))
+                     v_0)))))))))))
 (define pthread-count 1)
 (define set-processor-count! (lambda (n_0) (set! pthread-count n_0)))
 (define finish_2778
@@ -12326,46 +12330,50 @@
                                 (zero? (current-atomic))
                                 #f)
                             (begin
-                              (|#%app|
-                               host:mutex-acquire
-                               (scheduler-mutex s_0))
-                              (let ((others?_0
-                                     (if (scheduler-futures-head s_0)
-                                       (zero? (scheduler-capacity s_0))
-                                       #f)))
-                                (begin
-                                  (|#%app|
-                                   host:mutex-release
-                                   (scheduler-mutex s_0))
-                                  (if others?_0
-                                    (begin
-                                      (lock-acquire (future*-lock f_0))
+                              (1/check-for-break)
+                              (begin
+                                (|#%app|
+                                 host:mutex-acquire
+                                 (scheduler-mutex s_0))
+                                (let ((others?_0
+                                       (if (scheduler-futures-head s_0)
+                                         (zero? (scheduler-capacity s_0))
+                                         #f)))
+                                  (begin
+                                    (|#%app|
+                                     host:mutex-release
+                                     (scheduler-mutex s_0))
+                                    (if others?_0
                                       (begin
-                                        (future-maybe-notify-stop f_0)
+                                        (lock-acquire (future*-lock f_0))
                                         (begin
-                                          (set-future*-state! f_0 #f)
-                                          (let ((stop?_0
-                                                 (eq?
-                                                  (future*-thread f_0)
-                                                  'stop)))
-                                            (begin
-                                              (let ((temp91_0
-                                                     (lambda ()
-                                                       (begin
-                                                         (|#%app|
-                                                          set-engine-thread-cell-state!
-                                                          #f)
-                                                         (if stop?_0
-                                                           (void)
-                                                           (schedule-future!.1
-                                                            #f
-                                                            f_0))
-                                                         (unsafe-abort-current-continuation/no-wind
-                                                          future-scheduler-prompt-tag
-                                                          (void))))))
-                                                (future-suspend.1 temp91_0 #f))
-                                              (void))))))
-                                    (void)))))
+                                          (future-maybe-notify-stop f_0)
+                                          (begin
+                                            (set-future*-state! f_0 #f)
+                                            (let ((stop?_0
+                                                   (eq?
+                                                    (future*-thread f_0)
+                                                    'stop)))
+                                              (begin
+                                                (let ((temp91_0
+                                                       (lambda ()
+                                                         (begin
+                                                           (|#%app|
+                                                            set-engine-thread-cell-state!
+                                                            #f)
+                                                           (if stop?_0
+                                                             (void)
+                                                             (schedule-future!.1
+                                                              #f
+                                                              f_0))
+                                                           (unsafe-abort-current-continuation/no-wind
+                                                            future-scheduler-prompt-tag
+                                                            (void))))))
+                                                  (future-suspend.1
+                                                   temp91_0
+                                                   #f))
+                                                (void))))))
+                                      (void))))))
                             (void))))
                       (lambda (e_2 results_0 leftover-ticks_0)
                         (if e_2 (loop_0 e_2) (|#%app| done_0 (void)))))))))
@@ -12560,9 +12568,14 @@
       futures-sync-for-shutdown
       scheduler-add-thread-custodian-mapping!))
     (void)))
-(define effect_2173
+(define effect_2787
   (begin
-    (void (set-future->thread! future*-thread future-swapping-out?))
+    (void
+     (set-future->thread!
+      (lambda (f_0)
+        (let ((t_0 (future*-thread f_0)))
+          (if (eq? t_0 'stop) (current-thread/in-atomic) t_0)))
+      future-swapping-out?))
     (void)))
 (define effect_2228
   (begin (void (set! future-can-take-lock? future*-thread)) (void)))

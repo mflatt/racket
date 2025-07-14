@@ -553,7 +553,8 @@
    ;; swap it out anyway
    (lambda ()
      (unless (eq? t (current-thread))
-       (future-exit-barrier))
+       (when (eqv? 0 (current-atomic))
+         (future-exit-barrier)))
      ;; In non-atomic mode:
      (finish)
      (when retry-callback
@@ -929,7 +930,7 @@
            t
            ;; quick pre-test before going atomic:
            (thread-pending-break t))
-      (define exit-barrier? (and (current-future) #t))
+      (define exit-barrier? (and (current-future) (not (current-thread/in-atomic))))
       ((let ()
          (start-atomic)
          (define finish
@@ -976,7 +977,7 @@
 
 ;; Might be called in atomic mode, but `check-t` is #f in that case
 (define (do-break-thread t kind check-t)
-  ((atomically
+  ((atomically/no-exit-barrier
     (cond
       [(thread-dead? t) void]
       [(thread-forward-break-to t)
@@ -998,15 +999,18 @@
              (run-interrupt-callback t)
              (thread-reschedule! t))))
        void])))
-  (when (eq? t check-t)
-    (check-for-break)
-    (when (in-atomic-mode?)
-      ;; This callback could get dropped; see `add-end-atomic-callback!`
-      ;; for more information. That's not entirely harmless, because
-      ;; it might delay detection of a thread break, and our current
-      ;; approach is to document the limitation (e.g., when breaking
-      ;; the current thread in a foreign callback).
-      (add-end-atomic-callback! check-for-break))))
+  (cond
+    [(eq? t check-t)
+     (check-for-break)
+     (when (in-atomic-mode?)
+       ;; This callback could get dropped; see `add-end-atomic-callback!`
+       ;; for more information. That's not entirely harmless, because
+       ;; it might delay detection of a thread break, and our current
+       ;; approach is to document the limitation (e.g., when breaking
+       ;; the current thread in a foreign callback).
+       (add-end-atomic-callback! check-for-break))]
+    [(eqv? 0 (current-atomic))
+     (future-exit-barrier)]))
 
 (define (break>? k1 k2)
   (cond

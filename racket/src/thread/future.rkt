@@ -127,7 +127,9 @@
 (define (run-future f
                     #:was-blocked? [was-blocked? #f]
                     #:as-unblock? [as-unblock? #f])
-  (set-future*-state! f 'running)
+  (set-future*-state! f (if as-unblock?
+                            #f ; like an unscheduled future
+                            'running))
   (define thunk (future*-thunk f))
   (set-future*-thunk! f #f)
   (lock-release (future*-lock f))
@@ -476,7 +478,7 @@
     (cond
       [(continuation-prompt-available? future-start-prompt-tag)
        (lock-acquire (future*-lock me-f))
-       (set-future*-state! me-f #f)
+       ;; Assert: (eq? (future*-state me-f) #f)
        (with-continuation-mark
          break-enabled-key parallel-break-disabled-cell
          (future-suspend #:reschedule (lambda ()
@@ -589,6 +591,9 @@
        (log-future 'result (future*-id me-f))
        (current-future me-f)
        v)]
+    [(current-thread/in-atomic)
+     ;; not in a future pthread
+     (thunk)]
     [else
      ;; In case the main thread is trying to shut down futures, check in:
      (engine-block)
@@ -876,6 +881,7 @@
               (future-suspend))
             (when (and (eq? (scheduler-round-robin s) 'round)
                        (zero? (current-atomic)))
+              (check-for-break)
               (host:mutex-acquire (scheduler-mutex s))
               (define others? (and (scheduler-futures-head s)
                                    (zero? (scheduler-capacity s))))
@@ -1006,6 +1012,11 @@
                                        scheduler-add-thread-custodian-mapping!))
 
 ;; tell "thread.rkt" layer how to maybe extract a thread from `(current-future)`:
-(void (set-future->thread! future*-thread future-swapping-out?))
+(void (set-future->thread! (lambda (f)
+                             (define t (future*-thread f))
+                             (if (eq? t 'stop)
+                                 (current-thread/in-atomic) ; in a Racket thread for a parallel thread
+                                 t))
+                           future-swapping-out?))
 
 (void (set-future-can-take-lock?! future*-thread))
