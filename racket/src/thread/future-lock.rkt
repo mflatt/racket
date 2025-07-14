@@ -13,7 +13,8 @@
 ;;
 ;;    - fsemaphore [one at a time]
 ;;    - schedule queue
-;;    - futures, lower ID before higher ID
+;;    - atomicity, including when in Racket thread scheduler
+;;    - futures, lower ID before higher ID (implies atomicity)
 ;;
 ;; A future's lock must be held to change the future's fields, except
 ;; that the fields to implement the schedule queue should be modified

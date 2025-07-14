@@ -105,6 +105,8 @@
            thread-descheduled?
            thread-suspended?
            thread-cells
+           thread-interrupt-callback
+           set-thread-interrupt-callback!
            set-future->thread!
            current-break-enabled-cell
            parallel-break-disabled-cell))
@@ -129,7 +131,7 @@
                      
                      [suspend+resume-callbacks #:mutable] ; list of (cons callback callback)
                      [descheduled? #:mutable]
-                     [interrupt-callback #:mutable] ; non-#f => wake up on kill
+                     [interrupt-callback #:mutable] ; non-#f => wake up on kill; 'future means future half is running
                      
                      [dead-evt #:mutable] ; created on demand
                      [suspended-box #:mutable] ; created on demand; box contains thread if suspended
@@ -187,7 +189,8 @@
                         #:suspend-to-kill? [suspend-to-kill? #f]
                         #:break-enabled-cell [break-enabled-cell (if (or initial? at-root?)
                                                                      break-enabled-default-cell
-                                                                     (current-break-enabled-cell))])
+                                                                     (current-break-enabled-cell))]
+                        #:schedule? [schedule? #t])
   (check who (procedure-arity-includes/c 0) proc)
   (define p (if (or at-root? initial?)
                 root-thread-group
@@ -216,9 +219,9 @@
                     null ; kill-callbacks
 
                     null ; suspend+resume-callbacks
-                    #f ; descheduled
-                    #f ; interrupt-callback
-                    
+                    (not schedule?) ; descheduled
+                    (if schedule? #f 'future) ; interrupt-callback
+
                     #f ; dead-evt
                     #f ; suspended-box
                     #f ; suspended-evt
@@ -241,7 +244,8 @@
     (cond
       [(or (not c) cref)
        (set-thread-custodian-references! t (list cref))
-       (thread-group-add! p t)
+       (when schedule?
+         (thread-group-add! p t))
        void]
       [else (lambda () (raise-custodian-is-shut-down who c))])))
   t)
@@ -543,10 +547,12 @@
 (define (thread-deschedule! t timeout-at interrupt-callback)
   (define retry-callback #f)
   (atomically/no-exit-barrier
-   (set-thread-interrupt-callback! t (lambda ()
-                                       ;; If the interrupt callback gets invoked,
-                                       ;; then remember that we need a retry
-                                       (set! retry-callback (interrupt-callback))))
+   (set-thread-interrupt-callback! t (if (eq? interrupt-callback 'future)
+                                         'future
+                                         (lambda ()
+                                           ;; If the interrupt callback gets invoked,
+                                           ;; then remember that we need a retry
+                                           (set! retry-callback (interrupt-callback)))))
    (define finish (do-thread-deschedule! t timeout-at))
    ;; It's ok if the thread gets interrupted
    ;; outside the atomic region, because we'd
@@ -758,7 +764,8 @@
     ;; turn out to be disabled, the wait will be
     ;; retried through the retry callback
     (set-thread-interrupt-callback! t #f)
-    (interrupt-callback)))
+    (unless (eq? interrupt-callback 'future)
+      (interrupt-callback))))
 
 ;; ----------------------------------------
 ;; Suspend and resume events
@@ -824,7 +831,7 @@
 ;; are paused, then `sched-info` contains information (such as a
 ;; timeout for the current thread's sleep) needed for a global sleep
 (define (thread-yield sched-info)
-  (atomically
+  (atomically/no-exit-barrier
    (cond
     [(or (not sched-info)
          (schedule-info-did-work? sched-info))
@@ -994,7 +1001,8 @@
            ;; interrupt synchronization, if any
            (run-suspend/resume-callbacks t car)
            (run-suspend/resume-callbacks t cdr))
-         (when (thread-descheduled? t)
+         (when (and (thread-descheduled? t)
+                    (not (eq? 'future (thread-interrupt-callback t))))
            (unless (thread-suspended? t)
              (run-interrupt-callback t)
              (thread-reschedule! t))))
