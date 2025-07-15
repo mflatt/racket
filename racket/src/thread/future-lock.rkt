@@ -23,7 +23,7 @@
 ;; only with the schedule-queue lock held.
 ;;
 ;; A future with state #f is available to run, but it must be either
-;; `would-be?` (never in the queue, only run by a Racket thread) or
+;; would-be (never in the queue, only run by a Racket thread) or
 ;; currently in a queue for a future pthread to take ownership of the
 ;; future.
 

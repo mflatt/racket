@@ -18,7 +18,7 @@
                  lock
                  custodian          ; don't run in future pthread if custodian is shut down
                  [parallel #:mutable] ; #f for a normal future, a `parallel` record for a future implementing a parallel thread
-                 [would-be? #:mutable] ; transitions from #t to 'blocked after blocked
+                 [kind #:mutable]   ; #f, 'would-be, or 'was
                  [thunk #:mutable]  ; thunk or continuation
                  [prev #:mutable]   ; queue previous
                  [next #:mutable]   ; queue next

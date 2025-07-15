@@ -119,6 +119,10 @@
   (define (get-system-stats)
     (values (collections)))
 
+  (define (internal-error s)
+    (#%printf "internal-error: ~a\n" s)
+    (#%exit 1))
+
   (define (primitive-table key)
     (case key
       [(|#%pthread|)
@@ -191,7 +195,8 @@
         'threaded? rumble:threaded?
         'continuation-current-primitive rumble:continuation-current-primitive
         'prop:unsafe-authentic-override prop:unsafe-authentic-override
-        'get-system-stats get-system-stats)]
+        'get-system-stats get-system-stats
+        'internal-error internal-error)]
       [else #f]))
 
   ;; Tie knots:

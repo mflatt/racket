@@ -38,6 +38,8 @@
 
          assert-no-end-atomic-callbacks
 
+         assert
+
          set-future-block!)
 
 ;; "atomically" is atomic within a place; when a future-running
@@ -240,9 +242,15 @@
 
   (define (assert-no-end-atomic-callbacks)
     (unless (eq? 0 (end-atomic-callback))
-      (internal-error "non-empty end-atomic callbacks")))]
+      (internal-error "non-empty end-atomic callbacks")))
+  (define-syntax (assert stx)
+    (syntax-case stx ()
+      [(_ e)
+       #`(unless e
+           (internal-error #,(format "assertion failed: ~s" (syntax->datum #'e))))]))]
  #:off
  [(define-syntax-rule (start-implicit-atomic-mode) (begin))
   (define-syntax-rule (end-implicit-atomic-mode) (begin))
   (define-syntax-rule (assert-atomic-mode) (begin))
-  (define-syntax-rule (assert-no-end-atomic-callbacks) (begin))])
+  (define-syntax-rule (assert-no-end-atomic-callbacks) (begin))
+  (define-syntax-rule (assert e) (begin))])

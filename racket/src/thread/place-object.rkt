@@ -4,7 +4,8 @@
          "custodian-object.rkt"
          "evt.rkt"
          "place-message.rkt"
-         "internal-error.rkt")
+         "internal-error.rkt"
+         "atomic.rkt")
 
 (provide (struct-out place)
          make-place
@@ -68,8 +69,7 @@
   (define p current-place)
   (host:mutex-acquire (place-lock p))
   (define n (+ (place-active-parallel p) delta))
-  (when (n . < . 0)
-    (internal-error "place parallel count went negative"))
+  (assert (n . >= . 0))
   (set-place-active-parallel! p n)
   (host:mutex-release (place-lock p)))
 

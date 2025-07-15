@@ -11,4 +11,4 @@
                      #:off
                      [off ...])
   ;; Select `on` or `off` here:
-  (begin off ...))
+  (begin on ...))

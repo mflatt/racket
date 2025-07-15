@@ -85,7 +85,7 @@
            (make-lock) ; lock
            cust
            #f          ; parallel
-           would-be?
+           (and would-be? 'would-be)
            thunk
            #f          ; prev
            #f          ; next
@@ -100,7 +100,7 @@
   (define f (current-future))
   (and f
        (or (in-future-thread?)
-           (future*-would-be? f))
+           (eq? (future*-kind f) 'would-be))
        f))
 
 (define (current-future-in-unblock-thread)
@@ -115,11 +115,17 @@
 
 (define (current-future-prompt)
   (define f (current-future))
-  (if (future*-parallel f)
-      ;; in a parallel thread, the future sees the full continuation,
-      ;; whether it's running in a future pthread or as a Racket thread
-      #f
-      future-scheduler-prompt-tag))
+  (cond
+    [(not f)
+     ;; can happen just after changing from 'would-be to 'was if something
+     ;; prompt-related precipitated the block
+     #f]
+    [(future*-parallel f)
+     ;; in a parallel thread, the future sees the full continuation,
+     ;; whether it's running in a future pthread or as a Racket thread
+     #f]
+    [else
+     future-scheduler-prompt-tag]))
 
 ;; called with lock on f held;
 ;; in a non-main pthread, caller is responsible for logging 'end-work;
@@ -140,7 +146,7 @@
                                thunk
                                '(unsafe-start-atomic)))
       (log-future (if as-unblock? 'sync 'result) (future*-id f))))
-  (unless (eq? (future*-would-be? f) 'blocked)
+  (unless (eq? (future*-kind f) 'was)
     (log-future 'start-work (future*-id f)))
   (define (finish! results state)
     (start-future-uninterrupted)
@@ -179,7 +185,9 @@
      (set-engine-thread-cell-state! (thread-cells (parallel*-thread (future*-parallel f))))
      ;; unblock thread's start has `future-start-prompt-tag` prompt:
      (thunk)]
-    [(eq? (future*-would-be? f) #t)
+    [(and (eq? (future*-kind f) 'would-be)
+          ;; if we're in a parallel thread, don't try to track would-be blocking
+          (not (current-future)))
      ;; Similar to `(current-future-in-future-thread)` case, but retries
      ;; excplitily if the future blocks
      (call-with-values (lambda ()
@@ -192,8 +200,7 @@
                           future-start-prompt-tag
                           (lambda args
                             ;; Blocked as a would-be future; `(current-future)` has been
-                            ;; reset to #f, and we can retry immediately
-                            (set-future*-would-be?! f 'blocked)
+                            ;; reset to #f, and `future-kind` set to 'was, and we can retry immediately
                             (touch f))))
                        (lambda results
                          (when (eq? (future*-state f) 'running)
@@ -366,7 +373,7 @@
         ;; Need to wait on `f`, so deschedule current one;
         ;; we may pick `f` next the queue (or maybe later)
         (dependent-on-future f)]
-       [(future*-would-be? f) ; => not scheduled
+       [(future*-kind f) ; => not scheduled
         (lock-release-current)
         ;; Lock on f is held
         (run-future f)
@@ -462,15 +469,20 @@
 ;; or in a Racket thread is that is a future's unblock thread;
 ;; can be called from Rumble layer
 (define (future-block)
+  (start-future-uninterrupted)
   (define me-f (current-future-in-future-thread))
-  (when me-f
-    (unless (future*-would-be? me-f)
-      (log-future 'block (future*-id me-f)))
-    (lock-acquire (future*-lock me-f))
-    (future-maybe-notify-stop me-f)
-    (set-future*-state! me-f 'blocked)
-    (on-transition-to-unfinished)
-    (future-suspend)))
+  (cond
+    [me-f
+     (unless (future*-kind me-f)
+       (log-future 'block (future*-id me-f)))
+     (lock-acquire (future*-lock me-f))
+     (end-future-uninterrupted) ; future lock covers it at this point
+     (future-maybe-notify-stop me-f)
+     (set-future*-state! me-f 'blocked)
+     (on-transition-to-unfinished)
+     (future-suspend)]
+    [else
+     (end-future-uninterrupted)]))
 
 ;; called in a Racket thread running a would-be future or as an unblock thread;
 ;; only does something if the thread matches the future's unblock thread
@@ -478,22 +490,17 @@
   (when (eqv? (current-atomic) 0)
     (define me-f (current-future-in-unblock-thread))
     (when me-f
-      (cond
-        [(continuation-prompt-available? future-start-prompt-tag)
-         (lock-acquire (future*-lock me-f))
-         ;; Assert: (eq? (future*-state me-f) #f)
-         (with-continuation-mark
-             break-enabled-key parallel-break-disabled-cell
-             (future-suspend #:reschedule (lambda ()
-                                            (schedule-future! me-f)
-                                            (current-future #f)
-                                            ;; back to start, which will suspend and then
-                                            ;; loop to potentially (if resumed) unblock again
-                                            (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void)))))]
-        [else
-         ;; thread has jumped outside of the future prompt; switch to being
-         ;; a plain thread running the future's continuation
-         (current-future #f)]))))
+      (assert (continuation-prompt-available? future-start-prompt-tag))
+      (lock-acquire (future*-lock me-f))
+      (assert (eq? (future*-state me-f) #f))
+      (with-continuation-mark
+          break-enabled-key parallel-break-disabled-cell
+          (future-suspend #:reschedule (lambda ()
+                                         (schedule-future! me-f)
+                                         (current-future #f)
+                                         ;; back to start, which will suspend and then
+                                         ;; loop to potentially (if resumed) unblock again
+                                         (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void))))))))
 
 ;; called with lock held on the current future, which implies
 ;; that `(current-atomic)` has been incremented, too
@@ -527,13 +534,14 @@
      (lock-release (future*-lock me-f))
      (when touching-f
        (log-future 'touch (future*-id me-f) #:data (future*-id touching-f)))
-     (unless (future*-would-be? me-f)
+     (unless (future*-kind me-f)
        (log-future 'suspend (future*-id me-f)))
      (cond
        [reschedule
         (reschedule)]
-       [(future*-would-be? me-f)
+       [(future*-kind me-f)
         (current-future #f)
+        (set-future*-kind! me-f 'was)
         (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void))]
        [else
         (unblock-thread me-f)
@@ -549,7 +557,7 @@
   (when p
     (unless (parallel*-stop? p)
       (define th (parallel*-thread p))
-      ;; Assert: (in-future-thread?)
+      (assert (in-future-thread?))
       (set-engine-thread-cell-state! #f)
       (host:post-as-asynchronous-callback
        (lambda ()
@@ -613,18 +621,28 @@
 ;; Can be in a future thread
 ;; Call `thunk` in the place's main thread:
 (define (future-sync who thunk)
+  (start-future-uninterrupted)
   (define me-f (current-future))
   (cond
-    [(future*-would-be? me-f)
+    [(eq? (future*-kind me-f) 'would-be)
      (current-future #f)
+     (end-future-uninterrupted)
      (log-future 'sync (future*-id me-f) #:prim-name who)
      (let ([v (thunk)])
        (log-future 'result (future*-id me-f))
        (current-future me-f)
        v)]
+    [(future*-parallel me-f)
+     (end-future-uninterrupted)
+     ;; can run directly within a parallel thread, whether in
+     ;; a future pthread or Racket thread
+     (thunk)]
     [(in-racket-thread?)
+     (end-future-uninterrupted)
+     ;; can run directly, since we're not in a future pthread
      (thunk)]
     [else
+     (end-future-uninterrupted)
      ;; In case the main thread is trying to shut down futures, check in:
      (engine-block)
      ;; Host's `call-as-asynchronous-callback` will post `thunk`
@@ -731,6 +749,7 @@
 ;; (see "future-lock.rkt" for more on lock discipline)
 (define (schedule-future! f #:front? [front? #f])
   (start-future-uninterrupted)
+  (increment-place-parallel-count! 1)
   (define s (future-scheduler f))
   (host:mutex-acquire (scheduler-mutex s))
   (define old (if front?
@@ -750,7 +769,6 @@
      (set-scheduler-futures-tail! s f)])
   (host:condition-signal (scheduler-cond s))
   (host:mutex-release (scheduler-mutex s))
-  (increment-place-parallel-count! 1)
   (end-future-uninterrupted))
 
 ;; called with queue lock held
@@ -818,7 +836,7 @@
      (set-future*-state! f #f)
      (lock-release (future*-lock f))
      (on-transition-to-unfinished)
-     (if (future*-would-be? f)
+     (if (future*-kind f)
          (wakeup-this-place)
          (schedule-future! f #:front? #t))
      #t]))
@@ -1032,10 +1050,7 @@
 ;; waiting for it, then make sure there's a wakeup signal
 (define (on-transition-to-unfinished)
   (define me-f (current-future))
-  (when (and me-f
-             (or (not (future*-would-be? me-f))
-                 (and (future*-parallel me-f)
-                      (in-future-thread?))))
+  (when (and me-f (in-future-thread?))
     (wakeup-this-place)))
 
 (define wakeup-this-place (lambda () (void)))

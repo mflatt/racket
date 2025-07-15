@@ -303,20 +303,26 @@
                     v)
                   'current-pseudo-random-generator))
 
+(define-syntax-rule (pseudo-random-generator-next!* arg ...)
+  (if (current-future)
+      (future-sync 'pseudo-random-generator-next!
+                   (lambda () (pseudo-random-generator-next! arg ...)))
+      (pseudo-random-generator-next! arg ...)))
+
 (define/who random
   (case-lambda
-   [() (pseudo-random-generator-next! (current-pseudo-random-generator))]
+   [() (pseudo-random-generator-next!* (current-pseudo-random-generator))]
    [(n)
     (cond
      [(pseudo-random-generator? n)
-      (pseudo-random-generator-next! n)]
+      (pseudo-random-generator-next!* n)]
      [else
       (check who
              :test (and (exact-integer? n)
                         (<= 1 n 4294967087))
              :contract "(or/c (integer-in 1 4294967087) pseudo-random-generator?)"
              n)
-      (pseudo-random-generator-next! (current-pseudo-random-generator) n)])]
+      (pseudo-random-generator-next!* (current-pseudo-random-generator) n)])]
    [(n prg)
     (check who
            :test (and (exact-integer? n)
@@ -324,7 +330,7 @@
            :contract "(or/c (integer-in 1 4294967087) pseudo-random-generator?)"
            n)
     (check who pseudo-random-generator? prg)
-    (pseudo-random-generator-next! prg n)]))
+    (pseudo-random-generator-next!* prg n)]))
 
 (define/who (random-seed k)
   (check who
@@ -332,7 +338,9 @@
                     (<= k (sub1 (#%expt 2 31))))
          :contract "(integer-in 0 (sub1 (expt 2 31)))"
          k)
-  (pseudo-random-generator-seed! (current-pseudo-random-generator) k))
+  (block-future)
+  (pseudo-random-generator-seed! (current-pseudo-random-generator) k)
+  (unblock-future))
 
 (define (pseudo-random-generator-vector? v)
   (let ([in-range?
