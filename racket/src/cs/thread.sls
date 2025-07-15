@@ -71,10 +71,10 @@
         ;; Recognize definition of `current-future`:
         [(_ 1/current-future (make-pthread-parameter #f))
          (define-as-virtual-register stx current-future-virtual-register)]
-        ;; Force-inline `start-atomic`, `end-atomic`, `future-barrier`, and `future-exit-barrier`,
+        ;; Force-inline `start-atomic`, `end-atomic`, `end-atomic/no-exit-barrier`, `future-barrier`, and `future-exit-barrier`,
         ;; at least within the core layers:
         [(_ id (lambda () expr ...))
-         (#%memq (syntax->datum #'id) '(start-atomic end-atomic future-barrier future-exit-barrier))
+         (#%memq (syntax->datum #'id) '(start-atomic end-atomic end-atomic/no-exit-barrier future-barrier future-exit-barrier))
          #'(begin
              (define proc (let ([id (lambda () expr ...)]) id))
              (define-syntax (id stx)

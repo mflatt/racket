@@ -329,9 +329,8 @@
 ;; ----------------------------------------
 ;; Thread termination
 
-;; Called in atomic mode:
+;; Called in atomic mode or in a thread that has the only access to the thread:
 (define (thread-push-kill-callback! cb [t-in #f])
-  (assert-atomic-mode)
   (define t (or t-in (current-thread/in-atomic)))
   (set-thread-kill-callbacks! t (cons cb (thread-kill-callbacks t))))
 
@@ -925,8 +924,7 @@
 ;; `check-for-break` should be called.
 (define (check-for-break)
   (unless (and (current-future)
-               ;; in a future pthread?
-               (not (current-thread/in-atomic))
+               (in-future-thread?)
                ;; but not a future pthread that is running a parallel-thread future?
                (or (not (future->thread (current-future)))
                    ;; and not when the future is already trying to swap out
@@ -937,7 +935,7 @@
            t
            ;; quick pre-test before going atomic:
            (thread-pending-break t))
-      (define exit-barrier? (and (current-future) (not (current-thread/in-atomic))))
+      (define exit-barrier? (and (current-future) (in-future-thread?)))
       ((let ()
          (start-atomic)
          (define finish

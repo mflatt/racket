@@ -1,5 +1,6 @@
 #lang racket/base
-(require "config.rkt"
+(require racket/fixnum
+         "config.rkt"
          "place-local.rkt"
          "place-object.rkt"
          "check.rkt"
@@ -98,7 +99,7 @@
 (define (current-future-in-future-thread) ; includes would-be futures
   (define f (current-future))
   (and f
-       (or (not (current-thread/in-atomic))
+       (or (in-future-thread?)
            (future*-would-be? f))
        f))
 
@@ -165,7 +166,7 @@
      (call-with-values (lambda ()
                          (call-with-continuation-prompt
                           (lambda ()
-                            (current-atomic (sub1 (current-atomic)))
+                            (end-future-uninterrupted)
                             (thunk))
                           future-start-prompt-tag
                           (lambda args (void))))
@@ -294,10 +295,9 @@
                             (lambda args
                               (loop)))))))
      (set-future*-parallel! me-f (parallel* pool th #f))
-     (atomically
-      (thread-push-kill-callback! (lambda () (future-stop me-f)) th)
-      ;; this is the step (internally atomic) that commits the thread to running:
-      (schedule-future! me-f))
+     (thread-push-kill-callback! (lambda () (future-stop me-f)) th)
+     ;; this is the step (internally atomic) that commits the thread to running:
+     (schedule-future! me-f)
      th]))
 
 ;; When two futures interact, we may need to adjust both;
@@ -475,24 +475,25 @@
 ;; called in a Racket thread running a would-be future or as an unblock thread;
 ;; only does something if the thread matches the future's unblock thread
 (define (future-unblock)
-  (define me-f (current-future-in-unblock-thread))
-  (when me-f
-    (cond
-      [(continuation-prompt-available? future-start-prompt-tag)
-       (lock-acquire (future*-lock me-f))
-       ;; Assert: (eq? (future*-state me-f) #f)
-       (with-continuation-mark
-         break-enabled-key parallel-break-disabled-cell
-         (future-suspend #:reschedule (lambda ()
-                                        (schedule-future! me-f)
-                                        (current-future #f)
-                                        ;; back to start, which will suspend and then
-                                        ;; loop to potentially (if resumed) unblock again
-                                        (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void)))))]
-      [else
-       ;; thread has jumped outside of the future prompt; switch to being
-       ;; a plain thread running the future's continuation
-       (current-future #f)])))
+  (when (eqv? (current-atomic) 0)
+    (define me-f (current-future-in-unblock-thread))
+    (when me-f
+      (cond
+        [(continuation-prompt-available? future-start-prompt-tag)
+         (lock-acquire (future*-lock me-f))
+         ;; Assert: (eq? (future*-state me-f) #f)
+         (with-continuation-mark
+             break-enabled-key parallel-break-disabled-cell
+             (future-suspend #:reschedule (lambda ()
+                                            (schedule-future! me-f)
+                                            (current-future #f)
+                                            ;; back to start, which will suspend and then
+                                            ;; loop to potentially (if resumed) unblock again
+                                            (unsafe-abort-current-continuation/no-wind future-start-prompt-tag (void)))))]
+        [else
+         ;; thread has jumped outside of the future prompt; switch to being
+         ;; a plain thread running the future's continuation
+         (current-future #f)]))))
 
 ;; called with lock held on the current future, which implies
 ;; that `(current-atomic)` has been incremented, too
@@ -504,7 +505,7 @@
      (cond
        [(eqv? (current-atomic) 1)
         (set-future*-thunk! me-f (if (and (future*-parallel me-f)
-                                          (not (current-thread/in-atomic)))
+                                          (in-future-thread?))
                                      (lambda ()
                                        ;; check for break on apply in Racket thread,
                                        ;; since `no-wind` won't check automatically
@@ -512,13 +513,13 @@
                                      k))]
        [else
         ;; extra atomicity is from `start-uninterrupted`s
-        (define n (sub1 (current-atomic)))
+        (define n (fx- (current-atomic) 1))
         (current-atomic 1)
         (set-future*-thunk! me-f (lambda ()
                                    (current-atomic (+ n (current-atomic)))
                                    (k)))])
      ;; no future-scheduler swap out from here on:
-     (unless (current-thread/in-atomic)
+     (unless (in-racket-thread?)
        (define p (future*-parallel me-f))
        (when p
          (set-scheduler-round-robin! (parallel-thread-pool-scheduler (parallel*-pool p)) 'pause)))
@@ -548,7 +549,7 @@
   (when p
     (unless (parallel*-stop? p)
       (define th (parallel*-thread p))
-      ;; Assert: (not (current-thread/in-atomic))
+      ;; Assert: (in-future-thread?)
       (set-engine-thread-cell-state! #f)
       (host:post-as-asynchronous-callback
        (lambda ()
@@ -621,8 +622,7 @@
        (log-future 'result (future*-id me-f))
        (current-future me-f)
        v)]
-    [(current-thread/in-atomic)
-     ;; not in a future pthread
+    [(in-racket-thread?)
      (thunk)]
     [else
      ;; In case the main thread is trying to shut down futures, check in:
@@ -730,7 +730,7 @@
 ;; maybe atomically, but no other locks held
 ;; (see "future-lock.rkt" for more on lock discipline)
 (define (schedule-future! f #:front? [front? #f])
-  (current-atomic (add1 (current-atomic)))
+  (start-future-uninterrupted)
   (define s (future-scheduler f))
   (host:mutex-acquire (scheduler-mutex s))
   (define old (if front?
@@ -751,7 +751,7 @@
   (host:condition-signal (scheduler-cond s))
   (host:mutex-release (scheduler-mutex s))
   (increment-place-parallel-count! 1)
-  (current-atomic (sub1 (current-atomic))))
+  (end-future-uninterrupted))
 
 ;; called with queue lock held
 (define (deschedule-future f)
@@ -776,7 +776,7 @@
 ;; called with no locks held; if successful,
 ;; returns with lock held on f
 (define (try-deschedule-future? f)
-  (current-atomic (add1 (current-atomic)))
+  (start-future-uninterrupted)
   (define s (future-scheduler f))
   (host:mutex-acquire (scheduler-mutex s))
   (define ok?
@@ -794,7 +794,7 @@
        #t]))
   (host:mutex-release (scheduler-mutex s))
   (when ok? (increment-place-parallel-count! -1))
-  (current-atomic (sub1 (current-atomic)))
+  (end-future-uninterrupted)
   ok?)
 
 ;; called in any pthread
@@ -822,14 +822,6 @@
          (wakeup-this-place)
          (schedule-future! f #:front? #t))
      #t]))
-
-(define (future-scheduler-lock f)
-  (define s (future-scheduler f))
-  (host:mutex-acquire (scheduler-mutex s)))
-
-(define (future-scheduler-unlock f)
-  (define s (future-scheduler f))
-  (host:mutex-release (scheduler-mutex s)))
 
 ;; ----------------------------------------
 
@@ -903,7 +895,7 @@
                          (make-engine-thread-cell-state break-enabled-default-cell
                                                         #t)
                          #t))
-  (current-atomic (add1 (current-atomic)))
+  (start-future-uninterrupted)
   (call-with-engine-completion
    (lambda (done)
      (let loop ([e e])
@@ -1043,7 +1035,7 @@
   (when (and me-f
              (or (not (future*-would-be? me-f))
                  (and (future*-parallel me-f)
-                      (not (current-thread/in-atomic)))))
+                      (in-future-thread?))))
     (wakeup-this-place)))
 
 (define wakeup-this-place (lambda () (void)))

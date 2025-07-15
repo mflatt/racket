@@ -1897,6 +1897,8 @@
 (define current-atomic (make-pthread-parameter 0))
 (define current-thread/in-atomic (make-pthread-parameter #f))
 (define 1/current-future (make-pthread-parameter #f))
+(define in-racket-thread? (lambda () (if (current-thread/in-atomic) #t #f)))
+(define in-future-thread? (lambda () (not (current-thread/in-atomic))))
 (define start-atomic
   (lambda ()
     (begin (future-barrier) (current-atomic (fx+ (current-atomic) 1)))))
@@ -7817,7 +7819,7 @@
    check-for-break
    (lambda ()
      (if (if (1/current-future)
-           (if (not (current-thread/in-atomic))
+           (if (in-future-thread?)
              (let ((or-part_0
                     (not
                      (let ((app_0 future->thread))
@@ -7832,7 +7834,7 @@
        (let ((t_0 (1/current-thread)))
          (if (if t_0 (thread-pending-break t_0) #f)
            (let ((exit-barrier?_0
-                  (if (1/current-future) (not (current-thread/in-atomic)) #f)))
+                  (if (1/current-future) (in-future-thread?) #f)))
              (|#%app|
               (begin
                 (start-atomic)
@@ -10991,15 +10993,9 @@
       (if (unsafe-box*-cas! ID id_0 (+ 1 id_0)) id_0 (get-next-id)))))
 (define make-lock (lambda () (box 0)))
 (define start-future-uninterrupted
-  (lambda ()
-    (if (1/current-future)
-      (current-atomic (add1 (current-atomic)))
-      (start-atomic))))
+  (lambda () (current-atomic (fx+ (current-atomic) 1))))
 (define end-future-uninterrupted
-  (lambda ()
-    (if (1/current-future)
-      (current-atomic (sub1 (current-atomic)))
-      (end-atomic))))
+  (lambda () (current-atomic (fx- (current-atomic) 1))))
 (define lock-acquire
   (lambda (lock_0)
     (begin
@@ -11386,7 +11382,7 @@
   (lambda ()
     (let ((f_0 (1/current-future)))
       (if f_0
-        (if (let ((or-part_0 (not (current-thread/in-atomic))))
+        (if (let ((or-part_0 (in-future-thread?)))
               (if or-part_0 or-part_0 (future*-would-be? f_0)))
           f_0
           #f)
@@ -11483,7 +11479,7 @@
                           (call-with-continuation-prompt
                            (lambda ()
                              (begin
-                               (current-atomic (sub1 (current-atomic)))
+                               (end-future-uninterrupted)
                                (|#%app| thunk_0)))
                            future-start-prompt-tag
                            (lambda args_0 (void))))
@@ -11677,7 +11673,7 @@
                                    (default-continuation-prompt-tag))))))
                           (let ((me-f_0
                                  (create-future thunk-in-prompt_0 cust_0 #f)))
-                            (let ((temp46_0
+                            (let ((temp47_0
                                    (lambda ()
                                      (letrec*
                                       ((loop_0
@@ -11698,19 +11694,15 @@
                                       #f
                                       #f
                                       'thread/parallel
-                                      temp46_0)))
+                                      temp47_0)))
                                 (begin
                                   (set-future*-parallel!
                                    me-f_0
                                    (parallel*3.1 pool_0 th_0 #f))
-                                  (start-atomic)
-                                  (begin0
-                                    (begin
-                                      (thread-push-kill-callback!
-                                       (lambda () (future-stop me-f_0))
-                                       th_0)
-                                      (schedule-future!.1 #f me-f_0))
-                                    (end-atomic))
+                                  (thread-push-kill-callback!
+                                   (lambda () (future-stop me-f_0))
+                                   th_0)
+                                  (schedule-future!.1 #f me-f_0)
                                   th_0)))))))))))))))
     (|#%name|
      thread/parallel
@@ -11872,26 +11864,28 @@
         (void)))))
 (define future-unblock
   (lambda ()
-    (let ((me-f_0 (current-future-in-unblock-thread)))
-      (if me-f_0
-        (if (continuation-prompt-available? future-start-prompt-tag)
-          (begin
-            (lock-acquire (future*-lock me-f_0))
-            (with-continuation-mark*
-             authentic
-             break-enabled-key
-             parallel-break-disabled-cell
-             (let ((temp68_0
-                    (lambda ()
-                      (begin
-                        (schedule-future!.1 #f me-f_0)
-                        (1/current-future #f)
-                        (unsafe-abort-current-continuation/no-wind
-                         future-start-prompt-tag
-                         (void))))))
-               (future-suspend.1 temp68_0 #f))))
-          (1/current-future #f))
-        (void)))))
+    (if (eqv? (current-atomic) 0)
+      (let ((me-f_0 (current-future-in-unblock-thread)))
+        (if me-f_0
+          (if (continuation-prompt-available? future-start-prompt-tag)
+            (begin
+              (lock-acquire (future*-lock me-f_0))
+              (with-continuation-mark*
+               authentic
+               break-enabled-key
+               parallel-break-disabled-cell
+               (let ((temp68_0
+                      (lambda ()
+                        (begin
+                          (schedule-future!.1 #f me-f_0)
+                          (1/current-future #f)
+                          (unsafe-abort-current-continuation/no-wind
+                           future-start-prompt-tag
+                           (void))))))
+                 (future-suspend.1 temp68_0 #f))))
+            (1/current-future #f))
+          (void)))
+      (void))))
 (define future-suspend.1
   (|#%name|
    future-suspend
@@ -11903,12 +11897,10 @@
             (if (eqv? (current-atomic) 1)
               (set-future*-thunk!
                me-f_0
-               (if (if (future*-parallel me-f_0)
-                     (not (current-thread/in-atomic))
-                     #f)
+               (if (if (future*-parallel me-f_0) (in-future-thread?) #f)
                  (lambda () (call-in-continuation k_0 1/check-for-break))
                  k_0))
-              (let ((n_0 (sub1 (current-atomic))))
+              (let ((n_0 (fx- (current-atomic) 1)))
                 (begin
                   (current-atomic 1)
                   (set-future*-thunk!
@@ -11917,7 +11909,7 @@
                      (begin
                        (current-atomic (+ n_0 (current-atomic)))
                        (|#%app| k_0)))))))
-            (if (current-thread/in-atomic)
+            (if (in-racket-thread?)
               (void)
               (let ((p_0 (future*-parallel me-f_0)))
                 (if p_0
@@ -12050,7 +12042,7 @@
                 (log-future.1 #f #f 'result temp79_0))
               (1/current-future me-f_0)
               v_0)))
-        (if (current-thread/in-atomic)
+        (if (in-racket-thread?)
           (|#%app| thunk_0)
           (begin
             (engine-block)
@@ -12263,7 +12255,7 @@
    schedule-future!
    (lambda (front?17_0 f19_0)
      (begin
-       (current-atomic (add1 (current-atomic)))
+       (start-future-uninterrupted)
        (let ((s_0 (future-scheduler f19_0)))
          (begin
            (|#%app| host:mutex-acquire (scheduler-mutex s_0))
@@ -12288,7 +12280,7 @@
                (|#%app| host:condition-signal (scheduler-cond s_0))
                (|#%app| host:mutex-release (scheduler-mutex s_0))
                (increment-place-parallel-count! 1)
-               (current-atomic (sub1 (current-atomic)))))))))))
+               (end-future-uninterrupted)))))))))
 (define deschedule-future
   (lambda (f_0)
     (let ((s_0 (future-scheduler f_0)))
@@ -12313,7 +12305,7 @@
 (define try-deschedule-future?
   (lambda (f_0)
     (begin
-      (current-atomic (add1 (current-atomic)))
+      (start-future-uninterrupted)
       (let ((s_0 (future-scheduler f_0)))
         (begin
           (|#%app| host:mutex-acquire (scheduler-mutex s_0))
@@ -12331,7 +12323,7 @@
             (begin
               (|#%app| host:mutex-release (scheduler-mutex s_0))
               (if ok?_0 (increment-place-parallel-count! -1) (void))
-              (current-atomic (sub1 (current-atomic)))
+              (end-future-uninterrupted)
               ok?_0)))))))
 (define future-notify-dependents
   (lambda (deps_0)
@@ -12442,7 +12434,7 @@
                  #t)
                 #t)))
           (begin
-            (current-atomic (add1 (current-atomic)))
+            (start-future-uninterrupted)
             (|#%app|
              call-with-engine-completion
              (lambda (done_0)
@@ -12714,9 +12706,7 @@
             (let ((or-part_0 (not (future*-would-be? me-f_0))))
               (if or-part_0
                 or-part_0
-                (if (future*-parallel me-f_0)
-                  (not (current-thread/in-atomic))
-                  #f)))
+                (if (future*-parallel me-f_0) (in-future-thread?) #f)))
             #f)
         (|#%app| wakeup-this-place)
         (void)))))
