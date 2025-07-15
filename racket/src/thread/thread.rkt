@@ -349,7 +349,7 @@
      ((atomically
        (do-thread-suspend t)))]
     [else
-     (atomically
+     (atomically/no-exit-barrier
       (do-kill-thread t)
       (void))
      (when (eq? t (current-thread))

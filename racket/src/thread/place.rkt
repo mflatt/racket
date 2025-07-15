@@ -194,7 +194,14 @@
         (semaphore-post-all/atomic s))
       (when break
         (thread-did-work!)
-        (do-break-thread root-thread break #f))))))
+        (do-break-thread root-thread break #f))))
+  ;; Called in atomic mode by scheduler
+  (lambda ()
+    (define p current-place)
+    (host:mutex-acquire (place-lock p))
+    (define n (place-active-parallel p))
+    (host:mutex-release (place-lock p))
+    (n . > . 0))))
 
 ;; in atomic mode
 (define (do-place-kill p)

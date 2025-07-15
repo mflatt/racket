@@ -213,14 +213,20 @@
           (not (any-idle-waiters?)))
      ;; all threads done or blocked
      (cond
-       [(thread-running? root-thread)
+       [(or (thread-running? root-thread)
+            (any-running-parallel-threads?))
         ;; we shouldn't exit, because the main thread is
         ;; blocked, but it's not going to become unblocked;
         ;; sleep forever or until a signal changes things
         (process-sleep)
         (poll-and-select-thread! 0)]
        [else
-        (void)])]
+        ;; Look for callbacks one more time, since `(process-sleep)` would
+        ;; otherwise report any late-added ones
+        (define callbacks (host:poll-async-callbacks))
+        (cond
+          [(pair? callbacks) (maybe-done callbacks)]
+          [else (void)])])]
     [else
      ;; try again, which should lead to `process-sleep`
      (poll-and-select-thread! 0)]))
@@ -298,7 +304,8 @@
   (thread-did-work!))
 
 (define (try-post-idle)
-  (and (post-idle)
+  (and (not (any-running-parallel-threads?))
+       (post-idle)
        (begin
          (thread-did-work!)
          #t)))
@@ -349,5 +356,7 @@
 ;; ----------------------------------------
 
 (define check-place-activity void)
-(define (set-check-place-activity! proc)
-  (set! check-place-activity proc))
+(define any-running-parallel-threads? (lambda () #f))
+(define (set-check-place-activity! proc running-parallel?)
+  (set! check-place-activity proc)
+  (set! any-running-parallel-threads? running-parallel?))

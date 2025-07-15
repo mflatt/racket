@@ -11,10 +11,11 @@
 ;; when multiple locks are held at once, they must be acquired
 ;; in this order):
 ;;
+;;    - atomicity in Racket thread scheduler
 ;;    - fsemaphore [one at a time]
 ;;    - schedule queue
-;;    - atomicity, including when in Racket thread scheduler
 ;;    - futures, lower ID before higher ID (implies atomicity)
+;;    - place lock
 ;;
 ;; A future's lock must be held to change the future's fields, except
 ;; that the fields to implement the schedule queue should be modified

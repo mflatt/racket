@@ -295,8 +295,9 @@
                               (loop)))))))
      (set-future*-parallel! me-f (parallel* pool th #f))
      (atomically
-      (thread-push-kill-callback! (lambda () (future-stop me-f)) th))
-     (schedule-future! me-f)
+      (thread-push-kill-callback! (lambda () (future-stop me-f)) th)
+      ;; this is the step (internally atomic) that commits the thread to running:
+      (schedule-future! me-f))
      th]))
 
 ;; When two futures interact, we may need to adjust both;
@@ -567,7 +568,8 @@
             ;; Racket thread should be on its way back to `touch-blocked` or
             ;; alerady noticed the reader future; in the former case, it will
             ;; check on the future without needing to be rescheduled
-            (void)]))))))
+            (void)])))
+      (wakeup-this-place))))
 
 ;; in atomic mode in Racket thread when an unblocking thread is killed
 (define (future-stop f)
@@ -724,9 +726,11 @@
   (futures-sync-for-shutdown))
 
 ;; called in any pthread
-;; called maybe holding an fsemaphore lock or scheduler lock, but nothing else
+;; called maybe holding an fsemaphore lock or scheduler lock, and
+;; maybe atomically, but no other locks held
 ;; (see "future-lock.rkt" for more on lock discipline)
 (define (schedule-future! f #:front? [front? #f])
+  (current-atomic (add1 (current-atomic)))
   (define s (future-scheduler f))
   (host:mutex-acquire (scheduler-mutex s))
   (define old (if front?
@@ -745,7 +749,9 @@
      (set-future*-next! old f)
      (set-scheduler-futures-tail! s f)])
   (host:condition-signal (scheduler-cond s))
-  (host:mutex-release (scheduler-mutex s)))
+  (host:mutex-release (scheduler-mutex s))
+  (increment-place-parallel-count! 1)
+  (current-atomic (sub1 (current-atomic))))
 
 ;; called with queue lock held
 (define (deschedule-future f)
@@ -770,6 +776,7 @@
 ;; called with no locks held; if successful,
 ;; returns with lock held on f
 (define (try-deschedule-future? f)
+  (current-atomic (add1 (current-atomic)))
   (define s (future-scheduler f))
   (host:mutex-acquire (scheduler-mutex s))
   (define ok?
@@ -786,6 +793,8 @@
        (lock-acquire (future*-lock f))
        #t]))
   (host:mutex-release (scheduler-mutex s))
+  (when ok? (increment-place-parallel-count! -1))
+  (current-atomic (sub1 (current-atomic)))
   ok?)
 
 ;; called in any pthread
@@ -868,6 +877,7 @@
      (future-maybe-notify-stop f)
      (set-future*-state! f 'blocked)
      (on-transition-to-unfinished)
+     (increment-place-parallel-count! -1)
      (lock-release (future*-lock f))]
     [else
      (run-future-in-worker f w s)]))
@@ -938,6 +948,7 @@
               [e (loop e)]
               [else
                ;; Done --- completed or suspended (e.g., blocked)
+               (increment-place-parallel-count! -1)
                (done (void))]))))))
   (log-future 'end-work (future*-id f))
   (current-future 'worker)
@@ -1030,7 +1041,9 @@
 (define (on-transition-to-unfinished)
   (define me-f (current-future))
   (when (and me-f
-             (not (future*-would-be? me-f)))
+             (or (not (future*-would-be? me-f))
+                 (and (future*-parallel me-f)
+                      (not (current-thread/in-atomic)))))
     (wakeup-this-place)))
 
 (define wakeup-this-place (lambda () (void)))
