@@ -181,7 +181,7 @@
                     (go)))
      ;; If we get here, the break wasn't triggered, and it must be currently ignored.
      ;; (If the break was triggered so that we don't get here, it's not ignored.)
-     (thread-remove-ignored-break-cell! (current-thread/in-atomic) local-break-cell)
+     (thread-remove-ignored-break-cell! (current-thread) local-break-cell)
      ;; In case old break cell was meanwhile enabled:
      (check-for-break)
      ;; In tail position:

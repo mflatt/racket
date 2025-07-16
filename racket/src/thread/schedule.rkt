@@ -80,24 +80,35 @@
     (when (thread-dead? root-thread)
       (force-exit 0)))
   (flush-future-log)
+  (define (run-callbacks-in-new-thread callbacks)
+    ;; Need to run atomic callbacks in some thread, so make one
+    (do-make-thread 'callbacks
+                    (lambda () (void))
+                    #:custodian #f
+                    #:at-root? #t)
+    (poll-and-select-thread! TICKS callbacks))
   (cond
     [(all-threads-poll-done?)
      ;; May need to sleep
      (cond
        [(not (null? callbacks))
-        ;; Need to run atomic callbacks in some thread, so make one
-        (do-make-thread 'callbacks
-                        (lambda () (void))
-                        #:custodian #f
-                        #:at-root? #t)
-        (poll-and-select-thread! TICKS callbacks)]
+        (run-callbacks-in-new-thread callbacks)]
        [(and (not poll-now?)
              (check-external-events))
         ;; Retry and reset counter for checking external events
         (poll-and-select-thread! TICKS callbacks)]
        [(try-post-idle)
-        ;; Enabled a thread that was waiting for idle
-        (select-thread! leftover-ticks callbacks)]
+        => (lambda (new-callbacks)
+             ;; Enabled a thread that was waiting for idle,
+             ;; or discovered new callbacks
+             (cond
+               [(null? new-callbacks)
+                ;; Must have been an idle-evt post
+                (select-thread! leftover-ticks new-callbacks)]
+               [else
+                ;; Must have discovered new callbacks after checking
+                ;; parallel-thread count
+                (run-callbacks-in-new-thread new-callbacks)]))]
        [else
         (process-sleep)
         ;; Retry, checking right away for external events
@@ -221,8 +232,9 @@
         (process-sleep)
         (poll-and-select-thread! 0)]
        [else
-        ;; Look for callbacks one more time, since `(process-sleep)` would
-        ;; otherwise report any late-added ones
+        ;; Look for callbacks one more time (needed any time after
+        ;; checking `any-running-parallel-threads?`), since
+        ;; `(process-sleep)` would otherwise report any late-added ones
         (define callbacks (host:poll-async-callbacks))
         (cond
           [(pair? callbacks) (maybe-done callbacks)]
@@ -305,10 +317,21 @@
 
 (define (try-post-idle)
   (and (not (any-running-parallel-threads?))
-       (post-idle)
-       (begin
-         (thread-did-work!)
-         #t)))
+       ;; it's possible that a parallel thread was running, but it
+       ;; has since suspended itslef by posting an async callback
+       ;; since the last time we checked; so check for callbacks
+       ;; once again
+       (let ([callbacks (host:poll-async-callbacks)])
+         (cond
+           [(null? callbacks)
+            (and (post-idle)
+                 (begin
+                   (thread-did-work!)
+                   ;; return empty list of callbacks as "true"
+                   null))]
+           [else
+            ;; Not idle after all
+            callbacks]))))
 
 ;; ----------------------------------------
 

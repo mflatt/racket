@@ -7608,7 +7608,8 @@
        (|#%app|
         (begin
           (start-atomic)
-          (begin0 (do-thread-suspend t_0) (end-atomic))))))))
+          (begin0 (do-thread-suspend t_0) (end-atomic/no-exit-barrier))))
+       (future-exit-barrier)))))
 (define do-thread-suspend
   (lambda (t_0)
     (begin
@@ -7617,7 +7618,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:593:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:594:2 (assert-atomic-mode)>"))
       (if (1/thread-dead? t_0)
         void
         (begin
@@ -7685,7 +7686,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:628:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:629:2 (assert-atomic-mode)>"))
       (if (1/thread-dead? t_0)
         (not
          (if (1/custodian? benefactor_0)
@@ -7745,7 +7746,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:662:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:663:2 (assert-atomic-mode)>"))
       (letrec*
        ((loop_0
          (|#%name|
@@ -7847,7 +7848,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:708:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:709:2 (assert-atomic-mode)>"))
       (let ((new-l_0
              (letrec*
               ((loop_0
@@ -7883,7 +7884,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:730:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:731:2 (assert-atomic-mode)>"))
       (let ((lst_0 (thread-transitive-resumes t_0)))
         (begin
           (check-list lst_0)
@@ -7912,7 +7913,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:739:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:740:2 (assert-atomic-mode)>"))
       (let ((t_0 (current-thread/in-atomic)))
         (set-thread-suspend+resume-callbacks!
          t_0
@@ -7926,7 +7927,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:746:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:747:2 (assert-atomic-mode)>"))
       (let ((t_0 (current-thread/in-atomic)))
         (set-thread-suspend+resume-callbacks!
          t_0
@@ -7939,7 +7940,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:752:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:753:2 (assert-atomic-mode)>"))
       (let ((lst_0 (thread-suspend+resume-callbacks t_0)))
         (begin
           (check-list lst_0)
@@ -7965,7 +7966,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:758:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:759:2 (assert-atomic-mode)>"))
       (let ((interrupt-callback_0 (thread-interrupt-callback t_0)))
         (if interrupt-callback_0
           (begin
@@ -8506,7 +8507,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1040:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1041:2 (assert-atomic-mode)>"))
       (let ((ignore_0 (thread-ignore-break-cells t_0)))
         (let ((or-part_0 (eq? ignore_0 bc_0)))
           (if or-part_0
@@ -8520,7 +8521,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1048:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1049:2 (assert-atomic-mode)>"))
       (let ((ignore_0 (thread-ignore-break-cells t_0)))
         (set-thread-ignore-break-cells!
          t_0
@@ -8548,7 +8549,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1075:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1076:2 (assert-atomic-mode)>"))
       (queue-add! (thread-mailbox thd_0) v_0))))
 (define dequeue-mail!
   (lambda (thd_0)
@@ -8558,7 +8559,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1080:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1081:2 (assert-atomic-mode)>"))
       (let ((mbx_0 (thread-mailbox thd_0)))
         (if (not (queue-start mbx_0))
           (|#%app| host:internal-error "no mail!")
@@ -8571,7 +8572,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1090:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1091:2 (assert-atomic-mode)>"))
       (not (let ((q_0 (thread-mailbox thd_0))) (not (queue-start q_0)))))))
 (define push-mail!
   (lambda (thd_0 v_0)
@@ -8581,7 +8582,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1095:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1096:2 (assert-atomic-mode)>"))
       (queue-add-front! (thread-mailbox thd_0) v_0))))
 (define 1/thread-send
   (let ((thread-send_0
@@ -8680,7 +8681,7 @@
          (let ((t_0 (current-thread/in-atomic)))
            (for-each_2707 (lambda (msg_0) (push-mail! t_0 msg_0)) lst_0))
          (end-atomic))))))
-(define finish_2771
+(define finish_1919
   (make-struct-type-install-properties
    '(thread-receive-evt)
    0
@@ -8697,7 +8698,7 @@
             (void)
             (|#%app|
              host:internal-error
-             "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1162:25 (assert-atomic-mode)>"))
+             "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1163:25 (assert-atomic-mode)>"))
           (let ((t_0 (current-thread/in-atomic)))
             (if (is-mail? t_0)
               (values (list self_0) #f)
@@ -8750,7 +8751,7 @@
    #f
    #f
    '(0 . 0)))
-(define effect_2506 (finish_2771 struct:thread-receiver-evt))
+(define effect_2506 (finish_1919 struct:thread-receiver-evt))
 (define thread-receiver-evt34.1
   (|#%name|
    thread-receiver-evt
@@ -10179,7 +10180,7 @@
                          (go_0 #t))))
                    (begin
                      (thread-remove-ignored-break-cell!
-                      (current-thread/in-atomic)
+                      (1/current-thread)
                       local-break-cell_0)
                      (1/check-for-break)
                      (|#%app| thunk_0)))
@@ -13520,40 +13521,66 @@
               (let ((poll-now?_0 (<= leftover-ticks2_0 0)))
                 (begin
                   (|#%app| host:poll-will-executors)
-                  (poll-custodian-will-executor)
-                  (if poll-now?_0 (check-external-events) (void))
-                  (call-pre-poll-external-callbacks)
-                  (|#%app| check-place-activity callbacks_0)
-                  (if (check-queued-custodian-shutdown)
-                    (if (1/thread-dead? (unsafe-place-local-ref cell.1$1))
-                      (force-exit 0)
-                      (void))
-                    (void))
-                  (flush-future-log)
-                  (if (all-threads-poll-done?)
-                    (if (not (null? callbacks_0))
+                  (begin
+                    (poll-custodian-will-executor)
+                    (begin
+                      (if poll-now?_0 (check-external-events) (void))
                       (begin
-                        (let ((temp4_0 (lambda () (void))))
-                          (do-make-thread.1
-                           #t
-                           unsafe-undefined
-                           #f
-                           #f
-                           #t
-                           #f
-                           'callbacks
-                           temp4_0))
-                        (poll-and-select-thread! TICKS callbacks_0))
-                      (if (if (not poll-now?_0) (check-external-events) #f)
-                        (poll-and-select-thread! TICKS callbacks_0)
-                        (if (try-post-idle)
-                          (select-thread! leftover-ticks2_0 callbacks_0)
+                        (call-pre-poll-external-callbacks)
+                        (begin
+                          (|#%app| check-place-activity callbacks_0)
                           (begin
-                            (process-sleep)
-                            (poll-and-select-thread! 0 callbacks_0)))))
-                    (select-thread!
-                     (if poll-now?_0 TICKS leftover-ticks2_0)
-                     callbacks_0)))))))))
+                            (if (check-queued-custodian-shutdown)
+                              (if (1/thread-dead?
+                                   (unsafe-place-local-ref cell.1$1))
+                                (force-exit 0)
+                                (void))
+                              (void))
+                            (begin
+                              (flush-future-log)
+                              (let ((run-callbacks-in-new-thread_0
+                                     (|#%name|
+                                      run-callbacks-in-new-thread
+                                      (lambda (callbacks_1)
+                                        (begin
+                                          (let ((temp4_0 (lambda () (void))))
+                                            (do-make-thread.1
+                                             #t
+                                             unsafe-undefined
+                                             #f
+                                             #f
+                                             #t
+                                             #f
+                                             'callbacks
+                                             temp4_0))
+                                          (poll-and-select-thread!
+                                           TICKS
+                                           callbacks_1))))))
+                                (if (all-threads-poll-done?)
+                                  (if (not (null? callbacks_0))
+                                    (run-callbacks-in-new-thread_0 callbacks_0)
+                                    (if (if (not poll-now?_0)
+                                          (check-external-events)
+                                          #f)
+                                      (poll-and-select-thread!
+                                       TICKS
+                                       callbacks_0)
+                                      (let ((c1_0 (try-post-idle)))
+                                        (if c1_0
+                                          (if (null? c1_0)
+                                            (select-thread!
+                                             leftover-ticks2_0
+                                             c1_0)
+                                            (run-callbacks-in-new-thread_0
+                                             c1_0))
+                                          (begin
+                                            (process-sleep)
+                                            (poll-and-select-thread!
+                                             0
+                                             callbacks_0))))))
+                                  (select-thread!
+                                   (if poll-now?_0 TICKS leftover-ticks2_0)
+                                   callbacks_0))))))))))))))))
     (case-lambda
      ((leftover-ticks_0) (poll-and-select-thread!_0 leftover-ticks_0 null))
      ((leftover-ticks_0 pending-callbacks1_0)
@@ -13819,7 +13846,10 @@
 (define try-post-idle
   (lambda ()
     (if (not (|#%app| any-running-parallel-threads?))
-      (if (post-idle) (begin (thread-did-work!) #t) #f)
+      (let ((callbacks_0 (|#%app| host:poll-async-callbacks)))
+        (if (null? callbacks_0)
+          (if (post-idle) (begin (thread-did-work!) null) #f)
+          callbacks_0))
       #f)))
 (define accum-cpu-time!
   (lambda (t_0 timeout?_0)

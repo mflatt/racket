@@ -581,8 +581,9 @@
 (define/who (thread-suspend t)
   (check who thread? t)
   (check-current-custodian-manages who t)
-  ((atomically
-    (do-thread-suspend t))))
+  ((atomically/no-exit-barrier
+    (do-thread-suspend t)))
+  (future-exit-barrier))
 
 ;; in atomic mode
 ;; Returns a thunk to call to handle the case that
