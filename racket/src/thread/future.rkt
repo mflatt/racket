@@ -268,23 +268,31 @@
 
 (define/who (make-parallel-thread-pool [n pthread-count])
   (check who exact-positive-integer? n)
-  (make-phantom-bytes (* n 1024)) ; intended to make sure that `n` is reasonable 
+  (make-phantom-bytes (* n 1024)) ; intended to make sure that `n` is reasonable
+  (create-parallel-thread-pool n +inf.0))
+
+(define (create-parallel-thread-pool n capacity)
   (atomically
    (define s (start-scheduler n #t))
    (set-place-schedulers! current-place (hash-set (place-schedulers current-place) s #t))
-   (define pool (parallel-thread-pool s))
+   (define pool (parallel-thread-pool s capacity))
    (host:will-register custodian-will-executor pool
                        (lambda (pool)
                          (define s (parallel-thread-pool-scheduler pool))
-                         (kill-future-scheduler s)
-                         (set-place-schedulers! current-place (hash-remove (place-schedulers current-place) s))))
+                         (define schedulers (place-schedulers current-place))
+                         (when (hash-ref schedulers s #f)
+                           (kill-future-scheduler s)
+                           (set-place-schedulers! current-place (hash-remove schedulers s)))))
    pool))
 
 (define/who (parallel-thread-pool-close pool)
   (check who parallel-thread-pool? pool)
-  (void))
+  (define s (parallel-thread-pool-scheduler pool))
+  (host:mutex-acquire (scheduler-mutex s))
+  (set-parallel-thread-pool-capacity! pool 0)
+  (host:mutex-release (scheduler-mutex s)))
 
-(define/who (thread/parallel thunk [pool (make-parallel-thread-pool)])
+(define/who (thread/parallel thunk [pool (create-parallel-thread-pool 1 1)])
   (check who (procedure-arity-includes/c 0) thunk)
   (check who parallel-thread-pool? pool)
   (cond
@@ -327,12 +335,15 @@
                             (lambda args
                               (loop)))))))
      (set-future*-parallel! me-f (parallel* pool th #f))
-     (thread-push-kill-callback! (lambda () (future-external-stop me-f)) th)
+     (thread-push-kill-callback! (lambda ()
+                                   (future-external-stop me-f)
+                                   (thread-pool-departure pool))
+                                 th)
      (thread-push-suspend+resume-callbacks! (lambda () (future-external-stop me-f))
                                             (lambda () (future-external-resume me-f))
                                             th)
      ;; this is the step (internally atomic) that commits the thread to running:
-     (schedule-future! me-f)
+     (schedule-future! me-f #:check-pool-open? #t)
      th]))
 
 ;; When two futures interact, we may need to adjust both;
@@ -618,20 +629,14 @@
      (lock-release (future*-lock f))]
     [else
      (set-parallel*-stop?! (future*-parallel f) #t)
-     (define mutex+cond (and (eq? (future*-state f) 'running)
-                             (list (host:make-mutex) (host:make-condition))))
-     (when mutex+cond
-       (set-future*-results! f mutex+cond)
-       (host:mutex-acquire (car mutex+cond)))
-     (lock-release (future*-lock f))
-     (when mutex+cond
-       (let loop ()
-         (host:condition-wait (cadr mutex+cond) (car mutex+cond))
+     (let loop ()
+       (define done? (not (eq? (future*-state f) 'running)))
+       (lock-release (future*-lock f))
+       (unless done?
+         (drain-async-callbacks)
+         (sleep-this-place)
          (lock-acquire (future*-lock f))
-         (define done? (not (eq? (future*-state f) 'running)))
-         (lock-release (future*-lock f))
-         (unless done? (loop)))
-       (host:mutex-release (car mutex+cond)))]))
+         (loop)))]))
 
 ;; lock on f is held
 (define (future-maybe-notify-stop f)
@@ -639,10 +644,7 @@
   (when (and p
              (parallel*-stop? p)
              (eq? (future*-state f) 'running))
-    (define mutex+cond (future*-results f))
-    (host:mutex-acquire (car mutex+cond))
-    (host:condition-broadcast (cadr mutex+cond))
-    (host:mutex-release (car mutex+cond))))
+    (wakeup-this-place)))
 
 ;; in atomic mode in Racket thread when an unblocking thread is resumed
 (define (future-external-resume f)
@@ -714,7 +716,6 @@
                    [futures-tail #:mutable]
                    mutex   ; guards futures chain; see "future-lock.rkt" for discipline
                    cond    ; signaled when chain goes from empty to non-empty
-                   ping-cond
                    [round-robin #:mutable] ; #f, 'round, 'pause
                    [capacity #:mutable])
   #:authentic)
@@ -758,7 +759,6 @@
                        #f  ; futures-tail
                        (host:make-mutex)
                        (host:make-condition)
-                       (host:make-condition)
                        (and round-robin? 'round)
                        pthread-count))
   (define workers
@@ -773,19 +773,19 @@
 (define (kill-future-schedulers)
   (define s (current-scheduler))
   (when s
-    (kill-future-scheduler s)
+    (kill-future-scheduler s #:for-parallel? #f)
     (current-scheduler #f))
   (for ([s (in-hash-keys (place-schedulers current-place))])
     (kill-future-scheduler s))
   (set-place-schedulers! current-place (hasheq)))
 
 ;; called in atomic mode
-(define (kill-future-scheduler s)
+(define (kill-future-scheduler s #:for-parallel? [for-parallel? #t])
   (host:mutex-acquire (scheduler-mutex s))
   (for ([w (in-list (scheduler-workers s))])
     (set-worker-die?! w #t))
   (host:mutex-release (scheduler-mutex s))
-  (futures-sync-for-shutdown))
+  (scheduler-sync-for-shutdown s #:for-parallel? for-parallel?))
 
 ;; lock on f is held
 (define (future-scheduled? f)
@@ -797,7 +797,9 @@
 ;; called in any pthread
 ;; holding the lock for f or a unique reference to f
 ;; (see "future-lock.rkt" for more on lock discipline)
-(define (schedule-future! f #:front? [front? #f])
+(define (schedule-future! f
+                          #:front? [front? #f]
+                          #:check-pool-open? [check-pool-open? #f])
   (start-future-uninterrupted)
   (assert (not (future-scheduled? f)))
   (assert (future*-thunk f))
@@ -808,6 +810,13 @@
     (increment-place-parallel-count! 1))
   (define s (future-scheduler f))
   (host:mutex-acquire (scheduler-mutex s))
+  (when check-pool-open?
+    (define pool (parallel*-pool (future*-parallel f)))
+    (define capacity (sub1 (parallel-thread-pool-capacity pool)))
+    (unless (capacity . >= . 0)
+      (host:mutex-release (scheduler-mutex s))
+      (raise-arguments-error 'thread/parallel "the parallel thread pool has been closed"))
+    (set-parallel-thread-pool-capacity! pool capacity))
   (define old (if front?
                   (scheduler-futures-head s)
                   (scheduler-futures-tail s)))
@@ -881,6 +890,17 @@
      (when (future*-kind f)
        (wakeup-this-place))
      #t]))
+
+;; called in atomic mode in Racket thread or scheduling thread;
+;; close a schduler when its thread pool will never have new work
+(define (thread-pool-departure pool)
+  (define s (parallel-thread-pool-scheduler pool))
+  (host:mutex-acquire (scheduler-mutex s))
+  (define capacity (parallel-thread-pool-capacity pool))
+  (host:mutex-release (scheduler-mutex s))
+  (when (zero? capacity)
+    (kill-future-scheduler s)
+    (set-place-schedulers! current-place (hash-remove (place-schedulers current-place) s))))
 
 ;; ----------------------------------------
 
@@ -1018,35 +1038,39 @@
     (set-scheduler-round-robin! s 'round)))
 
 ;; in atomic mode
-(define (futures-sync-for-shutdown)
+(define (scheduler-sync-for-shutdown s #:for-parallel? for-parallel?)
   ;; Make sure any futures that are running in a future pthread
   ;; have had a chance to notice a custodian shutdown or a
   ;; future-scheduler shutdown.
   ;;
   ;; Assert: all workers have `ping` as #f.
-  (define (sync-one s)
+  (host:mutex-acquire (scheduler-mutex s))
+  (for ([w (in-list (scheduler-workers s))])
+    (let retry ()
+      (unless (box-cas! (worker-ping w) #f #t)
+        (retry))))
+  ;; Assert: all workers have `ping` as #t.
+  ;; Wake up idle threads so they check in:
+  (host:condition-broadcast (scheduler-cond s))
+  (host:mutex-release (scheduler-mutex s))
+  ;; When a worker sets `ping` to #f, they must broadcast
+  ;; a wakeup for the following loop's benefit
+  (let loop ()
     (host:mutex-acquire (scheduler-mutex s))
-    (for ([w (in-list (scheduler-workers s))])
-      (let retry ()
-        (unless (box-cas! (worker-ping w) #f #t)
-          (retry))))
-    ;; Assert: all workers have `ping` as #t.
-    ;; Wake up idle threads so they check in:
-    (host:condition-broadcast (scheduler-cond s))
-    (drain-async-callbacks (scheduler-mutex s)) ; releases and re-acquires mutex
-    ;; When a worker sets `ping` to #f, they must broadcast
-    ;; a wakeup for the following loop's benefit
-    (let loop ()
-      (when (for/or ([w (in-list (scheduler-workers s))])
-              (unbox (worker-ping w)))
-        (host:condition-wait (scheduler-ping-cond s) (scheduler-mutex s))
-        (loop)))
-    ;; Assert: all workers have `ping` as #f.
-    (host:mutex-release (scheduler-mutex s)))
+    (define done? (for/or ([w (in-list (scheduler-workers s))])
+                    (unbox (worker-ping w))))
+    (host:mutex-release (scheduler-mutex s))
+    (unless done?
+      (drain-async-callbacks)   
+      (sleep-this-place)
+      (loop)))
+  ;; Assert: all workers have `ping` as #f.
+  (void))
+
+;; in atomic mode
+(define (futures-sync-for-shutdown)
   (when (current-scheduler)
-    (sync-one (current-scheduler)))
-  (for ([s (in-hash-keys (place-schedulers current-place))])
-    (sync-one s)))
+    (scheduler-sync-for-shutdown (current-scheduler) #:for-parallel? #f)))
 
 ;; lock-free synchronization to check whether the box content is #f
 (define (worker-pinged? w)
@@ -1059,19 +1083,17 @@
 (define (check-in w s)
   (when (unbox (worker-ping w))
     (set-box! (worker-ping w) #f)
-    (host:condition-broadcast (scheduler-ping-cond s))))
+    (wakeup-this-place)))
 
 ;; in atomic mode
 ;; While we're trying to finish up futures, some of them
 ;; may be blocked waiting for async callbacks. No new ones
 ;; will get posted since we've set the ping flag, so we
 ;; only have to drain once.
-(define (drain-async-callbacks m)
-  (host:mutex-release m)
+(define (drain-async-callbacks)
   (define callbacks (host:poll-async-callbacks))
   (for ([callback (in-list callbacks)])
-    (callback))
-  (host:mutex-acquire m))
+    (callback)))
 
 ;; ----------------------------------------
 
@@ -1107,10 +1129,12 @@
     (wakeup-this-place)))
 
 (define wakeup-this-place (lambda () (void)))
+(define sleep-this-place (lambda () (void)))
 (define ensure-place-wakeup-handle (lambda () (void)))
 
-(define (set-place-future-procs! wakeup ensure)
+(define (set-place-future-procs! wakeup sleep* ensure)
   (set! wakeup-this-place wakeup)
+  (set! sleep-this-place sleep*)
   (set! ensure-place-wakeup-handle ensure))
 
 ;; tell "atomic.rkt" layer how to block:

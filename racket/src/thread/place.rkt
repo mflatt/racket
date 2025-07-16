@@ -166,6 +166,10 @@
   (set-box! (place-activity-canary p) #t)
   (sandman-wakeup (place-wakeup-handle p)))
 
+;; called with place's lock held or for the current place
+(define (place-wait-activity p)
+  (sandman-sleep #f))
+
 (void
  (set-check-place-activity!
   ;; Called in atomic mode by scheduler
@@ -477,6 +481,8 @@
 (void (set-place-future-procs!
        (lambda ()
          (place-has-activity! current-place))
+       (lambda ()
+         (place-wait-activity current-place))
        ;; in atomic mode
        (lambda ()
          (ensure-wakeup-handle!))))

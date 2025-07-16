@@ -7,5 +7,6 @@
       (parameterize ([current-custodian (make-custodian)])
         (thread/parallel
          (lambda ()
-           (custodian-shutdown-all (make-custodian)))))))
+           (custodian-shutdown-all (make-custodian)))
+         (make-parallel-thread-pool 1)))))
   (map thread-wait ts))
