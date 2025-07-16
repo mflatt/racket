@@ -92,8 +92,6 @@
 		    0 0 0 0
 		    1 1 1 1))
 
-(printf "HERE\n")
-
 ;; Check that suspended thread/parallels don't break
 ;;  scheduling. (The test really continues past this
 ;;  one, since the thread/parallels don't die right away.)
@@ -896,6 +894,18 @@
     (test #f thread-running? t2)
     (test #t thread-dead? t2)
     (test 99 values v)))
+
+(let ([n 0]
+      [delta 0])
+  (let ([f (thread/parallel
+            (lambda ()
+              (let loop ()
+                (set! n (+ n delta))
+                (loop))))])
+    (thread-suspend f)
+    (set! delta 1)
+    (sleep SLEEP-TIME)
+    (test 0 values n)))
 
 ;; Breaking/killing:
 (define /dev/null-for-err

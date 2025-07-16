@@ -734,11 +734,9 @@
     (when b-t
       (do-thread-resume b-t c))))
 
-;; Called in atomic mode:
+;; Called in atomic mode or before the thread is shared:
 ;; Given callbacks are also called in atomic mode
-(define (thread-push-suspend+resume-callbacks! s-cb r-cb)
-  (assert-atomic-mode)
-  (define t (current-thread/in-atomic))
+(define (thread-push-suspend+resume-callbacks! s-cb r-cb [t (current-thread/in-atomic)])
   (set-thread-suspend+resume-callbacks! t (cons (cons s-cb r-cb)
                                                 (thread-suspend+resume-callbacks t))))
 
@@ -763,8 +761,8 @@
     ;; a waiter on a semaphore of channel; if breaks
     ;; turn out to be disabled, the wait will be
     ;; retried through the retry callback
-    (set-thread-interrupt-callback! t #f)
     (unless (eq? interrupt-callback 'future)
+      (set-thread-interrupt-callback! t #f)
       (interrupt-callback))))
 
 ;; ----------------------------------------

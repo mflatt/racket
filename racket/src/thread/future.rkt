@@ -37,6 +37,7 @@
          touch
          thread/parallel
          make-parallel-thread-pool
+         parallel-thread-pool-close
          parallel-thread-pool?
          future-block
          future-sync
@@ -261,6 +262,10 @@
                          (set-place-schedulers! current-place (hash-remove (place-schedulers current-place) s))))
    pool))
 
+(define/who (parallel-thread-pool-close pool)
+  (check who parallel-thread-pool? pool)
+  (void))
+
 (define/who (thread/parallel thunk [pool (make-parallel-thread-pool)])
   (check who (procedure-arity-includes/c 0) thunk)
   (check who parallel-thread-pool? pool)
@@ -302,7 +307,10 @@
                             (lambda args
                               (loop)))))))
      (set-future*-parallel! me-f (parallel* pool th #f))
-     (thread-push-kill-callback! (lambda () (future-stop me-f)) th)
+     (thread-push-kill-callback! (lambda () (future-external-stop me-f)) th)
+     (thread-push-suspend+resume-callbacks! (lambda () (future-external-stop me-f))
+                                            (lambda () (future-external-resume me-f))
+                                            th)
      ;; this is the step (internally atomic) that commits the thread to running:
      (schedule-future! me-f)
      th]))
@@ -580,8 +588,8 @@
             (void)])))
       (wakeup-this-place))))
 
-;; in atomic mode in Racket thread when an unblocking thread is killed
-(define (future-stop f)
+;; in atomic mode in Racket thread when an unblocking thread is killed or suspended
+(define (future-external-stop f)
   (cond
     [(try-deschedule-future? f)
      ;; lock on `f` is held...
@@ -615,6 +623,15 @@
     (host:mutex-acquire (car mutex+cond))
     (host:condition-broadcast (cadr mutex+cond))
     (host:mutex-release (car mutex+cond))))
+
+;; in atomic mode in Racket thread when an unblocking thread is resumed
+(define (future-external-resume f)
+  (lock-acquire (future*-lock f))
+  (set-parallel*-stop?! (future*-parallel f) #f)
+  (when (and (eq? (future*-state f) #f)
+             (eq? 'future (thread-interrupt-callback (parallel*-thread (future*-parallel f)))))
+    (schedule-future! f))
+  (lock-release (future*-lock f)))
 
 ;; ----------------------------------------
 
@@ -885,7 +902,7 @@
     [(or (custodian-shut-down?/other-pthread (future*-custodian f))
          (future-stop? f))
      (future-maybe-notify-stop f)
-     (set-future*-state! f 'blocked)
+     (set-future*-state! f #f)
      (on-transition-to-unfinished)
      (increment-place-parallel-count! -1)
      (lock-release (future*-lock f))]
@@ -945,8 +962,8 @@
               (when others?
                 (lock-acquire (future*-lock f))
                 (future-maybe-notify-stop f)
-                (set-future*-state! f #f)
                 (define stop? (future-stop? f))
+                (set-future*-state! f #f)
                 (future-suspend
                  #:reschedule (lambda ()
                                 (set-engine-thread-cell-state! #f)

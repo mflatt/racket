@@ -211,6 +211,7 @@
 
          thread/parallel
          make-parallel-thread-pool
+         parallel-thread-pool-close
          parallel-thread-pool?
 
          unsafe-os-thread-enabled?

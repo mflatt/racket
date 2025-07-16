@@ -533,7 +533,7 @@ void scheme_init_futures(Scheme_Startup_Env *newenv)
                              scheme_make_prim_w_arity(make_parallel_pool, "make-parallel-thread-pool", 0, 1),
                              newenv);
   scheme_addto_prim_instance("parallel-thread-pool-close",
-                             scheme_make_prim_w_arity(parallel_pool_close, "parallel-thread-close", 1, 1),
+                             scheme_make_prim_w_arity(parallel_pool_close, "parallel-thread-pool-close", 1, 1),
                              newenv);
   scheme_addto_prim_instance("parallel-thread-pool?",
                              scheme_make_prim_w_arity(parallel_pool_p, "parallel-thread-pool?", 0, 1),
@@ -3812,7 +3812,7 @@ static Scheme_Object *thread_parallel(int argc, Scheme_Object *args[])
 
   if (argc > 1) {
     if (!SAME_TYPE(SCHEME_TYPE(args[1]), scheme_parallel_pool_type))
-      scheme_wrong_contract(who, "parallel-thread-pool?", 0, argc, args);
+      scheme_wrong_contract(who, "thread/parallel", 0, argc, args);
   }
 
   return scheme_thread(args[0]);
@@ -3834,7 +3834,7 @@ static Scheme_Object *make_parallel_pool(int argc, Scheme_Object *args[])
 static Scheme_Object *parallel_poll_close(int argc, Scheme_Object *args[])
 {
   if (!SAME_TYPE(SCHEME_TYPE(args[0]), scheme_parallel_pool_type))
-    scheme_wrong_contract(who, "parallel-thread-pool?", 0, argc, args);
+    scheme_wrong_contract(who, "parallel-thread-pool-close", 0, argc, args);
 
   return scheme_void;
 }
