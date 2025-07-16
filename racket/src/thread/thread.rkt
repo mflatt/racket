@@ -405,11 +405,15 @@
                            "the current custodian does not solely manage the specified thread"
                            "thread" t)))
 
+;; can be called in any pthread, including a GCing pthread
 (define (thread-representative-custodian t)
-  (atomically
-   (define cs (thread-custodian-references t))
-   (and (pair? cs)
-        (custodian-reference->custodian (car cs)))))
+  (start-uninterruptable)
+  (define cs (thread-custodian-references t))
+  (define c
+    (and (pair? cs)
+         (custodian-reference->custodian (car cs))))
+  (end-uninterruptable)
+  c)
 
 ;; Called in atomic mode:
 (define (run-kill-callbacks! t)
@@ -507,6 +511,7 @@
 ;; thread, where the thunk returns `(void)`;
 (define (do-thread-deschedule! t timeout-at)
   (assert-atomic-mode)
+  (assert (current-thread/in-atomic))
   (cond
     [(thread-descheduled? t)
      (unless (eq? (thread-descheduled? t) 'terribly-wrong)
@@ -573,10 +578,11 @@
     (internal-error "tried to reschedule a dead thread"))
   (unless (thread-descheduled? t)
     (internal-error "tried to reschedule a scheduled thread"))
-  (set-thread-descheduled?! t #f)
-  (set-thread-interrupt-callback! t #f)
-  (remove-from-sleeping-threads! t)
-  (thread-group-add! (thread-parent t) t))
+  (unless (eq? 'future (thread-interrupt-callback t))
+    (set-thread-descheduled?! t #f)
+    (set-thread-interrupt-callback! t #f)
+    (remove-from-sleeping-threads! t)
+    (thread-group-add! (thread-parent t) t)))
 
 (define/who (thread-suspend t)
   (check who thread? t)
@@ -994,7 +1000,7 @@
        (unless (thread-pending-break t)
          (set-thread-pending-break! t kind)
          (thread-did-work!)
-         (begin
+         (unless (thread-suspended? t)
            ;; interrupt synchronization, if any
            (run-suspend/resume-callbacks t car)
            (run-suspend/resume-callbacks t cdr))

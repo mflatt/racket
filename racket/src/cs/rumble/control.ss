@@ -440,7 +440,7 @@
            (metacontinuation-frame-resume-k mf)
            (metacontinuation-frame-marks mf)
            (lambda ()
-             (if #t ; wind?
+             (if wind?
                  (end-uninterrupted/call-hook 'handle)
                  (end-uninterrupted 'handle))
              (if (#%procedure? args)
@@ -717,7 +717,7 @@
   (current-winders (full-continuation-winders c))
   (current-mark-splice (full-continuation-mark-splice c))
   (end-uninterrupted 'cc)
-  (apply-with-break-transition (full-continuation-k c) (full-continuation-mark-stack c) args))
+  (apply-without-break-transition (full-continuation-k c) (full-continuation-mark-stack c) args))
 
 ;; Used as a "handler" for a prompt without a tag, which is used for
 ;; composable continuations

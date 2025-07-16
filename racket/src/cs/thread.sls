@@ -121,6 +121,29 @@
 
   (define (internal-error s)
     (#%printf "internal-error: ~a\n" s)
+    (#%call/cc
+     (lambda (k)
+       (let loop ([k k] [offset #f] [n 0])
+         (cond
+           [(or (not (#%$continuation? k))
+                (eq? k #%$null-continuation))
+            (void)]
+           [(fx= n 100) (void)]
+           [else
+            (let* ([name (let* ([c (if offset
+                                       (#%$continuation-stack-return-code k offset)
+                                       (#%$continuation-return-code k))]
+                                [n (#%$code-name c)])
+                           n)])
+              (#%printf " at ~s\n" name)
+              (let* ([offset (if offset
+                                 (fx- offset (#%$continuation-stack-return-frame-words k offset))
+                                 (fx- (#%$continuation-stack-clength k)
+                                      (#%$continuation-return-frame-words k)))]
+                     [offset (if (fx= offset 0) #f offset)])
+                (loop (if offset k (#%$continuation-link k))
+                      offset
+                      (fx+ n 1))))]))))
     (#%exit 1))
 
   (define (primitive-table key)

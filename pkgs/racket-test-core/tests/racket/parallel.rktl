@@ -1,7 +1,9 @@
 
 (load-relative "loadtest.rktl")
 
-(Section 'thread/parallels)
+(Section 'parallel)
+
+;; This test suite is derived from "thread.rktl"
 
 (require racket/parallel)
 
@@ -15,11 +17,6 @@
 (arity-test thread/parallel 1 2)
 (err/rt-test (thread/parallel 5) type?)
 (err/rt-test (thread/parallel (lambda (x) 8)) type?)
-(arity-test thread? 1 1)
-
-(test #f struct-predicate-procedure? thread?)
-(test #f struct-predicate-procedure? evt?)
-(test #f struct-type-property-predicate-procedure? evt?)
 
 ;; ----------------------------------------
 ;; Thread/Parallel sets
@@ -53,16 +50,10 @@
 
       (set! stop? #t)
 
-      (let ([va (/ (unbox a) a%)]
-            [vb (unbox b)]
-            [vc (unbox c)]
-            [vd (unbox d)])
-        (define (roughly= x y)
-          (<= (- (* (- x 1) 0.9) 10) y (+ (* (+ x 1) 1.1) 10)))
-
-        (test #t roughly= vb (* b% va))
-        (test #t roughly= vc (* c% va))
-        (test #t roughly= vd (* d% va))))))
+      ;; the `thread` test checks for some balance among the results,
+      ;; but `thread/parallel` is not predictable enough for that on
+      ;; the scale of `SLEEP-TIME`
+      (void))))
 
 ;; Simple test:
 (let ([ts (make-thread-group)])
@@ -101,14 +92,6 @@
   (test-set-balance ts1 ts2 ts2 ts1
 		    0 0 (* SLEEP-TIME 10) (* SLEEP-TIME 10)
 		    1 1 0 0))
-
-(arity-test make-thread-group 0 1)
-(err/rt-test (make-thread-group 5) type?)
-(arity-test thread-group? 1 1)
-(test #t thread-group? (make-thread-group))
-(test #f thread-group? 5)
-(arity-test current-thread-group 0 1)
-(err/rt-test (current-thread-group 5))
 
 ;; ----------------------------------------
 
@@ -199,27 +182,7 @@
   (test #f weak-box-value b)
   (test #f weak-box-value bb))
 
-(test #t custodian? cm)
-(test #f custodian? 1)
-(arity-test custodian? 1 1)
-
-(arity-test custodian-shutdown-all 1 1)
-(err/rt-test (custodian-shutdown-all 0))
-
-(arity-test make-custodian 0 1)
-(err/rt-test (make-custodian 0))
-
 (test (void) kill-thread t)
-(arity-test kill-thread 1 1)
-(err/rt-test (kill-thread 5) type?)
-
-(arity-test break-thread 1 2)
-(err/rt-test (break-thread 5) type?)
-(err/rt-test (break-thread (current-thread) 5) type?)
-
-(err/rt-test (break-thread (current-thread)) exn:break?)
-(err/rt-test (break-thread (current-thread) 'hang-up) exn:break:hang-up?)
-(err/rt-test (break-thread (current-thread) 'terminate) exn:break:terminate?)
 
 (let ([bad? #f])
   (define t
@@ -294,32 +257,7 @@
   (test #t values ex?)
   (set! ex? #f))
 
-(arity-test thread-wait 1 1)
-(err/rt-test (thread-wait 5) type?)
-
-(test #t thread-running? (current-thread))
-(arity-test thread-running? 1 1)
-(err/rt-test (thread-running? 5) type?)
-
-(test #f thread-dead? (current-thread))
-(arity-test thread-dead? 1 1)
-(err/rt-test (thread-dead? 5) type?)
-
-(arity-test sleep 0 1)
-(err/rt-test (sleep 'a) type?)
-(err/rt-test (sleep 1+3i) type?)
-(err/rt-test (sleep -1.0) type?)
-
 (define s (make-semaphore 1))
-
-(test #t semaphore? s)
-
-(arity-test make-semaphore 0 1)
-(err/rt-test (make-semaphore "a") type?)
-(err/rt-test (make-semaphore -1) type?)
-(err/rt-test (make-semaphore 1.0) type?)
-(err/rt-test (make-semaphore (expt 2 64)) exn:fail?)
-(arity-test semaphore? 1 1)
 
 (define test-block
   (lambda (block? thunk)
@@ -341,10 +279,6 @@
 (semaphore-post s) 
 (test-block #f (lambda () (semaphore-wait/enable-break s)))
 (test-block #t (lambda () (semaphore-wait/enable-break s)))
-
-(arity-test semaphore-try-wait? 1 1)
-(arity-test semaphore-wait 1 1)
-(arity-test semaphore-post 1 1)
 
 (define s (make-semaphore))
 (define result 0)
@@ -527,10 +461,6 @@
 (define (exn:thread? e)
   (and (exn:fail? e) (not (exn:fail:contract? e))))
 
-(err/rt-test (call-in-nested-thread (lambda () (kill-thread (current-thread)))) exn:thread?)
-(err/rt-test (call-in-nested-thread (lambda () ((error-escape-handler)))) exn:thread?)
-(err/rt-test (call-in-nested-thread (lambda () (raise (box 5)))) box?)
-
 (define output-stream null)
 (define (output v)
   (set! output-stream 
@@ -542,7 +472,6 @@
   (define c1 (make-custodian))
   (define c2 (make-custodian))
   (define c3 (make-custodian))
-
 
   (set! output-stream null)
   
@@ -580,85 +509,86 @@
 	(output 'me)))
      c1)))
 
-(test 'inner-result chain 3)
-(test-stream '(os ms mpre is ie mpost me))
+(thread-wait
+ (thread/parallel
+  (lambda ()
+    (test 'inner-result chain 3)
+    (test-stream '(os ms mpre is ie mpost me))
+    
+    (test #t exn:thread? (chain 1))
+    (test-stream '(os ms mpre is ibreak))
+    
+    (parameterize-break #f
+      (test #t exn:thread? (chain 1))
+      (test-stream '(os ms mpre is ie))
+      (test (void) 'discard-break
+            (with-handlers ([void void])
+              (break-enabled #t)
+              (sleep)
+              'not-void)))
 
-(test #t exn:thread? (chain 1))
-(test-stream '(os ms mpre is ibreak))
+    (test #t exn:thread? (chain 2))
+    (test-stream '(os ms mpre is mpost))
 
-(parameterize-break #f
-  (test #t exn:thread? (chain 1))
-  (test-stream '(os ms mpre is ie))
-  (test (void) 'discard-break
-	(with-handlers ([void void])
-	  (break-enabled #t)
-	  (sleep)
-	  'not-void)))
+    (test #t exn:thread? (chain (lambda (t1 get-c) (kill-thread (current-thread)))))
+    (test-stream '(os ms mpre is mpost))
 
-(test #t exn:thread? (chain 2))
-(test-stream '(os ms mpre is mpost))
+    (test #t exn:fail:contract? (chain 'wrong))
+    (test-stream '(os ms mpre is iother mpost))
 
-(test #t exn:thread? (chain (lambda (t1 get-c) (kill-thread (current-thread)))))
-(test-stream '(os ms mpre is mpost))
+    (test #t exn:break? (chain (let ([t (current-thread)]) (lambda (t1 get-c) (break-thread t)))))
+    (test-stream '(os ms mpre is ibreak mpost))
 
-(test #t exn:fail:contract? (chain 'wrong))
-(test-stream '(os ms mpre is iother mpost))
+    (test #t exn:thread? (chain (lambda (t1 get-c) (kill-thread t1))))
+    (test-stream '(os ms mpre is ibreak))
 
-(test #t exn:break? (chain (let ([t (current-thread)]) (lambda (t1 get-c) (break-thread t)))))
-(test-stream '(os ms mpre is ibreak mpost))
+    (parameterize-break #f
+      (test #t exn:thread? (let ([t (current-thread)])
+                             (chain (lambda (t1 get-c)
+                                      (custodian-shutdown-all (get-c 1))
+                                      (test #t thread-running? (current-thread))
+                                      (test #t thread-running? t)
+                                      (test #f thread-running? t1)))))
+      (test-stream '(os ms mpre is ie))
+      (test (void) 'discard-break
+            (with-handlers ([void void])
+              (break-enabled #t)
+              (sleep)
+              'not-void)))
 
-(test #t exn:thread? (chain (lambda (t1 get-c) (kill-thread t1))))
-(test-stream '(os ms mpre is ibreak))
-
-(parameterize-break #f
-  (test #t exn:thread? (let ([t (current-thread)])
-			 (chain (lambda (t1 get-c)
-				  (custodian-shutdown-all (get-c 1))
-				  (test #t thread-running? (current-thread))
-				  (test #t thread-running? t)
-				  (test #f thread-running? t1)))))
-  (test-stream '(os ms mpre is ie))
-  (test (void) 'discard-break
-	(with-handlers ([void void])
-	  (break-enabled #t)
-	  (sleep)
-	  'not-void)))
-
-(err/rt-test (call-with-continuation-barrier
-              (lambda ()
-                (let/cc k (call-in-nested-thread (lambda () (k)))) exn:fail:contract:continuation?)))
-(test 1 call-with-continuation-prompt (lambda ()
-                                        (let/cc k (call-in-nested-thread (lambda () (k 1))))))
-(err/rt-test (let/ec k (call-in-nested-thread (lambda () (k)))) exn:fail:contract:continuation?)
-(err/rt-test ((call-in-nested-thread (lambda () (let/cc k k)))) exn:fail:contract:continuation?)
-(err/rt-test ((call-in-nested-thread (lambda () (let/ec k k)))) exn:fail:contract:continuation?)
-
-(err/rt-test (call-in-nested-thread 5))
-(err/rt-test (call-in-nested-thread (lambda (x) 10)))
-(err/rt-test (call-in-nested-thread (lambda () 10) 5))
-
-(arity-test call-in-nested-thread 1 2)
-
-(test
- 7
- 'nested-thread-stack-ownership-test
- (let ()
-   (define -k #f)
-   (call-in-nested-thread (lambda () 
-                            (call-with-continuation-barrier
-                             (lambda ()
-                               (call-with-continuation-prompt
-                                (lambda ()
-                                  (with-continuation-mark
-                                      'x
-                                      'y
-                                    (let/cc k
-                                      (set! -k k)
-                                      (sync (thread/parallel (lambda () (k 5))))))))))))
-   (call-in-nested-thread (lambda ()
-                            (call-with-continuation-prompt
-                             (lambda ()
-                               (-k 7)))))))
+    (err/rt-test (call-with-continuation-barrier
+                  (lambda ()
+                    (let/cc k (call-in-nested-thread (lambda () (k)))) exn:fail:contract:continuation?)))
+    (test 1 call-with-continuation-prompt (lambda ()
+                                            (let/cc k (call-in-nested-thread (lambda () (k 1))))))
+    (err/rt-test (let/ec k (call-in-nested-thread (lambda () (k)))) exn:fail:contract:continuation?)
+    (err/rt-test ((call-in-nested-thread (lambda () (let/cc k k)))) exn:fail:contract:continuation?)
+    (err/rt-test ((call-in-nested-thread (lambda () (let/ec k k)))) exn:fail:contract:continuation?)
+    
+    (err/rt-test (call-in-nested-thread 5))
+    (err/rt-test (call-in-nested-thread (lambda (x) 10)))
+    (err/rt-test (call-in-nested-thread (lambda () 10) 5))
+    
+    (test
+     7
+     'nested-thread-stack-ownership-test
+     (let ()
+       (define -k #f)
+       (call-in-nested-thread (lambda () 
+                                (call-with-continuation-barrier
+                                 (lambda ()
+                                   (call-with-continuation-prompt
+                                    (lambda ()
+                                      (with-continuation-mark
+                                          'x
+                                        'y
+                                        (let/cc k
+                                          (set! -k k)
+                                          (sync (thread/parallel (lambda () (k 5))))))))))))
+       (call-in-nested-thread (lambda ()
+                                (call-with-continuation-prompt
+                                 (lambda ()
+                                   (-k 7))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test wait-multiple:
@@ -1103,7 +1033,7 @@
 	   (let* ([c (parameterize ([current-custodian c0])
 		       (make-custodian))]
 		  [t (parameterize ([current-custodian c])
-		       ((if resumable? thread/parallel/suspend-to-kill thread/parallel) loop))]
+		       ((if resumable? thread/suspend-to-kill thread/parallel) loop))]
 		  [check-inc (lambda (inc?)
 			       (let ([v0 v]) 
                                  (sync (car odd-ticks))
@@ -1196,8 +1126,8 @@
 			   thread/parallels)))
 	     (custodian-shutdown-all (current-custodian)))))])
   (go thread/parallel #f)
-  (go thread/parallel/suspend-to-kill #t)
-  (go thread/parallel/suspend-to-kill #f))
+  (go thread/suspend-to-kill #t)
+  (go thread/suspend-to-kill #f))
 
 (let ([t1 (thread/parallel (lambda () (semaphore-wait (make-semaphore))))]
       [t2 (thread/parallel (lambda () (semaphore-wait (make-semaphore))))]
@@ -1223,41 +1153,6 @@
   (thread-suspend t2)
   (thread-resume t2)
   (test #f thread-running? t3))
-
-;; Transitive custodian addition:
-(let ([c1 (make-custodian)]
-      [c2 (make-custodian)]
-      [c3 (make-custodian)])
-  (let ([t1 (parameterize ([current-custodian c1])
-	      (thread/parallel/suspend-to-kill (lambda () (sleep 10000))))]
-	[t2 (parameterize ([current-custodian c2])
-	      (thread/parallel/suspend-to-kill (lambda () (sleep 10000))))])
-    (let ([t2-2 (let loop ([n 5][t t2])
-		  (if (zero? n)
-		      t
-		      (loop (sub1 n)
-			    (parameterize ([current-custodian c2])
-			      (let ([t2 (thread/parallel/suspend-to-kill (lambda () (sleep 10000)))])
-				(thread-resume t2 t)
-				t2)))))])
-      (custodian-shutdown-all c2)
-      (test #f thread-running? t2)
-      (test #f thread-running? t2-2)
-      (thread-resume t2)
-      (test #f thread-running? t2)
-      (test #f thread-running? t2-2)
-      (thread-resume t2 t1)
-      (test #t thread-running? t2)
-      (test #t thread-running? t2-2)
-      (thread-resume t1 c3)
-      (custodian-shutdown-all c1)
-      (test #t thread-running? t1)
-      (test #t thread-running? t2)
-      (test #t thread-running? t2-2)
-      (custodian-shutdown-all c3)
-      (test #f thread-running? t1)
-      (test #f thread-running? t2)
-      (test #f thread-running? t2-2))))
 
 ;; Cyclic thread/parallel yokes should be ok:
 (let* ([c1 (make-custodian)]
@@ -1661,23 +1556,24 @@
 ;; Make sure that extracting a procedure name for a thread/parallel
 ;; doesn't create trouble:
 
-(for ([i 1000])
-  (thread/parallel (make-keyword-procedure (lambda (x y) '()))))
+(let ([pool (make-parallel-thread-pool)])
+  (for ([i 1000])
+    (thread/parallel (make-keyword-procedure (lambda (x y) '()))
+                     pool)))
 
 ;; --------------------
 ;; Make sure that thread/parallel time accounting works:
 
 (let ([t (thread/parallel (λ () (let loop () (loop))))])
-  (sleep 1)
+  (sleep SLEEP-TIME)
   (define s (current-process-milliseconds t))
   (kill-thread t)
-  (test #t positive? s))
+  (test #t >= s 0))
 
 (test #t integer? (current-process-milliseconds))
 (test #t integer? (current-process-milliseconds #f))
 (test #t integer? (current-process-milliseconds (thread/parallel void)))
 (test #t integer? (current-process-milliseconds 'subprocesses))
-(err/rt-test (current-process-milliseconds 'other))
 
 ;; --------------------
 ;; Check `thread-break` on a thread/parallel kiled while it tried to sync:

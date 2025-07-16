@@ -14,8 +14,8 @@
 ;;
 ;;    - engine atomicity
 ;;    - fsemaphore [one at a time]
-;;    - schedule queue
 ;;    - futures, lower ID before higher ID (implies engine atomicity)
+;;    - schedule queue
 ;;    - place lock
 ;;
 ;; A future's lock must be held to change the future's fields, except

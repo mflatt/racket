@@ -735,8 +735,8 @@ We should also test deep continuations.
       (if (even? i)
           (func void)
           (func (parameterize ([eval-jit-enabled #f])
-                    (eval #'(lambda () (void)))))))))
-  
+                  (eval #'(lambda () (void)))))))))
+
   ;; A future shouldn't use up a background thread if its
   ;; starting thread's custodian is shut down:
   (let ()
@@ -748,7 +748,7 @@ We should also test deep continuations.
                                         (let loop () (loop)))))))))
     (sleep 0.1)
     (custodian-shutdown-all c))
-  
+
   ;; If a future is suspended via a custodian, it should still
   ;; work to touch it:
   (let ()
@@ -764,8 +764,7 @@ We should also test deep continuations.
     (custodian-shutdown-all c)
     (fsemaphore-post s)
     (check-equal? 10 (touch f)))
-  
-  
+
   ;; Start a future in a custodian-suspended future:
   (let ()
     (define f #f)
