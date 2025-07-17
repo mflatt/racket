@@ -11348,10 +11348,10 @@
   (|#%name| set-future-state! (record-mutator struct:future* 9)))
 (define set-future*-dependents!
   (|#%name| set-future-dependents! (record-mutator struct:future* 10)))
-(define finish_2830
+(define finish_2033
   (make-struct-type-install-properties
    '(parallel-thread-pool)
-   3
+   4
    0
    #f
    (list (cons prop:authentic #t))
@@ -11367,8 +11367,8 @@
    (|#%nongenerative-uid| parallel-thread-pool)
    #f
    #f
-   '(3 . 6)))
-(define effect_2753 (finish_2830 struct:parallel-thread-pool))
+   '(4 . 14)))
+(define effect_2753 (finish_2033 struct:parallel-thread-pool))
 (define parallel-thread-pool2.1
   (|#%name|
    parallel-thread-pool
@@ -11386,18 +11386,26 @@
   (|#%name|
    parallel-thread-pool-capacity
    (record-accessor struct:parallel-thread-pool 1)))
+(define parallel-thread-pool-swimmers
+  (|#%name|
+   parallel-thread-pool-swimmers
+   (record-accessor struct:parallel-thread-pool 2)))
 (define parallel-thread-pool-custodian-reference
   (|#%name|
    parallel-thread-pool-custodian-reference
-   (record-accessor struct:parallel-thread-pool 2)))
+   (record-accessor struct:parallel-thread-pool 3)))
 (define set-parallel-thread-pool-capacity!
   (|#%name|
    set-parallel-thread-pool-capacity!
    (record-mutator struct:parallel-thread-pool 1)))
+(define set-parallel-thread-pool-swimmers!
+  (|#%name|
+   set-parallel-thread-pool-swimmers!
+   (record-mutator struct:parallel-thread-pool 2)))
 (define set-parallel-thread-pool-custodian-reference!
   (|#%name|
    set-parallel-thread-pool-custodian-reference!
-   (record-mutator struct:parallel-thread-pool 2)))
+   (record-mutator struct:parallel-thread-pool 3)))
 (define finish_2955
   (make-struct-type-install-properties
    '(parallel*)
@@ -12212,7 +12220,8 @@
                      (place-schedulers (unsafe-place-local-ref cell.1$2))
                      s_0
                      #t))
-                   (let ((pool_0 (parallel-thread-pool2.1 s_0 capacity_0 #f)))
+                   (let ((pool_0
+                          (parallel-thread-pool2.1 s_0 capacity_0 0 #f)))
                      (let ((close_0
                             (|#%name|
                              close
@@ -12275,7 +12284,9 @@
          (begin
            (|#%app| host:mutex-acquire (scheduler-mutex s_0))
            (set-parallel-thread-pool-capacity! pool_0 0)
-           (|#%app| host:mutex-release (scheduler-mutex s_0))))))))
+           (|#%app| host:mutex-release (scheduler-mutex s_0))
+           (start-atomic)
+           (begin0 (thread-pool-departure pool_0 0) (end-atomic))))))))
 (define 1/thread/parallel
   (let ((thread/parallel_0
          (|#%name|
@@ -12377,7 +12388,7 @@
                                  (lambda ()
                                    (begin
                                      (future-external-stop me-f_0)
-                                     (thread-pool-departure pool_0)))
+                                     (thread-pool-departure pool_0 -1)))
                                  th_0)
                                 (thread-push-suspend+resume-callbacks!
                                  (lambda () (future-external-stop me-f_0))
@@ -13003,7 +13014,11 @@
                                     "the parallel thread pool has been closed")))
                                (set-parallel-thread-pool-capacity!
                                 pool_0
-                                capacity_0))))
+                                capacity_0)
+                               (set-parallel-thread-pool-swimmers!
+                                pool_0
+                                (add1
+                                 (parallel-thread-pool-swimmers pool_0))))))
                          (void))
                        (let ((old_0
                               (if front?24_0
@@ -13095,22 +13110,26 @@
             (if (future*-kind f_0) (|#%app| wakeup-this-place) (void))
             #t))))))
 (define thread-pool-departure
-  (lambda (pool_0)
+  (lambda (pool_0 delta_0)
     (let ((s_0 (parallel-thread-pool-scheduler pool_0)))
       (begin
         (|#%app| host:mutex-acquire (scheduler-mutex s_0))
-        (let ((capacity_0 (parallel-thread-pool-capacity pool_0)))
-          (begin
-            (|#%app| host:mutex-release (scheduler-mutex s_0))
-            (if (zero? capacity_0)
-              (begin
-                (kill-future-scheduler.1 #t s_0)
-                (set-place-schedulers!
-                 (unsafe-place-local-ref cell.1$2)
-                 (hash-remove
-                  (place-schedulers (unsafe-place-local-ref cell.1$2))
-                  s_0)))
-              (void))))))))
+        (begin
+          (set-parallel-thread-pool-swimmers!
+           pool_0
+           (+ (parallel-thread-pool-swimmers pool_0) delta_0))
+          (let ((capacity_0 (parallel-thread-pool-capacity pool_0)))
+            (begin
+              (|#%app| host:mutex-release (scheduler-mutex s_0))
+              (if (zero? capacity_0)
+                (begin
+                  (kill-future-scheduler.1 #t s_0)
+                  (set-place-schedulers!
+                   (unsafe-place-local-ref cell.1$2)
+                   (hash-remove
+                    (place-schedulers (unsafe-place-local-ref cell.1$2))
+                    s_0)))
+                (void)))))))))
 (define start-worker
   (lambda (w_0 s_0)
     (let ((th_0

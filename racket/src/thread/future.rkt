@@ -275,7 +275,7 @@
   (or (atomically
        (define s (start-scheduler n #t))
        (set-place-schedulers! current-place (hash-set (place-schedulers current-place) s #t))
-       (define pool (parallel-thread-pool s capacity #f))
+       (define pool (parallel-thread-pool s capacity 0 #f))
        (define (close pool)
          (define s (parallel-thread-pool-scheduler pool))
          (define schedulers (place-schedulers current-place))
@@ -300,7 +300,9 @@
   (define s (parallel-thread-pool-scheduler pool))
   (host:mutex-acquire (scheduler-mutex s))
   (set-parallel-thread-pool-capacity! pool 0)
-  (host:mutex-release (scheduler-mutex s)))
+  (host:mutex-release (scheduler-mutex s))
+  (atomically
+   (thread-pool-departure pool 0)))
 
 (define (thread/parallel thunk [pool-in 'own] [keep-result? #f])
   (define who 'thread)
@@ -361,7 +363,7 @@
      (set-future*-parallel! me-f (parallel* pool th #f))
      (thread-push-kill-callback! (lambda ()
                                    (future-external-stop me-f)
-                                   (thread-pool-departure pool))
+                                   (thread-pool-departure pool -1))
                                  th)
      (thread-push-suspend+resume-callbacks! (lambda () (future-external-stop me-f))
                                             (lambda () (future-external-resume me-f))
@@ -843,7 +845,8 @@
     (unless (capacity . >= . 0)
       (host:mutex-release (scheduler-mutex s))
       (raise-arguments-error 'thread/parallel "the parallel thread pool has been closed"))
-    (set-parallel-thread-pool-capacity! pool capacity))
+    (set-parallel-thread-pool-capacity! pool capacity)
+    (set-parallel-thread-pool-swimmers! pool (add1 (parallel-thread-pool-swimmers pool))))
   (define old (if front?
                   (scheduler-futures-head s)
                   (scheduler-futures-tail s)))
@@ -920,9 +923,10 @@
 
 ;; called in atomic mode in Racket thread or scheduling thread;
 ;; close a schduler when its thread pool will never have new work
-(define (thread-pool-departure pool)
+(define (thread-pool-departure pool delta)
   (define s (parallel-thread-pool-scheduler pool))
   (host:mutex-acquire (scheduler-mutex s))
+  (set-parallel-thread-pool-swimmers! pool (+ (parallel-thread-pool-swimmers pool) delta))
   (define capacity (parallel-thread-pool-capacity pool))
   (host:mutex-release (scheduler-mutex s))
   (when (zero? capacity)

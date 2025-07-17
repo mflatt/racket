@@ -30,6 +30,7 @@
 
 (struct parallel-thread-pool (scheduler
                               [capacity #:mutable]
+                              [swimmers #:mutable]
                               [custodian-reference #:mutable])
   #:authentic
   #:reflection-name 'parallel-thread-pool)

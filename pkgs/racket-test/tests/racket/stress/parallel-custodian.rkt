@@ -1,6 +1,9 @@
 #lang racket/base
 
 (for ([i 10000])
+  (parallel-thread-pool-close (make-parallel-thread-pool 1)))
+
+(for ([i 10000])
   (parameterize ([current-custodian (make-custodian)])
     (make-parallel-thread-pool 1)
     (custodian-shutdown-all (current-custodian))))
