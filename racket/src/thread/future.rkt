@@ -292,7 +292,7 @@
   (set-parallel-thread-pool-capacity! pool 0)
   (host:mutex-release (scheduler-mutex s)))
 
-(define/who (thread/parallel thunk [pool (create-parallel-thread-pool 1 1)])
+(define/who (thread/parallel thunk [pool (create-parallel-thread-pool 1 1)] [keep-result? #f])
   (check who (procedure-arity-includes/c 0) thunk)
   (check who parallel-thread-pool? pool)
   (cond
@@ -315,8 +315,7 @@
             (with-continuation-mark
                 parameterization-key paramz
                 (with-continuation-mark
-                    break-enabled-key
-                  break-enabled
+                  break-enabled-key break-enabled
                   (begin
                     (check-for-break)
                     (|#%app| thunk)))))
@@ -327,10 +326,15 @@
                        #:break-enabled-cell parallel-break-disabled-cell
                        #:custodian cust
                        #:schedule? #f
+                       #:keep-result? #t
                        (lambda ()
                          (let loop ()
                            (call-with-continuation-prompt
-                            (lambda () (touch-blocked me-f))
+                            (lambda ()
+                              (touch-blocked me-f)
+                              (when keep-result?
+                                ;; get result:
+                                (touch me-f)))
                             future-start-prompt-tag
                             (lambda args
                               (loop)))))))

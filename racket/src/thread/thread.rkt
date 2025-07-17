@@ -145,6 +145,8 @@
                      [mailbox #:mutable] ; a queue of messages from `thread-send`
                      [mailbox-wakeup #:mutable] ; callback to trigger (in atomic mode) on `thread-send`
 
+                     [results #:mutable]
+
                      [cpu-time #:mutable] ; accumulates CPU time in milliseconds
 
                      [future #:mutable]   ; saved would-be future or parallel-thread future
@@ -190,7 +192,8 @@
                         #:break-enabled-cell [break-enabled-cell (if (or initial? at-root?)
                                                                      break-enabled-default-cell
                                                                      (current-break-enabled-cell))]
-                        #:schedule? [schedule? #t])
+                        #:schedule? [schedule? #t]
+                        #:keep-result? [keep-result? #f])
   (check who (procedure-arity-includes/c 0) proc)
   (define p (if (or at-root? initial?)
                 root-thread-group
@@ -198,7 +201,16 @@
   (define cells (make-engine-thread-cell-state
                  break-enabled-cell
                  at-root?))
-  (define e (make-engine proc
+  (define e (make-engine (if keep-result?
+                             (lambda ()
+                               (call-with-values
+                                (lambda ()
+                                  (call-with-continuation-prompt
+                                   proc
+                                   (default-continuation-prompt-tag)))
+                                (lambda results
+                                  (set-thread-results! (current-thread/in-atomic) results))))
+                             proc)
                          (default-continuation-prompt-tag)
                          #f
                          cells
@@ -228,17 +240,18 @@
                     #f ; resumed-evt
 
                     #f ; pending-break
-                    #f ; ignore-thread-cells
+                    #f ; ignore-break-cells
                     #f ; forward-break-to
 
                     (make-queue) ; mailbox
                     void ; mailbox-wakeup
 
+                    (void) ; results
+
                     0 ; cpu-time
 
                     #f ; future
-                    cells ; thread-cell state
-                    )) 
+                    cells)) ; thread-cell state
   ((atomically
     (define cref (and c (custodian-register-thread c t remove-thread-custodian)))
     (cond
@@ -251,8 +264,8 @@
   t)
 
 (define make-thread
-  (let ([thread (lambda (proc)
-                  (do-make-thread 'thread proc))])
+  (let ([thread (lambda (proc [keep-result? #f])
+                  (do-make-thread 'thread proc #:keep-result? keep-result?))])
     thread))
 
 (define (thread/suspend-to-kill proc)
@@ -449,7 +462,11 @@
      ;; since the thread obviously can't continue after it is terminated
      (semaphore-wait (make-semaphore))]
     [else
-     (semaphore-wait (get-thread-dead-evt t))]))
+     (semaphore-wait (get-thread-dead-evt t))])
+  (let ([v (thread-results t)])
+    (if (pair? v)
+        (apply values v)
+        v)))
 
 (struct dead-evt custodian-accessible-semaphore ([custodian-references #:mutable])
   #:authentic
