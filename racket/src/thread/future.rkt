@@ -329,27 +329,32 @@
          (call-with-continuation-prompt
           (lambda ()
             (with-continuation-mark
-                parameterization-key paramz
-                (with-continuation-mark
-                  break-enabled-key break-enabled
-                  (begin
-                    (check-for-break)
-                    (|#%app| thunk)))))
+              parameterization-key paramz
+              (with-continuation-mark
+                break-enabled-key break-enabled
+                (begin
+                  (check-for-break)
+                  (if keep-result?
+                      (call-with-values
+                       thunk
+                       (lambda results
+                         (set-thread-results! (current-thread) results)))
+                      (begin
+                        (thunk)
+                        (set-thread-results! (current-thread) (list (void)))))))))
           (default-continuation-prompt-tag))))
      (define me-f (create-future thunk-in-prompt #f #f))
      (define th
        (do-make-thread who
+                       #:name (object-name thunk)
                        #:break-enabled-cell parallel-break-disabled-cell
                        #:custodian cust
                        #:schedule? #f
-                       #:keep-result? #t
+                       #:set-result? #f
                        (lambda ()
                          (let loop ()
                            (call-with-continuation-prompt
-                            (lambda ()
-                              (touch-blocked me-f)
-                              (when keep-result?
-                                (apply values (future*-results me-f))))
+                            (lambda () (touch-blocked me-f))
                             future-start-prompt-tag
                             (lambda args
                               (loop)))))))

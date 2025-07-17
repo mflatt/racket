@@ -1,12 +1,26 @@
 #lang racket/base
-(require racket/parallel)
+
+(for ([i 10000])
+  (parameterize ([current-custodian (make-custodian)])
+    (make-parallel-thread-pool 1)
+    (custodian-shutdown-all (current-custodian))))
 
 (for ([i (in-range 1000)])
   (define ts
     (for/list ([j (in-range 8)])
       (parameterize ([current-custodian (make-custodian)])
-        (thread/parallel
+        (thread
          (lambda ()
-           (custodian-shutdown-all (make-custodian)))
-         (make-parallel-thread-pool 1)))))
+           (custodian-shutdown-all (current-custodian)))
+         #:pool 'own))))
+  (map thread-wait ts))
+
+(for ([i (in-range 1000)])  
+  (define ts
+    (for/list ([j (in-range 8)])
+      (parameterize ([current-custodian (make-custodian)])
+        (thread
+         (lambda ()
+           (custodian-shutdown-all (current-custodian)))
+         #:pool (make-parallel-thread-pool 1)))))
   (map thread-wait ts))

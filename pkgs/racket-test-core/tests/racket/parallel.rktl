@@ -5,7 +5,8 @@
 
 ;; This test suite is derived from "thread.rktl"
 
-(require racket/parallel)
+(define (thread/parallel thunk)
+  (thread thunk #:pool 'own))
 
 (define SLEEP-TIME 0.1)
 
@@ -14,7 +15,6 @@
 (define t (thread/parallel (lambda () 8)))
 (test #t thread? t)
 
-(arity-test thread/parallel 1 2)
 (err/rt-test (thread/parallel 5) type?)
 (err/rt-test (thread/parallel (lambda (x) 8)) type?)
 
@@ -256,6 +256,19 @@
   (sync t3)
   (test #t values ex?)
   (set! ex? #f))
+
+(let ([fail (lambda (keep-results?)
+              (thread (parameterize ([current-error-port (open-output-bytes)])
+                        (lambda ()
+                          (error "fail")))
+                      #:pool 'own
+                      #:keep-results? keep-results?))])
+  (test (void) thread-wait (fail #f))
+  (test 'no thread-wait (fail #f) (lambda () 'no))
+  (test 'no thread-wait (fail #t) (lambda () 'no))
+  (test (void) thread-wait (thread/parallel (lambda () 'ok)))
+  (test 'ok thread-wait (thread (lambda () 'ok) #:pool 'own #:keep-results? #t))
+  (test-values '(ok more) (lambda () (thread-wait (thread (lambda () (values 'ok 'more)) #:pool 'own #:keep-results? #t)))))
 
 (define s (make-semaphore 1))
 
@@ -1558,8 +1571,8 @@
 
 (let ([pool (make-parallel-thread-pool)])
   (for ([i 1000])
-    (thread/parallel (make-keyword-procedure (lambda (x y) '()))
-                     pool)))
+    (thread (make-keyword-procedure (lambda (x y) '()))
+            #:pool pool)))
 
 ;; --------------------
 ;; Make sure that thread/parallel time accounting works:

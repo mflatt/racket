@@ -109,7 +109,8 @@
            set-thread-interrupt-callback!
            set-future->thread!
            current-break-enabled-cell
-           parallel-break-disabled-cell))
+           parallel-break-disabled-cell
+           set-thread-results!))
 
 (module* for-stats #f
   (provide thread-descheduled?
@@ -185,6 +186,7 @@
 
 (define (do-make-thread who
                         proc
+                        #:name [name (object-name proc)]
                         #:custodian [c (current-custodian)] ; can be #f
                         #:at-root? [at-root? #f]
                         #:initial? [initial? #f]
@@ -193,7 +195,8 @@
                                                                      break-enabled-default-cell
                                                                      (current-break-enabled-cell))]
                         #:schedule? [schedule? #t]
-                        #:keep-result? [keep-result? #f])
+                        #:keep-result? [keep-result? #f]
+                        #:set-result? [set-result? #t])
   (check who (procedure-arity-includes/c 0) proc)
   (define p (if (or at-root? initial?)
                 root-thread-group
@@ -201,16 +204,18 @@
   (define cells (make-engine-thread-cell-state
                  break-enabled-cell
                  at-root?))
-  (define e (make-engine (if keep-result?
-                             (lambda ()
-                               (call-with-values
-                                (lambda ()
-                                  (call-with-continuation-prompt
-                                   proc
-                                   (default-continuation-prompt-tag)))
-                                (lambda results
-                                  (set-thread-results! (current-thread/in-atomic) results))))
-                             proc)
+  (define e (make-engine (cond
+                           [keep-result?
+                            (lambda ()
+                              (call-with-values
+                               proc
+                               (lambda results
+                                 (set-thread-results! (current-thread/in-atomic) results))))]
+                           [set-result?
+                            (lambda ()
+                              (proc)
+                              (set-thread-results! (current-thread/in-atomic) (list (void))))]
+                           [else proc])
                          (default-continuation-prompt-tag)
                          #f
                          cells
@@ -218,7 +223,7 @@
   (define t (thread 'none ; node prev
                     'none ; node next
                     
-                    (object-name proc)
+                    name
                     e
                     p
                     #f ; sleeping
@@ -246,7 +251,7 @@
                     (make-queue) ; mailbox
                     void ; mailbox-wakeup
 
-                    #f ; results
+                    #f
 
                     0 ; cpu-time
 
@@ -529,7 +534,6 @@
 ;; thread, where the thunk returns `(void)`;
 (define (do-thread-deschedule! t timeout-at)
   (assert-atomic-mode)
-  (assert (current-thread/in-atomic))
   (cond
     [(thread-descheduled? t)
      (unless (eq? (thread-descheduled? t) 'terribly-wrong)

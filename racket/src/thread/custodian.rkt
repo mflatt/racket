@@ -180,7 +180,7 @@
   (do-custodian-register cust obj callback #:weak? #t #:gc-root? #t))
 
 (define (custodian-register-pool cust obj callback)
-  (do-custodian-register cust obj callback #:weak? #t))
+  (do-custodian-register cust obj callback))
 
 (define (custodian-register-also cref obj callback at-exit? weak?)
   (assert-atomic-mode)

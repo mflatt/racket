@@ -16,6 +16,6 @@
   [parallel-thread-pool-close (known-procedure 2)]
   [processor-count (known-procedure 1)]
   [reset-future-logs-for-tracing! (known-procedure 1)]
-  [thread/parallel (known-procedure 6)]
+  [thread/parallel (known-procedure 14)]
   [touch (known-procedure 2)]
   [would-be-future (known-procedure 2)])
