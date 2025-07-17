@@ -269,21 +269,31 @@
 (define/who (make-parallel-thread-pool [n pthread-count])
   (check who exact-positive-integer? n)
   (make-phantom-bytes (* n 1024)) ; intended to make sure that `n` is reasonable
-  (create-parallel-thread-pool n +inf.0))
+  (create-parallel-thread-pool 'make-parallel-thread-pool n +inf.0 (current-custodian) #f))
 
-(define (create-parallel-thread-pool n capacity)
-  (atomically
-   (define s (start-scheduler n #t))
-   (set-place-schedulers! current-place (hash-set (place-schedulers current-place) s #t))
-   (define pool (parallel-thread-pool s capacity))
-   (host:will-register custodian-will-executor pool
-                       (lambda (pool)
-                         (define s (parallel-thread-pool-scheduler pool))
-                         (define schedulers (place-schedulers current-place))
-                         (when (hash-ref schedulers s #f)
-                           (kill-future-scheduler s)
-                           (set-place-schedulers! current-place (hash-remove schedulers s)))))
-   pool))
+(define (create-parallel-thread-pool who n capacity cust own?)
+  (or (atomically
+       (define s (start-scheduler n #t))
+       (set-place-schedulers! current-place (hash-set (place-schedulers current-place) s #t))
+       (define pool (parallel-thread-pool s capacity #f))
+       (define (close pool)
+         (define s (parallel-thread-pool-scheduler pool))
+         (define schedulers (place-schedulers current-place))
+         (when (hash-ref schedulers s #f)
+           (kill-future-scheduler s)
+           (set-place-schedulers! current-place (hash-remove schedulers s)))
+         (unsafe-custodian-unregister pool (parallel-thread-pool-custodian-reference pool)))
+       (cond
+         [own?
+          ;; leave custodian shutdown to thread, but register a will in case
+          ;; the thread is GCed
+          (host:will-register custodian-will-executor pool close)
+          pool]
+         [else
+          (define cref (custodian-register-pool cust pool (lambda (pool c) (close pool))))
+          (set-parallel-thread-pool-custodian-reference! pool cref)
+          (and cref pool)]))
+      (raise-custodian-is-shut-down who cust)))
 
 (define/who (parallel-thread-pool-close pool)
   (check who parallel-thread-pool? pool)
@@ -292,14 +302,20 @@
   (set-parallel-thread-pool-capacity! pool 0)
   (host:mutex-release (scheduler-mutex s)))
 
-(define/who (thread/parallel thunk [pool (create-parallel-thread-pool 1 1)] [keep-result? #f])
+(define (thread/parallel thunk [pool-in 'own] [keep-result? #f])
+  (define who 'thread)
   (check who (procedure-arity-includes/c 0) thunk)
-  (check who parallel-thread-pool? pool)
+  (check who (lambda (v) (or (eq? v 'own) (parallel-thread-pool? v)))
+         #:contract "(or/c #f 'own parallel-thread-pool?)"
+         pool-in)         
   (cond
     [(not (futures-enabled?))
      (thread thunk)]
     [else
      (define cust (current-custodian))
+     (define pool (if (eq? pool-in 'own)
+                      (create-parallel-thread-pool 'thread 1 1 cust #t)
+                      pool-in))
      (define paramz (current-parameterization))
      (define break-enabled (current-break-enabled-cell))
      (define thunk-in-prompt
@@ -333,8 +349,7 @@
                             (lambda ()
                               (touch-blocked me-f)
                               (when keep-result?
-                                ;; get result:
-                                (touch me-f)))
+                                (apply values (future*-results me-f))))
                             future-start-prompt-tag
                             (lambda args
                               (loop)))))))

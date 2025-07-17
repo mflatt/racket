@@ -5403,6 +5403,9 @@
 (define custodian-register-place
   (lambda (cust_0 obj_0 callback_0)
     (do-custodian-register.1 #f #f #t #f #t cust_0 obj_0 callback_0)))
+(define custodian-register-pool
+  (lambda (cust_0 obj_0 callback_0)
+    (do-custodian-register.1 #f #f #f #f #t cust_0 obj_0 callback_0)))
 (define custodian-register-also
   (lambda (cref_0 obj_0 callback_0 at-exit?_0 weak?_0)
     (begin
@@ -5411,7 +5414,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/custodian.rkt:179:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/custodian.rkt:186:2 (assert-atomic-mode)>"))
       (let ((c_0 (custodian-reference->custodian cref_0)))
         (if (hash-ref (custodian-children c_0) obj_0 #f)
           (void)
@@ -5993,8 +5996,8 @@
          (raise-argument-error 'make-custodian-box "custodian?" c_0))
        (let ((b_0 (custodian-box1.1 v_0 (custodian-get-shutdown-sema c_0))))
          (begin
-           (if (let ((temp75_0 (lambda (b_1) (set-custodian-box-v! b_1 #f))))
-                 (do-custodian-register.1 #f #f #t #f #t c_0 b_0 temp75_0))
+           (if (let ((temp79_0 (lambda (b_1) (set-custodian-box-v! b_1 #f))))
+                 (do-custodian-register.1 #f #f #t #f #t c_0 b_0 temp79_0))
              (void)
              (raise-arguments-error
               'make-custodian-box
@@ -6466,7 +6469,7 @@
                   (void)))
               (void))))))
        (loop_0 mref_0)))))
-(define finish_2834
+(define finish_2182
   (make-struct-type-install-properties
    '(thread)
    25
@@ -6485,13 +6488,13 @@
            (let ((app_4
                   (cons
                    prop:waiter
-                   (let ((temp41_0
+                   (let ((temp43_0
                           (lambda (t_0 i-cb_0)
                             (thread-deschedule! t_0 #f i-cb_0))))
-                     (let ((temp42_0
+                     (let ((temp44_0
                             (lambda (t_0 v_0)
                               (begin (thread-reschedule! t_0) v_0))))
-                       (make-waiter-methods.1 temp42_0 temp41_0))))))
+                       (make-waiter-methods.1 temp44_0 temp43_0))))))
              (list
               app_0
               app_1
@@ -6512,7 +6515,7 @@
    #t
    #f
    '(25 . 16777082)))
-(define effect_2668 (finish_2834 struct:thread))
+(define effect_2668 (finish_2182 struct:thread))
 (define thread1.1
   (|#%name|
    thread
@@ -6711,7 +6714,7 @@
                            #f
                            (make-queue)
                            void
-                           (void)
+                           #f
                            0
                            #f
                            cells_0))))
@@ -6749,22 +6752,22 @@
   (let ((thread_0
          (|#%name|
           thread
-          (lambda (proc44_0 keep-result?43_0)
+          (lambda (proc46_0 keep-result?45_0)
             (do-make-thread.1
              #f
              unsafe-undefined
              unsafe-undefined
              #f
-             keep-result?43_0
+             keep-result?45_0
              #t
              #f
              'thread
-             proc44_0)))))
+             proc46_0)))))
     (|#%name|
      thread
      (case-lambda
       ((proc_0) (thread_0 proc_0 #f))
-      ((proc_0 keep-result?43_0) (thread_0 proc_0 keep-result?43_0))))))
+      ((proc_0 keep-result?45_0) (thread_0 proc_0 keep-result?45_0))))))
 (define 1/thread/suspend-to-kill
   (|#%name|
    thread/suspend-to-kill
@@ -6797,11 +6800,11 @@
   (|#%name|
    unsafe-thread-at-root
    (lambda (proc_0)
-     (let ((root-custodian57_0 (unsafe-place-local-ref cell.1$7)))
+     (let ((root-custodian59_0 (unsafe-place-local-ref cell.1$7)))
        (do-make-thread.1
         #t
         unsafe-undefined
-        root-custodian57_0
+        root-custodian59_0
         #f
         #f
         #t
@@ -7181,18 +7184,32 @@
        (set! post-shutdown-action proc_0)))
     (void)))
 (define 1/thread-wait
-  (|#%name|
-   thread-wait
-   (lambda (t_0)
-     (begin
-       (if (1/thread? t_0)
-         (void)
-         (raise-argument-error 'thread-wait "thread?" t_0))
-       (if (eq? t_0 (1/current-thread))
-         (1/semaphore-wait (1/make-semaphore))
-         (1/semaphore-wait (get-thread-dead-evt t_0)))
-       (let ((v_0 (thread-results t_0)))
-         (if (pair? v_0) (apply values v_0) v_0))))))
+  (let ((thread-wait_0
+         (|#%name|
+          thread-wait
+          (lambda (t22_0 fail-k21_0)
+            (begin
+              (if (1/thread? t22_0)
+                (void)
+                (raise-argument-error 'thread-wait "thread?" t22_0))
+              (if (if (procedure? fail-k21_0)
+                    (procedure-arity-includes? fail-k21_0 0)
+                    #f)
+                (void)
+                (raise-argument-error
+                 'thread-wait
+                 "(procedure-arity-includes/c 0)"
+                 fail-k21_0))
+              (if (eq? t22_0 (1/current-thread))
+                (1/semaphore-wait (1/make-semaphore))
+                (1/semaphore-wait (get-thread-dead-evt t22_0)))
+              (let ((v_0 (thread-results t22_0)))
+                (if v_0 (apply values v_0) (|#%app| fail-k21_0))))))))
+    (|#%name|
+     thread-wait
+     (case-lambda
+      ((t_0) (thread-wait_0 t_0 void))
+      ((t_0 fail-k21_0) (thread-wait_0 t_0 fail-k21_0))))))
 (define finish_2598
   (make-struct-type-install-properties
    '(thread-dead-evt)
@@ -7214,7 +7231,7 @@
    #f
    '(1 . 1)))
 (define effect_2691 (finish_2598 struct:dead-evt))
-(define dead-evt21.1
+(define dead-evt23.1
   (|#%name|
    dead-evt
    (record-constructor
@@ -7250,7 +7267,7 @@
    #f
    '(0 . 0)))
 (define effect_2565 (finish_3414 struct:dead-evt/suspend-to-kill))
-(define dead-evt/suspend-to-kill22.1
+(define dead-evt/suspend-to-kill24.1
   (|#%name|
    dead-evt/suspend-to-kill
    (record-constructor
@@ -7280,8 +7297,8 @@
            (void)
            (let ((evt_0
                   (if (thread-suspend-to-kill? t_0)
-                    (dead-evt/suspend-to-kill22.1 #f #f 0)
-                    (dead-evt21.1 #f #f 0 null))))
+                    (dead-evt/suspend-to-kill24.1 #f #f 0)
+                    (dead-evt23.1 #f #f 0 null))))
              (begin
                (set-thread-dead-evt! t_0 evt_0)
                (if (eq? 'done (thread-engine t_0))
@@ -7320,7 +7337,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:509:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:510:2 (assert-atomic-mode)>"))
       (let ((sleeping_0 (thread-sleeping t_0)))
         (if sleeping_0
           (begin
@@ -7335,7 +7352,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:517:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:518:2 (assert-atomic-mode)>"))
       (let ((sleeping_0
              (|#%app| (sandman-do-add-thread! the-sandman) t_0 ext-events_0)))
         (set-thread-sleeping! t_0 sleeping_0)))))
@@ -7350,7 +7367,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:530:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:531:2 (assert-atomic-mode)>"))
       (if (current-thread/in-atomic)
         (void)
         (|#%app|
@@ -7426,7 +7443,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:593:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:594:2 (assert-atomic-mode)>"))
       (if (1/thread-dead? t_0)
         (|#%app| host:internal-error "tried to reschedule a dead thread")
         (void))
@@ -7462,7 +7479,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:617:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:618:2 (assert-atomic-mode)>"))
       (if (1/thread-dead? t_0)
         void
         (begin
@@ -7489,39 +7506,39 @@
   (let ((thread-resume_0
          (|#%name|
           thread-resume
-          (lambda (t24_0 benefactor23_0)
+          (lambda (t26_0 benefactor25_0)
             (begin
-              (if (1/thread? t24_0)
+              (if (1/thread? t26_0)
                 (void)
-                (raise-argument-error 'thread-resume "thread?" t24_0))
-              (if (let ((or-part_0 (not benefactor23_0)))
+                (raise-argument-error 'thread-resume "thread?" t26_0))
+              (if (let ((or-part_0 (not benefactor25_0)))
                     (if or-part_0
                       or-part_0
-                      (let ((or-part_1 (1/thread? benefactor23_0)))
+                      (let ((or-part_1 (1/thread? benefactor25_0)))
                         (if or-part_1
                           or-part_1
-                          (1/custodian? benefactor23_0)))))
+                          (1/custodian? benefactor25_0)))))
                 (void)
                 (raise-argument-error
                  'thread-resume
                  "(or/c #f thread? custodian?)"
-                 benefactor23_0))
+                 benefactor25_0))
               (if (begin
                     (start-atomic)
                     (begin0
-                      (do-thread-resume t24_0 benefactor23_0)
+                      (do-thread-resume t26_0 benefactor25_0)
                       (end-atomic)))
                 (void)
                 (raise-arguments-error
                  'thread-resume
                  "the custodian has been shut down"
                  "custodian"
-                 benefactor23_0)))))))
+                 benefactor25_0)))))))
     (|#%name|
      thread-resume
      (case-lambda
       ((t_0) (thread-resume_0 t_0 #f))
-      ((t_0 benefactor23_0) (thread-resume_0 t_0 benefactor23_0))))))
+      ((t_0 benefactor25_0) (thread-resume_0 t_0 benefactor25_0))))))
 (define do-thread-resume
   (lambda (t_0 benefactor_0)
     (begin
@@ -7530,7 +7547,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:652:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:653:2 (assert-atomic-mode)>"))
       (if (1/thread-dead? t_0)
         (not
          (if (1/custodian? benefactor_0)
@@ -7588,7 +7605,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:686:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:687:2 (assert-atomic-mode)>"))
       (letrec*
        ((loop_0
          (|#%name|
@@ -7667,7 +7684,7 @@
    #f
    '(2 . 0)))
 (define effect_3100 (finish_2826 struct:transitive-resume))
-(define transitive-resume25.1
+(define transitive-resume27.1
   (|#%name|
    transitive-resume
    (record-constructor
@@ -7690,7 +7707,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:732:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:733:2 (assert-atomic-mode)>"))
       (let ((new-l_0
              (letrec*
               ((loop_0
@@ -7702,7 +7719,7 @@
                        (set-thread-suspended?! b-t_0 (thread-suspended? b-t_0))
                        (list
                         (let ((app_0 (make-weak-box b-t_0)))
-                          (transitive-resume25.1
+                          (transitive-resume27.1
                            app_0
                            (thread-suspended-box b-t_0)))))
                      (let ((o-t_0
@@ -7726,7 +7743,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:754:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:755:2 (assert-atomic-mode)>"))
       (let ((lst_0 (thread-transitive-resumes t_0)))
         (letrec*
          ((for-loop_0
@@ -7749,20 +7766,20 @@
   (let ((thread-push-suspend+resume-callbacks!_0
          (|#%name|
           thread-push-suspend+resume-callbacks!
-          (lambda (s-cb27_0 r-cb28_0 t26_0)
+          (lambda (s-cb29_0 r-cb30_0 t28_0)
             (let ((t_0
-                   (if (eq? t26_0 unsafe-undefined)
+                   (if (eq? t28_0 unsafe-undefined)
                      (current-thread/in-atomic)
-                     t26_0)))
+                     t28_0)))
               (set-thread-suspend+resume-callbacks!
                t_0
-               (let ((app_0 (cons s-cb27_0 r-cb28_0)))
+               (let ((app_0 (cons s-cb29_0 r-cb30_0)))
                  (cons app_0 (thread-suspend+resume-callbacks t_0)))))))))
     (case-lambda
      ((s-cb_0 r-cb_0)
       (thread-push-suspend+resume-callbacks!_0 s-cb_0 r-cb_0 unsafe-undefined))
-     ((s-cb_0 r-cb_0 t26_0)
-      (thread-push-suspend+resume-callbacks!_0 s-cb_0 r-cb_0 t26_0)))))
+     ((s-cb_0 r-cb_0 t28_0)
+      (thread-push-suspend+resume-callbacks!_0 s-cb_0 r-cb_0 t28_0)))))
 (define thread-pop-suspend+resume-callbacks!
   (lambda ()
     (begin
@@ -7771,7 +7788,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:768:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:769:2 (assert-atomic-mode)>"))
       (let ((t_0 (current-thread/in-atomic)))
         (set-thread-suspend+resume-callbacks!
          t_0
@@ -7784,7 +7801,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:774:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:775:2 (assert-atomic-mode)>"))
       (let ((lst_0 (thread-suspend+resume-callbacks t_0)))
         (letrec*
          ((for-loop_0
@@ -7808,7 +7825,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:780:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:781:2 (assert-atomic-mode)>"))
       (let ((interrupt-callback_0 (thread-interrupt-callback t_0)))
         (if interrupt-callback_0
           (if (eq? interrupt-callback_0 'future)
@@ -7844,7 +7861,7 @@
    #f
    '(2 . 2)))
 (define effect_2478 (finish_2360 struct:suspend-resume-evt))
-(define suspend-resume-evt29.1
+(define suspend-resume-evt31.1
   (|#%name|
    suspend-resume-evt
    (record-constructor
@@ -7935,7 +7952,7 @@
    #f
    '(0 . 0)))
 (define effect_2442 (finish_2344 struct:suspend-evt))
-(define suspend-evt30.1
+(define suspend-evt32.1
   (|#%name|
    suspend-evt
    (record-constructor
@@ -7971,7 +7988,7 @@
    #f
    '(0 . 0)))
 (define effect_2874 (finish_2494 struct:resume-evt))
-(define resume-evt31.1
+(define resume-evt33.1
   (|#%name|
    resume-evt
    (record-constructor
@@ -8007,7 +8024,7 @@
    #f
    '(1 . 1)))
 (define effect_3021 (finish_2484 struct:suspend-semaphore))
-(define suspend-semaphore32.1
+(define suspend-semaphore34.1
   (|#%name|
    suspend-semaphore
    (record-constructor
@@ -8033,14 +8050,14 @@
        (start-atomic)
        (begin0
          (if (1/thread-dead? t_0)
-           (resume-evt31.1 the-never-evt #f)
+           (resume-evt33.1 the-never-evt #f)
            (if (thread-suspended? t_0)
              (let ((or-part_0 (thread-resumed-evt t_0)))
                (if or-part_0
                  or-part_0
-                 (let ((r_0 (resume-evt31.1 (1/make-semaphore) #f)))
+                 (let ((r_0 (resume-evt33.1 (1/make-semaphore) #f)))
                    (begin (set-thread-resumed-evt! t_0 r_0) r_0))))
-             (resume-evt31.1 the-always-evt t_0)))
+             (resume-evt33.1 the-always-evt t_0)))
          (end-atomic))))))
 (define 1/thread-suspend-evt
   (|#%name|
@@ -8053,9 +8070,9 @@
        (start-atomic)
        (begin0
          (if (1/thread-dead? t_0)
-           (suspend-evt30.1 the-never-evt #f)
+           (suspend-evt32.1 the-never-evt #f)
            (if (thread-suspended? t_0)
-             (suspend-evt30.1 the-always-evt t_0)
+             (suspend-evt32.1 the-always-evt t_0)
              (let ((or-part_0 (thread-suspended-evt t_0)))
                (if or-part_0
                  or-part_0
@@ -8063,7 +8080,7 @@
                         (if (thread-suspend-to-kill? t_0)
                           (let ((refs_0 (thread-custodian-references t_0)))
                             (let ((sema_0
-                                   (suspend-semaphore32.1 #f #f 0 refs_0)))
+                                   (suspend-semaphore34.1 #f #f 0 refs_0)))
                               (begin
                                 (letrec*
                                  ((for-loop_0
@@ -8087,7 +8104,7 @@
                                 sema_0)))
                           (1/make-semaphore))))
                    (let ((s_0
-                          (suspend-evt30.1
+                          (suspend-evt32.1
                            sema_0
                            (if (thread-suspend-to-kill? t_0) t_0 #f))))
                      (begin (set-thread-suspended-evt! t_0 s_0) s_0)))))))
@@ -8111,15 +8128,15 @@
   (let ((sleep_0
          (|#%name|
           sleep
-          (lambda (secs33_0)
+          (lambda (secs35_0)
             (begin
-              (if (if (real? secs33_0) (>= secs33_0 0) #f)
+              (if (if (real? secs35_0) (>= secs35_0 0) #f)
                 (void)
-                (raise-argument-error 'sleep "(>=/c 0)" secs33_0))
-              (if (if (zero? secs33_0) (zero? (current-atomic)) #f)
+                (raise-argument-error 'sleep "(>=/c 0)" secs35_0))
+              (if (if (zero? secs35_0) (zero? (current-atomic)) #f)
                 (thread-yield #f)
                 (let ((until-msecs_0
-                       (let ((app_0 (* secs33_0 1000.0)))
+                       (let ((app_0 (* secs35_0 1000.0)))
                          (+ app_0 (current-inexact-monotonic-milliseconds)))))
                   (letrec*
                    ((loop_0
@@ -8134,7 +8151,7 @@
                    (loop_0)))))))))
     (|#%name|
      sleep
-     (case-lambda (() (sleep_0 0)) ((secs33_0) (sleep_0 secs33_0))))))
+     (case-lambda (() (sleep_0 0)) ((secs35_0) (sleep_0 secs35_0))))))
 (define cell.2$1 (unsafe-make-place-local hash2610))
 (define thread-poll-done!
   (lambda (t_0)
@@ -8251,30 +8268,30 @@
   (let ((break-thread_0
          (|#%name|
           break-thread
-          (lambda (t35_0 kind34_0)
+          (lambda (t37_0 kind36_0)
             (begin
-              (if (1/thread? t35_0)
+              (if (1/thread? t37_0)
                 (void)
-                (raise-argument-error 'break-thread "thread?" t35_0))
-              (if (let ((or-part_0 (not kind34_0)))
+                (raise-argument-error 'break-thread "thread?" t37_0))
+              (if (let ((or-part_0 (not kind36_0)))
                     (if or-part_0
                       or-part_0
-                      (let ((or-part_1 (eq? kind34_0 'hang-up)))
-                        (if or-part_1 or-part_1 (eq? kind34_0 'terminate)))))
+                      (let ((or-part_1 (eq? kind36_0 'hang-up)))
+                        (if or-part_1 or-part_1 (eq? kind36_0 'terminate)))))
                 (void)
                 (raise-argument-error
                  'break-thread
                  "(or/c #f 'hang-up 'terminate)"
-                 kind34_0))
+                 kind36_0))
               (do-break-thread
-               t35_0
-               (if kind34_0 kind34_0 'break)
+               t37_0
+               (if kind36_0 kind36_0 'break)
                (1/current-thread)))))))
     (|#%name|
      break-thread
      (case-lambda
       ((t_0) (break-thread_0 t_0 #f))
-      ((t_0 kind34_0) (break-thread_0 t_0 kind34_0))))))
+      ((t_0 kind36_0) (break-thread_0 t_0 kind36_0))))))
 (define do-break-thread
   (lambda (t_0 kind_0 check-t_0)
     (begin
@@ -8348,7 +8365,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1062:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1063:2 (assert-atomic-mode)>"))
       (let ((ignore_0 (thread-ignore-break-cells t_0)))
         (let ((or-part_0 (eq? ignore_0 bc_0)))
           (if or-part_0
@@ -8362,7 +8379,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1070:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1071:2 (assert-atomic-mode)>"))
       (let ((ignore_0 (thread-ignore-break-cells t_0)))
         (set-thread-ignore-break-cells!
          t_0
@@ -8390,7 +8407,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1097:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1098:2 (assert-atomic-mode)>"))
       (queue-add! (thread-mailbox thd_0) v_0))))
 (define dequeue-mail!
   (lambda (thd_0)
@@ -8400,7 +8417,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1102:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1103:2 (assert-atomic-mode)>"))
       (let ((mbx_0 (thread-mailbox thd_0)))
         (if (not (queue-start mbx_0))
           (|#%app| host:internal-error "no mail!")
@@ -8413,7 +8430,7 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1112:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1113:2 (assert-atomic-mode)>"))
       (not (let ((q_0 (thread-mailbox thd_0))) (not (queue-start q_0)))))))
 (define push-mail!
   (lambda (thd_0 v_0)
@@ -8423,26 +8440,26 @@
         (void)
         (|#%app|
          host:internal-error
-         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1117:2 (assert-atomic-mode)>"))
+         "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1118:2 (assert-atomic-mode)>"))
       (queue-add-front! (thread-mailbox thd_0) v_0))))
 (define 1/thread-send
   (let ((thread-send_0
          (|#%name|
           thread-send
-          (lambda (thd37_0 v38_0 fail-thunk36_0)
+          (lambda (thd39_0 v40_0 fail-thunk38_0)
             (let ((fail-thunk_0
-                   (if (eq? fail-thunk36_0 unsafe-undefined)
+                   (if (eq? fail-thunk38_0 unsafe-undefined)
                      (|#%name|
                       fail-thunk
                       (lambda ()
                         (raise-arguments-error
                          'thread-send
                          "target thread is not running")))
-                     fail-thunk36_0)))
+                     fail-thunk38_0)))
               (begin
-                (if (1/thread? thd37_0)
+                (if (1/thread? thd39_0)
                   (void)
-                  (raise-argument-error 'thread-send "thread?" thd37_0))
+                  (raise-argument-error 'thread-send "thread?" thd39_0))
                 (if (let ((or-part_0 (not fail-thunk_0)))
                       (if or-part_0
                         or-part_0
@@ -8458,12 +8475,12 @@
                  (begin
                    (start-atomic)
                    (begin0
-                     (if (not (1/thread-dead? thd37_0))
+                     (if (not (1/thread-dead? thd39_0))
                        (begin
-                         (enqueue-mail! thd37_0 v38_0)
-                         (let ((wakeup_0 (thread-mailbox-wakeup thd37_0)))
+                         (enqueue-mail! thd39_0 v40_0)
+                         (let ((wakeup_0 (thread-mailbox-wakeup thd39_0)))
                            (begin
-                             (set-thread-mailbox-wakeup! thd37_0 void)
+                             (set-thread-mailbox-wakeup! thd39_0 void)
                              (|#%app| wakeup_0)
                              void)))
                        (if fail-thunk_0 fail-thunk_0 (lambda () #f)))
@@ -8472,7 +8489,7 @@
      thread-send
      (case-lambda
       ((thd_0 v_0) (thread-send_0 thd_0 v_0 unsafe-undefined))
-      ((thd_0 v_0 fail-thunk36_0) (thread-send_0 thd_0 v_0 fail-thunk36_0))))))
+      ((thd_0 v_0 fail-thunk38_0) (thread-send_0 thd_0 v_0 fail-thunk38_0))))))
 (define 1/thread-receive
   (|#%name|
    thread-receive
@@ -8522,7 +8539,7 @@
          (let ((t_0 (current-thread/in-atomic)))
            (for-each_2009 (lambda (msg_0) (push-mail! t_0 msg_0)) lst_0))
          (end-atomic))))))
-(define finish_3092
+(define finish_2799
   (make-struct-type-install-properties
    '(thread-receive-evt)
    0
@@ -8539,7 +8556,7 @@
             (void)
             (|#%app|
              host:internal-error
-             "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1184:25 (assert-atomic-mode)>"))
+             "should be in atomic mode: #<syntax:/Users/mflatt/plt/racket/src/thread/thread.rkt:1185:25 (assert-atomic-mode)>"))
           (let ((t_0 (current-thread/in-atomic)))
             (if (is-mail? t_0)
               (values (list self_0) #f)
@@ -8592,8 +8609,8 @@
    #f
    #f
    '(0 . 0)))
-(define effect_2506 (finish_3092 struct:thread-receiver-evt))
-(define thread-receiver-evt39.1
+(define effect_2506 (finish_2799 struct:thread-receiver-evt))
+(define thread-receiver-evt41.1
   (|#%name|
    thread-receiver-evt
    (record-constructor
@@ -8611,7 +8628,7 @@
           (thread-receiver-evt?_2591 (impersonator-val v))
           #f))))))
 (define 1/thread-receive-evt
-  (|#%name| thread-receive-evt (lambda () (thread-receiver-evt39.1))))
+  (|#%name| thread-receive-evt (lambda () (thread-receiver-evt41.1))))
 (define future->thread (lambda (f_0) #f))
 (define future-swapping-out?$1
   (|#%name| future-swapping-out? (lambda (f_0) #f)))
@@ -11320,10 +11337,10 @@
   (|#%name| set-future-state! (record-mutator struct:future* 9)))
 (define set-future*-dependents!
   (|#%name| set-future-dependents! (record-mutator struct:future* 10)))
-(define finish_2738
+(define finish_2830
   (make-struct-type-install-properties
    '(parallel-thread-pool)
-   2
+   3
    0
    #f
    (list (cons prop:authentic #t))
@@ -11339,8 +11356,8 @@
    (|#%nongenerative-uid| parallel-thread-pool)
    #f
    #f
-   '(2 . 2)))
-(define effect_2753 (finish_2738 struct:parallel-thread-pool))
+   '(3 . 6)))
+(define effect_2753 (finish_2830 struct:parallel-thread-pool))
 (define parallel-thread-pool2.1
   (|#%name|
    parallel-thread-pool
@@ -11358,10 +11375,18 @@
   (|#%name|
    parallel-thread-pool-capacity
    (record-accessor struct:parallel-thread-pool 1)))
+(define parallel-thread-pool-custodian-reference
+  (|#%name|
+   parallel-thread-pool-custodian-reference
+   (record-accessor struct:parallel-thread-pool 2)))
 (define set-parallel-thread-pool-capacity!
   (|#%name|
    set-parallel-thread-pool-capacity!
    (record-mutator struct:parallel-thread-pool 1)))
+(define set-parallel-thread-pool-custodian-reference!
+  (|#%name|
+   set-parallel-thread-pool-custodian-reference!
+   (record-mutator struct:parallel-thread-pool 2)))
 (define finish_2955
   (make-struct-type-install-properties
    '(parallel*)
@@ -12150,45 +12175,80 @@
                    "exact-positive-integer?"
                    n_0))
                 (make-phantom-bytes (* n_0 1024))
-                (create-parallel-thread-pool n_0 +inf.0)))))))
+                (let ((app_0 +inf.0))
+                  (create-parallel-thread-pool
+                   'make-parallel-thread-pool
+                   n_0
+                   app_0
+                   (1/current-custodian)
+                   #f))))))))
     (|#%name|
      make-parallel-thread-pool
      (case-lambda
       (() (make-parallel-thread-pool_0 unsafe-undefined))
       ((n8_0) (make-parallel-thread-pool_0 n8_0))))))
 (define create-parallel-thread-pool
-  (lambda (n_0 capacity_0)
-    (begin
-      (start-atomic)
-      (begin0
-        (let ((s_0 (start-scheduler n_0 #t)))
-          (begin
-            (set-place-schedulers!
-             (unsafe-place-local-ref cell.1$2)
-             (hash-set
-              (place-schedulers (unsafe-place-local-ref cell.1$2))
-              s_0
-              #t))
-            (let ((pool_0 (parallel-thread-pool2.1 s_0 capacity_0)))
-              (begin
-                (|#%app|
-                 host:will-register
-                 (unsafe-place-local-ref cell.1$4)
-                 pool_0
-                 (lambda (pool_1)
-                   (let ((s_1 (parallel-thread-pool-scheduler pool_1)))
-                     (let ((schedulers_0
-                            (place-schedulers
-                             (unsafe-place-local-ref cell.1$2))))
-                       (if (hash-ref schedulers_0 s_1 #f)
+  (lambda (who_0 n_0 capacity_0 cust_0 own?_0)
+    (let ((or-part_0
+           (begin
+             (start-atomic)
+             (begin0
+               (let ((s_0 (start-scheduler n_0 #t)))
+                 (begin
+                   (set-place-schedulers!
+                    (unsafe-place-local-ref cell.1$2)
+                    (hash-set
+                     (place-schedulers (unsafe-place-local-ref cell.1$2))
+                     s_0
+                     #t))
+                   (let ((pool_0 (parallel-thread-pool2.1 s_0 capacity_0 #f)))
+                     (let ((close_0
+                            (|#%name|
+                             close
+                             (lambda (pool_1)
+                               (let ((s_1
+                                      (parallel-thread-pool-scheduler pool_1)))
+                                 (let ((schedulers_0
+                                        (place-schedulers
+                                         (unsafe-place-local-ref cell.1$2))))
+                                   (begin
+                                     (if (hash-ref schedulers_0 s_1 #f)
+                                       (begin
+                                         (kill-future-scheduler.1 #t s_1)
+                                         (set-place-schedulers!
+                                          (unsafe-place-local-ref cell.1$2)
+                                          (hash-remove schedulers_0 s_1)))
+                                       (void))
+                                     (1/unsafe-custodian-unregister
+                                      pool_1
+                                      (parallel-thread-pool-custodian-reference
+                                       pool_1)))))))))
+                       (if own?_0
                          (begin
-                           (kill-future-scheduler.1 #t s_1)
-                           (set-place-schedulers!
-                            (unsafe-place-local-ref cell.1$2)
-                            (hash-remove schedulers_0 s_1)))
-                         (void))))))
-                pool_0))))
-        (end-atomic)))))
+                           (|#%app|
+                            host:will-register
+                            (unsafe-place-local-ref cell.1$4)
+                            pool_0
+                            close_0)
+                           pool_0)
+                         (let ((cref_0
+                                (custodian-register-pool
+                                 cust_0
+                                 pool_0
+                                 (lambda (pool_1 c_0) (close_0 pool_1)))))
+                           (begin
+                             (set-parallel-thread-pool-custodian-reference!
+                              pool_0
+                              cref_0)
+                             (if cref_0 pool_0 #f))))))))
+               (end-atomic)))))
+      (if or-part_0
+        or-part_0
+        (raise-arguments-error
+         who_0
+         "the custodian has been shut down"
+         "custodian"
+         cust_0)))))
 (define 1/parallel-thread-pool-close
   (|#%name|
    parallel-thread-pool-close
@@ -12209,29 +12269,32 @@
   (let ((thread/parallel_0
          (|#%name|
           thread/parallel
-          (lambda (thunk11_0 pool9_0 keep-result?10_0)
-            (let ((pool_0
-                   (if (eq? pool9_0 unsafe-undefined)
-                     (create-parallel-thread-pool 1 1)
-                     pool9_0)))
-              (begin
-                (if (if (procedure? thunk11_0)
-                      (procedure-arity-includes? thunk11_0 0)
-                      #f)
-                  (void)
-                  (raise-argument-error
-                   'thread/parallel
-                   "(procedure-arity-includes/c 0)"
-                   thunk11_0))
-                (if (1/parallel-thread-pool? pool_0)
-                  (void)
-                  (raise-argument-error
-                   'thread/parallel
-                   "parallel-thread-pool?"
-                   pool_0))
-                (if (not (1/futures-enabled?))
-                  (make-thread thunk11_0)
-                  (let ((cust_0 (1/current-custodian)))
+          (lambda (thunk11_0 pool-in9_0 keep-result?10_0)
+            (begin
+              (if (if (procedure? thunk11_0)
+                    (procedure-arity-includes? thunk11_0 0)
+                    #f)
+                (void)
+                (raise-argument-error
+                 'thread
+                 "(procedure-arity-includes/c 0)"
+                 thunk11_0))
+              (if (let ((or-part_0 (eq? pool-in9_0 'own)))
+                    (if or-part_0
+                      or-part_0
+                      (1/parallel-thread-pool? pool-in9_0)))
+                (void)
+                (raise-argument-error
+                 'thread
+                 "(or/c #f 'own parallel-thread-pool?)"
+                 pool-in9_0))
+              (if (not (1/futures-enabled?))
+                (make-thread thunk11_0)
+                (let ((cust_0 (1/current-custodian)))
+                  (let ((pool_0
+                         (if (eq? pool-in9_0 'own)
+                           (create-parallel-thread-pool 'thread 1 1 cust_0 #t)
+                           pool-in9_0)))
                     (let ((paramz_0 (current-parameterization)))
                       (let ((break-enabled_0 (current-break-enabled-cell)))
                         (let ((thunk-in-prompt_0
@@ -12254,7 +12317,7 @@
                                    (default-continuation-prompt-tag))))))
                           (let ((me-f_0
                                  (create-future thunk-in-prompt_0 #f #f)))
-                            (let ((temp64_0
+                            (let ((temp63_0
                                    (lambda ()
                                      (letrec*
                                       ((loop_0
@@ -12266,7 +12329,9 @@
                                               (begin
                                                 (touch-blocked me-f_0)
                                                 (if keep-result?10_0
-                                                  (1/touch me-f_0)
+                                                  (apply
+                                                   values
+                                                   (future*-results me-f_0))
                                                   (void))))
                                             future-start-prompt-tag
                                             (lambda args_0 (loop_0)))))))
@@ -12280,8 +12345,8 @@
                                       #t
                                       #f
                                       #f
-                                      'thread/parallel
-                                      temp64_0)))
+                                      'thread
+                                      temp63_0)))
                                 (begin
                                   (set-future*-parallel!
                                    me-f_0
@@ -12301,10 +12366,10 @@
     (|#%name|
      thread/parallel
      (case-lambda
-      ((thunk_0) (thread/parallel_0 thunk_0 unsafe-undefined #f))
-      ((thunk_0 pool_0 keep-result?10_0)
-       (thread/parallel_0 thunk_0 pool_0 keep-result?10_0))
-      ((thunk_0 pool9_0) (thread/parallel_0 thunk_0 pool9_0 #f))))))
+      ((thunk_0) (thread/parallel_0 thunk_0 'own #f))
+      ((thunk_0 pool-in_0 keep-result?10_0)
+       (thread/parallel_0 thunk_0 pool-in_0 keep-result?10_0))
+      ((thunk_0 pool-in9_0) (thread/parallel_0 thunk_0 pool-in9_0 #f))))))
 (define lock-acquire-both
   (lambda (f_0)
     (let ((me-f_0 (current-future-in-future-thread)))
@@ -12384,11 +12449,11 @@
                             f_0
                             (hash-set (future*-dependents f_0) 'place #t))
                            (lock-release (future*-lock f_0))
-                           (let ((temp72_0 (future*-id f_0)))
-                             (log-future.1 #f #f 'touch-pause temp72_0))
+                           (let ((temp71_0 (future*-id f_0)))
+                             (log-future.1 #f #f 'touch-pause temp71_0))
                            (1/sync (future-evt1.1 f_0))
-                           (let ((temp74_0 (future*-id f_0)))
-                             (log-future.1 #f #f 'touch-resume temp74_0))
+                           (let ((temp73_0 (future*-id f_0)))
+                             (log-future.1 #f #f 'touch-resume temp73_0))
                            (1/touch f_0)))
                        (if (future*? s_0)
                          (if (current-future-in-future-thread)
@@ -12403,11 +12468,11 @@
                              (dependent-on-future f_0)
                              (begin
                                (lock-release (future*-lock f_0))
-                               (let ((temp76_0 (future*-id f_0)))
-                                 (log-future.1 #f #f 'touch-pause temp76_0))
+                               (let ((temp75_0 (future*-id f_0)))
+                                 (log-future.1 #f #f 'touch-pause temp75_0))
                                (1/sync (future-evt1.1 f_0))
-                               (let ((temp78_0 (future*-id f_0)))
-                                 (log-future.1 #f #f 'touch-resume temp78_0))
+                               (let ((temp77_0 (future*-id f_0)))
+                                 (log-future.1 #f #f 'touch-resume temp77_0))
                                (1/touch f_0)))
                            (begin
                              (lock-release (future*-lock f_0))
@@ -12450,8 +12515,8 @@
           (begin
             (if (future*-kind me-f_0)
               (void)
-              (let ((temp85_0 (future*-id me-f_0)))
-                (log-future.1 #f #f 'block temp85_0)))
+              (let ((temp84_0 (future*-id me-f_0)))
+                (log-future.1 #f #f 'block temp84_0)))
             (lock-acquire (future*-lock me-f_0))
             (end-future-uninterrupted)
             (future-maybe-notify-stop me-f_0)
@@ -12480,14 +12545,14 @@
              authentic
              break-enabled-key
              parallel-break-disabled-cell
-             (let ((temp87_0
+             (let ((temp86_0
                     (lambda ()
                       (begin
                         (1/current-future #f)
                         (unsafe-abort-current-continuation/no-wind
                          future-start-prompt-tag
                          (void))))))
-               (future-suspend.1 temp87_0 #t #f))))
+               (future-suspend.1 temp86_0 #t #f))))
           (void)))
       (void))))
 (define future-suspend.1
@@ -12524,14 +12589,14 @@
             (if reschedule?12_0 (schedule-future!.1 #f #f me-f_0) (void))
             (lock-release (future*-lock me-f_0))
             (if touching-f16_0
-              (let ((temp90_0 (future*-id me-f_0)))
-                (let ((temp91_0 (future*-id touching-f16_0)))
-                  (log-future.1 temp91_0 #f 'touch temp90_0)))
+              (let ((temp89_0 (future*-id me-f_0)))
+                (let ((temp90_0 (future*-id touching-f16_0)))
+                  (log-future.1 temp90_0 #f 'touch temp89_0)))
               (void))
             (if (future*-kind me-f_0)
               (void)
-              (let ((temp93_0 (future*-id me-f_0)))
-                (log-future.1 #f #f 'suspend temp93_0)))
+              (let ((temp92_0 (future*-id me-f_0)))
+                (log-future.1 #f #f 'suspend temp92_0)))
             (if reschedule13_0
               (|#%app| reschedule13_0)
               (if (future*-kind me-f_0)
@@ -12644,12 +12709,12 @@
             (begin
               (1/current-future #f)
               (end-future-uninterrupted)
-              (let ((temp97_0 (future*-id me-f_0)))
-                (log-future.1 #f who_0 'sync temp97_0))
+              (let ((temp96_0 (future*-id me-f_0)))
+                (log-future.1 #f who_0 'sync temp96_0))
               (let ((v_0 (|#%app| thunk_0)))
                 (begin
-                  (let ((temp100_0 (future*-id me-f_0)))
-                    (log-future.1 #f #f 'result temp100_0))
+                  (let ((temp99_0 (future*-id me-f_0)))
+                    (log-future.1 #f #f 'result temp99_0))
                   (1/current-future me-f_0)
                   v_0)))
             (if (future*-parallel me-f_0)
@@ -12663,12 +12728,12 @@
                    host:call-as-asynchronous-callback
                    (lambda ()
                      (begin
-                       (let ((temp102_0 (future*-id me-f_0)))
-                         (log-future.1 #f who_0 'sync temp102_0))
+                       (let ((temp101_0 (future*-id me-f_0)))
+                         (log-future.1 #f who_0 'sync temp101_0))
                        (let ((v_0 (|#%app| thunk_0)))
                          (begin
-                           (let ((temp105_0 (future*-id me-f_0)))
-                             (log-future.1 #f #f 'result temp105_0))
+                           (let ((temp104_0 (future*-id me-f_0)))
+                             (log-future.1 #f #f 'result temp104_0))
                            v_0))))))))))))))
 (define pthread-count 1)
 (define set-processor-count! (lambda (n_0) (set! pthread-count n_0)))
@@ -13183,9 +13248,9 @@
                                                       (future-stop? f_0)))
                                                  (begin
                                                    (set-future*-state! f_0 #f)
-                                                   (let ((temp119_0
+                                                   (let ((temp118_0
                                                           (not stop?_0)))
-                                                     (let ((temp120_0
+                                                     (let ((temp119_0
                                                             (lambda ()
                                                               (begin
                                                                 (|#%app|
@@ -13195,8 +13260,8 @@
                                                                  future-scheduler-prompt-tag
                                                                  (void))))))
                                                        (future-suspend.1
-                                                        temp120_0
                                                         temp119_0
+                                                        temp118_0
                                                         #f)))
                                                    (void)))))
                                            (void))))))
@@ -13211,8 +13276,8 @@
                               (void))
                             (|#%app| done_0 (void))))))))))
                 (loop_0 e_0))))
-            (let ((temp117_0 (future*-id f_0)))
-              (log-future.1 #f #f 'end-work temp117_0))
+            (let ((temp116_0 (future*-id f_0)))
+              (log-future.1 #f #f 'end-work temp116_0))
             (1/current-future 'worker)
             (set-box! (worker-current-future-box w_0) #f)
             (if (scheduler-round-robin s_0)

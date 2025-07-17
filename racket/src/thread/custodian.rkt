@@ -34,6 +34,7 @@
          unsafe-custodian-unregister
          custodian-register-thread
          custodian-register-place
+         custodian-register-pool
          custodian-register-also
          custodian-shutdown-root-at-exit
          raise-custodian-is-shut-down
@@ -53,7 +54,10 @@
 (module+ for-future
   (provide set-custodian-future-callbacks!
            current-custodian
-           custodian-will-executor))
+           custodian-will-executor
+           unsafe-custodian-unregister
+           custodian-register-pool
+           raise-custodian-is-shut-down))
 
 ;; For `(struct custodian ...)`, see "custodian-object.rkt"
 
@@ -174,6 +178,9 @@
 
 (define (custodian-register-place cust obj callback)
   (do-custodian-register cust obj callback #:weak? #t #:gc-root? #t))
+
+(define (custodian-register-pool cust obj callback)
+  (do-custodian-register cust obj callback #:weak? #t))
 
 (define (custodian-register-also cref obj callback at-exit? weak?)
   (assert-atomic-mode)

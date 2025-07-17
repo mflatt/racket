@@ -29,7 +29,8 @@
   #:reflection-name 'future)
 
 (struct parallel-thread-pool (scheduler
-                              [capacity #:mutable])
+                              [capacity #:mutable]
+                              [custodian-reference #:mutable])
   #:authentic
   #:reflection-name 'parallel-thread-pool)
 

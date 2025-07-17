@@ -145,7 +145,7 @@
                      [mailbox #:mutable] ; a queue of messages from `thread-send`
                      [mailbox-wakeup #:mutable] ; callback to trigger (in atomic mode) on `thread-send`
 
-                     [results #:mutable]
+                     [results #:mutable] ; #f or a list
 
                      [cpu-time #:mutable] ; accumulates CPU time in milliseconds
 
@@ -246,7 +246,7 @@
                     (make-queue) ; mailbox
                     void ; mailbox-wakeup
 
-                    (void) ; results
+                    #f ; results
 
                     0 ; cpu-time
 
@@ -454,8 +454,9 @@
 ;; ----------------------------------------
 ;; Thread status events
 
-(define/who (thread-wait t)
+(define/who (thread-wait t [fail-k void])
   (check who thread? t)
+  (check who (procedure-arity-includes/c 0) fail-k)
   (cond
     [(eq? t (current-thread))
      ;; as a special case, enable GC of this thread if not otherwise referenced,
@@ -464,9 +465,9 @@
     [else
      (semaphore-wait (get-thread-dead-evt t))])
   (let ([v (thread-results t)])
-    (if (pair? v)
+    (if v
         (apply values v)
-        v)))
+        (fail-k))))
 
 (struct dead-evt custodian-accessible-semaphore ([custodian-references #:mutable])
   #:authentic
