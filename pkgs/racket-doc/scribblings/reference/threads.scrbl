@@ -217,12 +217,12 @@ otherwise.}
          any]{
 
 Blocks execution of the current thread until @racket[thd] has
-terminated. The result is @|void-const| if the thread does not record
-results (see @racket[#:keep-results?] in @racket[thread]). If a thread
-keeps and has results, those results are returned. If a thread was
-created to keep results, but it raised an exception or otherwise
+terminated. If the thread's procedure raised an exception or otherwise
 aborted to the thread's initial @tech{prompt}, @racket[fail-k] is
-called to produce the result of @racket[thread-wait].
+called to produce the result of @racket[thread-wait]. Otherwise, if
+the thread records its results (see @racket[#:keep-results?] in
+@racket[thread]), those results are returned, while @|void-const| is
+return if the thread does not keep its results.
 
 Note that @racket[(thread-wait (current-thread))]
 deadlocks the current thread, but a break can end the deadlock if

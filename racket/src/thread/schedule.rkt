@@ -164,6 +164,7 @@
        (cond
          [(not e)
           ;; Thread completed
+          (thread-maybe-set-results! t results)
           (accum-cpu-time! t #t)
           (set-thread-future! t #f)
           (current-thread/in-atomic #f)

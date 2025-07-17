@@ -337,14 +337,12 @@
                 (begin
                   (check-for-break)
                   (if keep-result?
-                      (call-with-values
-                       thunk
-                       (lambda results
-                         (set-thread-results! (current-thread) results)))
+                      (thunk)
                       (begin
                         (thunk)
-                        (set-thread-results! (current-thread) (list (void)))))))))
-          (default-continuation-prompt-tag))))
+                        (void)))))))
+          (default-continuation-prompt-tag)
+          no-results-on-abort-handler)))
      (define me-f (create-future thunk-in-prompt #f #f))
      (define th
        (do-make-thread who
@@ -352,7 +350,7 @@
                        #:break-enabled-cell parallel-break-disabled-cell
                        #:custodian cust
                        #:schedule? #f
-                       #:set-result? #f
+                       #:keep-result? keep-result?
                        (lambda ()
                          (let loop ()
                            (call-with-continuation-prompt
@@ -496,9 +494,12 @@
   (cond
     [(eq? s 'blocked)
      (run-future f #:was-blocked? #t #:as-unblock? #t)]
-    [(or (eq? s 'done)
-         (eq? s 'aborted))
-     (lock-release (future*-lock f))]
+    [(eq? s 'done)
+     (lock-release (future*-lock f))
+     (apply values (future*-results f))]
+    [(eq? s 'aborted)
+     (lock-release (future*-lock f))
+     #f]
     [else
      ;; the future is not blocked; suspend and get resumed if/when
      ;; needed again
@@ -535,8 +536,6 @@
   (define me-f (current-future-in-future-thread))
   (cond
     [me-f
-     (unless (future*-kind me-f)
-       (log-future 'block (future*-id me-f)))
      (lock-acquire (future*-lock me-f))
      (end-future-uninterrupted) ; future lock covers it at this point
      (future-maybe-notify-stop me-f)

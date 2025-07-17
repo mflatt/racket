@@ -78,7 +78,8 @@
            thread-dead!
            thread-did-work!
            thread-poll-not-done!
-           
+           thread-maybe-set-results!
+
            thread-reschedule!
 
            poll-done-threads
@@ -110,7 +111,7 @@
            set-future->thread!
            current-break-enabled-cell
            parallel-break-disabled-cell
-           set-thread-results!))
+           no-results-on-abort-handler))
 
 (module* for-stats #f
   (provide thread-descheduled?
@@ -195,8 +196,7 @@
                                                                      break-enabled-default-cell
                                                                      (current-break-enabled-cell))]
                         #:schedule? [schedule? #t]
-                        #:keep-result? [keep-result? #f]
-                        #:set-result? [set-result? #t])
+                        #:keep-result? [keep-result? #f])
   (check who (procedure-arity-includes/c 0) proc)
   (define p (if (or at-root? initial?)
                 root-thread-group
@@ -204,20 +204,9 @@
   (define cells (make-engine-thread-cell-state
                  break-enabled-cell
                  at-root?))
-  (define e (make-engine (cond
-                           [keep-result?
-                            (lambda ()
-                              (call-with-values
-                               proc
-                               (lambda results
-                                 (set-thread-results! (current-thread/in-atomic) results))))]
-                           [set-result?
-                            (lambda ()
-                              (proc)
-                              (set-thread-results! (current-thread/in-atomic) (list (void))))]
-                           [else proc])
+  (define e (make-engine proc
                          (default-continuation-prompt-tag)
-                         #f
+                         no-results-on-abort-handler
                          cells
                          at-root?))
   (define t (thread 'none ; node prev
@@ -251,7 +240,7 @@
                     (make-queue) ; mailbox
                     void ; mailbox-wakeup
 
-                    #f
+                    (if keep-result? 'pending 'pending/none)
 
                     0 ; cpu-time
 
@@ -285,6 +274,30 @@
   (do-make-thread 'unsafe-thread-at-root proc
                   #:at-root? #t
                   #:custodian root-custodian))
+
+;; ----------------------------------------
+;; Thread results
+
+(define no-results-on-abort-handler
+  (case-lambda
+    [(abort-thunk)
+     (check 'thread-continuation-prompt-handler (procedure-arity-includes/c 0) abort-thunk)
+     (set-thread-results! (current-thread) #f)
+     ;; try again, but with the default prompt handler:
+     (call-with-continuation-prompt abort-thunk (default-continuation-prompt-tag) #f)]
+    [args
+     (apply raise-result-arity-error
+            'call-with-continuation-prompt
+            1
+            "\n  in: application of thread prompt handler"
+            args)]))
+
+(define (thread-maybe-set-results! t results)
+  (define v (thread-results t))
+  (when v
+    (set-thread-results! t (if (eq? v 'pending)
+                               results
+                               (list (void))))))
 
 ;; ----------------------------------------
 ;; Thread status
@@ -470,9 +483,11 @@
     [else
      (semaphore-wait (get-thread-dead-evt t))])
   (let ([v (thread-results t)])
-    (if v
-        (apply values v)
-        (fail-k))))
+    (cond
+      [(or (pair? v) (null? v))
+       (apply values v)]
+      [else
+       (fail-k)])))
 
 (struct dead-evt custodian-accessible-semaphore ([custodian-references #:mutable])
   #:authentic
