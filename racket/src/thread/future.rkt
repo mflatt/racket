@@ -603,8 +603,8 @@
          ;; in atomic mode and in arbitrary Racket thread selected by scheduler
          (cond
            [(thread-descheduled? th)
-            ;; If the threads wasn't descheduled most recently by its
-            ;; future, then Racket thread could still have noticed the waiting
+            ;; If the thread wasn't descheduled most recently by its future,
+            ;; then the Racket thread could still have noticed the waiting
             ;; future thread early, ran it, and then get descheduled for some
             ;; other good reason
             (when (eq? 'future (thread-interrupt-callback th))
@@ -614,7 +614,7 @@
                 (thread-reschedule! th)))]
            [else
             ;; Racket thread should be on its way back to `touch-blocked` or
-            ;; alerady noticed the reader future; in the former case, it will
+            ;; already noticed the reader future; in the former case, it will
             ;; check on the future without needing to be rescheduled
             (void)])))
       (wakeup-this-place))))
@@ -634,6 +634,8 @@
        (lock-release (future*-lock f))
        (unless done?
          (drain-async-callbacks)
+         ;; relying on the fact that an asychornous callback post
+         ;; will also wake up the place
          (sleep-this-place)
          (lock-acquire (future*-lock f))
          (loop)))]))
@@ -670,6 +672,11 @@
   (start-future-uninterrupted)
   (define me-f (current-future))
   (cond
+    [(not me-f)
+     ;; Between the time that `future-sync` was requested and
+     ;; we get here, the continuation was apparently moved
+     (end-future-uninterrupted)
+     (thunk)]
     [(eq? (future*-kind me-f) 'would-be)
      (current-future #f)
      (end-future-uninterrupted)
@@ -723,7 +730,7 @@
 (struct worker (id
                 [pthread #:mutable]
                 current-future-box ; reports current future (for access external to pthread)
-                [die? #:mutable]
+                [state #:mutable]
                 [ping #:mutable]) ; box set to #t when the thread should check in with scheduler
   #:authentic)
 
@@ -742,7 +749,7 @@
   (worker id
           #f         ; pthread
           (box #f)   ; current-future-box
-          #f         ; die?
+          #f         ; state
           (box #f)))
 
 ;; called in a Racket thread
@@ -781,11 +788,7 @@
 
 ;; called in atomic mode
 (define (kill-future-scheduler s #:for-parallel? [for-parallel? #t])
-  (host:mutex-acquire (scheduler-mutex s))
-  (for ([w (in-list (scheduler-workers s))])
-    (set-worker-die?! w #t))
-  (host:mutex-release (scheduler-mutex s))
-  (scheduler-sync-for-shutdown s #:for-parallel? for-parallel?))
+  (scheduler-sync-for-shutdown s 'exit-request))
 
 ;; lock on f is held
 (define (future-scheduled? f)
@@ -915,12 +918,14 @@
        (current-future 'worker)
        (host:mutex-acquire (scheduler-mutex s))
        (let loop ()
-         (check-in w s)
          (cond
-           [(worker-die? w) ; worker was killed
-            (host:mutex-release (scheduler-mutex s))]
+           [(eq? (worker-state w) 'exit-request)
+            (set-worker-state! w 'exited)
+            (host:mutex-release (scheduler-mutex s))
+            (wakeup-this-place)]
            [(scheduler-futures-head s)
             => (lambda (f)
+                 (worker-check-in w)
                  ;; give up scheduler lock in the hope of claiming f
                  (host:mutex-release (scheduler-mutex s))
                  (lock-acquire (future*-lock f))
@@ -940,6 +945,7 @@
                     (host:mutex-acquire (scheduler-mutex s))
                     (loop)]))]
            [else
+            (worker-check-in w)
             ;; wait for work
             (host:condition-wait (scheduler-cond s) (scheduler-mutex s))
             (loop)])))))
@@ -989,40 +995,43 @@
      (let loop ([e e])
        (e TICKS
           (lambda ()
-            ;; Check whether the main pthread wants to know we're here
-            (when (and (zero? (current-atomic))
-                       (worker-pinged? w))
-              (host:mutex-acquire (scheduler-mutex s))
-              (check-in w s)
-              (host:mutex-release (scheduler-mutex s)))
-            ;; Check that the future should still run
-            (when (and (or (custodian-shut-down?/other-pthread* (future*-custodian f))
-                           (worker-die? w)
-                           (future-stop? f))
-                       (zero? (current-atomic)))
-              (lock-acquire (future*-lock f))
-              (future-maybe-notify-stop f)
-              (set-future*-state! f #f)
-              (on-transition-to-unfinished)
-              (future-suspend))
-            (when (and (eq? (scheduler-round-robin s) 'round)
-                       (zero? (current-atomic)))
-              (check-for-break)
-              (host:mutex-acquire (scheduler-mutex s))
-              (define others? (and (scheduler-futures-head s)
-                                   (zero? (scheduler-capacity s))))
-              (host:mutex-release (scheduler-mutex s))
-              (when others?
+            (when (zero? (current-atomic))
+              ;; Check in for termination request
+              (define-values (exit? shut-down?)
+                (cond
+                  [(worker-pinged? w)
+                   (host:mutex-acquire (scheduler-mutex s))
+                   (define exit? (eq? (worker-state w) 'exit-request))
+                   (define shut-down? (custodian-shut-down?/other-pthread* (future*-custodian f)))
+                   (worker-check-in w)
+                   (host:mutex-release (scheduler-mutex s))
+                   (values exit? shut-down?)]
+                  [else (values #f #f)]))
+              (when (or exit?
+                        shut-down?
+                        (future-stop? f))
                 (lock-acquire (future*-lock f))
                 (future-maybe-notify-stop f)
-                (define stop? (future-stop? f))
                 (set-future*-state! f #f)
-                (future-suspend
-                 #:reschedule? (not stop?)
-                 #:reschedule (lambda ()
-                                (set-engine-thread-cell-state! #f)
-                                (unsafe-abort-current-continuation/no-wind future-scheduler-prompt-tag (void))))
-                (void))))
+                (on-transition-to-unfinished)
+                (future-suspend))
+              (when (eq? (scheduler-round-robin s) 'round)
+                (check-for-break)
+                (host:mutex-acquire (scheduler-mutex s))
+                (define others? (and (scheduler-futures-head s)
+                                     (zero? (scheduler-capacity s))))
+                (host:mutex-release (scheduler-mutex s))
+                (when others?
+                  (lock-acquire (future*-lock f))
+                  (future-maybe-notify-stop f)
+                  (define stop? (future-stop? f))
+                  (set-future*-state! f #f)
+                  (future-suspend
+                   #:reschedule? (not stop?)
+                   #:reschedule (lambda ()
+                                  (set-engine-thread-cell-state! #f)
+                                  (unsafe-abort-current-continuation/no-wind future-scheduler-prompt-tag (void))))
+                  (void)))))
           (lambda (e results leftover-ticks)
             (cond
               [e (loop e)]
@@ -1038,39 +1047,41 @@
     (set-scheduler-round-robin! s 'round)))
 
 ;; in atomic mode
-(define (scheduler-sync-for-shutdown s #:for-parallel? for-parallel?)
+(define (scheduler-sync-for-shutdown s request)
   ;; Make sure any futures that are running in a future pthread
   ;; have had a chance to notice a custodian shutdown or a
   ;; future-scheduler shutdown.
-  ;;
-  ;; Assert: all workers have `ping` as #f.
   (host:mutex-acquire (scheduler-mutex s))
   (for ([w (in-list (scheduler-workers s))])
-    (let retry ()
-      (unless (box-cas! (worker-ping w) #f #t)
-        (retry))))
-  ;; Assert: all workers have `ping` as #t.
+    (unless (eq? (worker-state w) 'exited)
+      (set-worker-state! w request)
+      (let retry ()
+        (unless (or (box-cas! (worker-ping w) #f #t)
+                    (box-cas! (worker-ping w) #t #t))
+          (retry)))))
   ;; Wake up idle threads so they check in:
   (host:condition-broadcast (scheduler-cond s))
   (host:mutex-release (scheduler-mutex s))
-  ;; When a worker sets `ping` to #f, they must broadcast
+  ;; When a worker sets `state`, they must broadcast
   ;; a wakeup for the following loop's benefit
   (let loop ()
     (host:mutex-acquire (scheduler-mutex s))
     (define done? (for/or ([w (in-list (scheduler-workers s))])
-                    (unbox (worker-ping w))))
+                    (memq (worker-state w) (if (eq? request 'cust-request)
+                                               '(exited cust)
+                                               '(exited)))))
     (host:mutex-release (scheduler-mutex s))
     (unless done?
-      (drain-async-callbacks)   
+      (drain-async-callbacks)
+      ;; relying on the fact that an asychornous callback post
+      ;; will also wake up the place
       (sleep-this-place)
-      (loop)))
-  ;; Assert: all workers have `ping` as #f.
-  (void))
+      (loop))))
 
 ;; in atomic mode
 (define (futures-sync-for-shutdown)
   (when (current-scheduler)
-    (scheduler-sync-for-shutdown (current-scheduler) #:for-parallel? #f)))
+    (scheduler-sync-for-shutdown (current-scheduler) 'cust-request)))
 
 ;; lock-free synchronization to check whether the box content is #f
 (define (worker-pinged? w)
@@ -1079,10 +1090,10 @@
     [(box-cas! (worker-ping w) #f #f) #f]
     [else (worker-pinged? w)]))
 
-;; called with scheduler lock
-(define (check-in w s)
-  (when (unbox (worker-ping w))
-    (set-box! (worker-ping w) #f)
+;; scheduler lock is held
+(define (worker-check-in w)
+  (when (eq? (worker-state w) 'cust-request)
+    (set-worker-state! w 'cust)
     (wakeup-this-place)))
 
 ;; in atomic mode
