@@ -305,8 +305,11 @@
 
 (define-syntax-rule (pseudo-random-generator-next!* arg ...)
   (if (current-future)
-      (future-sync 'pseudo-random-generator-next!
-                   (lambda () (pseudo-random-generator-next! arg ...)))
+      (begin
+        (block-future)
+        (let ([r (pseudo-random-generator-next! arg ...)])
+          (unblock-future)
+          r))
       (pseudo-random-generator-next! arg ...)))
 
 (define/who random
