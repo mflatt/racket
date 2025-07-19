@@ -5,6 +5,7 @@
          "port.rkt"
          "input-port.rkt"
          "output-port.rkt"
+         "lock.rkt"
          "pipe.rkt"
          "commit-port.rkt")
 
@@ -228,28 +229,31 @@
 
   [get-progress-evt
    (lambda ()
-     (atomically
-      (slow-mode!)
-      (make-progress-evt)))]
+     (with-lock this
+       (slow-mode!)
+       (make-progress-evt)))]
 
-  ;; in atomic mode
+  ;; with lock held
   [commit
    (lambda (amt progress-evt ext-evt finish)
      (slow-mode!)
      (wait-commit
       progress-evt ext-evt
-      ;; in atomic mode, maybe in a different thread:
+      ;; in atomic mode, maybe in a different thread;
+      ;; since we have progress-evt, then the lock must
+      ;; requrire atomic mode
       (lambda ()
-        (let ([amt (fxmin amt (fx- end-pos pos))])
-          (cond
-            [(fx= 0 amt)
-             (finish #"")]
-            [else
-             (define dest-bstr (make-bytes amt))
-             (bytes-copy! dest-bstr 0 bstr pos (fx+ pos amt))
-             (set! pos (fx+ pos amt))
-             (progress!)
-             (finish dest-bstr)])))))]
+        (with-lock this
+          (let ([amt (fxmin amt (fx- end-pos pos))])
+            (cond
+              [(fx= 0 amt)
+               (finish #"")]
+              [else
+               (define dest-bstr (make-bytes amt))
+               (bytes-copy! dest-bstr 0 bstr pos (fx+ pos amt))
+               (set! pos (fx+ pos amt))
+               (progress!)
+               (finish dest-bstr)]))))))]
 
   ;; in atomic mode
   [buffer-mode

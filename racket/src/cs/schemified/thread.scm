@@ -1906,8 +1906,7 @@
 (define in-future-thread? (lambda () (not (current-thread/in-racket))))
 (define start-uninterruptible
   (lambda () (current-atomic (fx+ (current-atomic) 1))))
-(define end-uninterruptible
-  (lambda () (current-atomic (fx- (current-atomic) 1))))
+(define end-uninterruptible (lambda () (end-atomic/no-barrier-exit)))
 (define start-atomic
   (lambda ()
     (begin (future-barrier) (current-atomic (fx+ (current-atomic) 1)))))
@@ -6974,7 +6973,7 @@
                (if (pair? cs_0)
                  (custodian-reference->custodian (car cs_0))
                  #f)))
-          (begin (end-uninterruptible) c_0))))))
+          (begin (end-atomic/no-barrier-exit) c_0))))))
 (define run-kill-callbacks!
   (lambda (t_0)
     (begin
@@ -11159,7 +11158,7 @@
     (begin
       (memory-order-release)
       (if (unsafe-box*-cas! lock_0 1 0)
-        (end-uninterruptible)
+        (end-atomic/no-barrier-exit)
         (if (eq? (unbox lock_0) 0)
           (|#%app| host:internal-error "lock release failed!")
           (lock-release lock_0))))))
@@ -11606,7 +11605,7 @@
                                          (lock-release (future*-lock f6_0))
                                          (future-notify-dependents deps_0)
                                          (wakeup-racket-thread f6_0)
-                                         (end-uninterruptible)
+                                         (end-atomic/no-barrier-exit)
                                          (let ((temp45_0 (future*-id f6_0)))
                                            (log-future.1
                                             #f
@@ -11625,7 +11624,9 @@
                         (lambda ()
                           (call-with-continuation-prompt
                            (lambda ()
-                             (begin (end-uninterruptible) (|#%app| thunk_0)))
+                             (begin
+                               (end-atomic/no-barrier-exit)
+                               (|#%app| thunk_0)))
                            future-start-prompt-tag
                            (lambda args_0 (void))))
                         (lambda results_0 (finish!_0 results_0 'done))))
@@ -12107,12 +12108,12 @@
         (if me-f_0
           (begin
             (lock-acquire (future*-lock me-f_0))
-            (end-uninterruptible)
+            (end-atomic/no-barrier-exit)
             (future-maybe-notify-stop me-f_0)
             (set-future*-state! me-f_0 'blocked)
             (on-transition-to-unfinished)
             (future-suspend.1 #f #f #f))
-          (end-uninterruptible))))))
+          (end-atomic/no-barrier-exit))))))
 (define future-unblock
   (lambda ()
     (if (not-atomic-mode?)
@@ -12272,11 +12273,11 @@
       (start-uninterruptible)
       (let ((me-f_0 (1/current-future)))
         (if (not me-f_0)
-          (begin (end-uninterruptible) (|#%app| thunk_0))
+          (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
           (if (eq? (future*-kind me-f_0) 'would-be)
             (begin
               (1/current-future #f)
-              (end-uninterruptible)
+              (end-atomic/no-barrier-exit)
               (let ((temp95_0 (future*-id me-f_0)))
                 (log-future.1 #f who_0 'sync temp95_0))
               (let ((v_0 (|#%app| thunk_0)))
@@ -12286,11 +12287,11 @@
                   (1/current-future me-f_0)
                   v_0)))
             (if (future*-parallel me-f_0)
-              (begin (end-uninterruptible) (|#%app| thunk_0))
+              (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
               (if (in-racket-thread?)
-                (begin (end-uninterruptible) (|#%app| thunk_0))
+                (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
                 (begin
-                  (end-uninterruptible)
+                  (end-atomic/no-barrier-exit)
                   (engine-block)
                   (|#%app|
                    host:call-as-asynchronous-callback
@@ -12529,7 +12530,7 @@
                          (set-scheduler-futures-tail! s_0 f28_0))))
                    (|#%app| host:condition-signal (scheduler-cond s_0))
                    (|#%app| host:mutex-release (scheduler-mutex s_0))
-                   (end-uninterruptible)))))))))))
+                   (end-atomic/no-barrier-exit)))))))))))
 (define try-deschedule-future?.1
   (|#%name|
    try-deschedule-future?
@@ -14109,7 +14110,9 @@
 (define 1/unsafe-start-uninterruptible
   (|#%name| unsafe-start-uninterruptible (lambda () (start-uninterruptible))))
 (define 1/unsafe-end-uninterruptible
-  (|#%name| unsafe-end-uninterruptible (lambda () (end-uninterruptible))))
+  (|#%name|
+   unsafe-end-uninterruptible
+   (lambda () (end-atomic/no-barrier-exit))))
 (define 1/current-process-milliseconds
   (let ((current-process-milliseconds_0
          (|#%name|
@@ -14191,6 +14194,8 @@
    poll-ctx-sched-info
    'set-poll-ctx-incomplete?!
    set-poll-ctx-incomplete?!
+   'delayed-poll
+   delayed-poll12.1
    'control-state-evt
    control-state-evt9.1
    'async-evt

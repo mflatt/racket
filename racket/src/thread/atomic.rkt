@@ -50,7 +50,7 @@
 (define (start-uninterruptible)
   (current-atomic (fx+ (current-atomic) 1)))
 (define (end-uninterruptible)
-  (current-atomic (fx- (current-atomic) 1)))
+  (end-atomic/no-barrier-exit))
 
 ;; "atomically" is atomic within a place; when a future-running
 ;; pthread tries to enter atomic mode, it is suspended

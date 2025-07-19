@@ -24148,7 +24148,7 @@
   (lambda (s_0)
     (let ((built-in-s_0 (string->symbol (format ".~s" s_0))))
       (begin (hash-set! built-in-symbols built-in-s_0 #t) built-in-s_0))))
-(define effect_2328
+(define effect_2085
   (begin
     (void
      (begin
@@ -24204,6 +24204,12 @@
              call-with-module-prompt
              make-pthread-parameter
              engine-block
+             make-mutex
+             make-condition
+             mutex-acquire
+             mutex-release
+             condition-wait
+             condition-signal
              make-record-type-descriptor
              make-record-type-descriptor*
              make-record-constructor-descriptor

@@ -48,6 +48,7 @@
           'poll-ctx-select-proc poll-ctx-select-proc
           'poll-ctx-sched-info poll-ctx-sched-info
           'set-poll-ctx-incomplete?! set-poll-ctx-incomplete?!
+          'delayed-poll delayed-poll
           'control-state-evt control-state-evt
           'async-evt async-evt
           'current-sandman current-sandman

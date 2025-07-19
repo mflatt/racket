@@ -4,6 +4,8 @@
 
 (provide start-atomic
          end-atomic
+         start-uninterruptible
+         end-uninterruptible
          atomically
          non-atomically
          atomically/no-gc-interrupts/no-wind
@@ -51,6 +53,8 @@
         prop:evt
         unsafe-start-atomic
         unsafe-end-atomic
+        unsafe-start-uninterruptible
+        unsafe-end-uninterruptible
         current-custodian
         custodian-shut-down?
         current-plumber
@@ -67,6 +71,7 @@
          poll-ctx-select-proc
          poll-ctx-sched-info
          set-poll-ctx-incomplete?!
+         delayed-poll
          schedule-info-did-work!
          control-state-evt
          async-evt
@@ -85,6 +90,8 @@
 
 (define start-atomic unsafe-start-atomic)
 (define end-atomic unsafe-end-atomic)
+(define start-uninterruptible unsafe-start-uninterruptible)
+(define end-uninterruptible unsafe-end-uninterruptible)
 
 (define-syntax-rule (atomically e ...)
   (begin

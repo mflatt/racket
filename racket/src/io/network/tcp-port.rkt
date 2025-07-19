@@ -6,6 +6,7 @@
          "../port/close.rkt"
          "../port/input-port.rkt"
          "../port/output-port.rkt"
+         "../port/lock.rkt"
          "../port/fd-port.rkt"
          "../port/file-stream.rkt"
          "error.rkt")
@@ -19,7 +20,7 @@
   [abandon? #f]
   #:override
   [on-close
-   ;; in atomic mode
+   ;; with lock held and in atomic mode
    (lambda ()
      (unless abandon?
        (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_READ)))]
@@ -34,18 +35,19 @@
 (define (make-tcp-input-port fd name
                              #:fd-refcount [fd-refcount (box 1)])
   (finish-fd-input-port
-   (new tcp-input-port
-        #:field
-        [name name]
-        [fd fd]
-        [fd-refcount fd-refcount])))
+   (port-lock-init-atomic-mode
+    (new tcp-input-port
+         #:field
+         [name name]
+         [fd fd]
+         [fd-refcount fd-refcount]))))
 
 (class tcp-output-port #:extends fd-output-port
   #:field
   [abandon? #f]
   #:override
   [on-close
-   ;; in atomic mode
+   ;; with lock held and in atomic mode
    (lambda ()
      (unless abandon?
        (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_WRITE)))]
@@ -53,7 +55,7 @@
    (lambda (n)
      (raise-network-error #f n "error writing to stream port"))]
   [buffer-mode
-   ;; in atomic mode
+   ;; with lock held and in atomic mode
    (case-lambda
      [() buffer-mode]
      [(mode)
@@ -67,12 +69,13 @@
 (define (make-tcp-output-port fd name
                               #:fd-refcount [fd-refcount (box 1)])
   (finish-fd-output-port
-   (new tcp-output-port
-        #:field
-        [name name]
-        [fd fd]
-        [fd-refcount fd-refcount]
-        [buffer-mode 'block])
+   (port-lock-init-atomic-mode
+    (new tcp-output-port
+         #:field
+         [name name]
+         [fd fd]
+         [fd-refcount fd-refcount]
+         [buffer-mode 'block]))
    #:plumber #f))
 
 ;; ----------------------------------------

@@ -12,6 +12,7 @@
          "../port/fd-port.rkt"
          "../port/file-stream.rkt"
          "../port/check.rkt"
+         "../port/insist-lock.rkt"
          "../file/host.rkt"
          "../string/convert.rkt"
          "../locale/string.rkt"
@@ -141,10 +142,14 @@
         (unless (eq? stderr 'stdout)
           (maybe-wait stderr))
 
+        (when stdout (port-insist-atomic-lock stdout))
+        (when stdin (port-insist-atomic-lock stdin))
+        (when (and stderr (not (eq? stderr 'stdout))) (port-insist-atomic-lock stderr))
+
         (start-atomic)
-        (when stdout (check-not-closed who stdout))
-        (when stdin (check-not-closed who stdin))
-        (when (and stderr (not (eq? stderr 'stdout))) (check-not-closed who stderr))
+        (when stdout (check-not-closed who stdout #:unlock end-atomic))
+        (when stdin (check-not-closed who stdin #:unlock end-atomic))
+        (when (and stderr (not (eq? stderr 'stdout))) (check-not-closed who stderr #:unlock end-atomic))
         (poll-subprocess-finalizations)
         (check-current-custodian who)
         (define envvars (rktio_empty_envvars rktio))
