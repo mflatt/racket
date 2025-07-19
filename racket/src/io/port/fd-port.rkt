@@ -565,7 +565,7 @@
   (make-struct-type-property 'fd-place-message-opener))
 
 (define (fd-port->place-message port)
-  (port-lock port) ;; implies atomic mode
+  (port-lock port)
   (cond
     [(port-closed? port)
      (port-unlock port)
@@ -584,12 +584,12 @@
         (define fd (claim-dup fd-dup))
         (opener fd name)))]))
 
-;; in atomic mode
+;; with lock held and in atomic mode
 (define (dup-port-fd port)
   (define fd (fd-port-fd port))
   (define new-fd (rktio_dup rktio fd))
   (when (rktio-error? new-fd)
-    (end-atomic)
+    (port-unlock port)
     (raise-rktio-error 'place-channel-put new-fd "error during dup of file descriptor"))
   (define fd-dup (box (rktio_fd_detach rktio new-fd)))
   (unsafe-add-global-finalizer fd-dup (lambda ()

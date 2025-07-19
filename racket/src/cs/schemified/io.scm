@@ -11243,7 +11243,12 @@
         (begin
           (if (vector? new-fd_0)
             (begin
-              (unsafe-end-atomic)
+              (begin
+                (memory-order-release)
+                (if (unsafe-struct*-cas! port_0 2 #t #f)
+                  (void)
+                  (port-unlock-slow port_0))
+                (unsafe-end-uninterruptible))
               (let ((base-msg_0 "error during dup of file descriptor"))
                 (raise
                  (let ((app_0
