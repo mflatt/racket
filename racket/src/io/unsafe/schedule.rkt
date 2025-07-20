@@ -37,7 +37,7 @@
   (when poll-ctx
     (sandman-poll-ctx-add-poll-set-adder! poll-ctx
                                           (lambda (ps)
-                                            (atomically
+                                            (rktioly
                                              (define rfd (rktio_system_fd rktio
                                                                           fd
                                                                           (case mode
@@ -52,7 +52,7 @@
   (when poll-ctx
     (sandman-poll-ctx-add-poll-set-adder! poll-ctx
                                           (lambda (ps)
-                                            (rktio_poll_set_add_eventmask rktio ps event-mask)))))
+                                            (rktioly (rktio_poll_set_add_eventmask rktio ps event-mask))))))
 
 (define (unsafe-poll-ctx-milliseconds-wakeup poll-ctx msecs)
   (when poll-ctx

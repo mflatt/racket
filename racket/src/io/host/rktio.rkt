@@ -2,7 +2,9 @@
 (require racket/include
          (for-syntax racket/base)
          (only-in '#%linklet primitive-table)
-         "../host/place-local.rkt")
+         "place-local.rkt"
+         "thread.rkt"
+         "pthread.rkt")
 
 (provide rktio
          rktio-error?
@@ -10,6 +12,17 @@
          rktio-errno
          rktio-errstep
          racket-error?
+
+         start-rktio
+         end-rktio
+         rktioly
+
+         rktio-mutex
+         start-some-rktio
+         end-some-rktio
+
+         end-rktio+atomic
+
          rktio-place-init!
          rktio-place-destroy!)
 ;; More `provide`s added by macros below
@@ -81,6 +94,34 @@
        (eqv? (rktio-errno v) errno)))
 
 (define-place-local rktio (rktio_init))
+
+;; rktio lock order:
+;;
+;;    - atomic/uninterruptible mode (reentrant)
+;;    - port locks (*not* reentrant, implies uninterruptable mode)
+;;    - rktio lock (reentrant, implies uninterruptable mode)
+;;
+;; The rktio lock needs to be used for any rktio operation,
+;; unless "rktio.h" says that the operation is atomic.
+
+(define-place-local rktio-mutex (make-mutex))
+(define (start-rktio)
+  (start-uninterruptible)
+  (mutex-acquire rktio-mutex))
+(define (end-rktio)
+  (mutex-release rktio-mutex)
+  (end-uninterruptible))
+(define-syntax-rule (rktioly e ...)
+  (begin
+    (start-rktio)
+    (begin0
+      (let () e ...)
+      (end-rktio))))
+(define start-some-rktio mutex-acquire)
+(define end-some-rktio mutex-release)
+(define (end-rktio+atomic)
+  (end-rktio)
+  (end-atomic))
 
 (define (rktio-place-init!)
   (set! rktio (rktio_init)))

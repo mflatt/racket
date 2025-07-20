@@ -36,7 +36,7 @@
                          #:wait? [wait? #t]
                          #:enable-break? [enable-break? #f])
   (check-receive! who u bstr start end)
-  (atomically
+  (rktioly
    (do-udp-maybe-receive! who u bstr start end
                           #:wait? wait?
                           #:enable-break? enable-break?)))
@@ -47,9 +47,11 @@
    u
    ;; in atomic mode:
    (lambda ()
-     (do-udp-maybe-receive! who u bstr start end
-                            #:wait? #f
-                            #:handle-error (lambda (thunk) thunk)))))
+     (rktioly
+      (do-udp-maybe-receive! who u bstr start end
+                             #:wait? #f
+                             #:handle-error (lambda (thunk) thunk)
+                             #:unlock end-rktio+atomic)))))
   
 (define/who (udp-receive-ready-evt u)
   (check who udp? u)
@@ -67,11 +69,12 @@
 
 ;; ----------------------------------------
 
-;; in atomic mode
+;; in rktio mode and maybe atomic mode, with the "maybe" delegated to `unlock` and `handle-error`
 (define (do-udp-maybe-receive! who u bstr start end
                                #:wait? [wait? #t]
                                #:enable-break? [enable-break? #f]
-                               #:handle-error [handle-error handle-error-immediately])
+                               #:handle-error [handle-error handle-error-immediately]
+                               #:unlock [unlock end-rktio])
    (let loop ()
      ;; re-check closed on every iteration, in case the state changes
      ;; while we block
@@ -95,7 +98,7 @@
                      (racket-error? r RKTIO_ERROR_INFO_TRY_AGAIN))
                  (cond
                    [wait?
-                    (end-atomic)
+                    (unlock)
                     ((if enable-break? sync/enable-break sync)
                      (rktio-evt (lambda ()
                                   (or (not (udp-s u))
@@ -103,7 +106,7 @@
                                                  RKTIO_POLL_NOT_READY))))
                                 (lambda (ps)
                                   (rktio_poll_add rktio (udp-s u) ps RKTIO_POLL_READ))))
-                    (start-atomic)
+                    (start-rktio)
                     (loop)]
                    [else (values #f #f #f)])]
                 [else
@@ -149,7 +152,8 @@
              (sandman-poll-ctx-add-poll-set-adder!
               poll-ctx
               (lambda (ps)
-                (rktio_poll_add rktio (udp-s (udp-receiving-evt-u self)) ps RKTIO_POLL_READ)))
+                (rktioly
+                 (rktio_poll_add rktio (udp-s (udp-receiving-evt-u self)) ps RKTIO_POLL_READ))))
              (values #f self)])]))))
   #:reflection-name 'udp-receive-evt
   #:authentic)
@@ -163,17 +167,18 @@
 (define/who (udp-set-receive-buffer-size! u size)
   (check who udp? u)
   (check who exact-positive-integer? size)
-  (atomically
+  (rktioly
    (check-udp-closed who u)
    (unless (fixnum? size)
-     (end-atomic)
+     (end-rktio)
      (raise-non-fixnum who size))
    (define r (rktio_udp_set_receive_buffer_size rktio (udp-s u) size))
    (when (rktio-error? r)
      (raise-option-error who "set" r))))
 
+;; in rktio mode
 (define (raise-option-error who mode v)
-  (end-atomic)
+  (end-rktio)
   (raise-network-error who v (string-append mode "sockopt failed")))
 
 (define (raise-non-fixnum who size)

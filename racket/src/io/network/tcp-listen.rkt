@@ -26,6 +26,7 @@
   (check who exact-nonnegative-integer? max-allow-wait)
   (check who string? #:or-false hostname)
   (define (raise-listen-error what err)
+    (end-rktio)
     (end-atomic)
     (raise-network-error who err
                          (string-append what
@@ -35,39 +36,40 @@
                                         (format "\n  port number: ~a" port-no))))
   (security-guard-check-network who hostname port-no 'server)
   (let loop ([family RKTIO_FAMILY_ANY])
-    ((atomically
-      ;; Result is a thunk that might call `loop`
-      ;; or might return a listener
-      (call-with-resolved-address
-       hostname port-no
-       #:family family
-       #:passive? #t
-       ;; in atomic mode
-       (lambda (addr)
-         (cond
-           [(rktio-error? addr)
-            (raise-listen-error "address-resolution error" addr)]
-           [else
-            (check-current-custodian who)
-            (define lnr (rktio_listen rktio addr (min max-allow-wait 10000) reuse?))
-            (cond
-              [(rktio-error? lnr)
-               (cond
-                 [(racket-error? lnr RKTIO_ERROR_TRY_AGAIN_WITH_IPV4)
-                  (lambda () (loop (rktio_get_ipv4_family rktio)))]
-                 [else
-                  (raise-listen-error "listen failed" lnr)])]
-              [else
-               (define closed (box #f))
-               (define custodian-reference
-                 (unsafe-custodian-register (current-custodian)
-                                            lnr
-                                            ;; in atomic mode
-                                            (lambda (fd) (do-tcp-close lnr closed))
-                                            #f
-                                            #f))
-               (lambda ()
-                 (tcp-listener lnr closed custodian-reference))])])))))))
+    ((atomically ; because `call-with-resolved-address` and `unsafe-custodian-register`
+      (rktioly
+       ;; Result is a thunk that might call `loop`
+       ;; or might return a listener
+       (call-with-resolved-address
+        hostname port-no
+        #:family family
+        #:passive? #t
+        ;; in atomic mode and rktio mode
+        (lambda (addr)
+          (cond
+            [(rktio-error? addr)
+             (raise-listen-error "address-resolution error" addr)]
+            [else
+             (check-current-custodian who #:unlock end-rktio+atomic)
+             (define lnr (rktio_listen rktio addr (min max-allow-wait 10000) reuse?))
+             (cond
+               [(rktio-error? lnr)
+                (cond
+                  [(racket-error? lnr RKTIO_ERROR_TRY_AGAIN_WITH_IPV4)
+                   (lambda () (loop (rktio_get_ipv4_family rktio)))]
+                  [else
+                   (raise-listen-error "listen failed" lnr)])]
+               [else
+                (define closed (box #f))
+                (define custodian-reference
+                  (unsafe-custodian-register (current-custodian)
+                                             lnr
+                                             ;; in atomic mode
+                                             (lambda (fd) (do-tcp-close lnr closed))
+                                             #f
+                                             #f))
+                (lambda ()
+                  (tcp-listener lnr closed custodian-reference))])]))))))))
 
 ; in atomic mode
 (define (do-tcp-close lnr closed)

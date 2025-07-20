@@ -26,13 +26,13 @@
                          (define rfc (fs-change-evt-rfc fc))
                          (cond
                            [(not rfc) (values (list fc) #f)]
-                           [(eqv? (rktio_poll_fs_change_ready rktio rfc) RKTIO_POLL_READY)
+                           [(eqv? (rktioly (rktio_poll_fs_change_ready rktio rfc)) RKTIO_POLL_READY)
                             (values (list fc) #f)]
                            [else
                             (sandman-poll-ctx-add-poll-set-adder!
                              ctx
                              (lambda (ps)
-                               (rktio_poll_add_fs_change rktio rfc ps)))
+                               (rktioly (rktio_poll_add_fs_change rktio rfc ps))))
                             (values #f fc)]))))
 
 (define (filesystem-change-evt? v)
@@ -42,27 +42,27 @@
   (check who path-string? p)
   (check who (procedure-arity-includes/c 0) #:or-false fail)
   (define fn (->host p who '(exists)))
-  (start-atomic)
+  (start-rktio)
   (define file-rfc (rktio_fs_change rktio fn shared-ltps))
   (define rfc
     (cond
       [(rktio-error? file-rfc)
-       (end-atomic)
+       (end-rktio)
        (cond
          [(and (zero? (bitwise-and (rktio_fs_change_properties rktio) RKTIO_FS_CHANGE_FILE_LEVEL))
                (rktio_file_exists rktio fn))
           ;; try directory containing the file
           (define-values (base name dir) (split-path (host-> fn)))
           (define base-fn (->host base who '(exists)))
-          (start-atomic)
+          (start-rktio)
           (rktio_fs_change rktio base-fn shared-ltps)]
          [else
-          (start-atomic)
+          (start-rktio)
           file-rfc])]
       [else file-rfc]))
   (cond
     [(rktio-error? rfc)
-     (end-atomic)
+     (end-rktio)
      (cond
        [fail (fail)]
        [(racket-error? rfc RKTIO_ERROR_UNSUPPORTED)
@@ -82,7 +82,7 @@
                                                  #t))
      (set-fs-change-evt-cust-ref! fc cust-ref)
      (unsafe-add-global-finalizer fc (lambda () (close-fc fc)))
-     (end-atomic)
+     (end-rktio)
      fc]))
 
 (define/who (filesystem-change-evt-cancel fc)
@@ -98,7 +98,7 @@
     (unsafe-custodian-unregister fc (fs-change-evt-cust-ref fc))
     (set-fs-change-evt-cust-ref! fc #f)
     (set-fs-change-evt-rfc! fc #f)
-    (rktio_fs_change_forget rktio rfc)))
+    (rktioly (rktio_fs_change_forget rktio rfc))))
 
 (void (set-fs-change-properties!
        (let ([props (rktio_fs_change_properties rktio)])
