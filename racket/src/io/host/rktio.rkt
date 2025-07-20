@@ -108,7 +108,8 @@
 ;; The rktio lock needs to be used for any rktio operation,
 ;; unless "rktio.h" says that the operation is atomic.
 
-(struct m+s (mutex sleep handle))
+(struct m+s (mutex sleep handle)
+  #:authentic)
 
 (define (make-rktio-mutex+sleep rktio)
   (m+s (make-mutex)
@@ -180,8 +181,18 @@
   (cond
     [(box-cas! (m+s-sleep mutex+sleep) #f 'sleep)
      (mutex-acquire (m+s-mutex mutex+sleep))
-     ;; acquired and ok
-     #t]
+     ;; It's possible that we set to 'sleep, but a non-sleep
+     ;; thread managed to switch to 1 and then got the mutex
+     ;; and then switched to #f; it would be bad to sleep
+     ;; in that case, so make sure we're still supposed to sleep
+     (cond
+       [(box-cas! (m+s-sleep mutex+sleep) 'sleep 'sleep)
+        ;; acquired and ok
+        #t]
+       [else
+        ;; release mutex, and assume others are waiting
+        (mutex-release (m+s-mutex mutex+sleep))
+        #f])]
     [(ping-sleep-wakeup (m+s-sleep mutex+sleep))
      ;; others are waiting, and we should not sleep
      #f]

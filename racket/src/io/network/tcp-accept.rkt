@@ -23,7 +23,7 @@
                        #:enable-break? [enable-break? #f])
   (check who tcp-listener? listener)
   (let loop ()
-    (start-atomic)
+    (start-atomic) ; because listener, `check-current-custodian`, and `open-input-output-accepted-tcp`
     (cond
       [(tcp-listener-closed? listener)
        (closed-error who listener)]
@@ -128,7 +128,7 @@
                          "listener is closed"
                          "listener" listener))
 
-;; in atomic mode
+;; in atomic mode, *not* rktio mode
 (define (open-input-output-accepted-tcp fd)
   (rktioly
    (rktio_tcp_nodelay rktio fd #t) ; initially block buffered

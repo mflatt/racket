@@ -30,10 +30,12 @@
          set-udp-is-bound?!
          set-udp-is-connected?!)
 
+;; a udp record is locked by `start-rktio`/`end-rktio`
 (struct udp (s-box is-bound? is-connected? custodian-reference)
   #:mutable
   #:authentic)
 
+;; in rktio mode
 (define (udp-s u) (unbox (udp-s-box u)))
 
 (define/who (udp-open-socket [family-hostname #f] [family-port-no #f])
@@ -41,40 +43,37 @@
   (check who port-number? #:or-false family-port-no)
   (security-guard-check-network who family-hostname family-port-no 'server)
   (atomically ; because `call-with-resolved-address` and `unsafe-custodian-register`
-   (rktioly
-    (call-with-resolved-address
-     #:who who
-     family-hostname family-port-no
-     #:tcp? #f
-     ;; in atomic mode and rktio mode
-     (lambda (addr)
-       (check-current-custodian who #:unlock end-rktio+atomic)
-       (define s (rktio_udp_open rktio addr (udp-default-family)))
-       (cond
-         [(rktio-error? s)
-          (end-rktio)
-          (end-atomic)
-          (raise-network-error who s "creation failed")]
-         [else
-          (define s-box (box s))
-          (define custodian-reference
-            (unsafe-custodian-register (current-custodian)
-                                       s-box
-                                       ;; in atomic mode
-                                       (lambda (s-box) (do-udp-close s-box))
-                                       #f
-                                       #f))
-          (udp s-box #f #f custodian-reference)]))))))
+   (call-with-resolved-address
+    #:who who
+    family-hostname family-port-no
+    #:tcp? #f
+    ;; in atomic mode, *not* rktio mode
+    (lambda (addr)
+      (check-current-custodian who)
+      (define s (rktioly (rktio_udp_open rktio addr (udp-default-family))))
+      (cond
+        [(rktio-error? s)
+         (end-atomic)
+         (raise-network-error who s "creation failed")]
+        [else
+         (define s-box (box s))
+         (define custodian-reference
+           (unsafe-custodian-register (current-custodian)
+                                      s-box
+                                      ;; in atomic mode
+                                      (lambda (s-box) (rktioly (do-udp-close s-box)))
+                                      #f
+                                      #f))
+         (udp s-box #f #f custodian-reference)])))))
 
-; in rktio mode and/or atomic mode
+; in rktio mode
 (define (do-udp-close s-box)
   (define s (unbox s-box))
   (when s
-    (start-rktio)
     (rktio_close rktio s)
-    (end-rktio)
     (set-box! s-box #f)))
 
+;; for external, so *not* in rktio mode
 (define/who (udp-close u)
   (check who udp? u)
   (atomically ; because `unsafe-custodian-unregister`
@@ -92,9 +91,10 @@
 
 ;; ----------------------------------------
 
+;; for external use, so *not* in rktio mode
 (define/who (udp-bound? u)
   (check who udp? u)
-  (udp-is-bound? u))
+  (rktioly (udp-is-bound? u)))
 
 (define/who (udp-bind! u hostname port-no [reuse? #f])
   (check who udp? u)
@@ -102,32 +102,34 @@
   (check who listen-port-number? port-no)
   (security-guard-check-network who hostname port-no 'server)
   (atomically ; because `call-with-resolved-address`
-   (rktioly
-    (call-with-resolved-address
-     #:who who
-     hostname port-no
-     #:tcp? #f
-     #:passive? #t
-     (lambda (addr)
-       (check-udp-closed* who u)
-       (when (udp-is-bound? u)
-         (end-rktio)
-         (end-atomic)
-         (raise-arguments-error who "udp socket is already bound"
-                                "socket" u))
-       (define b (rktio_udp_bind rktio (udp-s u) addr reuse?))
-       (when (rktio-error? b)
-         (end-rktio)
-         (end-atomic)
-         (raise-network-error who b
-                              (string-append "can't bind" (if reuse? " as reusable" "")
-                                             "\n  address: " (or hostname "<unspec>")
-                                             "\n  port number: " (number->string port-no))))
-       (set-udp-is-bound?! u #t))))))
+   (call-with-resolved-address
+    #:who who
+    hostname port-no
+    #:tcp? #f
+    #:passive? #t
+    (lambda (addr)
+      (start-rktio)
+      (check-udp-closed* who u)
+      (when (udp-is-bound? u)
+        (end-rktio)
+        (end-atomic)
+        (raise-arguments-error who "udp socket is already bound"
+                               "socket" u))
+      (define b (rktio_udp_bind rktio (udp-s u) addr reuse?))
+      (when (rktio-error? b)
+        (end-rktio)
+        (end-atomic)
+        (raise-network-error who b
+                             (string-append "can't bind" (if reuse? " as reusable" "")
+                                            "\n  address: " (or hostname "<unspec>")
+                                            "\n  port number: " (number->string port-no))))
+      (set-udp-is-bound?! u #t)
+      (end-rktio)))))
 
+;; *not* in rktio mode
 (define/who (udp-connected? u)
   (check who udp? u)
-  (udp-is-connected? u))
+  (rktioly (udp-is-connected? u)))
 
 (define/who (udp-connect! u hostname port-no)
   (check who udp? u)
@@ -140,33 +142,36 @@
                            "third argument" port-no))
   (security-guard-check-network who hostname port-no 'client)
   (atomically ; because `call-with-resolved-address`
-   (rktioly
-    (cond
-      [(not hostname)
-       (check-udp-closed* who u)
-       (when (udp-is-connected? u)
-         (define d (rktio_udp_disconnect rktio (udp-s u)))
-         (when (rktio-error? d)
+   (cond
+     [(not hostname)
+      (start-rktio)
+      (check-udp-closed* who u)
+      (when (udp-is-connected? u)
+        (define d (rktio_udp_disconnect rktio (udp-s u)))
+        (when (rktio-error? d)
+          (end-rktio)
+          (end-atomic)
+          (raise-network-error who d "can't disconnect"))
+        (set-udp-is-connected?! u #f))
+      (end-rktio)]
+     [else
+      (call-with-resolved-address
+       #:who who
+       hostname port-no
+       #:tcp? #f
+       (lambda (addr)
+         (start-rktio)
+         (check-udp-closed* who u)
+         (define c (rktio_udp_connect rktio (udp-s u) addr))
+         (when (rktio-error? c)
            (end-rktio)
            (end-atomic)
-           (raise-network-error who d "can't disconnect"))
-         (set-udp-is-connected?! u #f))]
-      [else
-       (call-with-resolved-address
-        #:who who
-        hostname port-no
-        #:tcp? #f
-        (lambda (addr)
-          (check-udp-closed* who u)
-          (define c (rktio_udp_connect rktio (udp-s u) addr))
-          (when (rktio-error? c)
-            (end-rktio)
-            (end-atomic)
-            (raise-network-error who c
-                                 (string-append "can't connect"
-                                                "\n  address: " hostname
-                                                "\n  port number: " (number->string port-no))))
-          (set-udp-is-connected?! u #t)))]))))
+           (raise-network-error who c
+                                (string-append "can't connect"
+                                               "\n  address: " hostname
+                                               "\n  port number: " (number->string port-no))))
+         (set-udp-is-connected?! u #t)
+         (end-rktio)))])))
 
 ;; ----------------------------------------
 
@@ -203,6 +208,7 @@
 
 ;; ----------------------------------------
 
+;; for external, so *not* in rktio mode
 (define/who (udp-ttl u)
   (check who udp? u)
   (rktioly
@@ -214,6 +220,7 @@
       (raise-network-option-error who "get" v)]
      [else v])))
 
+;; for external, so *not* in rktio mode
 (define/who (udp-set-ttl! u ttl)
   (check who udp? u)
   (check who byte? ttl)

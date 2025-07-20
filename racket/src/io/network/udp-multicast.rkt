@@ -44,35 +44,35 @@
   (check who string? multicast-hostname)
   (check who string? #:or-false hostname)
   (atomically ; because `call-with-resolved-address`
-   (rktioly
-    (call-with-resolved-address
-     #:who who
-     #:which "multicast "
-     #:port-number-on-error? #f
-     multicast-hostname -1
-     #:family (udp-default-family)
-     #:tcp? #f
-     (lambda (multicast-addr)
-       (call-with-resolved-address
-        #:who who
-        #:which "interface "
-        #:port-number-on-error? #f
-        hostname (and hostname -1)
-        #:family (udp-default-family)
-        #:tcp? #f
-        (lambda (intf-addr)
-          (check-udp-closed* who u)
-          (define v (rktio_udp_change_multicast_group rktio (udp-s u) multicast-addr intf-addr action))
-          (when (rktio-error? v)
-            (raise-option-error* who "set" v)))))))))
+   (call-with-resolved-address
+    #:who who
+    #:which "multicast "
+    #:port-number-on-error? #f
+    multicast-hostname -1
+    #:family (udp-default-family)
+    #:tcp? #f
+    (lambda (multicast-addr)
+      (call-with-resolved-address
+       #:who who
+       #:which "interface "
+       #:port-number-on-error? #f
+       hostname (and hostname -1)
+       #:family (udp-default-family)
+       #:tcp? #f
+       (lambda (intf-addr)
+         (start-rktio)
+         (check-udp-closed* who u)
+         (define v (rktio_udp_change_multicast_group rktio (udp-s u) multicast-addr intf-addr action))
+         (end-rktio)
+         (when (rktio-error? v)
+           (raise-option-error* who "set" v))))))))
 
-;; in rktio mode and in atomic mode
+;; in atomic mode, *not* rktio mode
 (define (raise-option-error* who mode v)
-  (end-rktio)
   (end-atomic)
   (raise-network-option-error who mode v))
 
-;; in rktio mode
+;; in rktio mode, *not* atomic mode
 (define (raise-option-error who mode v)
   (end-rktio)
   (raise-network-option-error who mode v))
@@ -97,18 +97,19 @@
   (check who udp? u)
   (check who string? #:or-false hostname)
   (atomically ; because `call-with-resolved-address`
-   (rktioly
-    (call-with-resolved-address
-     #:who who
-     #:port-number-on-error? #f
-     hostname (and hostname -1)
-     #:family (udp-default-family)
-     #:tcp? #f
-     (lambda (addr)
-       (check-udp-closed* who u)
-       (define r (rktio_udp_set_multicast_interface rktio (udp-s u) addr))
-       (when (rktio-error? r)
-         (raise-option-error* who "set" r)))))))
+   (call-with-resolved-address
+    #:who who
+    #:port-number-on-error? #f
+    hostname (and hostname -1)
+    #:family (udp-default-family)
+    #:tcp? #f
+    (lambda (addr)
+      (start-rktio)
+      (check-udp-closed* who u)
+      (define r (rktio_udp_set_multicast_interface rktio (udp-s u) addr))
+      (end-rktio)
+      (when (rktio-error? r)
+        (raise-option-error* who "set" r))))))
   
 ;; ----------------------------------------
 

@@ -36,12 +36,11 @@
     (raise-arguments-error who
                            "no local port number supplied when local hostname was supplied"
                            "hostname" local-hostname))
-  ;; in atomic and rktio mode (but exits to raise an exception)
+  ;; in atomic mode, *not* rktio mode (but exits atomic to raise an exception)
   (define (raise-connect-error err
                                [what "connection failed"]
                                [hostname hostname]
                                [port-no port-no])
-    (end-rktio)
     (end-atomic)
     (raise-network-error who err
                          (string-append what
@@ -53,78 +52,79 @@
                                             ""))))
   (security-guard-check-network who hostname port-no 'client)
   (atomically ; because `call-with-resolved-address` and `call-with-resource`
-   (rktioly
-    (call-with-resolved-address
-     hostname port-no
-     #:enable-break? enable-break?
-     ;; in atomic mode and rktio mode
-     (lambda (remote-addr)
-       (cond
-         [(rktio-error? remote-addr)
-          (raise-connect-error remote-addr "host not found")]
-         [else
-          (call-with-resolved-address
-           local-hostname local-port-no
-           #:enable-break? enable-break?
-           ;; in atomic mode and rktio mode
-           (lambda (local-addr)
-             (cond
-               [(rktio-error? local-addr)
-                (raise-connect-error local-addr "local host not found" local-hostname local-port-no)]
-               [else
-                (call-with-resource
-                 (connect-progress (rktio_start_connect rktio remote-addr local-addr)
-                                   #f)
-                 ;; in atomic mode and not necessarily rktio mode
-                 (lambda (conn-prog)
-                   (start-rktio)
-                   (remove-trying-fd! conn-prog)
-                   (define conn (connect-progress-conn conn-prog))
-                   (when conn
-                     (rktio_connect_stop rktio conn))
-                   (end-rktio))
-                 ;; in atomic mode and rktio mode
-                 (lambda (conn-prog)
-                   (define conn (connect-progress-conn conn-prog))
-                   (cond
-                     [(rktio-error? conn)
-                      (raise-connect-error conn)]
-                     [else
-                      (let loop ()
-                        (cond
-                          [(eqv? (rktio_poll_connect_ready rktio conn)
-                                 RKTIO_POLL_NOT_READY)
-                           (init-trying-fd! conn-prog)
-                           (end-rktio)
-                           (end-atomic)
-                           ((if enable-break? sync/enable-break sync)
-                            (rktio-evt (lambda ()
-                                         (not (eqv? (rktio_poll_connect_ready rktio conn)
-                                                    RKTIO_POLL_NOT_READY)))
-                                       ;; in atomic and in rktio, must not start nested rktio
-                                       (lambda (ps)
-                                         (rktio_poll_add_connect rktio conn ps))))
-                           (start-atomic)
-                           (start-rktio)
-                           (loop)]
-                          [else
-                           (remove-trying-fd! conn-prog)
-                           (check-current-custodian who #:unlock end-rktio+atomic)
-                           (define fd (rktio_connect_finish rktio conn))
-                           (cond
-                             [(rktio-error? fd)
-                              (cond
-                                [(racket-error? fd RKTIO_ERROR_CONNECT_TRYING_NEXT)
-                                 (loop)]
-                                [else
-                                 ;; other errors imply that `conn` is destroyed
-                                 (set-connect-progress-conn! conn-prog #f)
-                                 (raise-connect-error fd)])]
-                             [else
-                              (define name (string->immutable-string hostname))
-                              (rktio_tcp_nodelay rktio fd #t) ; initially block buffered
-                              (rktio_tcp_keepalive rktio fd #t)
-                              (open-input-output-tcp fd name)])]))])))])))]))))))
+   (call-with-resolved-address
+    hostname port-no
+    #:enable-break? enable-break?
+    ;; in atomic mode, *not* rktio mode
+    (lambda (remote-addr)
+      (cond
+        [(rktio-error? remote-addr)
+         (raise-connect-error remote-addr "host not found")]
+        [else
+         (call-with-resolved-address
+          local-hostname local-port-no
+          #:enable-break? enable-break?
+          ;; in atomic mode, *not* rktio mode
+          (lambda (local-addr)
+            (cond
+              [(rktio-error? local-addr)
+               (raise-connect-error local-addr "local host not found" local-hostname local-port-no)]
+              [else
+               (call-with-resource
+                (connect-progress (rktioly (rktio_start_connect rktio remote-addr local-addr))
+                                  #f)
+                ;; in atomic mode, *not* rktio mode
+                (lambda (conn-prog)
+                  (start-rktio)
+                  (remove-trying-fd! conn-prog)
+                  (define conn (connect-progress-conn conn-prog))
+                  (when conn
+                    (rktio_connect_stop rktio conn))
+                  (end-rktio))
+                ;; in atomic mode, *not* rktio mode
+                (lambda (conn-prog)
+                  (define conn (connect-progress-conn conn-prog))
+                  (cond
+                    [(rktio-error? conn)
+                     (raise-connect-error conn)]
+                    [else
+                     (let loop ()
+                       (start-rktio)
+                       (cond
+                         [(eqv? (rktio_poll_connect_ready rktio conn)
+                                RKTIO_POLL_NOT_READY)
+                          (init-trying-fd! conn-prog)
+                          (end-rktio)
+                          (end-atomic)
+                          ((if enable-break? sync/enable-break sync)
+                           (rktio-evt (lambda ()
+                                        (not (eqv? (rktio_poll_connect_ready rktio conn)
+                                                   RKTIO_POLL_NOT_READY)))
+                                      ;; in atomic and in rktio, must not start nested rktio
+                                      (lambda (ps)
+                                        (rktio_poll_add_connect rktio conn ps))))
+                          (start-atomic)
+                          (loop)]
+                         [else
+                          (remove-trying-fd! conn-prog)
+                          (check-current-custodian who #:unlock end-rktio+atomic)
+                          (define fd (rktio_connect_finish rktio conn))
+                          (cond
+                            [(rktio-error? fd)
+                             (end-rktio)
+                             (cond
+                               [(racket-error? fd RKTIO_ERROR_CONNECT_TRYING_NEXT)
+                                (loop)]
+                               [else
+                                ;; other errors imply that `conn` is destroyed
+                                (set-connect-progress-conn! conn-prog #f)
+                                (raise-connect-error fd)])]
+                            [else
+                             (define name (string->immutable-string hostname))
+                             (rktio_tcp_nodelay rktio fd #t) ; initially block buffered
+                             (rktio_tcp_keepalive rktio fd #t)
+                             (end-rktio)
+                             (open-input-output-tcp fd name)])]))])))])))])))))
 
 ;; in atomic and rktio mode
 (define (init-trying-fd! conn-prog)
