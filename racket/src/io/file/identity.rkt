@@ -7,14 +7,14 @@
 
 (provide path-or-fd-identity)
 
-;; in some locked mode on entry, leaves that locked mode on return
+;; in some locked mode on entry that includes rktio, leaves that locked mode on return
 (define (path-or-fd-identity who
                              #:host-path [host-path #f]
                              #:as-link? [as-link? #f] ; used only if `host-path`
                              #:fd [fd #f]
                              #:port [port #f] ; for errors, and non-#f if `fd` provided
                              #:no-error? [no-error? #f]
-                             #:unlock [unlock (lambda () (end-atomic))])
+                             #:unlock [unlock (lambda () (end-rktio))])
   (define r0 (if host-path
                  (rktio_path_identity rktio host-path (not as-link?))
                  (rktio_fd_identity rktio fd)))

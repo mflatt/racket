@@ -9,6 +9,7 @@
          "../host/rktio.rkt"
          "../host/thread.rkt"
          "../host/pthread.rkt"
+         "../host/place-local.rkt"
          "../sandman/main.rkt"
          "../sandman/ltps.rkt"
          "../error/message.rkt")
@@ -16,6 +17,9 @@
 (provide filesystem-change-evt?
          filesystem-change-evt
          filesystem-change-evt-cancel)
+
+(module+ init
+  (provide rktio-filesyste-change-evt-init!))
 
 (struct fs-change-evt ([rfc #:mutable]
                        [cust-ref #:mutable])
@@ -26,11 +30,12 @@
                          (define rfc (fs-change-evt-rfc fc))
                          (cond
                            [(not rfc) (values (list fc) #f)]
-                           [(eqv? (rktio_poll_fs_change_ready rktio rfc) RKTIO_POLL_READY)
+                           [(eqv? (rktioly (rktio_poll_fs_change_ready rktio rfc)) RKTIO_POLL_READY)
                             (values (list fc) #f)]
                            [else
                             (sandman-poll-ctx-add-poll-set-adder!
                              ctx
+                             ;; atomic and in rktio, must not start nested rktio
                              (lambda (ps)
                                (rktio_poll_add_fs_change rktio rfc ps)))
                             (values #f fc)]))))
@@ -42,11 +47,14 @@
   (check who path-string? p)
   (check who (procedure-arity-includes/c 0) #:or-false fail)
   (define fn (->host p who '(exists)))
-  (start-atomic)
+  (start-atomic) ; because `unsafe-custodian-register`
+  (start-rktio)
+  (poll-filesystem-change-finalizations)
   (define file-rfc (rktio_fs_change rktio fn shared-ltps))
   (define rfc
     (cond
       [(rktio-error? file-rfc)
+       (end-rktio)
        (end-atomic)
        (cond
          [(and (zero? (bitwise-and (rktio_fs_change_properties rktio) RKTIO_FS_CHANGE_FILE_LEVEL))
@@ -54,14 +62,16 @@
           ;; try directory containing the file
           (define-values (base name dir) (split-path (host-> fn)))
           (define base-fn (->host base who '(exists)))
-          (start-atomic)
+          (start-rktio)
           (rktio_fs_change rktio base-fn shared-ltps)]
          [else
+          (start-rktio)
           (start-atomic)
           file-rfc])]
       [else file-rfc]))
   (cond
     [(rktio-error? rfc)
+     (end-rktio)
      (end-atomic)
      (cond
        [fail (fail)]
@@ -80,8 +90,11 @@
                                                  (lambda (fc) (close-fc fc))
                                                  #f
                                                  #t))
-     (set-fs-change-evt-cust-ref! fc cust-ref)
-     (unsafe-add-global-finalizer fc (lambda () (close-fc fc)))
+     (set-fs-change-evt-cust-ref! fc cust-ref)     
+     (unless filesystem-change-evt-will-executor
+       (set! filesystem-change-evt-will-executor (make-will-executor)))
+     (will-register filesystem-change-evt-will-executor fc (lambda (fc) (close-fc fc)))
+     (end-rktio)
      (end-atomic)
      fc]))
 
@@ -91,7 +104,7 @@
   (close-fc fc)
   (end-atomic))
 
-;; in atomic mode
+;; in atomic mode and rktio mode
 (define (close-fc fc)
   (define rfc (fs-change-evt-rfc fc))
   (when rfc
@@ -99,6 +112,13 @@
     (set-fs-change-evt-cust-ref! fc #f)
     (set-fs-change-evt-rfc! fc #f)
     (rktio_fs_change_forget rktio rfc)))
+
+(define-place-local filesystem-change-evt-will-executor #f)
+
+(define (poll-filesystem-change-finalizations)
+  (when (and filesystem-change-evt-will-executor
+             (will-try-execute filesystem-change-evt-will-executor))
+    (poll-filesystem-change-finalizations)))
 
 (void (set-fs-change-properties!
        (let ([props (rktio_fs_change_properties rktio)])
@@ -116,3 +136,6 @@
                          'low-latency)
                     (and (set? props RKTIO_FS_CHANGE_FILE_LEVEL)
                          'file-level))]))))
+
+(define (rktio-filesyste-change-evt-init!)
+  (set! filesystem-change-evt-will-executor #f))

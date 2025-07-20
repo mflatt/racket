@@ -97,10 +97,10 @@
                          'immobile-cell->address (lambda (b) b)
                          'address->immobile-cell (lambda (b) b)
                          'set-fs-change-properties! void
-                         'make-mutex (lambda () (make-semaphore 1))
-                         'make-condition (lambda () (make-semaphore 0))
-                         'mutex-acquire semaphore-wait
-                         'mutex-release semaphore-post
+                         'make-mutex (lambda () 'mutex)
+                         'make-condition (lambda () 'cond)
+                         'mutex-acquire (lambda (m) (start-atomic))
+                         'mutex-release (lambda (m) (end-atomic))
                          'condition-wait (lambda (m c)
                                            (semaphore-post m)
                                            (semaphore-wait c)

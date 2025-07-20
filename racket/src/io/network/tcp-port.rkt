@@ -23,7 +23,8 @@
    ;; with lock held and in atomic mode
    (lambda ()
      (unless abandon?
-       (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_READ)))]
+       (rktioly
+        (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_READ))))]
   [raise-read-error
    (lambda (n)
      (raise-network-error #f n "error reading from stream port"))]
@@ -50,7 +51,8 @@
    ;; with lock held and in atomic mode
    (lambda ()
      (unless abandon?
-       (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_WRITE)))]
+       (rktioly
+        (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_WRITE))))]
   [raise-write-error
    (lambda (n)
      (raise-network-error #f n "error writing to stream port"))]
@@ -60,7 +62,8 @@
      [() buffer-mode]
      [(mode)
       (set! buffer-mode mode)
-      (rktio_tcp_nodelay rktio fd (eq? mode 'block))])]
+      (rktioly
+       (rktio_tcp_nodelay rktio fd (eq? mode 'block)))])]
   #:property
   [prop:file-stream #f]
   [prop:fd-place-message-opener (lambda (fd name)

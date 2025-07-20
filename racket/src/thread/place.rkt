@@ -163,7 +163,11 @@
 
 ;; called with place's lock held or for the current place
 (define (place-has-activity! p)
-  (set-box! (place-activity-canary p) #t)
+  (define canary (place-activity-canary p))
+  (let loop ()
+    (or (box-cas! canary #f #t)
+        (box-cas! canary #t #t)
+        (loop)))
   (sandman-wakeup (place-wakeup-handle p)))
 
 ;; called with place's lock held or for the current place
@@ -175,7 +179,12 @@
   ;; Called in atomic mode by scheduler
   (lambda (callbacks)
     (define p current-place)
-    (when (unbox (place-activity-canary p))
+    (define canary (place-activity-canary p))    
+    (when (let loop ()
+            (cond
+              [(box-cas! canary #f #f) #f]
+              [(box-cas! canary #t #t) #t]
+              [else (loop)]))
       (set-box! (place-activity-canary p) #f)
       (host:mutex-acquire (place-lock p))
       (define queued-result (place-queued-result p))

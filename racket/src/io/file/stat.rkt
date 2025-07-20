@@ -7,13 +7,13 @@
 
 (provide path-or-fd-stat)
 
-;; in some locked mode on entry, leaves that locked mode on return
+;; in some locked mode on entry that includes rktio, leaves that locked mode on return
 (define (path-or-fd-stat who
                          #:host-path [host-path #f]
                          #:as-link? [as-link? #f] ; used only if `host-path`
                          #:fd [fd #f]
                          #:port [port #f] ; for errors, and non-#f if `fd` provided
-                         #:unlock [unlock (lambda () (end-atomic))])
+                         #:unlock [unlock end-rktio])
   (define r0 (if fd
                  (rktio_fd_stat rktio fd)
                  (rktio_file_or_directory_stat rktio host-path (not as-link?))))

@@ -31,6 +31,11 @@
 ;;  - 'to-atomic: lock is taken, atomic mode required in future, no one waiting
 ;;  - 'in-atomic: lock is taken, atomic mode was and remains required, no one waiting
 ;;  - `lock` record: general case, uses host-supplied synchronization
+;;
+;; Port locks are unordered. If you need to take multiple of then (as
+;; `subprocess` does), then set them to atomic mode, and take them only
+;; after entering atomic mode (at which point the order won't matter).
+;; Port locks are order *before* the rktio lock.
 
 (struct lock ([atomic? #:mutable]
               [was-atomic? #:mutable]

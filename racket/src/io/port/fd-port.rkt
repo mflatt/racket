@@ -37,8 +37,10 @@
                   #:discard-errors? [discard-errors? #f])
   (set-box! fd-refcount (sub1 (unbox fd-refcount)))
   (when (zero? (unbox fd-refcount))
+    (start-rktio)
     (fd-semaphore-update! fd 'remove)
     (define v (rktio_close rktio fd))
+    (end-rktio)
     (when (and (rktio-error? v)
                (not discard-errors?))
       (port-unlock p)
@@ -61,36 +63,39 @@
   #:override
   [read-in/inner
    (lambda (dest-bstr start end copy? to-buffer?)
-     (define n
-       (cond
-         [(and to-buffer?
-               (rktio_fd_is_text_converted rktio fd))
-          ;; need to keep track of whether any bytes in the buffer were converted
-          (when (or (not is-converted)
-                    ((bytes-length is-converted) . < . end))
-            (define new-is-converted (make-bytes end))
-            (when is-converted
-              (bytes-copy! new-is-converted 0 is-converted))
-            (set! is-converted new-is-converted))
-          (rktio_read_converted_in rktio fd dest-bstr start end is-converted start)]
-         [else
-          (rktio_read_in rktio fd dest-bstr start end)]))
-     (cond
-       [(rktio-error? n)
-        (port-unlock this)
-        (send fd-input-port this raise-read-error n)]
-       [(eqv? n RKTIO_READ_EOF) eof]
-       [(eqv? n 0) (or (fd-semaphore-update! fd 'read)
-                       (fd-evt fd RKTIO_POLL_READ this))]
-       [else n]))]
+     (rktioly
+      (define n
+        (cond
+          [(and to-buffer?
+                (rktio_fd_is_text_converted rktio fd))
+           ;; need to keep track of whether any bytes in the buffer were converted
+           (when (or (not is-converted)
+                     ((bytes-length is-converted) . < . end))
+             (define new-is-converted (make-bytes end))
+             (when is-converted
+               (bytes-copy! new-is-converted 0 is-converted))
+             (set! is-converted new-is-converted))
+           (rktio_read_converted_in rktio fd dest-bstr start end is-converted start)]
+          [else
+           (rktio_read_in rktio fd dest-bstr start end)]))
+      (cond
+        [(rktio-error? n)
+         (end-rktio)
+         (port-unlock this)
+         (send fd-input-port this raise-read-error n)]
+        [(eqv? n RKTIO_READ_EOF) eof]
+        [(eqv? n 0) (or (fd-semaphore-update! fd 'read)
+                        (fd-evt fd RKTIO_POLL_READ this))]
+        [else n])))]
 
   [byte-ready/inner
    (lambda (work-done!)
-     (cond
-       [(eqv? (rktio_poll_read_ready rktio fd) RKTIO_POLL_READY)
-        #t]
-       [else (or (fd-semaphore-update! fd 'read)
-                 (fd-evt fd RKTIO_POLL_READ this))]))]
+     (rktioly
+      (cond
+        [(eqv? (rktio_poll_read_ready rktio fd) RKTIO_POLL_READY)
+         #t]
+        [else (or (fd-semaphore-update! fd 'read)
+                  (fd-evt fd RKTIO_POLL_READ this))])))]
 
   [close
    (lambda ()
@@ -194,7 +199,7 @@
      (slow-mode!)
      (cond
        [(not (fx= start-pos end-pos))
-        (define n (rktio_write_in rktio fd bstr start-pos end-pos))
+        (define n (rktioly (rktio_write_in rktio fd bstr start-pos end-pos)))
         (cond
           [(rktio-error? n)
            ;; Discard buffer content before reporting the error. This
@@ -265,7 +270,8 @@
   [rktio-flushed?
    (lambda ()
      (or (not bstr)
-         (rktio_poll_write_flushed rktio fd)))]
+         (rktioly
+          (rktio_poll_write_flushed rktio fd))))]
 
   #:override
   ;; lock held and in atomic mode
@@ -351,9 +357,10 @@
                         ;; lock held and in atomic mode
                         (send fd-output-port p flush-buffer/external)
                         (define result
-                          (rktio_set_file_size rktio
-                                               (fd-output-port-fd p)
-                                               pos))
+                          (rktioly
+                           (rktio_set_file_size rktio
+                                                (fd-output-port-fd p)
+                                                pos)))
                         (when (rktio-error? result)
                           (port-unlock p)
                           (raise-rktio-error 'file-truncate result  "error setting file size")))]
@@ -379,7 +386,7 @@
          [fd-refcount fd-refcount]
          [buffer-mode
           (if (eq? buffer-mode 'infer)
-              (if (rktio_fd_is_terminal rktio fd)
+              (if (rktioly (rktio_fd_is_terminal rktio fd))
                   'line
                   'block)
               buffer-mode)]))
@@ -408,7 +415,7 @@
 (define (terminal-port? p)
   (define fd (fd-port-fd p))
   (and fd
-       (atomically (rktio_fd_is_terminal rktio fd))))
+       (rktioly (rktio_fd_is_terminal rktio fd))))
 
 ;; with lock held or in atomic mode, the latter when the port's lock has been forced to be atomic
 (define (fd-port-fd p)
@@ -429,7 +436,7 @@
        [(fd-output-port? cp)
         (with-lock cp
           (define fd (fd-port-fd cp))
-          (rktio_fd_is_pending_open rktio fd))]
+          (rktioly (rktio_fd_is_pending_open rktio fd)))]
        [else #f])]
     [(input-port? p) #f]
     [else
@@ -439,27 +446,29 @@
 
 ;; lock held and in atomic mode
 (define (get-file-position fd)
-  (define ppos (rktio_get_file_position rktio fd))
-  (cond
-    [(rktio-error? ppos)
-     ;; #f => not supported, so use port's own counter, instead
-     #f]
-    [else
-     (define pos (rktio_filesize_ref ppos))
-     (rktio_free ppos)
-     pos]))
+  (rktioly
+   (define ppos (rktio_get_file_position rktio fd))
+   (cond
+     [(rktio-error? ppos)
+      ;; #f => not supported, so use port's own counter, instead
+      #f]
+     [else
+      (define pos (rktio_filesize_ref ppos))
+      (rktio_free ppos)
+      pos])))
 
 ;; lock held for p and in atomic mode
 (define (set-file-position fd pos p)
   (define r
-    (rktio_set_file_position rktio
-                             fd
-                             (if (eof-object? pos)
-                                 0
-                                 pos)
-                             (if (eof-object? pos)
-                                 RKTIO_POSITION_FROM_END
-                                 RKTIO_POSITION_FROM_START)))
+    (rktioly
+     (rktio_set_file_position rktio
+                              fd
+                              (if (eof-object? pos)
+                                  0
+                                  pos)
+                              (if (eof-object? pos)
+                                  RKTIO_POSITION_FROM_END
+                                  RKTIO_POSITION_FROM_START))))
   (when (rktio-error? r)
     (port-unlock p)
     (raise-rktio-error 'file-position r "error setting stream position")))
@@ -496,10 +505,11 @@
           ;; try to get a semaphore to represent the file descriptor, because
           ;; that can be more scalable (especially for lots of TCP sockets)
           [(and (not (sandman-poll-ctx-poll? ctx))
-                (fd-semaphore-update! (fd-evt-fd fde)
-                                      (if (eqv? RKTIO_POLL_READ (bitwise-and mode RKTIO_POLL_READ))
-                                          'read
-                                          'write)))
+                (rktioly
+                 (fd-semaphore-update! (fd-evt-fd fde)
+                                       (if (eqv? RKTIO_POLL_READ (bitwise-and mode RKTIO_POLL_READ))
+                                           'read
+                                           'write))))
            => (lambda (s) ; got a semaphore
                 (values #f (wrap-evt s (lambda (s) 0))))]
           [else
@@ -514,6 +524,7 @@
             ;; Cooperate with the sandman by registering
             ;; a function that takes a poll set and
             ;; adds to it:
+            ;; in atomic and in rktio, must not start nested rktio
             (lambda (ps)
               (rktio_poll_add rktio (fd-evt-fd fde) ps mode)))
            (values #f fde)])]))))
@@ -535,6 +546,7 @@
        [else
         (sandman-poll-ctx-add-poll-set-adder!
          ctx
+         ;; in atomic and in rktio, must not start nested rktio
          (lambda (ps)
            (if (send fd-output-port p rktio-flushed?)
                (rktio_poll_set_add_nosleep rktio ps)
@@ -587,14 +599,21 @@
 ;; with lock held and in atomic mode
 (define (dup-port-fd port)
   (define fd (fd-port-fd port))
+  (start-rktio)
   (define new-fd (rktio_dup rktio fd))
   (when (rktio-error? new-fd)
+    (end-rktio)
     (port-unlock port)
     (raise-rktio-error 'place-channel-put new-fd "error during dup of file descriptor"))
   (define fd-dup (box (rktio_fd_detach rktio new-fd)))
+  (end-rktio)
   (unsafe-add-global-finalizer fd-dup (lambda ()
                                         (define fd (unbox fd-dup))
                                         (when fd
+                                          ;; no rktio argument, so no start-rktio, which
+                                          ;; is important for something like the argument
+                                          ;; to `unsafe-add-global-finalizer` that can run
+                                          ;; as part of the garbage-collection callbacks
                                           (rktio_fd_close_transfer fd))))
   fd-dup)
 
@@ -602,4 +621,4 @@
 (define (claim-dup fd-dup)
   (define fd (unbox fd-dup))
   (set-box! fd-dup #f)
-  (rktio_fd_attach rktio fd))
+  (rktioly (rktio_fd_attach rktio fd)))

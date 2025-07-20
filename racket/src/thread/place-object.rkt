@@ -64,14 +64,15 @@
          (hasheq)             ; schedulers
          0))                  ; active-parallel
 
-;; in atomic mode
+;; in atomic mode; returns #t if count goes to 0
 (define (increment-place-parallel-count! delta)
   (define p current-place)
   (host:mutex-acquire (place-lock p))
   (define n (+ (place-active-parallel p) delta))
   (assert (n . >= . 0))
   (set-place-active-parallel! p n)
-  (host:mutex-release (place-lock p)))
+  (host:mutex-release (place-lock p))
+  (eqv? n 0))
 
 (define initial-place (make-place (host:make-mutex)
                                   root-custodian))

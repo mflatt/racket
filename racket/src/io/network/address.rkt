@@ -11,7 +11,7 @@
          register-address-finalizer
          address-init!)
 
-;; in atomic mode
+;; in atomic mode and rktio mode
 (define (call-with-resolved-address hostname port-no proc
                                     #:who [who #f] ; not #f => report errors
                                     #:which [which ""] ; for error reporting, including trailing space
@@ -36,8 +36,8 @@
       (lambda (lookup-box)
         (define lookup (unbox lookup-box))
         (when lookup
-          (rktio_addrinfo_lookup_stop rktio lookup)))
-      ;; in atomic mode
+          (rktioly (rktio_addrinfo_lookup_stop rktio lookup))))
+      ;; in atomic and rktio mode
       (lambda (lookup-box)
         (define lookup (unbox lookup-box))
         (let loop ()
@@ -45,14 +45,17 @@
             [(and (not (rktio-error? lookup))
                   (eqv? (rktio_poll_addrinfo_lookup_ready rktio lookup)
                         RKTIO_POLL_NOT_READY))
+             (end-rktio)
              (end-atomic)
              ((if enable-break? sync/enable-break sync)
               (rktio-evt (lambda ()
                            (not (eqv? (rktio_poll_addrinfo_lookup_ready rktio lookup)
                                       RKTIO_POLL_NOT_READY)))
+                         ;; in atomic and in rktio, must not start nested rktio
                          (lambda (ps)
                            (rktio_poll_add_addrinfo_lookup rktio lookup ps))))
              (start-atomic)
+             (start-rktio)
              (loop)]
             [else
              (set-box! lookup-box #f) ; receiving result implies `lookup` is destroyed
@@ -61,11 +64,12 @@
                   lookup
                   (rktio_addrinfo_lookup_get rktio lookup))
               ;; in atomic mode
-              (lambda (addr) (rktio_addrinfo_free rktio addr))
+              (lambda (addr) (rktioly (rktio_addrinfo_free rktio addr)))
               ;; in atomic mode
               (lambda (addr)
                 (cond
                   [(and who (rktio-error? addr))
+                   (end-rktio)
                    (end-atomic)
                    (raise-network-error who addr (string-append
                                                   "can't resolve " which "address"
@@ -88,7 +92,7 @@
   (will-register address-will-executor
                  addr
                  (lambda (addr)
-                   (rktio_addrinfo_free rktio addr)
+                   (rktioly (rktio_addrinfo_free rktio addr))
                    #t)))
 
 (define (poll-address-finalizations)

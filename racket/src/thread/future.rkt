@@ -887,7 +887,8 @@
        #f]))
   (host:mutex-release (scheduler-mutex s))
   (when (and ok? decrement-count? (future*-parallel f))
-    (increment-place-parallel-count! -1))
+    (when (increment-place-parallel-count! -1)
+      (wakeup-this-place)))
   ok?)
 
 ;; called in any pthread
@@ -987,7 +988,8 @@
      (set-future*-state! f #f)
      (on-transition-to-unfinished)
      (when (future*-parallel f)
-       (increment-place-parallel-count! -1))
+       (when (increment-place-parallel-count! -1)
+         (wakeup-this-place)))
      (lock-release (future*-lock f))]
     [else
      (run-future-in-worker f w s)]))
@@ -1063,7 +1065,8 @@
               [else
                ;; Done --- completed or suspended (e.g., blocked)
                (when (future*-parallel f)
-                 (increment-place-parallel-count! -1))
+                 (when (increment-place-parallel-count! -1)
+                   (wakeup-this-place)))
                (done (void))]))))))
   (log-future 'end-work (future*-id f))
   (current-future 'worker)

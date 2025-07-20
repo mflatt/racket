@@ -126,9 +126,9 @@
     (error 'assert-atomic "not in atomic mode")))
 
 ;; in atomic mode
-(define (check-current-custodian who)
+(define (check-current-custodian who #:unlock [unlock end-atomic])
   (when (custodian-shut-down? (current-custodian))
-    (end-atomic)
+    (unlock)
     (raise
      (exn:fail
       (string-append (symbol->string who) ": the current custodian has been shut down")

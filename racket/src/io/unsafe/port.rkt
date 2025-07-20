@@ -23,7 +23,7 @@
   (define read? (memq 'read mode))
   (define write? (memq 'write mode))
   (define refcount (box (if (and read? write?) 2 1)))
-  (define fd (atomically
+  (define fd (rktioly
               (rktio_system_fd rktio system-fd
                                (bitwise-ior
                                 (if read? RKTIO_OPEN_READ 0)
@@ -47,7 +47,7 @@
 
 (define (unsafe-port->file-descriptor p)
   (define fd (fd-port-fd p))
-  (atomically
+  (rktioly
    (and fd
         (not (rktio_fd_is_pending_open rktio fd))
         (rktio_fd_system_fd rktio fd))))
@@ -59,14 +59,14 @@
 (define/who (unsafe-fd->semaphore system-fd mode socket?)
   (check who exact-integer? system-fd)
   (check who symbol? #:contract "(or/c 'read 'write 'check-read 'check-write 'remove)" mode)
-  (start-atomic)
+  (start-rktio)
   (define fd (rktio_system_fd rktio system-fd
                               (bitwise-ior RKTIO_OPEN_READ
                                            RKTIO_OPEN_WRITE
                                            (if socket? RKTIO_OPEN_SOCKET 0))))
   (define sema (fd-semaphore-update! fd mode))
   (rktio_forget rktio fd)
-  (end-atomic)
+  (end-rktio)
   sema)
 
 (define (unsafe-file-descriptor->semaphore system-fd mode)
@@ -76,7 +76,7 @@
   (unsafe-fd->semaphore system-fd mode #t))
 
 (define (unsafe-poll-fd system-fd mode [socket? #t])
-  (atomically
+  (rktioly
    (define fd (rktio_system_fd rktio system-fd (if socket? RKTIO_OPEN_SOCKET 0)))
    (define ready?
      (case mode

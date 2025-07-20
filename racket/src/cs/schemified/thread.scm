@@ -3834,7 +3834,8 @@
         (let ((n_0 (+ (place-active-parallel p_0) delta_0)))
           (begin
             (set-place-active-parallel! p_0 n_0)
-            (|#%app| host:mutex-release (place-lock p_0))))))))
+            (|#%app| host:mutex-release (place-lock p_0))
+            (eqv? n_0 0)))))))
 (define initial-place
   (let ((temp10_0 (|#%app| host:make-mutex)))
     (let ((root-custodian11_0 (unsafe-place-local-ref cell.1$7)))
@@ -12564,7 +12565,9 @@
              (if (if ok?_0
                    (if decrement-count?30_0 (future*-parallel f32_0) #f)
                    #f)
-               (increment-place-parallel-count! -1)
+               (if (increment-place-parallel-count! -1)
+                 (|#%app| wakeup-this-place)
+                 (void))
                (void))
              ok?_0)))))))
 (define future-notify-dependents
@@ -12685,7 +12688,11 @@
         (future-maybe-notify-stop f_0)
         (set-future*-state! f_0 #f)
         (on-transition-to-unfinished)
-        (if (future*-parallel f_0) (increment-place-parallel-count! -1) (void))
+        (if (future*-parallel f_0)
+          (if (increment-place-parallel-count! -1)
+            (|#%app| wakeup-this-place)
+            (void))
+          (void))
         (lock-release (future*-lock f_0)))
       (run-future-in-worker f_0 w_0 s_0))))
 (define run-future-in-worker
@@ -12803,7 +12810,9 @@
                           (loop_0 e_2)
                           (begin
                             (if (future*-parallel f_0)
-                              (increment-place-parallel-count! -1)
+                              (if (increment-place-parallel-count! -1)
+                                (|#%app| wakeup-this-place)
+                                (void))
                               (void))
                             (|#%app| done_0 (void))))))))))
                 (loop_0 e_0))))
@@ -14771,79 +14780,100 @@
       ((p_0 kind1_0) (place-break_0 p_0 kind1_0))))))
 (define place-has-activity!
   (lambda (p_0)
-    (begin
-      (set-box! (place-activity-canary p_0) #t)
-      (let ((h_0 (place-wakeup-handle p_0)))
-        (|#%app| (sandman-do-wakeup the-sandman) h_0)))))
+    (let ((canary_0 (place-activity-canary p_0)))
+      (begin
+        (letrec*
+         ((loop_0
+           (|#%name|
+            loop
+            (lambda ()
+              (let ((or-part_0 (unsafe-box*-cas! canary_0 #f #t)))
+                (if or-part_0
+                  or-part_0
+                  (let ((or-part_1 (unsafe-box*-cas! canary_0 #t #t)))
+                    (if or-part_1 or-part_1 (loop_0)))))))))
+         (loop_0))
+        (let ((h_0 (place-wakeup-handle p_0)))
+          (|#%app| (sandman-do-wakeup the-sandman) h_0))))))
 (define place-wait-activity
   (lambda (p_0) (|#%app| (sandman-do-sleep the-sandman) #f)))
-(define effect_2165
+(define effect_2952
   (begin
     (void
      (set-check-place-activity!
       (lambda (callbacks_0)
         (let ((p_0 (unsafe-place-local-ref cell.1$2)))
-          (if (unbox (place-activity-canary p_0))
-            (begin
-              (set-box! (place-activity-canary p_0) #f)
+          (let ((canary_0 (place-activity-canary p_0)))
+            (if (letrec*
+                 ((loop_0
+                   (|#%name|
+                    loop
+                    (lambda ()
+                      (if (unsafe-box*-cas! canary_0 #f #f)
+                        #f
+                        (if (unsafe-box*-cas! canary_0 #t #t) #t (loop_0)))))))
+                 (loop_0))
               (begin
-                (|#%app| host:mutex-acquire (place-lock p_0))
-                (let ((queued-result_0 (place-queued-result p_0)))
-                  (let ((break_0 (place-pending-break p_0)))
-                    (let ((dequeue-semas_0 (place-dequeue-semas p_0)))
-                      (begin
-                        (if break_0 (set-place-pending-break! p_0 #f) (void))
-                        (if (pair? dequeue-semas_0)
-                          (set-place-dequeue-semas! p_0 null)
-                          (void))
-                        (|#%app| host:mutex-release (place-lock p_0))
-                        (if queued-result_0
-                          (begin
-                            (|#%app|
-                             host:post-as-asynchronous-callback
-                             (lambda ()
-                               (begin
-                                 (letrec*
-                                  ((for-loop_0
-                                    (|#%name|
-                                     for-loop
-                                     (lambda (lst_0)
-                                       (if (pair? lst_0)
-                                         (let ((callback_0 (unsafe-car lst_0)))
-                                           (let ((rest_0 (unsafe-cdr lst_0)))
-                                             (begin
-                                               (|#%app| callback_0)
-                                               (for-loop_0 rest_0))))
-                                         (values))))))
-                                  (for-loop_0 callbacks_0))
-                                 (void))))
-                            (force-exit queued-result_0))
-                          (void))
-                        (letrec*
-                         ((for-loop_0
-                           (|#%name|
-                            for-loop
-                            (lambda (lst_0)
-                              (if (pair? lst_0)
-                                (let ((s_0 (unsafe-car lst_0)))
-                                  (let ((rest_0 (unsafe-cdr lst_0)))
-                                    (begin
+                (set-box! (place-activity-canary p_0) #f)
+                (begin
+                  (|#%app| host:mutex-acquire (place-lock p_0))
+                  (let ((queued-result_0 (place-queued-result p_0)))
+                    (let ((break_0 (place-pending-break p_0)))
+                      (let ((dequeue-semas_0 (place-dequeue-semas p_0)))
+                        (begin
+                          (if break_0 (set-place-pending-break! p_0 #f) (void))
+                          (if (pair? dequeue-semas_0)
+                            (set-place-dequeue-semas! p_0 null)
+                            (void))
+                          (|#%app| host:mutex-release (place-lock p_0))
+                          (if queued-result_0
+                            (begin
+                              (|#%app|
+                               host:post-as-asynchronous-callback
+                               (lambda ()
+                                 (begin
+                                   (letrec*
+                                    ((for-loop_0
+                                      (|#%name|
+                                       for-loop
+                                       (lambda (lst_0)
+                                         (if (pair? lst_0)
+                                           (let ((callback_0
+                                                  (unsafe-car lst_0)))
+                                             (let ((rest_0 (unsafe-cdr lst_0)))
+                                               (begin
+                                                 (|#%app| callback_0)
+                                                 (for-loop_0 rest_0))))
+                                           (values))))))
+                                    (for-loop_0 callbacks_0))
+                                   (void))))
+                              (force-exit queued-result_0))
+                            (void))
+                          (letrec*
+                           ((for-loop_0
+                             (|#%name|
+                              for-loop
+                              (lambda (lst_0)
+                                (if (pair? lst_0)
+                                  (let ((s_0 (unsafe-car lst_0)))
+                                    (let ((rest_0 (unsafe-cdr lst_0)))
                                       (begin
-                                        (thread-did-work!)
-                                        (semaphore-post-all/atomic s_0))
-                                      (for-loop_0 rest_0))))
-                                (values))))))
-                         (for-loop_0 dequeue-semas_0))
-                        (void)
-                        (if break_0
-                          (begin
-                            (thread-did-work!)
-                            (do-break-thread
-                             (unsafe-place-local-ref cell.1$1)
-                             break_0
-                             #f))
-                          (void))))))))
-            (void))))
+                                        (begin
+                                          (thread-did-work!)
+                                          (semaphore-post-all/atomic s_0))
+                                        (for-loop_0 rest_0))))
+                                  (values))))))
+                           (for-loop_0 dequeue-semas_0))
+                          (void)
+                          (if break_0
+                            (begin
+                              (thread-did-work!)
+                              (do-break-thread
+                               (unsafe-place-local-ref cell.1$1)
+                               break_0
+                               #f))
+                            (void))))))))
+              (void)))))
       (lambda ()
         (let ((p_0 (unsafe-place-local-ref cell.1$2)))
           (begin
