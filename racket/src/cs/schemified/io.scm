@@ -34425,9 +34425,9 @@
                   (begin
                     (unsafe-start-atomic)
                     (begin
-                      (start-rktio)
+                      (poll-filesystem-change-finalizations)
                       (begin
-                        (poll-filesystem-change-finalizations)
+                        (start-rktio)
                         (let ((file-rfc_0
                                (|#%app|
                                 rktio_fs_change
@@ -34436,93 +34436,83 @@
                                 (unsafe-place-local-ref cell.1$5))))
                           (let ((rfc_0
                                  (if (vector? file-rfc_0)
-                                   (begin
-                                     (end-rktio)
-                                     (unsafe-end-atomic)
-                                     (if (if (zero?
-                                              (bitwise-and
-                                               (|#%app|
-                                                rktio_fs_change_properties
-                                                (unsafe-place-local-ref
-                                                 cell.1))
-                                               8))
-                                           (|#%app|
-                                            rktio_file_exists
-                                            (unsafe-place-local-ref cell.1)
-                                            fn_0)
-                                           #f)
-                                       (call-with-values
-                                        (lambda ()
-                                          (1/split-path (host-> fn_0)))
-                                        (lambda (base_0 name_0 dir_0)
-                                          (let ((base-fn_0
-                                                 (->host
-                                                  base_0
-                                                  'filesystem-change-evt
-                                                  '(exists))))
-                                            (begin
-                                              (start-rktio)
-                                              (|#%app|
-                                               rktio_fs_change
-                                               (unsafe-place-local-ref cell.1)
-                                               base-fn_0
-                                               (unsafe-place-local-ref
-                                                cell.1$5))))))
-                                       (begin
-                                         (start-rktio)
-                                         (unsafe-start-atomic)
-                                         file-rfc_0)))
+                                   (if (if (zero?
+                                            (bitwise-and
+                                             (|#%app|
+                                              rktio_fs_change_properties
+                                              (unsafe-place-local-ref cell.1))
+                                             8))
+                                         (|#%app|
+                                          rktio_file_exists
+                                          (unsafe-place-local-ref cell.1)
+                                          fn_0)
+                                         #f)
+                                     (call-with-values
+                                      (lambda () (1/split-path (host-> fn_0)))
+                                      (lambda (base_0 name_0 dir_0)
+                                        (let ((base-fn_0
+                                               (->host
+                                                base_0
+                                                'filesystem-change-evt
+                                                '(exists))))
+                                          (|#%app|
+                                           rktio_fs_change
+                                           (unsafe-place-local-ref cell.1)
+                                           base-fn_0
+                                           (unsafe-place-local-ref
+                                            cell.1$5)))))
+                                     file-rfc_0)
                                    file-rfc_0)))
-                            (if (vector? rfc_0)
-                              (begin
-                                (end-rktio)
-                                (unsafe-end-atomic)
-                                (if fail2_0
-                                  (|#%app| fail2_0)
-                                  (if (racket-error? rfc_0 1)
-                                    (raise
-                                     (let ((app_0
-                                            (let ((msg_0 "unsupported"))
-                                              (error-message->adjusted-string
-                                               'filesystem-change-evt
-                                               'racket/primitive
-                                               msg_0
-                                               'racket/primitive))))
-                                       (|#%app|
-                                        exn:fail:unsupported
-                                        app_0
-                                        (current-continuation-marks))))
-                                    (raise-filesystem-error
-                                     'filesystem-change-evt
-                                     rfc_0
-                                     (1/format
-                                      "error generating event\n  path: ~a"
-                                      (host-> fn_0))))))
-                              (let ((fc_0 (fs-change-evt1.1 rfc_0 #f)))
-                                (let ((cust-ref_0
-                                       (|#%app|
-                                        1/unsafe-custodian-register
-                                        (current-custodian)
-                                        fc_0
-                                        (lambda (fc_1) (close-fc fc_1))
-                                        #f
-                                        #t)))
-                                  (begin
-                                    (set-fs-change-evt-cust-ref!
-                                     fc_0
-                                     cust-ref_0)
-                                    (if (unsafe-place-local-ref cell.1$6)
-                                      (void)
-                                      (unsafe-place-local-set!
-                                       cell.1$6
-                                       (make-will-executor)))
-                                    (will-register
-                                     (unsafe-place-local-ref cell.1$6)
-                                     fc_0
-                                     (lambda (fc_1) (close-fc fc_1)))
-                                    (end-rktio)
-                                    (unsafe-end-atomic)
-                                    fc_0))))))))))))))))
+                            (begin
+                              (end-rktio)
+                              (if (vector? rfc_0)
+                                (begin
+                                  (unsafe-end-atomic)
+                                  (if fail2_0
+                                    (|#%app| fail2_0)
+                                    (if (racket-error? rfc_0 1)
+                                      (raise
+                                       (let ((app_0
+                                              (let ((msg_0 "unsupported"))
+                                                (error-message->adjusted-string
+                                                 'filesystem-change-evt
+                                                 'racket/primitive
+                                                 msg_0
+                                                 'racket/primitive))))
+                                         (|#%app|
+                                          exn:fail:unsupported
+                                          app_0
+                                          (current-continuation-marks))))
+                                      (raise-filesystem-error
+                                       'filesystem-change-evt
+                                       rfc_0
+                                       (1/format
+                                        "error generating event\n  path: ~a"
+                                        (host-> fn_0))))))
+                                (let ((fc_0 (fs-change-evt1.1 rfc_0 #f)))
+                                  (let ((cust-ref_0
+                                         (|#%app|
+                                          1/unsafe-custodian-register
+                                          (current-custodian)
+                                          fc_0
+                                          (lambda (fc_1) (close-fc fc_1))
+                                          #f
+                                          #t)))
+                                    (begin
+                                      (set-fs-change-evt-cust-ref!
+                                       fc_0
+                                       cust-ref_0)
+                                      (if (unsafe-place-local-ref cell.1$6)
+                                        (void)
+                                        (unsafe-place-local-set!
+                                         cell.1$6
+                                         (make-will-executor)))
+                                      (will-register
+                                       (unsafe-place-local-ref cell.1$6)
+                                       fc_0
+                                       (lambda (fc_1) (close-fc fc_1)))
+                                      (unsafe-end-atomic)
+                                      fc_0)))))))))))))))))
     (|#%name|
      filesystem-change-evt
      (case-lambda
@@ -34540,8 +34530,7 @@
           "filesystem-change-evt?"
           fc_0))
        (unsafe-start-atomic)
-       (close-fc fc_0)
-       (unsafe-end-atomic)))))
+       (begin0 (close-fc fc_0) (unsafe-end-atomic))))))
 (define close-fc
   (lambda (fc_0)
     (let ((rfc_0 (fs-change-evt-rfc fc_0)))
@@ -34553,10 +34542,13 @@
            (fs-change-evt-cust-ref fc_0))
           (set-fs-change-evt-cust-ref! fc_0 #f)
           (set-fs-change-evt-rfc! fc_0 #f)
-          (|#%app|
-           rktio_fs_change_forget
-           (unsafe-place-local-ref cell.1)
-           rfc_0))
+          (start-rktio)
+          (begin0
+            (|#%app|
+             rktio_fs_change_forget
+             (unsafe-place-local-ref cell.1)
+             rfc_0)
+            (end-rktio)))
         (void)))))
 (define cell.1$6 (unsafe-make-place-local #f))
 (define poll-filesystem-change-finalizations

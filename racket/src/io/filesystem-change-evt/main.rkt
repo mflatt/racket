@@ -21,6 +21,7 @@
 (module+ init
   (provide rktio-filesyste-change-evt-init!))
 
+;; locked by atomic mode
 (struct fs-change-evt ([rfc #:mutable]
                        [cust-ref #:mutable])
   #:reflection-name 'filesystem-change-evt
@@ -47,31 +48,26 @@
   (check who path-string? p)
   (check who (procedure-arity-includes/c 0) #:or-false fail)
   (define fn (->host p who '(exists)))
-  (start-atomic) ; because `unsafe-custodian-register`
-  (start-rktio)
+  (start-atomic)
   (poll-filesystem-change-finalizations)
+  (start-rktio)
   (define file-rfc (rktio_fs_change rktio fn shared-ltps))
   (define rfc
     (cond
       [(rktio-error? file-rfc)
-       (end-rktio)
-       (end-atomic)
        (cond
          [(and (zero? (bitwise-and (rktio_fs_change_properties rktio) RKTIO_FS_CHANGE_FILE_LEVEL))
                (rktio_file_exists rktio fn))
           ;; try directory containing the file
           (define-values (base name dir) (split-path (host-> fn)))
           (define base-fn (->host base who '(exists)))
-          (start-rktio)
           (rktio_fs_change rktio base-fn shared-ltps)]
          [else
-          (start-rktio)
-          (start-atomic)
           file-rfc])]
       [else file-rfc]))
+  (end-rktio)
   (cond
     [(rktio-error? rfc)
-     (end-rktio)
      (end-atomic)
      (cond
        [fail (fail)]
@@ -94,24 +90,23 @@
      (unless filesystem-change-evt-will-executor
        (set! filesystem-change-evt-will-executor (make-will-executor)))
      (will-register filesystem-change-evt-will-executor fc (lambda (fc) (close-fc fc)))
-     (end-rktio)
      (end-atomic)
      fc]))
 
 (define/who (filesystem-change-evt-cancel fc)
   (check who filesystem-change-evt? fc)
-  (start-atomic)
-  (close-fc fc)
-  (end-atomic))
+  (atomically
+   (close-fc fc)))
 
-;; in atomic mode and rktio mode
+;; in atomic mode
 (define (close-fc fc)
   (define rfc (fs-change-evt-rfc fc))
   (when rfc
     (unsafe-custodian-unregister fc (fs-change-evt-cust-ref fc))
     (set-fs-change-evt-cust-ref! fc #f)
     (set-fs-change-evt-rfc! fc #f)
-    (rktio_fs_change_forget rktio rfc)))
+    (rktioly
+     (rktio_fs_change_forget rktio rfc))))
 
 (define-place-local filesystem-change-evt-will-executor #f)
 

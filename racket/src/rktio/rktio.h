@@ -680,7 +680,7 @@ RKTIO_EXTERN void rktio_reap_processes(rktio_t *rktio);
 /*************************************************/
 /* Filesystem-change events                      */
 
-RKTIO_EXTERN_NOERR int rktio_fs_change_properties(rktio_t *rktio);
+RKTIO_EXTERN_ATOMIC_NOERR int rktio_fs_change_properties(rktio_t *rktio);
 /* Reports properties of the filesystem-change event implementation: */
 #define RKTIO_FS_CHANGE_SUPPORTED   (1 << 0)
 #define RKTIO_FS_CHANGE_SCALABLE    (1 << 1)
