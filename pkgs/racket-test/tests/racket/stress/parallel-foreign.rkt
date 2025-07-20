@@ -1,9 +1,8 @@
 #lang racket/base
 (require ffi/unsafe)
 
-
-(define f (lambda () void))
-(define f-ptr (cast f (_fun #:async-apply (lambda (f) (f)) -> _void) _fpointer))
+(define f (lambda () (void)))
+(define f-ptr (cast f (_fun #:atomic? #t #:async-apply (lambda (f) (f)) -> _void) _fpointer))
 (define f-back (cast f-ptr _fpointer (_fun -> _void)))
 
 (define (call)
@@ -22,7 +21,7 @@
           (thread
            #:pool (pick-pool pool)
            (lambda ()
-             (let loop () (call) (loop)))))))
+             (let loop () (call) '(sleep) '(loop)))))))
     (close-pool pool)
     (sleep 0.1)
     (map kill-thread ts)))
