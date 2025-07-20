@@ -315,7 +315,7 @@
   (define t (parameterize ([current-error-port (open-output-bytes)])
               (thread #:keep 'results
                       (λ ()
-                        (sleep (system-idle-evt))
+                        (sync (system-idle-evt))
                         1))))
   ;; may be before `t` gets to run at all
   (break-thread t)
