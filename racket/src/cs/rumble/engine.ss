@@ -53,23 +53,20 @@
                     (current-parameterization))])
     (create-engine empty-metacontinuation
                    (lambda (prefix)
-                     ;; Set parameterize for `prefix` to use:
-                     (with-continuation-mark
-                         parameterization-key paramz
-                       (begin
-                         (prefix)
-                         (call-with-values (lambda ()
-                                             (call-with-continuation-prompt
-                                              (lambda ()
-                                                ;; Set parameterization again inside
-                                                ;; the prompt tag, so it goes along with
-                                                ;; a captured continuation:
-                                                (with-continuation-mark
-                                                    parameterization-key paramz
-                                                  (|#%app| thunk)))
-                                              prompt-tag
-                                              abort-handler))
-                           engine-return))))
+                     (call-with-values (lambda ()
+                                         (call-with-continuation-prompt
+                                          (lambda ()
+                                            ;; Set parameterization inside
+                                            ;; the prompt tag, so it goes along with
+                                            ;; a captured continuation:
+                                            (with-continuation-mark
+                                                parameterization-key paramz
+                                              (begin
+                                                (prefix)
+                                                (|#%app| thunk))))
+                                          prompt-tag
+                                          abort-handler))
+                       engine-return))
                    thread-cell-state)))
 
 (define (make-engine-thread-cell-state init-break-enabled-cell ; default break-enable cell

@@ -311,6 +311,16 @@
   (test 'ok thread-wait (thread (lambda () 'ok) #:keep 'results))
   (test-values '(ok more) (lambda () (thread-wait (thread (lambda () (values 'ok 'more)) #:keep 'results)))))
 
+(let ()
+  (define t (parameterize ([current-error-port (open-output-bytes)])
+              (thread #:keep 'results
+                      (λ ()
+                        (sleep (system-idle-evt))
+                        1))))
+  ;; may be before `t` gets to run at all
+  (break-thread t)
+  (test 'none thread-wait t (λ () 'none)))
+
 (test #t thread-running? (current-thread))
 (arity-test thread-running? 1 1)
 (err/rt-test (thread-running? 5) type?)
