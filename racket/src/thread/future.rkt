@@ -92,7 +92,9 @@
            #f          ; next
            #f          ; results
            #f          ; state
-           #hasheq())) ; dependents
+           #hasheq()   ; dependents
+           #f          ; suspend-pthread-id
+           #f))        ; suspend-timestamp
 
 (define (future? v)
   (future*? v))
@@ -147,11 +149,16 @@
   (lock-release (future*-lock f))
   (when was-blocked?
     (when (logging-futures?)
+      (define prim-name (continuation-current-primitive* thunk))
       (log-future (if as-unblock? 'sync 'block) (future*-id f)
-                  #:prim-name (continuation-current-primitive
-                               thunk
-                               '(unsafe-start-atomic)))
-      (log-future (if as-unblock? 'sync 'result) (future*-id f))))
+                  #:timestamp (if (future*-kind f)
+                                  (current-inexact-milliseconds)
+                                  (future*-suspend-timestamp f))
+                  #:pthread-id (and (not (future*-kind f))
+                                    (future*-suspend-pthread-id f))
+                  #:prim-name prim-name)
+      (log-future (if as-unblock? 'sync 'result) (future*-id f)
+                  #:prim-name prim-name)))
   (unless (eq? (future*-kind f) 'was)
     (log-future 'start-work (future*-id f)))
   (define (finish! results state)
@@ -587,8 +594,8 @@
      ;; no future-scheduler swap out from here on:
      (unless (in-racket-thread?)
        (define p (future*-parallel me-f))
-       (when p
-         (set-scheduler-round-robin! (parallel-thread-pool-scheduler (parallel*-pool p)) 'pause)))
+       (when p         
+         (set-scheduler-round-robin! (parallel-thread-pool-scheduler (parallel*-pool p)) 'pause)))         
      (when reschedule?
        (schedule-future! me-f))
      ;; Release lock and go out of atomic mode:
@@ -596,7 +603,11 @@
      (when touching-f
        (log-future 'touch (future*-id me-f) #:data (future*-id touching-f)))
      (unless (future*-kind me-f)
-       (log-future 'suspend (future*-id me-f)))
+       (define timestamp (current-inexact-milliseconds))
+       (log-future 'suspend (future*-id me-f) #:timestamp timestamp)
+       ;; delay 'block/'sync to make sure it's worth computing `(continuation-current-primitive* k)`
+       (set-future*-suspend-pthread-id! me-f (get-pthread-id))
+       (set-future*-suspend-timestamp! me-f timestamp))
      (cond
        [reschedule
         (reschedule)]
@@ -631,7 +642,7 @@
             ;; other good reason
             (when (eq? 'future (thread-interrupt-callback th))
               (set-thread-interrupt-callback! th #f)
-              (unless (or (thread-dead? th)
+              (unless (or (is-thread-dead? th)
                           (thread-suspended? th))
                 (thread-reschedule! th)))]
            [else

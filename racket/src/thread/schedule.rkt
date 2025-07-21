@@ -77,7 +77,7 @@
   (call-pre-poll-external-callbacks)
   (check-place-activity callbacks)
   (when (check-queued-custodian-shutdown)
-    (when (thread-dead? root-thread)
+    (when (is-thread-dead? root-thread)
       (force-exit 0)))
   (flush-future-log)
   (define (run-callbacks-in-new-thread callbacks)
@@ -184,7 +184,7 @@
           (cond
             [(not-atomic-mode?)
              (flush-end-atomic-callbacks!)
-             (when (thread-dead? root-thread)
+             (when (is-thread-dead? root-thread)
                (force-exit 0))
              (define new-leftover-ticks (- leftover-ticks (- TICKS remaining-ticks)))
              (accum-cpu-time! t (new-leftover-ticks . <= . 0))

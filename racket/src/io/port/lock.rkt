@@ -11,6 +11,7 @@
          with-lock
          with-no-lock
          merely-atomically
+         also-atomically
          port-lock-require-atomic!
          port-lock-init-atomic-mode)
 
@@ -26,11 +27,25 @@
 ;;
 ;; Possble `(core-port-lock p)` values for a port `p`:
 ;;  - #f: lock is available, atomic mode not required [fast path]
-;;  - #t: lock is taken, atomic mode not required, no one waiting [fast path]
+;;  - #t: lock is taken, atomic mode not required, uncontended [fast path]
 ;;  - 'atomic: lock is available, but must be take in atomic mode
-;;  - 'to-atomic: lock is taken, atomic mode required in future, no one waiting
-;;  - 'in-atomic: lock is taken, atomic mode was and remains required, no one waiting
-;;  - `lock` record: general case, uses host-supplied synchronization
+;;  - 'to-atomic: lock is taken, atomic mode required in future, uncontended
+;;  - 'in-atomic: lock is taken, atomic mode was and remains required, uncontended
+;;  - `lock` record: general case for contended, uses host-supplied synchronization
+;; A port lock can go from atomic mode to non-atomic mode while being held (as
+;; decided by the thread holding the lock), but it can go from contended to
+;; uncontended without the lock holder's decision, obviously.
+;; When a lock goes from uncontended to contended, it stays contentded.
+;; So, these are the possible transitions:
+;;
+;;   *uncontended, non-atomic*               *uncontended, atomic*
+;;         {#f, #t}             <---->   {'atomic, 'in-atomic, 'to-atomic}
+;;
+;;            |                                  |
+;;            v                                  V
+;;
+;;     (lock #f ....)           <---->       (lock #t ....)
+;;    *contended, non-atomic*              *contended,atomic*
 ;;
 ;; Port locks are unordered. If you need to take multiple of then (as
 ;; `subprocess` does), then set them to atomic mode, and take them only
@@ -83,6 +98,17 @@
     (begin0
       (let () e ...)
       (port-lock-slow p))))
+
+;; Releases the lock at the beginning, but retains it after starting `e ...`
+(define-syntax-rule (also-atomically p-expr e ...)
+  (let ([p p-expr])
+    (port-unlock p) ; can't escalate to atomic with port lock held
+    (start-atomic)
+    (port-lock p) ; implies uninterrupted
+    (begin0
+      (let () e ...)
+      ;; this is really a "demote from atomic to uninterrupted"
+      (end-atomic))))
 
 ;; in uninterrutable mode, might be in atomic mode on exit
 (define (port-lock-slow p)

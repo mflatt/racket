@@ -24,7 +24,9 @@
                  [next #:mutable]   ; queue next
                  [results #:mutable] ; may have (cons <mutex> <condition>) to go with a stop request
                  [state #:mutable]  ; #f (could run), 'running, 'blocked, 'done, 'aborted, 'fsema or box, or future waiting on
-                 [dependents #:mutable]) ; futures that are blocked on this one
+                 [dependents #:mutable] ; futures that are blocked on this one
+                 [suspend-pthread-id #:mutable] ; for delayed logging
+                 [suspend-timestamp #:mutable]) ; got delayed logging
   #:authentic
   #:reflection-name 'future)
 

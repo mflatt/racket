@@ -62,7 +62,7 @@
            (rktio_ltps_handle_set_data rktio h (immobile-cell->address ib))
            s])])]))
 
-;; in atomic mode
+;; in atomic mode, *not* rktio mode
 (define (fd-semaphore-poll-ready?)
   (cond
     [(eq? shared-ltps rktio_NULL) #f]

@@ -20,12 +20,12 @@
   [buffer-mode 'block]
 
   #:public
-  ;; in atomic mode; must override
+  ;; with lock held; must override
   [read-in/inner
    (lambda (dest-bstr start end copy? to-buffer?)
      0)]
 
-  ;; in atomic mode
+  ;; with lock held
   ;; called when no peeked bytes are available;
   ;; return 'not-ready as #f, while #f means implement by peeking,
   ;; and other possibilities are #t or evt 
@@ -33,7 +33,7 @@
    (lambda (work-done!) #f)]
 
   #:static
-  ;; in atomic mode
+  ;; with lock held
   [purge-buffer
    (lambda ()
      (slow-mode!)
@@ -41,12 +41,14 @@
      (set! end-pos 0)
      (set! peeked-eof? #f))]
 
+  ;; with lock held
   [close-peek-buffer
    (lambda ()
      (purge-buffer)
      (set! bstr #"")
      (progress!))]
 
+  ;; with lock held
   [buffer-adjust-pos
    (lambda (i is-converted) ; is-converted reports on CRLF conversions in the buffer
      (define b buffer)
@@ -62,14 +64,14 @@
                                      (- r 1)))))]
        [else r]))]
 
-  ;; in atomic mode
+  ;; with lock held
   [default-buffer-mode
     (case-lambda
       [() buffer-mode]
       [(mode) (set! buffer-mode mode)])]
 
   #:private
-  ;; in atomic mode
+  ;; with lock held
   [pull-some-bytes
    (lambda ([amt (if (eq? 'block buffer-mode) (bytes-length bstr) 1)] [offset 0] [init-pos 0])
      (define get-end (min (+ amt offset) (bytes-length bstr)))
@@ -85,7 +87,7 @@
         (set! end-pos (fx+ offset v))
         v]))]
 
-  ;; in atomic mode
+  ;; with lock held
   [pull-more-bytes
    (lambda (amt)
      (cond
@@ -108,12 +110,12 @@
         (set! pos 0)
         (pull-more-bytes amt)]))]
 
-  ;; in atomic mode
+  ;; with lock held
   [retry-pull?
    (lambda (v)
      (and (integer? v) (not (eqv? v 0))))]
 
-  ;; in atomic mode
+  ;; with lock held
   [fast-mode!
    (lambda (amt) ; amt = not yet added to `offset`
      (define b buffer)
@@ -125,7 +127,7 @@
      (when o
        (set! offset (- (+ o amt) s))))]
 
-  ;; in atomic mode
+  ;; with lock hald
   [slow-mode!
    (lambda ()
      (define b buffer)
@@ -175,7 +177,7 @@
                (progress!))
              v])])))]
 
-  ;; in atomic mode
+  ;; with lock held
   [peek-in
    (lambda (dest-bstr start end skip progress-evt copy?)
      (let try-again ()
@@ -204,7 +206,7 @@
                  (try-again)
                  v)])])))]
 
-  ;; in atomic mode
+  ;; with lock held
   [byte-ready
    (lambda (work-done!)
      (let loop ()
@@ -233,7 +235,7 @@
        (slow-mode!)
        (make-progress-evt)))]
 
-  ;; with lock held
+  ;; with lock held, which will imply atomic mode (due to progress-evt)
   [commit
    (lambda (amt progress-evt ext-evt finish)
      (slow-mode!)
@@ -255,13 +257,13 @@
                (progress!)
                (finish dest-bstr)]))))))]
 
-  ;; in atomic mode
+  ;; with lock held
   [buffer-mode
    (case-lambda
      [() (default-buffer-mode)]
      [(mode) (default-buffer-mode mode)])]
 
-  ;; in atomic mode
+  ;; with lock held
   [close
    (lambda ()
      (close-peek-buffer))])

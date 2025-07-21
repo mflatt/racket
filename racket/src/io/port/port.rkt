@@ -78,7 +78,12 @@
   ;; -*> (void)
   ;; Called with lock held.
   ;; Reqeusts a close, and the port is closed if/when
-  ;; the method returns.
+  ;; the method returns. May exit and reenter lock, if promoting
+  ;; to atomic is necessary, only before doing anything interesting,
+  ;; and that case it must perform it's own "already closed?"
+  ;; check. The `close-port` implementation relies on the lock
+  ;; being held after an internal close operation so that the `closed?`
+  ;; flag can be set on the port.
   [close (lambda () (void))]
 
   ;; #f or (-*> (void))

@@ -380,9 +380,11 @@
            (cond
              [(rktio_copy_file_is_done rktio cp)
               (define r (rktio_copy_file_finish_permissions rktio cp))
-              (end-rktio)
               (when (rktio-error? r)
-                (report-error r))]
+                (end-rktio)
+                (report-error r))
+              (rktio_copy_file_stop rktio cp)
+              (end-rktio)]
              [else
               (define r (rktio_copy_file_step rktio cp))
               (when (rktio-error? r)

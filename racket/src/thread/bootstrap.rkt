@@ -297,7 +297,7 @@
                   'mutex-release (lambda (s) (semaphore-post s))
                   'call-as-asynchronous-callback (lambda (thunk) (thunk))
                   'post-as-asynchronous-callback (lambda (thunk) (thunk))
-                  'continuation-current-primitive (lambda (k) #f)
+                  'continuation-current-primitive (lambda (k excls incls) #f)
                   'prop:unsafe-authentic-override prop:unsafe-authentic-override
                   'get-system-stats (lambda () (values 0))
                   'internal-error error))

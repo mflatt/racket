@@ -74,7 +74,7 @@
            do-make-thread
            root-thread
            thread-running?
-           thread-dead?
+           is-thread-dead?
            thread-dead!
            thread-did-work!
            thread-poll-not-done!
@@ -105,6 +105,7 @@
            do-make-thread
            thread-descheduled?
            thread-suspended?
+           is-thread-dead?
            thread-cells
            thread-interrupt-callback
            set-thread-interrupt-callback!
@@ -114,7 +115,8 @@
            no-results-on-abort-handler))
 
 (module* for-stats #f
-  (provide thread-descheduled?
+  (provide is-thread-dead?
+           thread-descheduled?
            thread-sched-info))
 
 ;; ----------------------------------------
@@ -320,12 +322,16 @@
 
 (define/who (thread-running? t)
   (check who thread? t)
-  (and (not (eq? 'done (thread-engine t)))
-       (not (thread-suspended? t))))
+  (atomically
+   (and (not (eq? 'done (thread-engine t)))
+        (not (thread-suspended? t)))))
+
+(define/who (is-thread-dead? t)
+  (eq? 'done (thread-engine t)))
 
 (define/who (thread-dead? t)
   (check who thread? t)
-  (eq? 'done (thread-engine t)))
+  (atomically (is-thread-dead? t)))
 
 ;; In atomic mode
 ;; Terminating the current thread does not suspend or exit
@@ -394,7 +400,7 @@
 ;; Called in atomic mode:
 (define (do-kill-thread t)
   (assert-atomic-mode)
-  (unless (thread-dead? t)
+  (unless (is-thread-dead? t)
     (thread-dead! t)))
 
 ;; Called in atomic mode:
@@ -467,7 +473,7 @@
          ;; Check whether the current thread was terminated
          (let ([t (current-thread)])
            (when t ; in case custodians used (for testing) without threads
-             (when (or (thread-dead? t)
+             (when (or (is-thread-dead? t)
                        (null? (thread-custodian-references t)))
                (thread-engine-block))
              (check-for-break-after-kill))))))
@@ -614,7 +620,7 @@
 ;; Add a thread back to its thread group
 (define (thread-reschedule! t)
   (assert-atomic-mode)
-  (when (thread-dead? t)
+  (when (is-thread-dead? t)
     (internal-error "tried to reschedule a dead thread"))
   (unless (thread-descheduled? t)
     (internal-error "tried to reschedule a scheduled thread"))
@@ -639,7 +645,7 @@
 (define (do-thread-suspend t)
   (assert-atomic-mode)
   (cond
-    [(thread-dead? t) void]
+    [(is-thread-dead? t) void]
     [else
      (unless (thread-suspended? t)
        (set-thread-suspended?! t #t)
@@ -674,7 +680,7 @@
 (define (do-thread-resume t benefactor)
   (assert-atomic-mode)
   (cond
-    [(thread-dead? t)
+    [(is-thread-dead? t)
      ;; not resuming thread, but still potentially report whether the
      ;; given custodian is shutdown
      (not (and (custodian? benefactor)
@@ -767,7 +773,7 @@
          (let ([o-t (weak-box-value (transitive-resume-weak-box (car l)))])
            (cond
              [(not o-t) (loop (cdr l))]
-             [(thread-dead? o-t) (loop (cdr l))]
+             [(is-thread-dead? o-t) (loop (cdr l))]
              [(eq? b-t o-t) l]
              [else (cons (car l) (loop (cdr l)))]))])))
   (set-thread-transitive-resumes! t new-l))
@@ -832,7 +838,7 @@
   (check who thread? t)
   (atomically
    (cond
-     [(thread-dead? t)
+     [(is-thread-dead? t)
       (resume-evt never-evt #f)]
      [(thread-suspended? t)
       (or (thread-resumed-evt t)
@@ -846,7 +852,7 @@
   (check who thread? t)
   (atomically
    (cond
-     [(thread-dead? t)
+     [(is-thread-dead? t)
       (suspend-evt never-evt #f)]
      [(thread-suspended? t)
       (suspend-evt always-evt t)]
@@ -1029,7 +1035,7 @@
 (define (do-break-thread t kind check-t)
   ((atomically/no-barrier-exit
     (cond
-      [(thread-dead? t) void]
+      [(is-thread-dead? t) void]
       [(thread-forward-break-to t)
        => (lambda (other-t)
             (lambda () (do-break-thread other-t kind check-t)))]
@@ -1147,7 +1153,7 @@
   (check who (procedure-arity-includes/c 0) #:or-false fail-thunk)
   ((atomically
     (cond
-      [(not (thread-dead? thd))
+      [(not (is-thread-dead? thd))
        (enqueue-mail! thd v)
        (define wakeup (thread-mailbox-wakeup thd))
        (set-thread-mailbox-wakeup! thd void)

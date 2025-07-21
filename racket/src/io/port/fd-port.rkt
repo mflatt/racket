@@ -32,17 +32,16 @@
          fd-port-fd
          prop:fd-place-message-opener)
 
-;; lock on `p` held and in atomic mode
+;; lock on `p` held, in atomic mode, in rktio mode
 (define (fd-close fd fd-refcount p
                   #:discard-errors? [discard-errors? #f])
   (set-box! fd-refcount (sub1 (unbox fd-refcount)))
   (when (zero? (unbox fd-refcount))
-    (start-rktio)
     (fd-semaphore-update! fd 'remove)
     (define v (rktio_close rktio fd))
-    (end-rktio)
     (when (and (rktio-error? v)
                (not discard-errors?))
+      (end-rktio)
       (port-unlock p)
       (raise-rktio-error #f v "error closing stream port"))))
 
@@ -51,12 +50,12 @@
 (class fd-input-port #:extends peek-via-read-input-port
   #:field
   [fd #f]
-  [fd-refcount (box 1)]
+  [fd-refcount (box 1)] ; atomic mode serves as a lock for a refcount
   [custodian-reference #f]
   [is-converted #f]
   
   #:public
-  [on-close (lambda () (void))] ; lock held and in atomic mode
+  [on-close (lambda () (void))] ; lock held and in rktio mode
   [raise-read-error (lambda (n)
                       (raise-filesystem-error #f n "error reading from stream port"))]
 
@@ -85,7 +84,7 @@
          (send fd-input-port this raise-read-error n)]
         [(eqv? n RKTIO_READ_EOF) eof]
         [(eqv? n 0) (or (fd-semaphore-update! fd 'read)
-                        (fd-evt fd RKTIO_POLL_READ this))]
+                        (fd-evt fd RKTIO_POLL_READ fd-refcount))]
         [else n])))]
 
   [byte-ready/inner
@@ -95,14 +94,19 @@
         [(eqv? (rktio_poll_read_ready rktio fd) RKTIO_POLL_READY)
          #t]
         [else (or (fd-semaphore-update! fd 'read)
-                  (fd-evt fd RKTIO_POLL_READ this))])))]
+                  (fd-evt fd RKTIO_POLL_READ fd-refcount))])))]
 
   [close
    (lambda ()
-     (send fd-input-port this on-close)
-     (fd-close fd fd-refcount this)
-     (unsafe-custodian-unregister this custodian-reference)
-     (close-peek-buffer))]
+     (also-atomically ; for custodian
+      this
+      (start-rktio)
+      (unless (zero? (unbox fd-refcount)) ; double-check, since we left locked mode
+        (send fd-input-port this on-close)
+        (fd-close fd fd-refcount this)
+        (unsafe-custodian-unregister this custodian-reference)
+        (close-peek-buffer))
+      (end-rktio)))]
 
   [file-position
    (case-lambda
@@ -112,11 +116,6 @@
      [(pos)
       (purge-buffer)
       (set-file-position fd pos this)])]
-
-  [no-more-atomic-for-progress
-   (lambda ()
-     ;; stay in atomic mode
-     (void))]
 
   #:property
   [prop:file-stream (lambda (p) (fd-input-port-fd p))]
@@ -132,14 +131,14 @@
                        #:fd-refcount [fd-refcount (box 1)]
                        #:custodian [cust (current-custodian)])
   (finish-fd-input-port
-   (port-lock-init-atomic-mode
-    (new fd-input-port
-         #:field
-         [name name]
-         [fd fd]
-         [fd-refcount fd-refcount]))
+   (new fd-input-port
+        #:field
+        [name name]
+        [fd fd]
+        [fd-refcount fd-refcount])
    #:custodian cust))
 
+;; in atomic mode
 (define (finish-fd-input-port p
                               #:custodian [cust (current-custodian)])
   (define fd (fd-input-port-fd p))
@@ -152,7 +151,7 @@
 (class fd-output-port #:extends core-output-port
   #:field
   [fd fd]
-  [fd-refcount (box 1)]
+  [fd-refcount (box 1)] ; atomic mode serves as a lock for a refcount
   [bstr (make-bytes 4096)]
   [start-pos 0]
   [end-pos 0]
@@ -192,7 +191,7 @@
      (raise-filesystem-error #f n "error writing to stream port"))]
 
   #:private
-  ;; lock held and in atomic mode
+  ;; lock held
   ;; Returns `#t` if the buffer is already or successfully flushed
   [flush-buffer
    (lambda (no-escape?)
@@ -230,7 +229,7 @@
               #f])])]
        [else #t]))]
 
-  ;; lock held and in atomic mode, but may leave it temporarily
+  ;; lock held, but may leave it temporarily
   [flush-buffer-fully
    (lambda (enable-break?)
      (let loop ()
@@ -243,7 +242,7 @@
          (when bstr ; in case it was closed
            (loop)))))]
 
-  ;; lock held and in atomic mode, but may leave it temporarily
+  ;; lock held, but may leave it temporarily
   [flush-buffer-fully-if-newline
    (lambda (src-bstr src-start src-end enable-break?)
      (for ([b (in-bytes src-bstr src-start src-end)])
@@ -253,10 +252,10 @@
        #:break newline?
        (void)))]
 
-  ;; lock held and in atomic mode, but may leave it temporarily
+  ;; lock held, but may leave it temporarily
   [flush-rktio-buffer-fully
    (lambda ()
-     (unless (rktio-flushed?)
+     (unless (rktioly (rktio-flushed?))
        (port-unlock this)
        (sync (rktio-fd-flushed-evt this))
        (port-lock this)
@@ -267,14 +266,14 @@
    (lambda ()
      (flush-buffer-fully #f))]
 
+  ;; in rktio mode
   [rktio-flushed?
    (lambda ()
      (or (not bstr)
-         (rktioly
-          (rktio_poll_write_flushed rktio fd))))]
+         (rktio_poll_write_flushed rktio fd)))]
 
   #:override
-  ;; lock held and in atomic mode
+  ;; lock held
   [write-out
    (lambda (src-bstr src-start src-end nonbuffer/nonblock? enable-break? copy? no-escape?)
      (slow-mode!)
@@ -294,7 +293,7 @@
         (bytes-copy! bstr end-pos src-bstr src-start (fx+ src-start amt))
         (set! end-pos (fx+ end-pos amt))
         (when (eq? buffer-mode 'line)
-          ;; can temporarily leave atomic mode:
+          ;; can temporarily leave port lock:
           (flush-buffer-fully-if-newline src-bstr src-start src-end enable-break?))
         (fast-mode! amt)
         amt]
@@ -317,20 +316,25 @@
    (get-write-evt-via-write-out (lambda (out v bstr start)
                                   (port-count! out v bstr start)))]
 
-  ;; lock held and in atomic mode
+  ;; lock held
   [close
    (lambda ()
-     (flush-buffer-fully #f) ; can temporarily leave atomic mode
-     (flush-rktio-buffer-fully) ; can temporarily leave atomic mode
+     (flush-buffer-fully #f) ; can temporarily leave lock
+     (flush-rktio-buffer-fully) ; can temporarily leave lock
      (when bstr ; <- in case a concurrent close succeeded
-       (send fd-output-port this on-close)
-       (when flush-handle
-         (plumber-flush-handle-remove! flush-handle))
-       (set! bstr #f)
-       (fd-close fd fd-refcount this)
-       (unsafe-custodian-unregister this custodian-reference)))]
+       (also-atomically ; for custodian and plumber
+        this
+        (start-rktio)
+        (when bstr ; check again, since we left locked mode again
+          (send fd-output-port this on-close)
+          (when flush-handle
+            (plumber-flush-handle-remove! flush-handle))
+          (set! bstr #f)
+          (fd-close fd fd-refcount this)
+          (unsafe-custodian-unregister this custodian-reference))
+        (end-rktio))))]
 
-  ;; lock held and in atomic mode
+  ;; lock held
   [file-position
    (case-lambda
      [()
@@ -339,13 +343,13 @@
       (and pos (+ pos (fx- (if (direct-bstr b) (direct-pos b) end-pos) start-pos)))]
      [(pos)
       (flush-buffer-fully #f)
-      ;; flushing can leave atomic mode, so make sure the
+      ;; flushing can leave port lock, so make sure the
       ;; port is still open before continuing
       (unless bstr
         (check-not-closed 'file-position this))
       (set-file-position fd pos this)])]
 
-  ;; lock held and in atomic mode
+  ;; lock held
   [buffer-mode
    (case-lambda
      [() buffer-mode]
@@ -354,7 +358,7 @@
   #:property
   [prop:file-stream (lambda (p) (fd-output-port-fd p))]
   [prop:file-truncate (lambda (p pos)
-                        ;; lock held and in atomic mode
+                        ;; lock held and *not* in rktio mode
                         (send fd-output-port p flush-buffer/external)
                         (define result
                           (rktioly
@@ -378,18 +382,17 @@
                         #:plumber [plumber (current-plumber)]
                         #:custodian [cust (current-custodian)])
   (finish-fd-output-port
-   (port-lock-init-atomic-mode
-    (new fd-output-port
-         #:field
-         [name name]
-         [fd fd]
-         [fd-refcount fd-refcount]
-         [buffer-mode
-          (if (eq? buffer-mode 'infer)
-              (if (rktioly (rktio_fd_is_terminal rktio fd))
-                  'line
-                  'block)
-              buffer-mode)]))
+   (new fd-output-port
+        #:field
+        [name name]
+        [fd fd]
+        [fd-refcount fd-refcount]
+        [buffer-mode
+         (if (eq? buffer-mode 'infer)
+             (if (rktioly (rktio_fd_is_terminal rktio fd))
+                 'line
+                 'block)
+             buffer-mode)])
    #:plumber plumber
    #:custodian cust))
 
@@ -398,7 +401,7 @@
                                #:custodian [cust (current-custodian)])
   (define fd (fd-output-port-fd p))
   (define fd-refcount (fd-output-port-fd-refcount p))
-  (define evt (fd-evt fd RKTIO_POLL_WRITE p))
+  (define evt (fd-evt fd RKTIO_POLL_WRITE fd-refcount))
   (define flush-handle (and plumber
                             (plumber-add-flush! plumber
                                                 (lambda (h)
@@ -444,10 +447,10 @@
 
 ;; ----------------------------------------
 
-;; lock held and in atomic mode
+;; lock held and *not* in rktio mode
 (define (get-file-position fd)
   (rktioly
-   (define ppos (rktio_get_file_position rktio fd))
+   (define ppos (rktioly (rktio_get_file_position rktio fd)))
    (cond
      [(rktio-error? ppos)
       ;; #f => not supported, so use port's own counter, instead
@@ -478,7 +481,7 @@
 ;; The ready value for an `fd-evt` is 0, so it can be used directly
 ;; for an input port
 
-(struct fd-evt (fd mode [closed #:mutable])
+(struct fd-evt (fd mode fd-refcount)
   #:property
   prop:evt
   (poller
@@ -486,7 +489,7 @@
    ;; whether the file descriptor has data available:
    (lambda (fde ctx)
      (cond
-       [(core-port-closed? (fd-evt-closed fde))
+       [(zero? (unbox (fd-evt-fd-refcount fde)))
         (values '(0) #f)]
        [else
         (define mode (fd-evt-mode fde))
@@ -526,7 +529,9 @@
             ;; adds to it:
             ;; in atomic and in rktio, must not start nested rktio
             (lambda (ps)
-              (rktio_poll_add rktio (fd-evt-fd fde) ps mode)))
+              (if (zero? (unbox (fd-evt-fd-refcount fde)))
+                  (rktio_poll_set_add_nosleep rktio ps)
+                  (rktio_poll_add rktio (fd-evt-fd fde) ps mode))))
            (values #f fde)])]))))
 
 ;; ----------------------------------------
@@ -541,7 +546,7 @@
    (lambda (ffe ctx)
      (define p  (rktio-fd-flushed-evt-p ffe))
      (cond
-       [(send fd-output-port p rktio-flushed?)
+       [(rktioly (send fd-output-port p rktio-flushed?))
         (values '(#t) #f)]
        [else
         (sandman-poll-ctx-add-poll-set-adder!
@@ -563,11 +568,12 @@
                                (when flush-handle
                                  (plumber-flush-handle-remove! flush-handle))
                                (with-lock port
-                                 (if (input-port? port)
-                                     (send fd-input-port port on-close)
-                                     (send fd-output-port port on-close))
-                                 (fd-close fd fd-refcount port #:discard-errors? #t)
-                                 (set-closed-state! port)))
+                                 (rktioly
+                                  (if (input-port? port)
+                                      (send fd-input-port port on-close)
+                                      (send fd-output-port port on-close))
+                                  (fd-close fd fd-refcount port #:discard-errors? #t)
+                                  (set-closed-state! port))))
                              #f
                              #f))
 
