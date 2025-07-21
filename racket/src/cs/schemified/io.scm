@@ -3334,9 +3334,21 @@
     (if (unsafe-box*-cas! (m+s-sleep mutex+sleep_0) #f 'sleep)
       (begin
         (mutex-acquire (m+s-mutex mutex+sleep_0))
-        (if (unsafe-box*-cas! (m+s-sleep mutex+sleep_0) 'sleep 'sleep)
-          #t
-          (begin (mutex-release (m+s-mutex mutex+sleep_0)) #f)))
+        (letrec*
+         ((loop_0
+           (|#%name|
+            loop
+            (lambda ()
+              (if (unsafe-box*-cas! (m+s-sleep mutex+sleep_0) 'sleep 'sleep)
+                #t
+                (if (let ((or-part_0
+                           (unsafe-box*-cas! (m+s-sleep mutex+sleep_0) #f #f)))
+                      (if or-part_0
+                        or-part_0
+                        (ping-sleep-wakeup (m+s-sleep mutex+sleep_0))))
+                  (begin (mutex-release (m+s-mutex mutex+sleep_0)) #f)
+                  (loop_0)))))))
+         (loop_0)))
       (if (ping-sleep-wakeup (m+s-sleep mutex+sleep_0))
         #f
         (maybe-mutex-acquire/start-sleep mutex+sleep_0)))))

@@ -185,14 +185,19 @@
      ;; thread managed to switch to 1 and then got the mutex
      ;; and then switched to #f; it would be bad to sleep
      ;; in that case, so make sure we're still supposed to sleep
-     (cond
-       [(box-cas! (m+s-sleep mutex+sleep) 'sleep 'sleep)
-        ;; acquired and ok
-        #t]
-       [else
-        ;; release mutex, and assume others are waiting
-        (mutex-release (m+s-mutex mutex+sleep))
-        #f])]
+     (let loop ()
+       (cond
+         [(box-cas! (m+s-sleep mutex+sleep) 'sleep 'sleep)
+          ;; acquired and ok
+          #t]
+         [(or (box-cas! (m+s-sleep mutex+sleep) #f #f)
+              (ping-sleep-wakeup (m+s-sleep mutex+sleep)))
+          ;; release mutex, and assume others are waiting
+          (mutex-release (m+s-mutex mutex+sleep))
+          #f]
+         [else
+          ;; must be a spurious CAS failure, so try checking again
+          (loop)]))]
     [(ping-sleep-wakeup (m+s-sleep mutex+sleep))
      ;; others are waiting, and we should not sleep
      #f]
