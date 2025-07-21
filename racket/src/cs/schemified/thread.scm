@@ -4136,10 +4136,12 @@
                     (if or-part_0
                       or-part_0
                       (|#%app| future-can-take-lock? f_0))))
-              (unsafe-struct*-cas! s_0 2 c_0 (add1 c_0))
+              (begin
+                (memory-order-release)
+                (unsafe-struct*-cas! s_0 2 c_0 (add1 c_0)))
               #f)
             #f)
-        (memory-order-release)
+        (void)
         (begin (start-atomic) (semaphore-post/atomic s_0) (end-atomic))))))
 (define semaphore-post/atomic
   (lambda (s_0)

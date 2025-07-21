@@ -108,8 +108,10 @@
           (let ([f (current-future)])
             (or (not f)
                 (future-can-take-lock? f)))
-          (unsafe-struct*-cas! s count-field-pos c (add1 c)))
-     (memory-order-release)]
+          (begin
+            (memory-order-release)
+            (unsafe-struct*-cas! s count-field-pos c (add1 c))))
+     (void)]
     [else
      (atomically
       (semaphore-post/atomic s)
