@@ -135,27 +135,34 @@
                                           "  path: ~a")
                                          (host-> host-path)))]
         [else
-         (end-atomic)
-         (let loop ([accum null])
-           (start-atomic)
-           (start-rktio)
+         (start-rktio)
+         (let loop ([accum null] [len 0])
            (define fnp (rktio_directory_list_step rktio dl))
            (define fn (if (rktio-error? fnp)
                           fnp
                           (rktio_to_bytes fnp)))
-           (end-rktio)
            (cond
              [(rktio-error? fn)
+              (end-rktio)
               (end-atomic)
               (check-rktio-error fn "error reading directory")]
              [(equal? fn #"")
               ;; `dl` is no longer valid; need to return still in
               ;; atomic mode, so that `dl` is not destroyed again
+              (end-rktio)
               accum]
              [else
+              (define new-accum (cons (host-element-> fn) accum))
               (rktio_free fnp)
-              (end-atomic)
-              (loop (cons (host-element-> fn) accum))]))])))))
+              (cond
+                [(= len 128)
+                 (end-rktio)
+                 (end-atomic)
+                 (start-atomic)
+                 (start-rktio)
+                 (loop new-accum 0)]
+                [else
+                 (loop new-accum (add1 len))])]))])))))
 
 (define/who (delete-file p)
   (check who path-string? p)
@@ -345,6 +352,7 @@
   (define src-host (->host src who '(read)))
   (define dest-host (->host dest who '(write delete)))
   (define (report-error r)
+    (end-atomic)
     (raise-filesystem-error who
                             r
                             (format (string-append
@@ -354,35 +362,40 @@
                                     (copy-file-step-string r)
                                     (host-> src-host)
                                     (host-> dest-host))))
-  (start-rktio)
-  (let ([cp (rktio_copy_file_start_permissions rktio dest-host src-host exists-ok?
-                                               permissions (or permissions 0)
-                                               override-create-permissions?)])
-    (cond
-      [(rktio-error? cp)
-       (end-rktio)
-       (report-error cp)]
-      [else
-       (thread-push-kill-callback!
-        (lambda () (rktio_copy_file_stop rktio cp)))
-       (dynamic-wind
-        void
-        (lambda ()
-          (end-rktio)
-          (let loop ()
-            (cond
-              [(rktio_copy_file_is_done rktio cp)
-               (define r (rktioly (rktio_copy_file_finish_permissions rktio cp)))
-               (when (rktio-error? r) (report-error r))]
-              [else
-               (define r (rktioly (rktio_copy_file_step rktio cp)))
-               (when (rktio-error? r) (report-error r))
-               (loop)])))
-        (lambda ()
-          (start-rktio)
-          (rktio_copy_file_stop rktio cp)
-          (thread-pop-kill-callback!)
-          (end-rktio)))])))
+  (atomically ; because `call-with-resource`
+   (call-with-resource
+    (rktioly (rktio_copy_file_start_permissions rktio dest-host src-host exists-ok?
+                                                permissions (or permissions 0)
+                                                override-create-permissions?))
+    ;; in atomic mode, *not* in rktio mode
+    (lambda (cp) (rktioly (rktio_copy_file_stop rktio cp)))
+    ;; in atomic mode, *not* in rktio mode
+    (lambda (cp)
+      (cond
+        [(rktio-error? cp)
+         (report-error cp)]
+        [else
+         (start-rktio)
+         (let loop ([steps 0])
+           (cond
+             [(rktio_copy_file_is_done rktio cp)
+              (define r (rktio_copy_file_finish_permissions rktio cp))
+              (end-rktio)
+              (when (rktio-error? r)
+                (report-error r))]
+             [else
+              (define r (rktio_copy_file_step rktio cp))
+              (when (rktio-error? r)
+                (end-rktio)
+                (report-error r))
+              (cond
+                [(= steps 10)
+                 (end-rktio)
+                 (end-atomic)
+                 (start-atomic)
+                 (start-rktio)
+                 (loop 0)]
+                [else (loop (add1 steps))])]))])))))
 
 (define/who (make-file-or-directory-link to path)
   (check who path-string? to)
