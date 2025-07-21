@@ -78,7 +78,7 @@
   ;; -*> (void)
   ;; Called with lock held.
   ;; Reqeusts a close, and the port is closed if/when
-  ;; the method returns.
+  ;; the method returns. May exit and reenter lock.
   [close (lambda () (void))]
 
   ;; #f or (-*> (void))

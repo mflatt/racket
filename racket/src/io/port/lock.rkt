@@ -11,6 +11,7 @@
          with-lock
          with-no-lock
          merely-atomically
+         also-atomically
          port-lock-require-atomic!
          port-lock-init-atomic-mode)
 
@@ -83,6 +84,17 @@
     (begin0
       (let () e ...)
       (port-lock-slow p))))
+
+(define-syntax-rule (also-atomically p-expr e ...)
+  (let ([p p-expr])
+    (port-unlock p) ; can't escalate to atomic with port lock held
+    (start-atomic)
+    (port-lock p)
+    (begin0
+      (let () e ...)
+      (port-unlock p)
+      (end-atomic)
+      (port-lock p))))
 
 ;; in uninterrutable mode, might be in atomic mode on exit
 (define (port-lock-slow p)

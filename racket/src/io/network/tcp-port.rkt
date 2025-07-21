@@ -20,11 +20,10 @@
   [abandon? #f]
   #:override
   [on-close
-   ;; with lock held and in atomic mode
+   ;; with lock held and in rktio mode
    (lambda ()
      (unless abandon?
-       (rktioly
-        (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_READ))))]
+       (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_READ)))]
   [raise-read-error
    (lambda (n)
      (raise-network-error #f n "error reading from stream port"))]
@@ -33,26 +32,25 @@
   [prop:fd-place-message-opener (lambda (fd name)
                                   (make-tcp-input-port fd name))])
 
+;; in atomic mode
 (define (make-tcp-input-port fd name
                              #:fd-refcount [fd-refcount (box 1)])
   (finish-fd-input-port
-   (port-lock-init-atomic-mode
-    (new tcp-input-port
-         #:field
-         [name name]
-         [fd fd]
-         [fd-refcount fd-refcount]))))
+   (new tcp-input-port
+        #:field
+        [name name]
+        [fd fd]
+        [fd-refcount fd-refcount])))
 
 (class tcp-output-port #:extends fd-output-port
   #:field
   [abandon? #f]
   #:override
   [on-close
-   ;; with lock held and in atomic mode
+   ;; with lock held and in rktio mode
    (lambda ()
      (unless abandon?
-       (rktioly
-        (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_WRITE))))]
+       (rktio_socket_shutdown rktio fd RKTIO_SHUTDOWN_WRITE)))]
   [raise-write-error
    (lambda (n)
      (raise-network-error #f n "error writing to stream port"))]
@@ -69,20 +67,21 @@
   [prop:fd-place-message-opener (lambda (fd name)
                                   (make-tcp-output-port fd name))])
 
+;; in atomic mode
 (define (make-tcp-output-port fd name
                               #:fd-refcount [fd-refcount (box 1)])
   (finish-fd-output-port
-   (port-lock-init-atomic-mode
-    (new tcp-output-port
-         #:field
-         [name name]
-         [fd fd]
-         [fd-refcount fd-refcount]
-         [buffer-mode 'block]))
+   (new tcp-output-port
+        #:field
+        [name name]
+        [fd fd]
+        [fd-refcount fd-refcount]
+        [buffer-mode 'block])
    #:plumber #f))
 
 ;; ----------------------------------------
 
+;; in atomic mode
 (define (open-input-output-tcp fd name #:close? [close? #t])
   (define refcount (box (if close? 2 3)))
   (values
