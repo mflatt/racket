@@ -596,18 +596,22 @@
        (define p (future*-parallel me-f))
        (when p         
          (set-scheduler-round-robin! (parallel-thread-pool-scheduler (parallel*-pool p)) 'pause)))         
+     (define timestamp (and (not (future*-kind me-f))
+                            (current-inexact-milliseconds)))
+     (when timestamp
+       ;; delay 'block/'sync to make sure it's worth computing `(continuation-current-primitive* k)`
+       (set-future*-suspend-pthread-id! me-f (get-pthread-id))
+       (set-future*-suspend-timestamp! me-f timestamp))
      (when reschedule?
        (schedule-future! me-f))
      ;; Release lock and go out of atomic mode:
      (lock-release (future*-lock me-f))
      (when touching-f
-       (log-future 'touch (future*-id me-f) #:data (future*-id touching-f)))
-     (unless (future*-kind me-f)
-       (define timestamp (current-inexact-milliseconds))
-       (log-future 'suspend (future*-id me-f) #:timestamp timestamp)
-       ;; delay 'block/'sync to make sure it's worth computing `(continuation-current-primitive* k)`
-       (set-future*-suspend-pthread-id! me-f (get-pthread-id))
-       (set-future*-suspend-timestamp! me-f timestamp))
+       (log-future 'touch (future*-id me-f) #:data (future*-id touching-f)
+                   #:timestamp (or timestamp
+                                   (current-inexact-milliseconds))))
+     (when timestamp
+       (log-future 'suspend (future*-id me-f) #:timestamp timestamp))
      (cond
        [reschedule
         (reschedule)]

@@ -105,7 +105,7 @@
 (define (continuation-current-primitive* thunk)
   (continuation-current-primitive
    thunk
-   '(unsafe-start-atomic)
+   '(unsafe-start-atomic dynamic-wind)
    '(thread-yield)))
 
 ;; ----------------------------------------

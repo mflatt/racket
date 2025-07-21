@@ -886,11 +886,12 @@
                                     v)
                                (loop (fx- len 1))))]))
                k)])
-    (let loop ([k (if (full-continuation? k) (full-continuation-k k) k)])
+    (let loop ([k (if (full-continuation? k) (full-continuation-k k) k)]
+               [fallback #f])
       (cond
         [(or (not (#%$continuation? k))
              (eq? k #%$null-continuation))
-         #f]
+         fallback]
         [else
          (let* ([name (or (let ([n #f])
                             (and n
@@ -906,7 +907,8 @@
               name]
              [else
               (#%$split-continuation k 0)
-              (loop (#%$continuation-link k))]))]))))
+              (loop (#%$continuation-link k)
+                    (or fallback name))]))]))))
 
 (define (traces->context ls realms?)
   (let loop ([l '()] [ls ls])

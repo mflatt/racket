@@ -11458,7 +11458,7 @@
     (|#%app|
      continuation-current-primitive
      thunk_0
-     '(unsafe-start-atomic)
+     '(unsafe-start-atomic dynamic-wind)
      '(thread-yield))))
 (define logging-future-events? (lambda () #f))
 (define log-future-event (lambda (msg_0 e_0) (void)))
@@ -12244,51 +12244,63 @@
               (|#%app|
                host:internal-error
                "attempting to suspend a future in uninterruptible mode"))
-            (if (in-racket-thread?)
-              (void)
-              (let ((p_0 (future*-parallel me-f_0)))
-                (if p_0
-                  (set-scheduler-round-robin!
-                   (parallel-thread-pool-scheduler (parallel*-pool p_0))
-                   'pause)
-                  (void))))
-            (if reschedule?12_0 (schedule-future!.1 #f #f me-f_0) (void))
-            (lock-release (future*-lock me-f_0))
-            (if touching-f16_0
-              (let ((temp91_0 (future*-id me-f_0)))
-                (let ((temp92_0 (future*-id touching-f16_0)))
-                  (log-future.1
-                   temp92_0
-                   #f
-                   #f
-                   unsafe-undefined
-                   'touch
-                   temp91_0)))
-              (void))
-            (if (future*-kind me-f_0)
-              (void)
-              (let ((timestamp_0 (current-inexact-milliseconds)))
+            (begin
+              (if (in-racket-thread?)
+                (void)
+                (let ((p_0 (future*-parallel me-f_0)))
+                  (if p_0
+                    (set-scheduler-round-robin!
+                     (parallel-thread-pool-scheduler (parallel*-pool p_0))
+                     'pause)
+                    (void))))
+              (let ((timestamp_0
+                     (if (not (future*-kind me-f_0))
+                       (current-inexact-milliseconds)
+                       #f)))
                 (begin
-                  (let ((temp94_0 (future*-id me-f_0)))
-                    (log-future.1 #f #f #f timestamp_0 'suspend temp94_0))
-                  (set-future*-suspend-pthread-id!
-                   me-f_0
-                   (|#%app| get-pthread-id))
-                  (set-future*-suspend-timestamp! me-f_0 timestamp_0))))
-            (if reschedule13_0
-              (|#%app| reschedule13_0)
-              (if (future*-kind me-f_0)
-                (begin
-                  (1/current-future #f)
-                  (set-future*-kind! me-f_0 'was)
-                  (unsafe-abort-current-continuation/no-wind
-                   future-start-prompt-tag
-                   (void)))
-                (begin
-                  (wakeup-racket-thread me-f_0)
-                  (unsafe-abort-current-continuation/no-wind
-                   future-scheduler-prompt-tag
-                   (void)))))))
+                  (if timestamp_0
+                    (begin
+                      (set-future*-suspend-pthread-id!
+                       me-f_0
+                       (|#%app| get-pthread-id))
+                      (set-future*-suspend-timestamp! me-f_0 timestamp_0))
+                    (void))
+                  (if reschedule?12_0 (schedule-future!.1 #f #f me-f_0) (void))
+                  (lock-release (future*-lock me-f_0))
+                  (if touching-f16_0
+                    (let ((temp91_0 (future*-id me-f_0)))
+                      (let ((temp92_0 (future*-id touching-f16_0)))
+                        (let ((temp93_0
+                               (if timestamp_0
+                                 timestamp_0
+                                 (current-inexact-milliseconds))))
+                          (let ((temp92_1 temp92_0) (temp91_1 temp91_0))
+                            (log-future.1
+                             temp92_1
+                             #f
+                             #f
+                             temp93_0
+                             'touch
+                             temp91_1)))))
+                    (void))
+                  (if timestamp_0
+                    (let ((temp95_0 (future*-id me-f_0)))
+                      (log-future.1 #f #f #f timestamp_0 'suspend temp95_0))
+                    (void))
+                  (if reschedule13_0
+                    (|#%app| reschedule13_0)
+                    (if (future*-kind me-f_0)
+                      (begin
+                        (1/current-future #f)
+                        (set-future*-kind! me-f_0 'was)
+                        (unsafe-abort-current-continuation/no-wind
+                         future-start-prompt-tag
+                         (void)))
+                      (begin
+                        (wakeup-racket-thread me-f_0)
+                        (unsafe-abort-current-continuation/no-wind
+                         future-scheduler-prompt-tag
+                         (void))))))))))
         future-start-prompt-tag)))))
 (define future-swapping-out?
   (lambda (f_0)
@@ -12382,12 +12394,12 @@
             (begin
               (1/current-future #f)
               (end-atomic/no-barrier-exit)
-              (let ((temp99_0 (future*-id me-f_0)))
-                (log-future.1 #f who_0 #f unsafe-undefined 'sync temp99_0))
+              (let ((temp100_0 (future*-id me-f_0)))
+                (log-future.1 #f who_0 #f unsafe-undefined 'sync temp100_0))
               (let ((v_0 (|#%app| thunk_0)))
                 (begin
-                  (let ((temp102_0 (future*-id me-f_0)))
-                    (log-future.1 #f #f #f unsafe-undefined 'result temp102_0))
+                  (let ((temp103_0 (future*-id me-f_0)))
+                    (log-future.1 #f #f #f unsafe-undefined 'result temp103_0))
                   (1/current-future me-f_0)
                   v_0)))
             (if (future*-parallel me-f_0)
@@ -12401,24 +12413,24 @@
                    host:call-as-asynchronous-callback
                    (lambda ()
                      (begin
-                       (let ((temp104_0 (future*-id me-f_0)))
+                       (let ((temp105_0 (future*-id me-f_0)))
                          (log-future.1
                           #f
                           who_0
                           #f
                           unsafe-undefined
                           'sync
-                          temp104_0))
+                          temp105_0))
                        (let ((v_0 (|#%app| thunk_0)))
                          (begin
-                           (let ((temp107_0 (future*-id me-f_0)))
+                           (let ((temp108_0 (future*-id me-f_0)))
                              (log-future.1
                               #f
                               #f
                               #f
                               unsafe-undefined
                               'result
-                              temp107_0))
+                              temp108_0))
                            v_0))))))))))))))
 (define pthread-count 1)
 (define set-processor-count! (lambda (n_0) (set! pthread-count n_0)))
@@ -12901,9 +12913,9 @@
                                                       (future-stop? f_0)))
                                                  (begin
                                                    (set-future*-state! f_0 #f)
-                                                   (let ((temp121_0
+                                                   (let ((temp122_0
                                                           (not stop?_0)))
-                                                     (let ((temp122_0
+                                                     (let ((temp123_0
                                                             (lambda ()
                                                               (begin
                                                                 (|#%app|
@@ -12913,8 +12925,8 @@
                                                                  future-scheduler-prompt-tag
                                                                  (void))))))
                                                        (future-suspend.1
+                                                        temp123_0
                                                         temp122_0
-                                                        temp121_0
                                                         #f)))
                                                    (void)))))
                                            (void))))))
@@ -12931,8 +12943,8 @@
                               (void))
                             (|#%app| done_0 (void))))))))))
                 (loop_0 e_0))))
-            (let ((temp119_0 (future*-id f_0)))
-              (log-future.1 #f #f #f unsafe-undefined 'end-work temp119_0))
+            (let ((temp120_0 (future*-id f_0)))
+              (log-future.1 #f #f #f unsafe-undefined 'end-work temp120_0))
             (1/current-future 'worker)
             (set-box! (worker-current-future-box w_0) #f)
             (if (scheduler-round-robin s_0)
