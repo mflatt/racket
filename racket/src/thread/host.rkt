@@ -55,6 +55,9 @@
         [will-register host:will-register]
         [will-try-execute host:will-try-execute]
 
+        [unsafe-make-hasheq host:unsafe-make-hasheq]
+        [unsafe-make-weak-hasheq host:unsafe-make-weak-hasheq]
+
         set-reachable-size-increments-callback!
         set-custodian-memory-use-proc!
         set-immediate-allocation-check-proc!

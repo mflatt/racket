@@ -57,7 +57,7 @@
          '()                  ; post-shutdown
          #f                   ; pumper-threads
          #f                   ; pending-break
-         (make-hasheq)        ; done-waiting
+         (host:unsafe-make-hasheq) ; done-waiting
          #f                   ; wakeup-handle
          '()                  ; dequeue-semas
          #f                   ; future scheduler

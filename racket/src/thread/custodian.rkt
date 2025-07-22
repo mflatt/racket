@@ -161,7 +161,7 @@
       (when gc-root?
         (host:disable-interrupts)
         (unless (custodian-gc-roots cust)
-          (set-custodian-gc-roots! cust (make-weak-hasheq)))
+          (set-custodian-gc-roots! cust (host:unsafe-make-weak-hasheq)))
         (hash-set! (custodian-gc-roots cust) obj #t)
         (check-limit-custodian cust)
         (host:enable-interrupts))
@@ -443,7 +443,7 @@
 ;; Ensures that custodians with memory limits and children are not
 ;; treated as inaccessible and merged; use only while holding the
 ;; memory-limit lock and with interrupts disabled (or be in a GC)
-(define custodians-with-limits (make-hasheq))
+(define custodians-with-limits (host:unsafe-make-hasheq))
 
 ;; In atomic mode
 (define (check-limit-custodian limit-cust)
@@ -523,7 +523,7 @@
                 ;; A place may have future pthreads, and each pthread may
                 ;; be running a future that becomes to a particular custodian;
                 ;; build up a custodian-to-pthread mapping in this table:
-                (define custodian-future-threads (make-hasheq))
+                (define custodian-future-threads (host:unsafe-make-hasheq))
                 (future-scheduler-add-thread-custodian-mapping! (place-future-scheduler initial-place)
                                                                 custodian-future-threads)
                 ;; Get roots, which are threads and custodians, for all distinct accounting domains

@@ -183,6 +183,8 @@
         'will-executor? rumble:will-executor?
         'will-register rumble:will-register
         'will-try-execute rumble:will-try-execute
+        'unsafe-make-hasheq unsafe-make-hasheq
+        'unsafe-make-weak-hasheq unsafe-make-weak-hasheq
         'set-break-enabled-transition-hook! rumble:set-break-enabled-transition-hook!
         'continuation-marks rumble:continuation-marks
         'set-reachable-size-increments-callback! rumble:set-reachable-size-increments-callback!

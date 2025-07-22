@@ -1220,6 +1220,10 @@
   (hash-ref (primitive-table '|#%engine|) 'will-register #f))
 (define host:will-try-execute
   (hash-ref (primitive-table '|#%engine|) 'will-try-execute #f))
+(define host:unsafe-make-hasheq
+  (hash-ref (primitive-table '|#%engine|) 'unsafe-make-hasheq #f))
+(define host:unsafe-make-weak-hasheq
+  (hash-ref (primitive-table '|#%engine|) 'unsafe-make-weak-hasheq #f))
 (define set-reachable-size-increments-callback!
   (hash-ref
    (primitive-table '|#%engine|)
@@ -2877,7 +2881,7 @@
   (|#%name| set-custodian-post-shutdown! (record-mutator struct:custodian 12)))
 (define create-custodian
   (lambda (parent_0)
-    (let ((app_0 (make-weak-hasheq)))
+    (let ((app_0 (|#%app| host:unsafe-make-weak-hasheq)))
       (custodian1.1 app_0 (box #f) #f #f #f #f #f 0 #f null #f #f null))))
 (define 1/custodian-shut-down?
   (|#%name|
@@ -3803,7 +3807,7 @@
    make-place
    (lambda (parent2_0 place-channel3_0 lock6_0 cust7_0)
      (let ((app_0 (box #f)))
-       (let ((app_1 (make-hasheq)))
+       (let ((app_1 (|#%app| host:unsafe-make-hasheq)))
          (place1.1
           parent2_0
           lock6_0
@@ -5203,7 +5207,9 @@
                    (|#%app| host:disable-interrupts)
                    (if (custodian-gc-roots cust17_0)
                      (void)
-                     (set-custodian-gc-roots! cust17_0 (make-weak-hasheq)))
+                     (set-custodian-gc-roots!
+                      cust17_0
+                      (|#%app| host:unsafe-make-weak-hasheq)))
                    (hash-set! (custodian-gc-roots cust17_0) obj18_0 #t)
                    (check-limit-custodian cust17_0)
                    (|#%app| host:enable-interrupts))
@@ -5809,7 +5815,7 @@
        (custodian-limit-memory_0 limit-cust_0 need-amt_0 unsafe-undefined))
       ((limit-cust_0 need-amt_0 stop-cust31_0)
        (custodian-limit-memory_0 limit-cust_0 need-amt_0 stop-cust31_0))))))
-(define custodians-with-limits (make-hasheq))
+(define custodians-with-limits (|#%app| host:unsafe-make-hasheq))
 (define check-limit-custodian
   (lambda (limit-cust_0)
     (if (pair? (custodian-memory-limits limit-cust_0))
@@ -5887,7 +5893,7 @@
 (define memory-limit-lock (|#%app| host:make-mutex))
 (define compute-memory-sizes 0)
 (define computed-memory-sizes? #f)
-(define effect_2783
+(define effect_2274
   (begin
     (void
      (|#%app|
@@ -5902,7 +5908,8 @@
           (|#%app|
            host:call-with-current-continuation-roots
            (lambda (k-roots_0)
-             (let ((custodian-future-threads_0 (make-hasheq)))
+             (let ((custodian-future-threads_0
+                    (|#%app| host:unsafe-make-hasheq)))
                (begin
                  (let ((app_0 future-scheduler-add-thread-custodian-mapping!))
                    (|#%app|

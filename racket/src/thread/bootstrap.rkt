@@ -259,6 +259,8 @@
                   'will-executor? will-executor/notify?
                   'will-register will-register/notify
                   'will-try-execute will-try-execute/notify
+                  'unsafe-make-hasheq make-hasheq
+                  'unsafe-make-weak-hasheq make-weak-hasheq
                   'set-reachable-size-increments-callback! (lambda (proc) (void))
                   'set-custodian-memory-use-proc! (lambda (proc) (void))
                   'set-immediate-allocation-check-proc! (lambda (proc) (void))

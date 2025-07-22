@@ -311,19 +311,22 @@
                   'current-pseudo-random-generator))
 
 (define-syntax-rule (with-prg-lock rgn e)
-  (let loop ()
-    (cond
-      [(#%$record-cas! rgn 1 #f #t)
-       (memory-order-acquire)
-       (let ([v e])
-         (memory-order-release)
-         (let loop ()
-           (unless (#%$record-cas! rgn 1 #t #f)               
-             (loop)))
-         v)]
-      [else
-       ;; we expect collisions to be rare and `e` to be short
-       (loop)])))
+  (begin
+    (start-engine-uninterrupted 'lock-release)
+    (let loop ()
+      (cond
+        [(#%$record-cas! rgn 1 #f #t)
+         (memory-order-acquire)
+         (let ([v e])
+           (memory-order-release)
+           (let loop ()
+             (unless (#%$record-cas! rgn 1 #t #f)
+               (loop)))
+           (end-engine-uninterrupted 'lock-release)
+           v)]
+        [else
+         ;; we expect collisions to be rare and `e` to be short
+         (loop)]))))
 
 (define/who (pseudo-random-generator->vector prg)
   (check who pseudo-random-generator? prg)

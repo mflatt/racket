@@ -320,6 +320,8 @@
           unsafe-ephemeron-hash-iterate-key unsafe-ephemeron-hash-iterate-value
           unsafe-ephemeron-hash-iterate-key+value unsafe-ephemeron-hash-iterate-pair
           unsafe-hash-seal!    ; not exported to racket
+          unsafe-make-hasheq   ; not exported to racket
+          unsafe-make-weak-hasheq   ; not exported to racket
 
           hash? hash-eq? hash-equal? hash-eqv? hash-equal-always? hash-strong? hash-weak? hash-ephemeron?
           immutable-hash?
