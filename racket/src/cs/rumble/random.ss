@@ -300,6 +300,9 @@
   (fields (immutable prg)
           (mutable lock)))
 
+(define (make-pseudo-random-generator)
+  (create-pseudo-random-generator (#%make-pseudo-random-generator) #f))
+
 (define/who current-pseudo-random-generator
   (make-parameter (make-pseudo-random-generator)
                   (lambda (v)
@@ -321,9 +324,6 @@
       [else
        ;; we expect collisions to be rare and `e` to be short
        (loop)])))
-
-(define (make-pseudo-random-generator)
-  (create-pseudo-random-generator (#%make-pseudo-random-generator) #f))
 
 (define/who (pseudo-random-generator->vector prg)
   (check who pseudo-random-generator? prg)

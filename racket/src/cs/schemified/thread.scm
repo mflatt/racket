@@ -12402,36 +12402,34 @@
                     (log-future.1 #f #f #f unsafe-undefined 'result temp103_0))
                   (1/current-future me-f_0)
                   v_0)))
-            (if (future*-parallel me-f_0)
+            (if (in-racket-thread?)
               (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
-              (if (in-racket-thread?)
-                (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
-                (begin
-                  (end-atomic/no-barrier-exit)
-                  (engine-block)
-                  (|#%app|
-                   host:call-as-asynchronous-callback
-                   (lambda ()
-                     (begin
-                       (let ((temp105_0 (future*-id me-f_0)))
-                         (log-future.1
-                          #f
-                          who_0
-                          #f
-                          unsafe-undefined
-                          'sync
-                          temp105_0))
-                       (let ((v_0 (|#%app| thunk_0)))
-                         (begin
-                           (let ((temp108_0 (future*-id me-f_0)))
-                             (log-future.1
-                              #f
-                              #f
-                              #f
-                              unsafe-undefined
-                              'result
-                              temp108_0))
-                           v_0))))))))))))))
+              (begin
+                (end-atomic/no-barrier-exit)
+                (engine-block)
+                (|#%app|
+                 host:call-as-asynchronous-callback
+                 (lambda ()
+                   (begin
+                     (let ((temp105_0 (future*-id me-f_0)))
+                       (log-future.1
+                        #f
+                        who_0
+                        #f
+                        unsafe-undefined
+                        'sync
+                        temp105_0))
+                     (let ((v_0 (|#%app| thunk_0)))
+                       (begin
+                         (let ((temp108_0 (future*-id me-f_0)))
+                           (log-future.1
+                            #f
+                            #f
+                            #f
+                            unsafe-undefined
+                            'result
+                            temp108_0))
+                         v_0)))))))))))))
 (define pthread-count 1)
 (define set-processor-count! (lambda (n_0) (set! pthread-count n_0)))
 (define finish_2666

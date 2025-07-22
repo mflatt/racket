@@ -704,7 +704,8 @@
 ;; ----------------------------------------
 
 ;; Can be in a future thread
-;; Call `thunk` in the place's main thread:
+;; Call `thunk` in the place's main thread, where it can
+;; run atomically and return a result
 (define (future-sync who thunk)
   (start-uninterruptible)
   (define me-f (current-future))
@@ -722,11 +723,6 @@
        (log-future 'result (future*-id me-f))
        (current-future me-f)
        v)]
-    [(future*-parallel me-f)
-     (end-uninterruptible)
-     ;; can run directly within a parallel thread, whether in
-     ;; a future pthread or Racket thread
-     (thunk)]
     [(in-racket-thread?)
      (end-uninterruptible)
      ;; can run directly, since we're not in a future pthread
