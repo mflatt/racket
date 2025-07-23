@@ -151,6 +151,7 @@
                 (1/unsafe-os-semaphore-post unsafe-os-semaphore-post)
                 (1/unsafe-os-semaphore-wait unsafe-os-semaphore-wait)
                 (1/unsafe-os-thread-enabled? unsafe-os-thread-enabled?)
+                (unsafe-parallel-active? unsafe-parallel-active?)
                 (unsafe-semaphore-post unsafe-semaphore-post)
                 (unsafe-semaphore-wait unsafe-semaphore-wait)
                 (1/unsafe-set-on-atomic-timeout! unsafe-set-on-atomic-timeout!)
@@ -1908,6 +1909,7 @@
 (define 1/current-future (make-pthread-parameter #f))
 (define in-racket-thread? (lambda () (if (current-thread/in-racket) #t #f)))
 (define in-future-thread? (lambda () (not (current-thread/in-racket))))
+(define current-parallel-active (make-pthread-parameter 0))
 (define start-uninterruptible
   (lambda () (current-atomic (fx+ (current-atomic) 1))))
 (define end-uninterruptible (lambda () (end-atomic/no-barrier-exit)))
@@ -3703,10 +3705,10 @@
                               (|#%app| (message-ized-unmessage v_1))
                               v_1)))))))))))))
        (loop_0 v_0)))))
-(define finish_2464
+(define finish_2942
   (make-struct-type-install-properties
    '(place)
-   21
+   22
    0
    #f
    (list
@@ -3728,8 +3730,8 @@
    (|#%nongenerative-uid| place)
    #f
    #f
-   '(21 . 2064304)))
-(define effect_2619 (finish_2464 struct:place))
+   '(22 . 4161456)))
+(define effect_2619 (finish_2942 struct:place))
 (define place1.1
   (|#%name|
    place
@@ -3773,6 +3775,8 @@
   (|#%name| place-schedulers (record-accessor struct:place 19)))
 (define place-active-parallel
   (|#%name| place-active-parallel (record-accessor struct:place 20)))
+(define place-active-parallel-threads
+  (|#%name| place-active-parallel-threads (record-accessor struct:place 21)))
 (define set-place-result!
   (|#%name| set-place-result! (record-mutator struct:place 4)))
 (define set-place-queued-result!
@@ -3802,6 +3806,10 @@
   (|#%name| set-place-schedulers! (record-mutator struct:place 19)))
 (define set-place-active-parallel!
   (|#%name| set-place-active-parallel! (record-mutator struct:place 20)))
+(define set-place-active-parallel-threads!
+  (|#%name|
+   set-place-active-parallel-threads!
+   (record-mutator struct:place 21)))
 (define make-place.1
   (|#%name|
    make-place
@@ -3829,6 +3837,7 @@
           '()
           #f
           (hasheq)
+          0
           0))))))
 (define increment-place-parallel-count!
   (lambda (delta_0)
@@ -13161,6 +13170,7 @@
     (call-in-new-main-thread
      (lambda ()
        (begin
+         (current-parallel-active #f)
          (set-place-host-roots!
           initial-place
           (|#%app| host:current-place-roots))
@@ -13168,6 +13178,7 @@
 (define call-in-another-main-thread
   (lambda (c_0 thunk_0)
     (begin
+      (current-parallel-active #f)
       (make-another-initial-thread-group)
       (set-root-custodian! c_0)
       (init-system-idle-evt!)
@@ -14254,6 +14265,7 @@
   (|#%name|
    unsafe-end-uninterruptible
    (lambda () (end-atomic/no-barrier-exit))))
+(define unsafe-parallel-active? (lambda () (current-parallel-active)))
 (define 1/current-process-milliseconds
   (let ((current-process-milliseconds_0
          (|#%name|

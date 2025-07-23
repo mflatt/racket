@@ -90,9 +90,10 @@
        ;; need to block engine swaps to provide atomic behavior,
        ;; and the engine-specific opeartion is cheaper than disabling all interrupts
        (start-engine-uninterrupted 'lock-acquire)
-       (cond
-         [(box-cas! lock #f #t) (memory-order-acquire)]
-         [else (#%$app/no-inline lock-acquire/slow lock)])]
+       (when (current-parallel-active)
+         (cond
+           [(box-cas! lock #f #t) (memory-order-acquire)]
+           [else (#%$app/no-inline lock-acquire/slow lock)]))]
       [else
        (scheduler-lock-acquire lock)]))
 
@@ -126,11 +127,12 @@
     (cond
       [(not lock) (enable-interrupts) (#%void)]
       [(box? lock)
-       (memory-order-release)
-       (cond
-         [(box-cas! lock #t #f) (void)]
-         [else
-          (#%$app/no-inline lock-release-slow lock)])
+       (when (current-parallel-active)
+         (memory-order-release)
+         (cond
+           [(box-cas! lock #t #f) (void)]
+           [else
+            (#%$app/no-inline lock-release-slow lock)]))
        (end-engine-uninterrupted 'lock-release)
        (void)]
       [else

@@ -1416,6 +1416,7 @@
   (check who string? :or-false lock-name))
 
 ;; For sanity checking of callbacks during a blocking callout:
+#;
 (define-virtual-register currently-blocking? #f)
 
 (define-syntax-rule (retain v ... e)
@@ -1612,6 +1613,7 @@
                            (let ([go (lambda ()
                                        (when lock (mutex-acquire lock))
                                        (with-interrupts-disabled*
+                                        #;
                                         (when blocking? (currently-blocking? #t))
                                         (retain
                                          orig-args
@@ -1631,8 +1633,10 @@
                                                         (lambda () (#%apply proc args))
                                                         (lambda ()
                                                           (when lock (mutex-release lock))
+                                                          #;
                                                           (when blocking? (currently-blocking? #f))))]))])
                                            (when lock (mutex-release lock))
+                                           #;
                                            (when blocking? (currently-blocking? #f))
                                            (case save-errno
                                              [(posix) (thread-cell-set! errno-cell (get-errno))]
@@ -1653,6 +1657,7 @@
         (gen-proc (lambda args ; if ret-size, includes an extra initial argument to receive the result
                     (let ([v (call-as-atomic-callback
                               (lambda ()
+                                #;
                                 (unless async-apply
                                   ;; Sanity check; if the check fails, things can go bad from here on,
                                   ;; but we try to continue, anyway

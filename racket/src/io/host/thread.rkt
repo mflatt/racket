@@ -10,6 +10,7 @@
          non-atomically
          atomically/no-gc-interrupts/no-wind
          assert-atomic
+         parallel-active?
          check-current-custodian)
 
 (define table
@@ -55,6 +56,7 @@
         unsafe-end-atomic
         unsafe-start-uninterruptible
         unsafe-end-uninterruptible
+        unsafe-parallel-active?
         current-custodian
         custodian-shut-down?
         current-plumber
@@ -92,6 +94,7 @@
 (define end-atomic unsafe-end-atomic)
 (define start-uninterruptible unsafe-start-uninterruptible)
 (define end-uninterruptible unsafe-end-uninterruptible)
+(define parallel-active? unsafe-parallel-active?)
 
 (define-syntax-rule (atomically e ...)
   (begin

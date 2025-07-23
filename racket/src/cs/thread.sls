@@ -60,7 +60,7 @@
                     (syntax-rules ()
                       [(_) (virtual-register n)]
                       [(_ v) (set-virtual-register! n v)]))))])
-      (syntax-case stx (current-atomic end-atomic-callback 1/current-future
+      (syntax-case stx (current-atomic end-atomic-callback 1/current-future current-parallel-active
                                        lambda make-pthread-parameter unsafe-make-place-local)
         ;; Recognize definition of `current-atomic`:
         [(_ current-atomic (make-pthread-parameter 0))
@@ -71,6 +71,9 @@
         ;; Recognize definition of `current-future`:
         [(_ 1/current-future (make-pthread-parameter #f))
          (define-as-virtual-register stx current-future-virtual-register)]
+        ;; Recognize definition of `current-parallel-active`:
+        [(_ current-parallel-active (make-pthread-parameter 0))
+         (define-as-virtual-register stx current-parallel-active-virtual-register)]
         ;; Force-inline atomicity-managing functions, at least within the core layers:
         [(_ id (lambda () expr ...))
          (#%memq (syntax->datum #'id) '(start-atomic end-atomic end-atomic/no-barrier-exit
@@ -232,7 +235,7 @@
 
   (include "include.ss")
   (include-generated "thread.scm")
-
+  
   (set-engine-exit-handler!
    (lambda (v)
      (|#%app| (|#%app| 1/exit-handler) v)))

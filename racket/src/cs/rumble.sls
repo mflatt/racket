@@ -828,7 +828,8 @@
           ;; compile-time use in "thread.sls"
           current-atomic-virtual-register
           end-atomic-virtual-register
-          current-future-virtual-register)
+          current-future-virtual-register
+          current-parallel-active-virtual-register)
   (import (chezpart)
 	  (rename (only (chezscheme) sleep)
 		  [sleep chez:sleep])

@@ -4,6 +4,7 @@
 (provide current-atomic
          current-thread/in-racket
          current-future ; not the one exported to Racket; see "api.rkt"
+         current-parallel-active
          in-racket-thread?
          in-future-thread?)
 
@@ -34,3 +35,11 @@
   (and (current-thread/in-racket) #t))
 (define (in-future-thread?)
   (not (current-thread/in-racket)))
+
+;; Whether locks need to be taken; set to `0` if there are any
+;; parallel threads or futures (potentially) running, `#f` otherwise.
+;; Checking the value of this parameter makes sense only in uninterrupted
+;; mode; otherwise, its value can change immediately.
+;; The true/default value of `0` reflects how this parameter is especially
+;; primitive.
+(define current-parallel-active (make-pthread-parameter 0))

@@ -112,6 +112,7 @@
                          'thread-suspend-evt thread-suspend-evt
                          'thread-dead-evt thread-dead-evt
                          'current-thread current-thread
+                         'current-parallel-active (lambda () #t)
                          'thread-resume thread-resume
                          'make-semaphore make-semaphore
                          'semaphore-post semaphore-post

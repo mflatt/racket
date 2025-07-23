@@ -64,15 +64,17 @@
 (define-syntax-rule (port-lock p-expr)
   (let ([p p-expr])
     (start-uninterruptible)
-    (unless (core-port-lock-cas! p #f #t)
-      (port-lock-slow p))
-    (memory-order-acquire)))
+    (when (parallel-active?)
+      (unless (core-port-lock-cas! p #f #t)
+        (port-lock-slow p))
+      (memory-order-acquire))))
 
 (define-syntax-rule (port-unlock p-expr)
   (let ([p p-expr])
-    (memory-order-release)
-    (unless (core-port-lock-cas! p #t #f)
-      (port-unlock-slow p))
+    (when (parallel-active?)
+      (memory-order-release)
+      (unless (core-port-lock-cas! p #t #f)
+        (port-unlock-slow p)))
     (end-uninterruptible)))
 
 (define-syntax-rule (with-lock p-expr e ...)
@@ -94,10 +96,12 @@
 ;; merely uninterruptible mode)
 (define-syntax-rule (merely-atomically p-expr e ...)
   (let ([p p-expr])
-    (port-unlock-slow p)
+    (when (parallel-active?)
+      (port-unlock-slow p))
     (begin0
       (let () e ...)
-      (port-lock-slow p))))
+      (when (parallel-active?)
+        (port-lock-slow p)))))
 
 ;; Releases the lock at the beginning, but retains it after starting `e ...`
 (define-syntax-rule (also-atomically p-expr e ...)

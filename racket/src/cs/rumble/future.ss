@@ -10,6 +10,11 @@
     [(_) (with-syntax ([pos current-future-virtual-register])
            #'(virtual-register pos))]))
 
+(define-syntax (current-parallel-active stx)
+  (syntax-case stx ()
+    [(_) (with-syntax ([pos current-parallel-active-virtual-register])
+           #'(virtual-register pos))]))
+
 (define block-future (lambda () (void)))
 (define unblock-future (lambda () (void)))
 (define sync-future (lambda (who thunk) (thunk)))

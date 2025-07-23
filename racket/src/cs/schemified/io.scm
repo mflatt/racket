@@ -2750,6 +2750,7 @@
 (define end-atomic unsafe-end-atomic)
 (define start-uninterruptible unsafe-start-uninterruptible)
 (define end-uninterruptible unsafe-end-uninterruptible)
+(define parallel-active? unsafe-parallel-active?)
 (define check-current-custodian.1
   (|#%name|
    check-current-custodian
@@ -4364,7 +4365,7 @@
              (if who3_0
                (raise-argument-error who3_0 "input-port?" v4_0)
                default_0))))))))
-(define finish_2724
+(define finish_2292
   (make-struct-type-install-properties
    '(core-input-port)
    2
@@ -4392,10 +4393,13 @@
                           (begin
                             (begin
                               (unsafe-start-uninterruptible)
-                              (if (unsafe-struct*-cas! i_1 2 #f #t)
-                                (void)
-                                (port-lock-slow i_1))
-                              (memory-order-acquire))
+                              (if (unsafe-parallel-active?)
+                                (begin
+                                  (if (unsafe-struct*-cas! i_1 2 #f #t)
+                                    (void)
+                                    (port-lock-slow i_1))
+                                  (memory-order-acquire))
+                                (void)))
                             (begin0
                               (|#%app|
                                byte-ready_0
@@ -4405,10 +4409,13 @@
                                   schedule-info-did-work!
                                   (|#%app| poll-ctx-sched-info poll-ctx_0))))
                               (begin
-                                (memory-order-release)
-                                (if (unsafe-struct*-cas! i_1 2 #t #f)
-                                  (void)
-                                  (port-unlock-slow i_1))
+                                (if (unsafe-parallel-active?)
+                                  (begin
+                                    (memory-order-release)
+                                    (if (unsafe-struct*-cas! i_1 2 #t #f)
+                                      (void)
+                                      (port-unlock-slow i_1)))
+                                  (void))
                                 (unsafe-end-uninterruptible))))))
                      (if (evt? v_0)
                        (values #f v_0)
@@ -4428,7 +4435,7 @@
    #f
    #f
    '(2 . 3)))
-(define effect_2528 (finish_2724 struct:core-input-port))
+(define effect_2528 (finish_2292 struct:core-input-port))
 (define create-core-input-port
   (|#%name|
    create-core-input-port
@@ -4687,7 +4694,7 @@
              (if who3_0
                (raise-argument-error who3_0 "output-port?" v4_0)
                default_0))))))))
-(define finish_2483
+(define finish_2463
   (make-struct-type-install-properties
    '(core-output-port)
    4
@@ -4710,17 +4717,23 @@
                      (if (begin
                            (begin
                              (unsafe-start-uninterruptible)
-                             (if (unsafe-struct*-cas! o_1 2 #f #t)
-                               (void)
-                               (port-lock-slow o_1))
-                             (memory-order-acquire))
+                             (if (unsafe-parallel-active?)
+                               (begin
+                                 (if (unsafe-struct*-cas! o_1 2 #f #t)
+                                   (void)
+                                   (port-lock-slow o_1))
+                                 (memory-order-acquire))
+                               (void)))
                            (begin0
                              (core-port-closed? o_1)
                              (begin
-                               (memory-order-release)
-                               (if (unsafe-struct*-cas! o_1 2 #t #f)
-                                 (void)
-                                 (port-unlock-slow o_1))
+                               (if (unsafe-parallel-active?)
+                                 (begin
+                                   (memory-order-release)
+                                   (if (unsafe-struct*-cas! o_1 2 #t #f)
+                                     (void)
+                                     (port-unlock-slow o_1)))
+                                 (void))
                                (unsafe-end-uninterruptible))))
                        (values '(#t) #f)
                        (values #f self_0)))))))
@@ -4738,7 +4751,7 @@
    #f
    #f
    '(4 . 15)))
-(define effect_2808 (finish_2483 struct:core-output-port))
+(define effect_2808 (finish_2463 struct:core-output-port))
 (define create-core-output-port
   (|#%name|
    create-core-output-port
@@ -4922,10 +4935,13 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
-             (if (unsafe-struct*-cas! out_0 2 #f #t)
-               (void)
-               (port-lock-slow out_0))
-             (memory-order-acquire))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (if (unsafe-struct*-cas! out_0 2 #f #t)
+                   (void)
+                   (port-lock-slow out_0))
+                 (memory-order-acquire))
+               (void)))
            (let ((v_0
                   (|#%app|
                    (core-output-port-methods-write-out.1
@@ -4948,10 +4964,13 @@
                   src-start_0)
                  (void))
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! out_0 2 #t #f)
-                   (void)
-                   (port-unlock-slow out_0))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! out_0 2 #t #f)
+                       (void)
+                       (port-unlock-slow out_0)))
+                   (void))
                  (unsafe-end-uninterruptible))
                (if (evt? v_0)
                  (values #f (replace-evt v_0 self-evt_0))
@@ -6222,8 +6241,11 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
-        (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
-        (memory-order-acquire))
+        (if (unsafe-parallel-active?)
+          (begin
+            (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
+            (memory-order-acquire))
+          (void)))
       (begin0
         (if (core-port-closed? p_0)
           (void)
@@ -6231,8 +6253,13 @@
             (|#%app| (core-port-methods-close.1 (core-port-vtable p_0)) p_0)
             (set-closed-state! p_0)))
         (begin
-          (memory-order-release)
-          (if (unsafe-struct*-cas! p_0 2 #t #f) (void) (port-unlock-slow p_0))
+          (if (unsafe-parallel-active?)
+            (begin
+              (memory-order-release)
+              (if (unsafe-struct*-cas! p_0 2 #t #f)
+                (void)
+                (port-unlock-slow p_0)))
+            (void))
           (unsafe-end-uninterruptible))))))
 (define set-closed-state!
   (lambda (p_0)
@@ -6277,10 +6304,13 @@
                   (begin
                     (begin
                       (unsafe-start-uninterruptible)
-                      (if (unsafe-struct*-cas! p_1 2 #f #t)
-                        (void)
-                        (port-lock-slow p_1))
-                      (memory-order-acquire))
+                      (if (unsafe-parallel-active?)
+                        (begin
+                          (if (unsafe-struct*-cas! p_1 2 #f #t)
+                            (void)
+                            (port-lock-slow p_1))
+                          (memory-order-acquire))
+                        (void)))
                     (begin0
                       (let ((or-part_0 (core-port-closed-sema p_1)))
                         (if or-part_0
@@ -6294,10 +6324,13 @@
                                 (void))
                               s_0))))
                       (begin
-                        (memory-order-release)
-                        (if (unsafe-struct*-cas! p_1 2 #t #f)
-                          (void)
-                          (port-unlock-slow p_1))
+                        (if (unsafe-parallel-active?)
+                          (begin
+                            (memory-order-release)
+                            (if (unsafe-struct*-cas! p_1 2 #t #f)
+                              (void)
+                              (port-unlock-slow p_1)))
+                          (void))
                         (unsafe-end-uninterruptible))))
                   (unsafe-end-atomic)))))
          (let ((self_0 #f))
@@ -6314,10 +6347,13 @@
          (if unlock1_0
            (|#%app| unlock1_0)
            (begin
-             (memory-order-release)
-             (if (unsafe-struct*-cas! cp4_0 2 #t #f)
-               (void)
-               (port-unlock-slow cp4_0))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (memory-order-release)
+                 (if (unsafe-struct*-cas! cp4_0 2 #t #f)
+                   (void)
+                   (port-unlock-slow cp4_0)))
+               (void))
              (unsafe-end-uninterruptible)))
          (let ((input?_0 (core-input-port? cp4_0)))
            (raise
@@ -6386,19 +6422,25 @@
              (begin
                (begin
                  (unsafe-start-uninterruptible)
-                 (if (unsafe-struct*-cas! cp_0 2 #f #t)
-                   (void)
-                   (port-lock-slow cp_0))
-                 (memory-order-acquire))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (if (unsafe-struct*-cas! cp_0 2 #f #t)
+                       (void)
+                       (port-lock-slow cp_0))
+                     (memory-order-acquire))
+                   (void)))
                (begin0
                  (begin
                    (check-not-closed.1 #f 'file-position cp_0)
                    (|#%app| file-position_0 cp_0 pos_0))
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! cp_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow cp_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! cp_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow cp_0)))
+                     (void))
                    (unsafe-end-uninterruptible))))
              (raise-arguments-error
               'file-position
@@ -6423,8 +6465,13 @@
       (begin
         (begin
           (unsafe-start-uninterruptible)
-          (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
-          (memory-order-acquire))
+          (if (unsafe-parallel-active?)
+            (begin
+              (if (unsafe-struct*-cas! p_0 2 #f #t)
+                (void)
+                (port-lock-slow p_0))
+              (memory-order-acquire))
+            (void)))
         (begin
           (check-not-closed.1 #f who_0 p_0)
           (let ((file-position_0
@@ -6433,10 +6480,13 @@
                   (if or-part_0 or-part_0 (1/output-port? file-position_0)))
               (begin
                 (begin
-                  (memory-order-release)
-                  (if (unsafe-struct*-cas! p_0 2 #t #f)
-                    (void)
-                    (port-unlock-slow p_0))
+                  (if (unsafe-parallel-active?)
+                    (begin
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! p_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow p_0)))
+                    (void))
                   (unsafe-end-uninterruptible))
                 (do-simple-file-position who_0 file-position_0 fail-k_0))
               (let ((pos_0
@@ -6447,10 +6497,13 @@
                        (if or-part_0 or-part_0 (get-core-port-offset p_0)))))
                 (begin
                   (begin
-                    (memory-order-release)
-                    (if (unsafe-struct*-cas! p_0 2 #t #f)
-                      (void)
-                      (port-unlock-slow p_0))
+                    (if (unsafe-parallel-active?)
+                      (begin
+                        (memory-order-release)
+                        (if (unsafe-struct*-cas! p_0 2 #t #f)
+                          (void)
+                          (port-unlock-slow p_0)))
+                      (void))
                     (unsafe-end-uninterruptible))
                   (if pos_0 pos_0 (|#%app| fail-k_0)))))))))))
 (define 1/port-count-lines-enabled
@@ -6473,8 +6526,13 @@
        (begin
          (begin
            (unsafe-start-uninterruptible)
-           (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
-           (memory-order-acquire))
+           (if (unsafe-parallel-active?)
+             (begin
+               (if (unsafe-struct*-cas! p_1 2 #f #t)
+                 (void)
+                 (port-lock-slow p_1))
+               (memory-order-acquire))
+             (void)))
          (begin0
            (begin
              (check-not-closed.1 #f 'port-count-lines! p_1)
@@ -6496,10 +6554,13 @@
                          (core-port-vtable p_1))))
                    (if count-lines!_0 (|#%app| count-lines!_0 p_1) (void))))))
            (begin
-             (memory-order-release)
-             (if (unsafe-struct*-cas! p_1 2 #t #f)
-               (void)
-               (port-unlock-slow p_1))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (memory-order-release)
+                 (if (unsafe-struct*-cas! p_1 2 #t #f)
+                   (void)
+                   (port-unlock-slow p_1)))
+               (void))
              (unsafe-end-uninterruptible))))))))
 (define 1/port-counts-lines?
   (|#%name|
@@ -6528,10 +6589,13 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
-               (if (unsafe-struct*-cas! p_1 2 #f #t)
-                 (void)
-                 (port-lock-slow p_1))
-               (memory-order-acquire))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (if (unsafe-struct*-cas! p_1 2 #f #t)
+                     (void)
+                     (port-lock-slow p_1))
+                   (memory-order-acquire))
+                 (void)))
              (begin0
                (begin
                  (check-not-closed.1 #f 'port-next-location p_1)
@@ -6544,10 +6608,13 @@
                        (let ((app_1 (location-column loc_0)))
                          (values app_0 app_1 (location-position loc_0)))))))
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! p_1 2 #t #f)
-                   (void)
-                   (port-unlock-slow p_1))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! p_1 2 #t #f)
+                       (void)
+                       (port-unlock-slow p_1)))
+                   (void))
                  (unsafe-end-uninterruptible))))
            (if (core-port-methods-file-position.1 (core-port-vtable p_1))
              (let ((offset_0
@@ -6560,17 +6627,23 @@
                     (begin
                       (begin
                         (unsafe-start-uninterruptible)
-                        (if (unsafe-struct*-cas! p_1 2 #f #t)
-                          (void)
-                          (port-lock-slow p_1))
-                        (memory-order-acquire))
+                        (if (unsafe-parallel-active?)
+                          (begin
+                            (if (unsafe-struct*-cas! p_1 2 #f #t)
+                              (void)
+                              (port-lock-slow p_1))
+                            (memory-order-acquire))
+                          (void)))
                       (begin0
                         (get-core-port-offset p_1)
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! p_1 2 #t #f)
-                            (void)
-                            (port-unlock-slow p_1))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! p_1 2 #t #f)
+                                (void)
+                                (port-unlock-slow p_1)))
+                            (void))
                           (unsafe-end-uninterruptible))))))
                (values #f #f (if offset_0 (add1 offset_0) #f))))))))))
 (define 1/set-port-next-location!
@@ -6610,8 +6683,13 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
-             (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
-             (memory-order-acquire))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (if (unsafe-struct*-cas! p_1 2 #f #t)
+                   (void)
+                   (port-lock-slow p_1))
+                 (memory-order-acquire))
+               (void)))
            (begin0
              (let ((loc_0 (core-port-count p_1)))
                (if (if loc_0
@@ -6625,10 +6703,13 @@
                    (set-location-position! loc_0 pos_0))
                  (void)))
              (begin
-               (memory-order-release)
-               (if (unsafe-struct*-cas! p_1 2 #t #f)
-                 (void)
-                 (port-unlock-slow p_1))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (memory-order-release)
+                   (if (unsafe-struct*-cas! p_1 2 #t #f)
+                     (void)
+                     (port-unlock-slow p_1)))
+                 (void))
                (unsafe-end-uninterruptible)))))))))
 (define port-count!
   (lambda (in_0 amt_0 bstr_0 start_0)
@@ -7440,7 +7521,7 @@
   (|#%name|
    set-commit-input-port-commit-manager!
    (record-mutator struct:commit-input-port 1)))
-(define finish_2484
+(define finish_2483
   (make-struct-type-install-properties
    '(commit-input-port-methods)
    1
@@ -7460,7 +7541,7 @@
    #f
    #f
    '(1 . 0)))
-(define effect_3199 (finish_2484 struct:commit-input-port-methods.1))
+(define effect_3199 (finish_2483 struct:commit-input-port-methods.1))
 (define commit-input-port-methods5.1
   (|#%name|
    commit-input-port-methods
@@ -7564,10 +7645,10 @@
    (lambda (this-id_0)
      (if (commit-input-port-commit-manager this-id_0)
        (begin
-         (port-unlock-slow this-id_0)
+         (if (unsafe-parallel-active?) (port-unlock-slow this-id_0) (void))
          (begin0
            (commit-manager-pause (commit-input-port-commit-manager this-id_0))
-           (port-lock-slow this-id_0)))
+           (if (unsafe-parallel-active?) (port-lock-slow this-id_0) (void))))
        (void)))))
 (define temp3.1
   (|#%name|
@@ -7580,8 +7661,10 @@
            #f)
        (begin
          (begin
-           (port-unlock-slow this-id_0)
-           (begin0 (|#%app| finish58_0) (port-lock-slow this-id_0)))
+           (if (unsafe-parallel-active?) (port-unlock-slow this-id_0) (void))
+           (begin0
+             (|#%app| finish58_0)
+             (if (unsafe-parallel-active?) (port-lock-slow this-id_0) (void))))
          #t)
        (begin
          (if (commit-input-port-commit-manager this-id_0)
@@ -7590,14 +7673,16 @@
             this-id_0
             (make-commit-manager)))
          (begin
-           (port-unlock-slow this-id_0)
+           (if (unsafe-parallel-active?) (port-unlock-slow this-id_0) (void))
            (begin0
              (commit-manager-wait
               (commit-input-port-commit-manager this-id_0)
               progress-evt56_0
               ext-evt57_0
               finish58_0)
-             (port-lock-slow this-id_0))))))))
+             (if (unsafe-parallel-active?)
+               (port-lock-slow this-id_0)
+               (void)))))))))
 (define temp4.1
   (|#%name|
    make-progress-evt
@@ -7654,15 +7739,23 @@
        (begin
          (begin
            (unsafe-start-uninterruptible)
-           (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
-           (memory-order-acquire))
+           (if (unsafe-parallel-active?)
+             (begin
+               (if (unsafe-struct*-cas! p_0 2 #f #t)
+                 (void)
+                 (port-lock-slow p_0))
+               (memory-order-acquire))
+             (void)))
          (begin0
            (begin (temp3.1$3 d_0) (temp4.1$2 d_0))
            (begin
-             (memory-order-release)
-             (if (unsafe-struct*-cas! p_0 2 #t #f)
-               (void)
-               (port-unlock-slow p_0))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (memory-order-release)
+                 (if (unsafe-struct*-cas! p_0 2 #t #f)
+                   (void)
+                   (port-unlock-slow p_0)))
+               (void))
              (unsafe-end-uninterruptible))))))))
 (define finish_2207
   (make-struct-type-install-properties
@@ -8149,20 +8242,26 @@
           (begin
             (begin
               (unsafe-start-uninterruptible)
-              (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                (void)
-                (port-lock-slow this-id_0))
-              (memory-order-acquire))
+              (if (unsafe-parallel-active?)
+                (begin
+                  (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                    (void)
+                    (port-lock-slow this-id_0))
+                  (memory-order-acquire))
+                (void)))
             (begin0
               (let ((o_0 (pipe-input-port-d this-id_0)))
                 (if (not (pipe-data-input-ref o_0))
                   always-evt
                   (begin (temp12.1 this-id_0) (temp4.1 this-id_0))))
               (begin
-                (memory-order-release)
-                (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                  (void)
-                  (port-unlock-slow this-id_0))
+                (if (unsafe-parallel-active?)
+                  (begin
+                    (memory-order-release)
+                    (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                      (void)
+                      (port-unlock-slow this-id_0)))
+                  (void))
                 (unsafe-end-uninterruptible))))))
        (|#%name|
         commit
@@ -8177,10 +8276,13 @@
                (begin
                  (begin
                    (unsafe-start-uninterruptible)
-                   (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                     (void)
-                     (port-lock-slow this-id_0))
-                   (memory-order-acquire))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                         (void)
+                         (port-lock-slow this-id_0))
+                       (memory-order-acquire))
+                     (void)))
                  (begin0
                    (let ((o_0 (pipe-input-port-d this-id_0)))
                      (begin
@@ -8229,10 +8331,13 @@
                                    (temp11.1 this-id_0 amt_0)
                                    (|#%app| finish580_0 dest-bstr_0)))))))))
                    (begin
-                     (memory-order-release)
-                     (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                       (void)
-                       (port-unlock-slow this-id_0))
+                     (if (unsafe-parallel-active?)
+                       (begin
+                         (memory-order-release)
+                         (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                           (void)
+                           (port-unlock-slow this-id_0)))
+                       (void))
                      (unsafe-end-uninterruptible)))))))))
        (|#%name| no-more-atomic-for-progress (lambda (this-id_0) (void)))))))
 (define temp13.1
@@ -8853,7 +8958,7 @@
        (make-pipe_0 limit_0 input-name_0 output-name26_0))
       ((limit_0 input-name25_0) (make-pipe_0 limit_0 input-name25_0 'pipe))
       ((limit24_0) (make-pipe_0 limit24_0 'pipe 'pipe))))))
-(define finish_2161
+(define finish_2293
   (make-struct-type-install-properties
    '(pipe-write-poller)
    1
@@ -8888,16 +8993,22 @@
                       (begin
                         (begin
                           (unsafe-start-uninterruptible)
-                          (if (unsafe-struct*-cas! in_0 2 #f #t)
-                            (void)
-                            (port-lock-slow in_0))
-                          (memory-order-acquire))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (if (unsafe-struct*-cas! in_0 2 #f #t)
+                                (void)
+                                (port-lock-slow in_0))
+                              (memory-order-acquire))
+                            (void)))
                         (temp14.1 in_0)
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! in_0 2 #t #f)
-                            (void)
-                            (port-unlock-slow in_0))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                (void)
+                                (port-unlock-slow in_0)))
+                            (void))
                           (unsafe-end-uninterruptible)))
                       (void))
                     (values
@@ -8918,7 +9029,7 @@
    #f
    #f
    '(1 . 0)))
-(define effect_2599 (finish_2161 struct:pipe-write-poller))
+(define effect_2599 (finish_2293 struct:pipe-write-poller))
 (define pipe-write-poller27.1
   (|#%name|
    pipe-write-poller
@@ -8951,7 +9062,7 @@
          0
          s
          'd))))))
-(define finish_2685
+(define finish_2220
   (make-struct-type-install-properties
    '(pipe-read-poller)
    1
@@ -8986,16 +9097,22 @@
                       (begin
                         (begin
                           (unsafe-start-uninterruptible)
-                          (if (unsafe-struct*-cas! out_0 2 #f #t)
-                            (void)
-                            (port-lock-slow out_0))
-                          (memory-order-acquire))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (if (unsafe-struct*-cas! out_0 2 #f #t)
+                                (void)
+                                (port-lock-slow out_0))
+                              (memory-order-acquire))
+                            (void)))
                         (temp18.1 out_0)
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! out_0 2 #t #f)
-                            (void)
-                            (port-unlock-slow out_0))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! out_0 2 #t #f)
+                                (void)
+                                (port-unlock-slow out_0)))
+                            (void))
                           (unsafe-end-uninterruptible)))
                       (void))
                     (values
@@ -9016,7 +9133,7 @@
    #f
    #f
    '(1 . 0)))
-(define effect_2907 (finish_2685 struct:pipe-read-poller))
+(define effect_2907 (finish_2220 struct:pipe-read-poller))
 (define pipe-read-poller28.1
   (|#%name|
    pipe-read-poller
@@ -9409,17 +9526,23 @@
             (begin
               (begin
                 (unsafe-start-uninterruptible)
-                (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                  (void)
-                  (port-lock-slow this-id_0))
-                (memory-order-acquire))
+                (if (unsafe-parallel-active?)
+                  (begin
+                    (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                      (void)
+                      (port-lock-slow this-id_0))
+                    (memory-order-acquire))
+                  (void)))
               (begin0
                 (begin (temp5.1$1 this-id_0) (temp4.1 this-id_0))
                 (begin
-                  (memory-order-release)
-                  (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                    (void)
-                    (port-unlock-slow this-id_0))
+                  (if (unsafe-parallel-active?)
+                    (begin
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow this-id_0)))
+                    (void))
                   (unsafe-end-uninterruptible))))))
          (|#%name|
           commit
@@ -9438,10 +9561,13 @@
                  (begin
                    (begin
                      (unsafe-start-uninterruptible)
-                     (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                       (void)
-                       (port-lock-slow this-id_0))
-                     (memory-order-acquire))
+                     (if (unsafe-parallel-active?)
+                       (begin
+                         (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                           (void)
+                           (port-lock-slow this-id_0))
+                         (memory-order-acquire))
+                       (void)))
                    (begin0
                      (let ((amt_0
                             (fxmin
@@ -9477,10 +9603,13 @@
                              (temp1.1 this-id_0)
                              (|#%app| finish280_0 dest-bstr_0)))))
                      (begin
-                       (memory-order-release)
-                       (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                         (void)
-                         (port-unlock-slow this-id_0))
+                       (if (unsafe-parallel-active?)
+                         (begin
+                           (memory-order-release)
+                           (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                             (void)
+                             (port-unlock-slow this-id_0)))
+                         (void))
                        (unsafe-end-uninterruptible)))))))))
          (commit-input-port-methods-no-more-atomic-for-progress.1
           commit-input-port-vtable.1)
@@ -9756,18 +9885,26 @@
        (begin
          (begin
            (unsafe-start-uninterruptible)
-           (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
-           (memory-order-acquire))
+           (if (unsafe-parallel-active?)
+             (begin
+               (if (unsafe-struct*-cas! p_0 2 #f #t)
+                 (void)
+                 (port-lock-slow p_0))
+               (memory-order-acquire))
+             (void)))
          (begin0
            (begin
              (check-not-closed.1 #f 'file-truncate p_0)
              (let ((p_1 (->core-output-port.1 unsafe-undefined p_0 #f)))
                (|#%app| (file-truncate-ref p_1) p_1 pos_0)))
            (begin
-             (memory-order-release)
-             (if (unsafe-struct*-cas! p_0 2 #t #f)
-               (void)
-               (port-unlock-slow p_0))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (memory-order-release)
+                 (if (unsafe-struct*-cas! p_0 2 #t #f)
+                   (void)
+                   (port-unlock-slow p_0)))
+               (void))
              (unsafe-end-uninterruptible))))))))
 (define 1/file-stream-buffer-mode
   (|#%name|
@@ -9785,17 +9922,25 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
-             (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
-             (memory-order-acquire))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (if (unsafe-struct*-cas! p_1 2 #f #t)
+                   (void)
+                   (port-lock-slow p_1))
+                 (memory-order-acquire))
+               (void)))
            (begin0
              (begin
                (check-not-closed.1 #f 'file-stream-buffer-mode p_1)
                (if buffer-mode_0 (|#%app| buffer-mode_0 p_1) #f))
              (begin
-               (memory-order-release)
-               (if (unsafe-struct*-cas! p_1 2 #t #f)
-                 (void)
-                 (port-unlock-slow p_1))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (memory-order-release)
+                   (if (unsafe-struct*-cas! p_1 2 #t #f)
+                     (void)
+                     (port-unlock-slow p_1)))
+                 (void))
                (unsafe-end-uninterruptible)))))))
     ((p_0 mode_0)
      (begin
@@ -9829,10 +9974,13 @@
                      (begin
                        (begin
                          (unsafe-start-uninterruptible)
-                         (if (unsafe-struct*-cas! p_1 2 #f #t)
-                           (void)
-                           (port-lock-slow p_1))
-                         (memory-order-acquire))
+                         (if (unsafe-parallel-active?)
+                           (begin
+                             (if (unsafe-struct*-cas! p_1 2 #f #t)
+                               (void)
+                               (port-lock-slow p_1))
+                             (memory-order-acquire))
+                           (void)))
                        (begin0
                          (begin
                            (check-not-closed.1 #f 'file-stream-buffer-mode p_1)
@@ -9843,10 +9991,13 @@
                                (begin (|#%app| buffer-mode_0 p_1 mode_0) #t)
                                #f)))
                          (begin
-                           (memory-order-release)
-                           (if (unsafe-struct*-cas! p_1 2 #t #f)
-                             (void)
-                             (port-unlock-slow p_1))
+                           (if (unsafe-parallel-active?)
+                             (begin
+                               (memory-order-release)
+                               (if (unsafe-struct*-cas! p_1 2 #t #f)
+                                 (void)
+                                 (port-unlock-slow p_1)))
+                             (void))
                            (unsafe-end-uninterruptible))))))))
              (begin
                (if (1/input-port? p_0)
@@ -9890,10 +10041,13 @@
                (begin
                  (end-rktio)
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! p5_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow p5_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! p5_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow p5_0)))
+                     (void))
                    (unsafe-end-uninterruptible))
                  (let ((base-msg_0 "error closing stream port"))
                    (raise
@@ -10082,18 +10236,24 @@
                       (lambda (this-id_0)
                         (begin
                           (begin
-                            (memory-order-release)
-                            (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                              (void)
-                              (port-unlock-slow this-id_0))
+                            (if (unsafe-parallel-active?)
+                              (begin
+                                (memory-order-release)
+                                (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                                  (void)
+                                  (port-unlock-slow this-id_0)))
+                              (void))
                             (unsafe-end-uninterruptible))
                           (unsafe-start-atomic)
                           (begin
                             (unsafe-start-uninterruptible)
-                            (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                              (void)
-                              (port-lock-slow this-id_0))
-                            (memory-order-acquire))
+                            (if (unsafe-parallel-active?)
+                              (begin
+                                (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                                  (void)
+                                  (port-lock-slow this-id_0))
+                                (memory-order-acquire))
+                              (void)))
                           (begin0
                             (begin
                               (start-rktio)
@@ -10223,10 +10383,17 @@
                                 (begin
                                   (end-rktio)
                                   (begin
-                                    (memory-order-release)
-                                    (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                                      (void)
-                                      (port-unlock-slow this-id_0))
+                                    (if (unsafe-parallel-active?)
+                                      (begin
+                                        (memory-order-release)
+                                        (if (unsafe-struct*-cas!
+                                             this-id_0
+                                             2
+                                             #t
+                                             #f)
+                                          (void)
+                                          (port-unlock-slow this-id_0)))
+                                      (void))
                                     (unsafe-end-uninterruptible))
                                   (|#%app|
                                    (fd-input-port-methods-raise-read-error.1
@@ -10334,7 +10501,7 @@
               p17_0
               (register-fd-close cust_0 fd_0 fd-refcount_0 #f p17_0))
              (finish-port/count p17_0))))))))
-(define finish_3020
+(define finish_2679
   (make-struct-type-install-properties
    '(fd-output-port)
    8
@@ -10363,10 +10530,13 @@
            (if (vector? result_0)
              (begin
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! p_0 2 #t #f)
-                   (void)
-                   (port-unlock-slow p_0))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! p_0 2 #t #f)
+                       (void)
+                       (port-unlock-slow p_0)))
+                   (void))
                  (unsafe-end-uninterruptible))
                (let ((base-msg_0 "error setting file size"))
                  (raise
@@ -10398,7 +10568,7 @@
    #f
    #f
    '(8 . 255)))
-(define effect_2896 (finish_3020 struct:fd-output-port))
+(define effect_2896 (finish_2679 struct:fd-output-port))
 (define create-fd-output-port
   (|#%name|
    create-fd-output-port
@@ -10559,18 +10729,24 @@
                 (if (fd-output-port-bstr this-id_0)
                   (begin
                     (begin
-                      (memory-order-release)
-                      (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                        (void)
-                        (port-unlock-slow this-id_0))
+                      (if (unsafe-parallel-active?)
+                        (begin
+                          (memory-order-release)
+                          (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                            (void)
+                            (port-unlock-slow this-id_0)))
+                        (void))
                       (unsafe-end-uninterruptible))
                     (unsafe-start-atomic)
                     (begin
                       (unsafe-start-uninterruptible)
-                      (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                        (void)
-                        (port-lock-slow this-id_0))
-                      (memory-order-acquire))
+                      (if (unsafe-parallel-active?)
+                        (begin
+                          (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                            (void)
+                            (port-lock-slow this-id_0))
+                          (memory-order-acquire))
+                        (void)))
                     (begin0
                       (begin
                         (start-rktio)
@@ -10720,10 +10896,13 @@
                                n_0))
                             (begin
                               (begin
-                                (memory-order-release)
-                                (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                                  (void)
-                                  (port-unlock-slow this-id_0))
+                                (if (unsafe-parallel-active?)
+                                  (begin
+                                    (memory-order-release)
+                                    (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                                      (void)
+                                      (port-unlock-slow this-id_0)))
+                                  (void))
                                 (unsafe-end-uninterruptible))
                               (|#%app|
                                (fd-output-port-methods-raise-write-error.1
@@ -10837,10 +11016,13 @@
                     n_0))
                  (begin
                    (begin
-                     (memory-order-release)
-                     (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                       (void)
-                       (port-unlock-slow this-id_0))
+                     (if (unsafe-parallel-active?)
+                       (begin
+                         (memory-order-release)
+                         (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                           (void)
+                           (port-unlock-slow this-id_0)))
+                       (void))
                      (unsafe-end-uninterruptible))
                    (|#%app|
                     (fd-output-port-methods-raise-write-error.1
@@ -10873,20 +11055,26 @@
              (void)
              (begin
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                   (void)
-                   (port-unlock-slow this-id_0))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                       (void)
+                       (port-unlock-slow this-id_0)))
+                   (void))
                  (unsafe-end-uninterruptible))
                (if enable-break?668_0
                  (sync/enable-break (core-output-port-evt this-id_0))
                  (sync (core-output-port-evt this-id_0)))
                (begin
                  (unsafe-start-uninterruptible)
-                 (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                   (void)
-                   (port-lock-slow this-id_0))
-                 (memory-order-acquire))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                       (void)
+                       (port-lock-slow this-id_0))
+                     (memory-order-acquire))
+                   (void)))
                (if (fd-output-port-bstr this-id_0) (loop_0) (void))))))))
       (loop_0)))))
 (define temp21.1
@@ -10937,18 +11125,24 @@
        (void)
        (begin
          (begin
-           (memory-order-release)
-           (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-             (void)
-             (port-unlock-slow this-id_0))
+           (if (unsafe-parallel-active?)
+             (begin
+               (memory-order-release)
+               (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                 (void)
+                 (port-unlock-slow this-id_0)))
+             (void))
            (unsafe-end-uninterruptible))
          (sync (rktio-fd-flushed-evt46.1 this-id_0))
          (begin
            (unsafe-start-uninterruptible)
-           (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-             (void)
-             (port-lock-slow this-id_0))
-           (memory-order-acquire))
+           (if (unsafe-parallel-active?)
+             (begin
+               (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                 (void)
+                 (port-lock-slow this-id_0))
+               (memory-order-acquire))
+             (void)))
          (temp22.1 this-id_0))))))
 (define open-output-fd.1
   (|#%name|
@@ -11030,17 +11224,23 @@
                            (begin
                              (begin
                                (unsafe-start-uninterruptible)
-                               (if (unsafe-struct*-cas! p43_0 2 #f #t)
-                                 (void)
-                                 (port-lock-slow p43_0))
-                               (memory-order-acquire))
+                               (if (unsafe-parallel-active?)
+                                 (begin
+                                   (if (unsafe-struct*-cas! p43_0 2 #f #t)
+                                     (void)
+                                     (port-lock-slow p43_0))
+                                   (memory-order-acquire))
+                                 (void)))
                              (begin0
                                (temp25.1 p43_0)
                                (begin
-                                 (memory-order-release)
-                                 (if (unsafe-struct*-cas! p43_0 2 #t #f)
-                                   (void)
-                                   (port-unlock-slow p43_0))
+                                 (if (unsafe-parallel-active?)
+                                   (begin
+                                     (memory-order-release)
+                                     (if (unsafe-struct*-cas! p43_0 2 #t #f)
+                                       (void)
+                                       (port-unlock-slow p43_0)))
+                                   (void))
                                  (unsafe-end-uninterruptible))))))
                         #f)))
                  (let ((custodian-reference_0
@@ -11090,10 +11290,13 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
-               (if (unsafe-struct*-cas! cp_0 2 #f #t)
-                 (void)
-                 (port-lock-slow cp_0))
-               (memory-order-acquire))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (if (unsafe-struct*-cas! cp_0 2 #f #t)
+                     (void)
+                     (port-lock-slow cp_0))
+                   (memory-order-acquire))
+                 (void)))
              (begin0
                (let ((fd_0 (fd-port-fd cp_0)))
                  (begin
@@ -11105,10 +11308,13 @@
                       fd_0)
                      (end-rktio))))
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! cp_0 2 #t #f)
-                   (void)
-                   (port-unlock-slow cp_0))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! cp_0 2 #t #f)
+                       (void)
+                       (port-unlock-slow cp_0)))
+                   (void))
                  (unsafe-end-uninterruptible))))
            #f)
          (if (1/input-port? p_0)
@@ -11149,10 +11355,13 @@
       (if (vector? r_0)
         (begin
           (begin
-            (memory-order-release)
-            (if (unsafe-struct*-cas! p_0 2 #t #f)
-              (void)
-              (port-unlock-slow p_0))
+            (if (unsafe-parallel-active?)
+              (begin
+                (memory-order-release)
+                (if (unsafe-struct*-cas! p_0 2 #t #f)
+                  (void)
+                  (port-unlock-slow p_0)))
+              (void))
             (unsafe-end-uninterruptible))
           (let ((base-msg_0 "error setting stream position"))
             (raise
@@ -11392,10 +11601,13 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
-             (if (unsafe-struct*-cas! port_1 2 #f #t)
-               (void)
-               (port-lock-slow port_1))
-             (memory-order-acquire))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (if (unsafe-struct*-cas! port_1 2 #f #t)
+                   (void)
+                   (port-lock-slow port_1))
+                 (memory-order-acquire))
+               (void)))
            (begin0
              (begin
                (start-rktio)
@@ -11414,10 +11626,13 @@
                    (set-closed-state! port_1))
                  (end-rktio)))
              (begin
-               (memory-order-release)
-               (if (unsafe-struct*-cas! port_1 2 #t #f)
-                 (void)
-                 (port-unlock-slow port_1))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (memory-order-release)
+                   (if (unsafe-struct*-cas! port_1 2 #t #f)
+                     (void)
+                     (port-unlock-slow port_1)))
+                 (void))
                (unsafe-end-uninterruptible))))))
      #f
      #f)))
@@ -11431,17 +11646,23 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
-        (if (unsafe-struct*-cas! port_0 2 #f #t)
-          (void)
-          (port-lock-slow port_0))
-        (memory-order-acquire))
+        (if (unsafe-parallel-active?)
+          (begin
+            (if (unsafe-struct*-cas! port_0 2 #f #t)
+              (void)
+              (port-lock-slow port_0))
+            (memory-order-acquire))
+          (void)))
       (if (1/port-closed? port_0)
         (begin
           (begin
-            (memory-order-release)
-            (if (unsafe-struct*-cas! port_0 2 #t #f)
-              (void)
-              (port-unlock-slow port_0))
+            (if (unsafe-parallel-active?)
+              (begin
+                (memory-order-release)
+                (if (unsafe-struct*-cas! port_0 2 #t #f)
+                  (void)
+                  (port-unlock-slow port_0)))
+              (void))
             (unsafe-end-uninterruptible))
           #f)
         (let ((input?_0 (1/input-port? port_0)))
@@ -11472,10 +11693,13 @@
                                name_1))))))))
                 (begin
                   (begin
-                    (memory-order-release)
-                    (if (unsafe-struct*-cas! port_0 2 #t #f)
-                      (void)
-                      (port-unlock-slow port_0))
+                    (if (unsafe-parallel-active?)
+                      (begin
+                        (memory-order-release)
+                        (if (unsafe-struct*-cas! port_0 2 #t #f)
+                          (void)
+                          (port-unlock-slow port_0)))
+                      (void))
                     (unsafe-end-uninterruptible))
                   (lambda ()
                     (begin
@@ -11496,10 +11720,13 @@
               (begin
                 (end-rktio)
                 (begin
-                  (memory-order-release)
-                  (if (unsafe-struct*-cas! port_0 2 #t #f)
-                    (void)
-                    (port-unlock-slow port_0))
+                  (if (unsafe-parallel-active?)
+                    (begin
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! port_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow port_0)))
+                    (void))
                   (unsafe-end-uninterruptible))
                 (let ((base-msg_0 "error during dup of file descriptor"))
                   (raise
@@ -11810,10 +12037,13 @@
                   (begin
                     (begin
                       (unsafe-start-uninterruptible)
-                      (if (unsafe-struct*-cas! in_1 2 #f #t)
-                        (void)
-                        (port-lock-slow in_1))
-                      (memory-order-acquire))
+                      (if (unsafe-parallel-active?)
+                        (begin
+                          (if (unsafe-struct*-cas! in_1 2 #f #t)
+                            (void)
+                            (port-lock-slow in_1))
+                          (memory-order-acquire))
+                        (void)))
                     (begin0
                       (let ((app_0
                              (core-input-port-methods-commit.1
@@ -11831,10 +12061,13 @@
                             bstr_0
                             0))))
                       (begin
-                        (memory-order-release)
-                        (if (unsafe-struct*-cas! in_1 2 #t #f)
-                          (void)
-                          (port-unlock-slow in_1))
+                        (if (unsafe-parallel-active?)
+                          (begin
+                            (memory-order-release)
+                            (if (unsafe-struct*-cas! in_1 2 #t #f)
+                              (void)
+                              (port-unlock-slow in_1)))
+                          (void))
                         (unsafe-end-uninterruptible)))))))))))
     (|#%name|
      port-commit-peeked
@@ -11879,18 +12112,24 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
-               (if (unsafe-struct*-cas! in_0 2 #f #t)
-                 (void)
-                 (port-lock-slow in_0))
-               (memory-order-acquire))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (if (unsafe-struct*-cas! in_0 2 #f #t)
+                     (void)
+                     (port-lock-slow in_0))
+                   (memory-order-acquire))
+                 (void)))
              (prepare-change in_0)
              (if (fx= start16_0 end17_0)
                (begin
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! in_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow in_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! in_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow in_0)))
+                     (void))
                    (unsafe-end-uninterruptible))
                  0)
                (if (core-port-closed? in_0)
@@ -11901,10 +12140,13 @@
                        (void)
                        (set-core-input-port-pending-eof?! in_0 #f))
                      (begin
-                       (memory-order-release)
-                       (if (unsafe-struct*-cas! in_0 2 #t #f)
-                         (void)
-                         (port-unlock-slow in_0))
+                       (if (unsafe-parallel-active?)
+                         (begin
+                           (memory-order-release)
+                           (if (unsafe-struct*-cas! in_0 2 #t #f)
+                             (void)
+                             (port-unlock-slow in_0)))
+                         (void))
                        (unsafe-end-uninterruptible))
                      eof)
                    (let ((buffer_0 (core-port-buffer in_0)))
@@ -11936,10 +12178,13 @@
                                     start16_0)
                                    (void))
                                  (begin
-                                   (memory-order-release)
-                                   (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                     (void)
-                                     (port-unlock-slow in_0))
+                                   (if (unsafe-parallel-active?)
+                                     (begin
+                                       (memory-order-release)
+                                       (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                         (void)
+                                         (port-unlock-slow in_0)))
+                                     (void))
                                    (unsafe-end-uninterruptible))
                                  v_0)))
                            (let ((read-in_0
@@ -11976,14 +12221,17 @@
                                               #f)
                                              (void)))
                                          (begin
-                                           (memory-order-release)
-                                           (if (unsafe-struct*-cas!
-                                                in_0
-                                                2
-                                                #t
-                                                #f)
-                                             (void)
-                                             (port-unlock-slow in_0))
+                                           (if (unsafe-parallel-active?)
+                                             (begin
+                                               (memory-order-release)
+                                               (if (unsafe-struct*-cas!
+                                                    in_0
+                                                    2
+                                                    #t
+                                                    #f)
+                                                 (void)
+                                                 (port-unlock-slow in_0)))
+                                             (void))
                                            (unsafe-end-uninterruptible))
                                          (if (exact-nonnegative-integer? v_1)
                                            (if (zero? v_1)
@@ -12038,15 +12286,18 @@
                                                        (begin
                                                          (begin
                                                            (unsafe-start-uninterruptible)
-                                                           (if (unsafe-struct*-cas!
-                                                                in_0
-                                                                2
-                                                                #f
-                                                                #t)
-                                                             (void)
-                                                             (port-lock-slow
-                                                              in_0))
-                                                           (memory-order-acquire))
+                                                           (if (unsafe-parallel-active?)
+                                                             (begin
+                                                               (if (unsafe-struct*-cas!
+                                                                    in_0
+                                                                    2
+                                                                    #f
+                                                                    #t)
+                                                                 (void)
+                                                                 (port-lock-slow
+                                                                  in_0))
+                                                               (memory-order-acquire))
+                                                             (void)))
                                                          (result-loop_0
                                                           next-v_0)))))
                                                  (if (procedure? v_1)
@@ -12075,10 +12326,13 @@
                                   (result-loop_0 v_0)))
                                (begin
                                  (begin
-                                   (memory-order-release)
-                                   (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                     (void)
-                                     (port-unlock-slow in_0))
+                                   (if (unsafe-parallel-active?)
+                                     (begin
+                                       (memory-order-release)
+                                       (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                         (void)
+                                         (port-unlock-slow in_0)))
+                                     (void))
                                    (unsafe-end-uninterruptible))
                                  (let ((app_0
                                         (->core-input-port.1
@@ -12114,27 +12368,36 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
-               (if (unsafe-struct*-cas! in_0 2 #f #t)
-                 (void)
-                 (port-lock-slow in_0))
-               (memory-order-acquire))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (if (unsafe-struct*-cas! in_0 2 #f #t)
+                     (void)
+                     (port-lock-slow in_0))
+                   (memory-order-acquire))
+                 (void)))
              (prepare-change in_0)
              (if (= start34_0 end35_0)
                (begin
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! in_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow in_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! in_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow in_0)))
+                     (void))
                    (unsafe-end-uninterruptible))
                  0)
                (if (if progress-evt19_0 (sync/timeout 0 progress-evt19_0) #f)
                  (begin
                    (begin
-                     (memory-order-release)
-                     (if (unsafe-struct*-cas! in_0 2 #t #f)
-                       (void)
-                       (port-unlock-slow in_0))
+                     (if (unsafe-parallel-active?)
+                       (begin
+                         (memory-order-release)
+                         (if (unsafe-struct*-cas! in_0 2 #t #f)
+                           (void)
+                           (port-unlock-slow in_0)))
+                       (void))
                      (unsafe-end-uninterruptible))
                    0)
                  (if (core-port-closed? in_0)
@@ -12142,10 +12405,13 @@
                    (if (core-input-port-pending-eof? in_0)
                      (begin
                        (begin
-                         (memory-order-release)
-                         (if (unsafe-struct*-cas! in_0 2 #t #f)
-                           (void)
-                           (port-unlock-slow in_0))
+                         (if (unsafe-parallel-active?)
+                           (begin
+                             (memory-order-release)
+                             (if (unsafe-struct*-cas! in_0 2 #t #f)
+                               (void)
+                               (port-unlock-slow in_0)))
+                           (void))
                          (unsafe-end-uninterruptible))
                        eof)
                      (let ((buffer_0 (core-port-buffer in_0)))
@@ -12164,10 +12430,13 @@
                                     buf-pos_0
                                     (fx+ buf-pos_0 v_0)))
                                  (begin
-                                   (memory-order-release)
-                                   (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                     (void)
-                                     (port-unlock-slow in_0))
+                                   (if (unsafe-parallel-active?)
+                                     (begin
+                                       (memory-order-release)
+                                       (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                         (void)
+                                         (port-unlock-slow in_0)))
+                                     (void))
                                    (unsafe-end-uninterruptible))
                                  v_0))
                              (let ((peek-in_0
@@ -12186,10 +12455,17 @@
                                          copy-bstr?22_0)))
                                    (begin
                                      (begin
-                                       (memory-order-release)
-                                       (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                         (void)
-                                         (port-unlock-slow in_0))
+                                       (if (unsafe-parallel-active?)
+                                         (begin
+                                           (memory-order-release)
+                                           (if (unsafe-struct*-cas!
+                                                in_0
+                                                2
+                                                #t
+                                                #f)
+                                             (void)
+                                             (port-unlock-slow in_0)))
+                                         (void))
                                        (unsafe-end-uninterruptible))
                                      (letrec*
                                       ((result-loop_0
@@ -12262,10 +12538,13 @@
                                       (result-loop_0 v_0))))
                                  (begin
                                    (begin
-                                     (memory-order-release)
-                                     (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                       (void)
-                                       (port-unlock-slow in_0))
+                                     (if (unsafe-parallel-active?)
+                                       (begin
+                                         (memory-order-release)
+                                         (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                           (void)
+                                           (port-unlock-slow in_0)))
+                                       (void))
                                      (unsafe-end-uninterruptible))
                                    (loop_0
                                     (->core-input-port.1
@@ -12280,10 +12559,13 @@
      (begin
        (begin
          (unsafe-start-uninterruptible)
-         (if (unsafe-struct*-cas! in41_0 2 #f #t)
-           (void)
-           (port-lock-slow in41_0))
-         (memory-order-acquire))
+         (if (unsafe-parallel-active?)
+           (begin
+             (if (unsafe-struct*-cas! in41_0 2 #f #t)
+               (void)
+               (port-lock-slow in41_0))
+             (memory-order-acquire))
+           (void)))
        (let ((buffer_0 (core-port-buffer in41_0)))
          (let ((pos_0 (direct-pos buffer_0)))
            (if (fx< pos_0 (direct-end buffer_0))
@@ -12294,18 +12576,24 @@
                    (port-count-byte! in41_0 b_0)
                    (void))
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! in41_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow in41_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! in41_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow in41_0)))
+                     (void))
                    (unsafe-end-uninterruptible))
                  b_0))
              (begin
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! in41_0 2 #t #f)
-                   (void)
-                   (port-unlock-slow in41_0))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! in41_0 2 #t #f)
+                       (void)
+                       (port-unlock-slow in41_0)))
+                   (void))
                  (unsafe-end-uninterruptible))
                (read-byte-via-bytes.1 special-ok?38_0 who40_0 in41_0)))))))))
 (define read-byte-via-bytes.1
@@ -12334,28 +12622,37 @@
      (begin
        (begin
          (unsafe-start-uninterruptible)
-         (if (unsafe-struct*-cas! in51_0 2 #f #t)
-           (void)
-           (port-lock-slow in51_0))
-         (memory-order-acquire))
+         (if (unsafe-parallel-active?)
+           (begin
+             (if (unsafe-struct*-cas! in51_0 2 #f #t)
+               (void)
+               (port-lock-slow in51_0))
+             (memory-order-acquire))
+           (void)))
        (let ((buffer_0 (core-port-buffer in51_0)))
          (let ((pos_0 (+ (direct-pos buffer_0) skip-k52_0)))
            (if (< pos_0 (direct-end buffer_0))
              (let ((b_0 (unsafe-bytes-ref (direct-bstr buffer_0) pos_0)))
                (begin
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! in51_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow in51_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! in51_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow in51_0)))
+                     (void))
                    (unsafe-end-uninterruptible))
                  b_0))
              (begin
                (begin
-                 (memory-order-release)
-                 (if (unsafe-struct*-cas! in51_0 2 #t #f)
-                   (void)
-                   (port-unlock-slow in51_0))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (memory-order-release)
+                     (if (unsafe-struct*-cas! in51_0 2 #t #f)
+                       (void)
+                       (port-unlock-slow in51_0)))
+                   (void))
                  (unsafe-end-uninterruptible))
                (peek-byte-via-bytes.1
                 #f
@@ -12388,8 +12685,13 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
-        (if (unsafe-struct*-cas! in_0 2 #f #t) (void) (port-lock-slow in_0))
-        (memory-order-acquire))
+        (if (unsafe-parallel-active?)
+          (begin
+            (if (unsafe-struct*-cas! in_0 2 #f #t)
+              (void)
+              (port-lock-slow in_0))
+            (memory-order-acquire))
+          (void)))
       (let ((buffer_0 (core-port-buffer in_0)))
         (let ((bstr_0 (direct-bstr buffer_0)))
           (let ((pos_0 (direct-pos buffer_0)))
@@ -12421,10 +12723,13 @@
                                      (subbytes bstr_0 pos_0 end_1))))
                               (begin
                                 (begin
-                                  (memory-order-release)
-                                  (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                    (void)
-                                    (port-unlock-slow in_0))
+                                  (if (unsafe-parallel-active?)
+                                    (begin
+                                      (memory-order-release)
+                                      (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                        (void)
+                                        (port-unlock-slow in_0)))
+                                    (void))
                                   (unsafe-end-uninterruptible))
                                 result_0))))))))
                 (letrec*
@@ -12435,10 +12740,13 @@
                       (if (fx= i_0 end_0)
                         (begin
                           (begin
-                            (memory-order-release)
-                            (if (unsafe-struct*-cas! in_0 2 #t #f)
-                              (void)
-                              (port-unlock-slow in_0))
+                            (if (unsafe-parallel-active?)
+                              (begin
+                                (memory-order-release)
+                                (if (unsafe-struct*-cas! in_0 2 #t #f)
+                                  (void)
+                                  (port-unlock-slow in_0)))
+                              (void))
                             (unsafe-end-uninterruptible))
                           #f)
                         (let ((b_0 (unsafe-bytes-ref bstr_0 i_0)))
@@ -12457,10 +12765,17 @@
                                   (if (if crlf?_0 (fx= (fx+ i_0 1) end_0) #f)
                                     (begin
                                       (begin
-                                        (memory-order-release)
-                                        (if (unsafe-struct*-cas! in_0 2 #t #f)
-                                          (void)
-                                          (port-unlock-slow in_0))
+                                        (if (unsafe-parallel-active?)
+                                          (begin
+                                            (memory-order-release)
+                                            (if (unsafe-struct*-cas!
+                                                 in_0
+                                                 2
+                                                 #t
+                                                 #f)
+                                              (void)
+                                              (port-unlock-slow in_0)))
+                                          (void))
                                         (unsafe-end-uninterruptible))
                                       #f)
                                     (finish_0 i_0 (fx+ i_0 1)))
@@ -12499,10 +12814,17 @@
                                   (begin
                                     (begin
                                       (unsafe-start-uninterruptible)
-                                      (if (unsafe-struct*-cas! out_0 2 #f #t)
-                                        (void)
-                                        (port-lock-slow out_0))
-                                      (memory-order-acquire))
+                                      (if (unsafe-parallel-active?)
+                                        (begin
+                                          (if (unsafe-struct*-cas!
+                                               out_0
+                                               2
+                                               #f
+                                               #t)
+                                            (void)
+                                            (port-lock-slow out_0))
+                                          (memory-order-acquire))
+                                        (void)))
                                     (begin
                                       (check-not-closed.1
                                        #f
@@ -12521,14 +12843,17 @@
                                               #f)))
                                         (begin
                                           (begin
-                                            (memory-order-release)
-                                            (if (unsafe-struct*-cas!
-                                                 out_0
-                                                 2
-                                                 #t
-                                                 #f)
-                                              (void)
-                                              (port-unlock-slow out_0))
+                                            (if (unsafe-parallel-active?)
+                                              (begin
+                                                (memory-order-release)
+                                                (if (unsafe-struct*-cas!
+                                                     out_0
+                                                     2
+                                                     #t
+                                                     #f)
+                                                  (void)
+                                                  (port-unlock-slow out_0)))
+                                              (void))
                                             (unsafe-end-uninterruptible))
                                           (letrec*
                                            ((r-loop_0
@@ -12550,17 +12875,23 @@
                               (begin
                                 (begin
                                   (unsafe-start-uninterruptible)
-                                  (if (unsafe-struct*-cas! out_0 2 #f #t)
-                                    (void)
-                                    (port-lock-slow out_0))
-                                  (memory-order-acquire))
+                                  (if (unsafe-parallel-active?)
+                                    (begin
+                                      (if (unsafe-struct*-cas! out_0 2 #f #t)
+                                        (void)
+                                        (port-lock-slow out_0))
+                                      (memory-order-acquire))
+                                    (void)))
                                 (begin0
                                   (check-not-closed.1 #f 'flush-output out_0)
                                   (begin
-                                    (memory-order-release)
-                                    (if (unsafe-struct*-cas! out_0 2 #t #f)
-                                      (void)
-                                      (port-unlock-slow out_0))
+                                    (if (unsafe-parallel-active?)
+                                      (begin
+                                        (memory-order-release)
+                                        (if (unsafe-struct*-cas! out_0 2 #t #f)
+                                          (void)
+                                          (port-unlock-slow out_0)))
+                                      (void))
                                     (unsafe-end-uninterruptible))))
                               (wo-loop_0 write-out_0)))))))))
                  (wo-loop_0 p_0))))))))
@@ -14268,18 +14599,24 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
-               (if (unsafe-struct*-cas! out_0 2 #f #t)
-                 (void)
-                 (port-lock-slow out_0))
-               (memory-order-acquire))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (if (unsafe-struct*-cas! out_0 2 #f #t)
+                     (void)
+                     (port-lock-slow out_0))
+                   (memory-order-acquire))
+                 (void)))
              (if (fx= start12_0 end13_0)
                (begin
                  (check-not-closed.1 #f who9_0 out_0)
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! out_0 2 #t #f)
-                     (void)
-                     (port-unlock-slow out_0))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! out_0 2 #t #f)
+                         (void)
+                         (port-unlock-slow out_0)))
+                     (void))
                    (unsafe-end-uninterruptible))
                  0)
                (let ((buffer_0 (core-port-buffer out_0)))
@@ -14310,10 +14647,13 @@
                               start12_0)
                              (void))
                            (begin
-                             (memory-order-release)
-                             (if (unsafe-struct*-cas! out_0 2 #t #f)
-                               (void)
-                               (port-unlock-slow out_0))
+                             (if (unsafe-parallel-active?)
+                               (begin
+                                 (memory-order-release)
+                                 (if (unsafe-struct*-cas! out_0 2 #t #f)
+                                   (void)
+                                   (port-unlock-slow out_0)))
+                               (void))
                              (unsafe-end-uninterruptible))
                            v_0))
                        (begin
@@ -14341,14 +14681,17 @@
                                      (if (not v_1)
                                        (begin
                                          (begin
-                                           (memory-order-release)
-                                           (if (unsafe-struct*-cas!
-                                                out_0
-                                                2
-                                                #t
-                                                #f)
-                                             (void)
-                                             (port-unlock-slow out_0))
+                                           (if (unsafe-parallel-active?)
+                                             (begin
+                                               (memory-order-release)
+                                               (if (unsafe-struct*-cas!
+                                                    out_0
+                                                    2
+                                                    #t
+                                                    #f)
+                                                 (void)
+                                                 (port-unlock-slow out_0)))
+                                             (void))
                                            (unsafe-end-uninterruptible))
                                          (if zero-ok?3_0
                                            0
@@ -14364,27 +14707,33 @@
                                             bstr11_0
                                             start12_0)
                                            (begin
-                                             (memory-order-release)
-                                             (if (unsafe-struct*-cas!
-                                                  out_0
-                                                  2
-                                                  #t
-                                                  #f)
-                                               (void)
-                                               (port-unlock-slow out_0))
+                                             (if (unsafe-parallel-active?)
+                                               (begin
+                                                 (memory-order-release)
+                                                 (if (unsafe-struct*-cas!
+                                                      out_0
+                                                      2
+                                                      #t
+                                                      #f)
+                                                   (void)
+                                                   (port-unlock-slow out_0)))
+                                               (void))
                                              (unsafe-end-uninterruptible))
                                            v_1)
                                          (if (evt? v_1)
                                            (begin
                                              (begin
-                                               (memory-order-release)
-                                               (if (unsafe-struct*-cas!
-                                                    out_0
-                                                    2
-                                                    #t
-                                                    #f)
-                                                 (void)
-                                                 (port-unlock-slow out_0))
+                                               (if (unsafe-parallel-active?)
+                                                 (begin
+                                                   (memory-order-release)
+                                                   (if (unsafe-struct*-cas!
+                                                        out_0
+                                                        2
+                                                        #t
+                                                        #f)
+                                                     (void)
+                                                     (port-unlock-slow out_0)))
+                                                 (void))
                                                (unsafe-end-uninterruptible))
                                              (if zero-ok?3_0
                                                0
@@ -14395,25 +14744,32 @@
                                                  (begin
                                                    (begin
                                                      (unsafe-start-uninterruptible)
-                                                     (if (unsafe-struct*-cas!
-                                                          out_0
-                                                          2
-                                                          #f
-                                                          #t)
-                                                       (void)
-                                                       (port-lock-slow out_0))
-                                                     (memory-order-acquire))
+                                                     (if (unsafe-parallel-active?)
+                                                       (begin
+                                                         (if (unsafe-struct*-cas!
+                                                              out_0
+                                                              2
+                                                              #f
+                                                              #t)
+                                                           (void)
+                                                           (port-lock-slow
+                                                            out_0))
+                                                         (memory-order-acquire))
+                                                       (void)))
                                                    (result-loop_0 new-v_0)))))
                                            (begin
                                              (begin
-                                               (memory-order-release)
-                                               (if (unsafe-struct*-cas!
-                                                    out_0
-                                                    2
-                                                    #t
-                                                    #f)
-                                                 (void)
-                                                 (port-unlock-slow out_0))
+                                               (if (unsafe-parallel-active?)
+                                                 (begin
+                                                   (memory-order-release)
+                                                   (if (unsafe-struct*-cas!
+                                                        out_0
+                                                        2
+                                                        #t
+                                                        #f)
+                                                     (void)
+                                                     (port-unlock-slow out_0)))
+                                                 (void))
                                                (unsafe-end-uninterruptible))
                                              (internal-error
                                               (format
@@ -14426,10 +14782,13 @@
                                 (result-loop_0 v_0)))
                              (begin
                                (begin
-                                 (memory-order-release)
-                                 (if (unsafe-struct*-cas! out_0 2 #t #f)
-                                   (void)
-                                   (port-unlock-slow out_0))
+                                 (if (unsafe-parallel-active?)
+                                   (begin
+                                     (memory-order-release)
+                                     (if (unsafe-struct*-cas! out_0 2 #t #f)
+                                       (void)
+                                       (port-unlock-slow out_0)))
+                                   (void))
                                  (unsafe-end-uninterruptible))
                                (let ((app_0
                                       (->core-output-port.1
@@ -14471,8 +14830,13 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
-        (if (unsafe-struct*-cas! out_0 2 #f #t) (void) (port-lock-slow out_0))
-        (memory-order-acquire))
+        (if (unsafe-parallel-active?)
+          (begin
+            (if (unsafe-struct*-cas! out_0 2 #f #t)
+              (void)
+              (port-lock-slow out_0))
+            (memory-order-acquire))
+          (void)))
       (let ((buffer_0 (core-port-buffer out_0)))
         (let ((pos_0 (direct-pos buffer_0)))
           (begin
@@ -14484,17 +14848,23 @@
                   (port-count-byte! out_0 b_0)
                   (void))
                 (begin
-                  (memory-order-release)
-                  (if (unsafe-struct*-cas! out_0 2 #t #f)
-                    (void)
-                    (port-unlock-slow out_0))
+                  (if (unsafe-parallel-active?)
+                    (begin
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! out_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow out_0)))
+                    (void))
                   (unsafe-end-uninterruptible)))
               (begin
                 (begin
-                  (memory-order-release)
-                  (if (unsafe-struct*-cas! out_0 2 #t #f)
-                    (void)
-                    (port-unlock-slow out_0))
+                  (if (unsafe-parallel-active?)
+                    (begin
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! out_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow out_0)))
+                    (void))
                   (unsafe-end-uninterruptible))
                 (let ((temp34_0 (bytes b_0)))
                   (write-some-bytes.1
@@ -14805,10 +15175,13 @@
                     (begin
                       (begin
                         (unsafe-start-uninterruptible)
-                        (if (unsafe-struct*-cas! out_1 2 #f #t)
-                          (void)
-                          (port-lock-slow out_1))
-                        (memory-order-acquire))
+                        (if (unsafe-parallel-active?)
+                          (begin
+                            (if (unsafe-struct*-cas! out_1 2 #f #t)
+                              (void)
+                              (port-lock-slow out_1))
+                            (memory-order-acquire))
+                          (void)))
                       (begin0
                         (begin
                           (check-not-closed.1 #f 'write-bytes-avail-evt out_1)
@@ -14820,10 +15193,13 @@
                                 (void)
                                 (begin
                                   (begin
-                                    (memory-order-release)
-                                    (if (unsafe-struct*-cas! out_1 2 #t #f)
-                                      (void)
-                                      (port-unlock-slow out_1))
+                                    (if (unsafe-parallel-active?)
+                                      (begin
+                                        (memory-order-release)
+                                        (if (unsafe-struct*-cas! out_1 2 #t #f)
+                                          (void)
+                                          (port-unlock-slow out_1)))
+                                      (void))
                                     (unsafe-end-uninterruptible))
                                   (raise-arguments-error
                                    'write-bytes-avail-evt
@@ -14837,10 +15213,13 @@
                                start-pos26_0
                                end-pos_0))))
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! out_1 2 #t #f)
-                            (void)
-                            (port-unlock-slow out_1))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! out_1 2 #t #f)
+                                (void)
+                                (port-unlock-slow out_1)))
+                            (void))
                           (unsafe-end-uninterruptible))))))))))))
     (|#%name|
      write-bytes-avail-evt
@@ -14865,18 +15244,24 @@
          (if (begin
                (begin
                  (unsafe-start-uninterruptible)
-                 (if (unsafe-struct*-cas! out_1 2 #f #t)
-                   (void)
-                   (port-lock-slow out_1))
-                 (memory-order-acquire))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (if (unsafe-struct*-cas! out_1 2 #f #t)
+                       (void)
+                       (port-lock-slow out_1))
+                     (memory-order-acquire))
+                   (void)))
                (begin0
                  (core-output-port-methods-get-write-evt.1
                   (core-port-vtable out_1))
                  (begin
-                   (memory-order-release)
-                   (if (unsafe-struct*-cas! out_1 2 #t #f)
-                     (void)
-                     (port-unlock-slow out_1))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (memory-order-release)
+                       (if (unsafe-struct*-cas! out_1 2 #t #f)
+                         (void)
+                         (port-unlock-slow out_1)))
+                     (void))
                    (unsafe-end-uninterruptible))))
            #t
            #f))))))
@@ -15034,10 +15419,13 @@
                            (begin
                              (begin
                                (unsafe-start-uninterruptible)
-                               (if (unsafe-struct*-cas! o_1 2 #f #t)
-                                 (void)
-                                 (port-lock-slow o_1))
-                               (memory-order-acquire))
+                               (if (unsafe-parallel-active?)
+                                 (begin
+                                   (if (unsafe-struct*-cas! o_1 2 #f #t)
+                                     (void)
+                                     (port-lock-slow o_1))
+                                   (memory-order-acquire))
+                                 (void)))
                              (let ((r_0
                                     (|#%app|
                                      write-out-special_0
@@ -15053,27 +15441,33 @@
                                      (if (not r_1)
                                        (begin
                                          (begin
-                                           (memory-order-release)
-                                           (if (unsafe-struct*-cas!
-                                                o_1
-                                                2
-                                                #t
-                                                #f)
-                                             (void)
-                                             (port-unlock-slow o_1))
+                                           (if (unsafe-parallel-active?)
+                                             (begin
+                                               (memory-order-release)
+                                               (if (unsafe-struct*-cas!
+                                                    o_1
+                                                    2
+                                                    #t
+                                                    #f)
+                                                 (void)
+                                                 (port-unlock-slow o_1)))
+                                             (void))
                                            (unsafe-end-uninterruptible))
                                          (if retry?1_0 (loop_0) #f))
                                        (if (evt? r_1)
                                          (begin
                                            (begin
-                                             (memory-order-release)
-                                             (if (unsafe-struct*-cas!
-                                                  o_1
-                                                  2
-                                                  #t
-                                                  #f)
-                                               (void)
-                                               (port-unlock-slow o_1))
+                                             (if (unsafe-parallel-active?)
+                                               (begin
+                                                 (memory-order-release)
+                                                 (if (unsafe-struct*-cas!
+                                                      o_1
+                                                      2
+                                                      #t
+                                                      #f)
+                                                   (void)
+                                                   (port-unlock-slow o_1)))
+                                               (void))
                                              (unsafe-end-uninterruptible))
                                            (if retry?1_0
                                              (result-loop_0 (sync r_1))
@@ -15086,14 +15480,17 @@
                                             #vu8(120)
                                             0)
                                            (begin
-                                             (memory-order-release)
-                                             (if (unsafe-struct*-cas!
-                                                  o_1
-                                                  2
-                                                  #t
-                                                  #f)
-                                               (void)
-                                               (port-unlock-slow o_1))
+                                             (if (unsafe-parallel-active?)
+                                               (begin
+                                                 (memory-order-release)
+                                                 (if (unsafe-struct*-cas!
+                                                      o_1
+                                                      2
+                                                      #t
+                                                      #f)
+                                                   (void)
+                                                   (port-unlock-slow o_1)))
+                                               (void))
                                              (unsafe-end-uninterruptible))
                                            #t)))))))
                                 (result-loop_0 r_0))))))))
@@ -18973,10 +19370,13 @@
             (begin
               (begin
                 (unsafe-start-uninterruptible)
-                (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                  (void)
-                  (port-lock-slow this-id_0))
-                (memory-order-acquire))
+                (if (unsafe-parallel-active?)
+                  (begin
+                    (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                      (void)
+                      (port-lock-slow this-id_0))
+                    (memory-order-acquire))
+                  (void)))
               (begin0
                 (begin
                   (if (commit-input-port-progress-sema this-id_0)
@@ -18992,10 +19392,13 @@
                         (void))))
                   (temp4.1 this-id_0))
                 (begin
-                  (memory-order-release)
-                  (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                    (void)
-                    (port-unlock-slow this-id_0))
+                  (if (unsafe-parallel-active?)
+                    (begin
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow this-id_0)))
+                    (void))
                   (unsafe-end-uninterruptible))))))
          (|#%name|
           commit
@@ -19012,10 +19415,13 @@
                (begin
                  (begin
                    (unsafe-start-uninterruptible)
-                   (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                     (void)
-                     (port-lock-slow this-id_0))
-                   (memory-order-acquire))
+                   (if (unsafe-parallel-active?)
+                     (begin
+                       (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                         (void)
+                         (port-lock-slow this-id_0))
+                       (memory-order-acquire))
+                     (void)))
                  (begin0
                    (let ((b_0 (core-port-buffer this-id_0)))
                      (let ((len_0 (direct-end b_0)))
@@ -19038,10 +19444,13 @@
                                (temp1.1 this-id_0)
                                (|#%app| finish204_0 dest-bstr_0)))))))
                    (begin
-                     (memory-order-release)
-                     (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                       (void)
-                       (port-unlock-slow this-id_0))
+                     (if (unsafe-parallel-active?)
+                       (begin
+                         (memory-order-release)
+                         (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                           (void)
+                           (port-unlock-slow this-id_0)))
+                       (void))
                      (unsafe-end-uninterruptible))))))))
          (commit-input-port-methods-no-more-atomic-for-progress.1
           commit-input-port-vtable.1))))))
@@ -19244,10 +19653,17 @@
                             (if (>= new-pos251_0 281474976710656)
                               (begin
                                 (begin
-                                  (memory-order-release)
-                                  (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                                    (void)
-                                    (port-unlock-slow this-id_0))
+                                  (if (unsafe-parallel-active?)
+                                    (begin
+                                      (memory-order-release)
+                                      (if (unsafe-struct*-cas!
+                                           this-id_0
+                                           2
+                                           #t
+                                           #f)
+                                        (void)
+                                        (port-unlock-slow this-id_0)))
+                                    (void))
                                   (unsafe-end-uninterruptible))
                                 (raise-arguments-error
                                  'file-position
@@ -19440,10 +19856,13 @@
                 (begin
                   (begin
                     (unsafe-start-uninterruptible)
-                    (if (unsafe-struct*-cas! o_0 2 #f #t)
-                      (void)
-                      (port-lock-slow o_0))
-                    (memory-order-acquire))
+                    (if (unsafe-parallel-active?)
+                      (begin
+                        (if (unsafe-struct*-cas! o_0 2 #f #t)
+                          (void)
+                          (port-lock-slow o_0))
+                        (memory-order-acquire))
+                      (void)))
                   (let ((len_0
                          (|#%app|
                           (bytes-output-port-methods-get-length.1
@@ -19453,10 +19872,13 @@
                       (if (> start-pos11_0 len_0)
                         (begin
                           (begin
-                            (memory-order-release)
-                            (if (unsafe-struct*-cas! o_0 2 #t #f)
-                              (void)
-                              (port-unlock-slow o_0))
+                            (if (unsafe-parallel-active?)
+                              (begin
+                                (memory-order-release)
+                                (if (unsafe-struct*-cas! o_0 2 #t #f)
+                                  (void)
+                                  (port-unlock-slow o_0)))
+                              (void))
                             (unsafe-end-uninterruptible))
                           (raise-range-error
                            'get-output-bytes
@@ -19474,10 +19896,13 @@
                             (void)
                             (begin
                               (begin
-                                (memory-order-release)
-                                (if (unsafe-struct*-cas! o_0 2 #t #f)
-                                  (void)
-                                  (port-unlock-slow o_0))
+                                (if (unsafe-parallel-active?)
+                                  (begin
+                                    (memory-order-release)
+                                    (if (unsafe-struct*-cas! o_0 2 #t #f)
+                                      (void)
+                                      (port-unlock-slow o_0)))
+                                  (void))
                                 (unsafe-end-uninterruptible))
                               (raise-range-error
                                'get-output-bytes
@@ -19503,10 +19928,13 @@
                                start-pos11_0
                                reset?10_0)
                               (begin
-                                (memory-order-release)
-                                (if (unsafe-struct*-cas! o_0 2 #t #f)
-                                  (void)
-                                  (port-unlock-slow o_0))
+                                (if (unsafe-parallel-active?)
+                                  (begin
+                                    (memory-order-release)
+                                    (if (unsafe-struct*-cas! o_0 2 #t #f)
+                                      (void)
+                                      (port-unlock-slow o_0)))
+                                  (void))
                                 (unsafe-end-uninterruptible))
                               bstr_0)))))))))))))
     (|#%name|
@@ -19715,10 +20143,17 @@
                                     (max-output-port-max-length this-id_0))))
                               (begin
                                 (begin
-                                  (memory-order-release)
-                                  (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                                    (void)
-                                    (port-unlock-slow this-id_0))
+                                  (if (unsafe-parallel-active?)
+                                    (begin
+                                      (memory-order-release)
+                                      (if (unsafe-struct*-cas!
+                                           this-id_0
+                                           2
+                                           #t
+                                           #f)
+                                        (void)
+                                        (port-unlock-slow this-id_0)))
+                                    (void))
                                   (unsafe-end-uninterruptible))
                                 (let ((wrote-len_0
                                        (let ((app_7
@@ -19731,14 +20166,17 @@
                                   (begin
                                     (begin
                                       (unsafe-start-uninterruptible)
-                                      (if (unsafe-struct*-cas!
-                                           this-id_0
-                                           2
-                                           #f
-                                           #t)
-                                        (void)
-                                        (port-lock-slow this-id_0))
-                                      (memory-order-acquire))
+                                      (if (unsafe-parallel-active?)
+                                        (begin
+                                          (if (unsafe-struct*-cas!
+                                               this-id_0
+                                               2
+                                               #f
+                                               #t)
+                                            (void)
+                                            (port-lock-slow this-id_0))
+                                          (memory-order-acquire))
+                                        (void)))
                                     (if (=
                                          (max-output-port-max-length this-id_0)
                                          wrote-len_0)
@@ -19764,10 +20202,13 @@
                                         wrote-len_0)))))))))
                       (begin
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! this-id_0 2 #t #f)
-                            (void)
-                            (port-unlock-slow this-id_0))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! this-id_0 2 #t #f)
+                                (void)
+                                (port-unlock-slow this-id_0)))
+                            (void))
                           (unsafe-end-uninterruptible))
                         (let ((len_0
                                (1/write-bytes
@@ -19778,10 +20219,13 @@
                           (begin
                             (begin
                               (unsafe-start-uninterruptible)
-                              (if (unsafe-struct*-cas! this-id_0 2 #f #t)
-                                (void)
-                                (port-lock-slow this-id_0))
-                              (memory-order-acquire))
+                              (if (unsafe-parallel-active?)
+                                (begin
+                                  (if (unsafe-struct*-cas! this-id_0 2 #f #t)
+                                    (void)
+                                    (port-lock-slow this-id_0))
+                                  (memory-order-acquire))
+                                (void)))
                             len_0))))))
                  app_5
                  app_6
@@ -26801,20 +27245,26 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
-             (if (unsafe-struct*-cas! cp_0 2 #f #t)
-               (void)
-               (port-lock-slow cp_0))
-             (memory-order-acquire))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (if (unsafe-struct*-cas! cp_0 2 #f #t)
+                   (void)
+                   (port-lock-slow cp_0))
+                 (memory-order-acquire))
+               (void)))
            (begin
              (check-not-closed.1 #f 'port-file-identity cp_0)
              (let ((fd_0 (|#%app| (file-stream-ref cp_0) cp_0)))
                (let ((temp7_0
                       (lambda ()
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! cp_0 2 #t #f)
-                            (void)
-                            (port-unlock-slow cp_0))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! cp_0 2 #t #f)
+                                (void)
+                                (port-unlock-slow cp_0)))
+                            (void))
                           (unsafe-end-uninterruptible)))))
                  (path-or-fd-identity.1
                   #f
@@ -26973,20 +27423,26 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
-             (if (unsafe-struct*-cas! cp_0 2 #f #t)
-               (void)
-               (port-lock-slow cp_0))
-             (memory-order-acquire))
+             (if (unsafe-parallel-active?)
+               (begin
+                 (if (unsafe-struct*-cas! cp_0 2 #f #t)
+                   (void)
+                   (port-lock-slow cp_0))
+                 (memory-order-acquire))
+               (void)))
            (begin
              (check-not-closed.1 #f 'port-file-stat cp_0)
              (let ((fd_0 (|#%app| (file-stream-ref cp_0) cp_0)))
                (let ((temp7_0
                       (lambda ()
                         (begin
-                          (memory-order-release)
-                          (if (unsafe-struct*-cas! cp_0 2 #t #f)
-                            (void)
-                            (port-unlock-slow cp_0))
+                          (if (unsafe-parallel-active?)
+                            (begin
+                              (memory-order-release)
+                              (if (unsafe-struct*-cas! cp_0 2 #t #f)
+                                (void)
+                                (port-unlock-slow cp_0)))
+                            (void))
                           (unsafe-end-uninterruptible)))))
                  (path-or-fd-stat.1
                   #f
@@ -27119,10 +27575,13 @@
     (lambda (self_0)
       (begin
         (begin
-          (memory-order-release)
-          (if (unsafe-struct*-cas! self_0 2 #t #f)
-            (void)
-            (port-unlock-slow self_0))
+          (if (unsafe-parallel-active?)
+            (begin
+              (memory-order-release)
+              (if (unsafe-struct*-cas! self_0 2 #t #f)
+                (void)
+                (port-unlock-slow self_0)))
+            (void))
           (unsafe-end-uninterruptible))
         (call-with-values
          (lambda () (|#%app| user-get-location_0))
@@ -27152,10 +27611,13 @@
                 pos_0))
              (begin
                (unsafe-start-uninterruptible)
-               (if (unsafe-struct*-cas! self_0 2 #f #t)
-                 (void)
-                 (port-lock-slow self_0))
-               (memory-order-acquire))
+               (if (unsafe-parallel-active?)
+                 (begin
+                   (if (unsafe-struct*-cas! self_0 2 #f #t)
+                     (void)
+                     (port-lock-slow self_0))
+                   (memory-order-acquire))
+                 (void)))
              (values line_0 col_0 pos_0)))
           (args_0
            (apply
@@ -27248,10 +27710,13 @@
       ((self_0)
        (begin
          (begin
-           (memory-order-release)
-           (if (unsafe-struct*-cas! self_0 2 #t #f)
-             (void)
-             (port-unlock-slow self_0))
+           (if (unsafe-parallel-active?)
+             (begin
+               (memory-order-release)
+               (if (unsafe-struct*-cas! self_0 2 #t #f)
+                 (void)
+                 (port-unlock-slow self_0)))
+             (void))
            (unsafe-end-uninterruptible))
          (let ((m_0 (|#%app| user-buffer-mode3_0)))
            (if (let ((or-part_0 (not m_0)))
@@ -27267,10 +27732,13 @@
              (begin
                (begin
                  (unsafe-start-uninterruptible)
-                 (if (unsafe-struct*-cas! self_0 2 #f #t)
-                   (void)
-                   (port-lock-slow self_0))
-                 (memory-order-acquire))
+                 (if (unsafe-parallel-active?)
+                   (begin
+                     (if (unsafe-struct*-cas! self_0 2 #f #t)
+                       (void)
+                       (port-lock-slow self_0))
+                     (memory-order-acquire))
+                   (void)))
                m_0)
              (raise-result-error
               '|user port buffer-mode|
@@ -27281,18 +27749,24 @@
       ((self_0 m_0)
        (begin
          (begin
-           (memory-order-release)
-           (if (unsafe-struct*-cas! self_0 2 #t #f)
-             (void)
-             (port-unlock-slow self_0))
+           (if (unsafe-parallel-active?)
+             (begin
+               (memory-order-release)
+               (if (unsafe-struct*-cas! self_0 2 #t #f)
+                 (void)
+                 (port-unlock-slow self_0)))
+             (void))
            (unsafe-end-uninterruptible))
          (|#%app| user-buffer-mode3_0 m_0)
          (begin
            (unsafe-start-uninterruptible)
-           (if (unsafe-struct*-cas! self_0 2 #f #t)
-             (void)
-             (port-lock-slow self_0))
-           (memory-order-acquire))))))))
+           (if (unsafe-parallel-active?)
+             (begin
+               (if (unsafe-struct*-cas! self_0 2 #f #t)
+                 (void)
+                 (port-lock-slow self_0))
+               (memory-order-acquire))
+             (void)))))))))
 (define 1/make-input-port
   (let ((make-input-port_0
          (|#%name|
@@ -27535,15 +28009,18 @@
                                                         (void)
                                                         (begin
                                                           (begin
-                                                            (memory-order-release)
-                                                            (if (unsafe-struct*-cas!
-                                                                 self18_0
-                                                                 2
-                                                                 #t
-                                                                 #f)
-                                                              (void)
-                                                              (port-unlock-slow
-                                                               self18_0))
+                                                            (if (unsafe-parallel-active?)
+                                                              (begin
+                                                                (memory-order-release)
+                                                                (if (unsafe-struct*-cas!
+                                                                     self18_0
+                                                                     2
+                                                                     #t
+                                                                     #f)
+                                                                  (void)
+                                                                  (port-unlock-slow
+                                                                   self18_0)))
+                                                              (void))
                                                             (unsafe-end-uninterruptible))
                                                           (raise-arguments-error
                                                            who16_0
@@ -27566,15 +28043,18 @@
                                                             (void)
                                                             (begin
                                                               (begin
-                                                                (memory-order-release)
-                                                                (if (unsafe-struct*-cas!
-                                                                     self18_0
-                                                                     2
-                                                                     #t
-                                                                     #f)
-                                                                  (void)
-                                                                  (port-unlock-slow
-                                                                   self18_0))
+                                                                (if (unsafe-parallel-active?)
+                                                                  (begin
+                                                                    (memory-order-release)
+                                                                    (if (unsafe-struct*-cas!
+                                                                         self18_0
+                                                                         2
+                                                                         #t
+                                                                         #f)
+                                                                      (void)
+                                                                      (port-unlock-slow
+                                                                       self18_0)))
+                                                                  (void))
                                                                 (unsafe-end-uninterruptible))
                                                               (raise-arguments-error
                                                                who16_0
@@ -27596,30 +28076,36 @@
                                                                   (void)
                                                                   (begin
                                                                     (begin
-                                                                      (memory-order-release)
-                                                                      (if (unsafe-struct*-cas!
-                                                                           self18_0
-                                                                           2
-                                                                           #t
-                                                                           #f)
-                                                                        (void)
-                                                                        (port-unlock-slow
-                                                                         self18_0))
+                                                                      (if (unsafe-parallel-active?)
+                                                                        (begin
+                                                                          (memory-order-release)
+                                                                          (if (unsafe-struct*-cas!
+                                                                               self18_0
+                                                                               2
+                                                                               #t
+                                                                               #f)
+                                                                            (void)
+                                                                            (port-unlock-slow
+                                                                             self18_0)))
+                                                                        (void))
                                                                       (unsafe-end-uninterruptible))
                                                                     (raise-arguments-error
                                                                      who16_0
                                                                      "returned #f when no progress evt was supplied")))
                                                                 (begin
                                                                   (begin
-                                                                    (memory-order-release)
-                                                                    (if (unsafe-struct*-cas!
-                                                                         self18_0
-                                                                         2
-                                                                         #t
-                                                                         #f)
-                                                                      (void)
-                                                                      (port-unlock-slow
-                                                                       self18_0))
+                                                                    (if (unsafe-parallel-active?)
+                                                                      (begin
+                                                                        (memory-order-release)
+                                                                        (if (unsafe-struct*-cas!
+                                                                             self18_0
+                                                                             2
+                                                                             #t
+                                                                             #f)
+                                                                          (void)
+                                                                          (port-unlock-slow
+                                                                           self18_0)))
+                                                                      (void))
                                                                     (unsafe-end-uninterruptible))
                                                                   (raise-result-error
                                                                    who16_0
@@ -27652,15 +28138,18 @@
                                                      (begin
                                                        (begin
                                                          (unsafe-start-uninterruptible)
-                                                         (if (unsafe-struct*-cas!
-                                                              self_0
-                                                              2
-                                                              #f
-                                                              #t)
-                                                           (void)
-                                                           (port-lock-slow
-                                                            self_0))
-                                                         (memory-order-acquire))
+                                                         (if (unsafe-parallel-active?)
+                                                           (begin
+                                                             (if (unsafe-struct*-cas!
+                                                                  self_0
+                                                                  2
+                                                                  #f
+                                                                  #t)
+                                                               (void)
+                                                               (port-lock-slow
+                                                                self_0))
+                                                             (memory-order-acquire))
+                                                           (void)))
                                                        (check-read-result_0
                                                         ok-false?_0
                                                         peek?_0
@@ -27670,15 +28159,18 @@
                                                         dest-start_0
                                                         dest-end_0)
                                                        (begin
-                                                         (memory-order-release)
-                                                         (if (unsafe-struct*-cas!
-                                                              self_0
-                                                              2
-                                                              #t
-                                                              #f)
-                                                           (void)
-                                                           (port-unlock-slow
-                                                            self_0))
+                                                         (if (unsafe-parallel-active?)
+                                                           (begin
+                                                             (memory-order-release)
+                                                             (if (unsafe-struct*-cas!
+                                                                  self_0
+                                                                  2
+                                                                  #t
+                                                                  #f)
+                                                               (void)
+                                                               (port-unlock-slow
+                                                                self_0)))
+                                                           (void))
                                                          (unsafe-end-uninterruptible))
                                                        (if (pipe-input-port?*
                                                             r_0)
@@ -27823,15 +28315,18 @@
                                                                  (check-for-break)
                                                                  (begin
                                                                    (begin
-                                                                     (memory-order-release)
-                                                                     (if (unsafe-struct*-cas!
-                                                                          self_0
-                                                                          2
-                                                                          #t
-                                                                          #f)
-                                                                       (void)
-                                                                       (port-unlock-slow
-                                                                        self_0))
+                                                                     (if (unsafe-parallel-active?)
+                                                                       (begin
+                                                                         (memory-order-release)
+                                                                         (if (unsafe-struct*-cas!
+                                                                              self_0
+                                                                              2
+                                                                              #t
+                                                                              #f)
+                                                                           (void)
+                                                                           (port-unlock-slow
+                                                                            self_0)))
+                                                                       (void))
                                                                      (unsafe-end-uninterruptible))
                                                                    (begin0
                                                                      (protect-in_0
@@ -27842,15 +28337,18 @@
                                                                       user-read-in8_0)
                                                                      (begin
                                                                        (unsafe-start-uninterruptible)
-                                                                       (if (unsafe-struct*-cas!
-                                                                            self_0
-                                                                            2
-                                                                            #f
-                                                                            #t)
-                                                                         (void)
-                                                                         (port-lock-slow
-                                                                          self_0))
-                                                                       (memory-order-acquire))))))))
+                                                                       (if (unsafe-parallel-active?)
+                                                                         (begin
+                                                                           (if (unsafe-struct*-cas!
+                                                                                self_0
+                                                                                2
+                                                                                #f
+                                                                                #t)
+                                                                             (void)
+                                                                             (port-lock-slow
+                                                                              self_0))
+                                                                           (memory-order-acquire))
+                                                                         (void)))))))))
                                                          (begin
                                                            (check-read-result_0
                                                             #f
@@ -27947,15 +28445,18 @@
                                                                     (check-for-break)
                                                                     (begin
                                                                       (begin
-                                                                        (memory-order-release)
-                                                                        (if (unsafe-struct*-cas!
-                                                                             self_0
-                                                                             2
-                                                                             #t
-                                                                             #f)
-                                                                          (void)
-                                                                          (port-unlock-slow
-                                                                           self_0))
+                                                                        (if (unsafe-parallel-active?)
+                                                                          (begin
+                                                                            (memory-order-release)
+                                                                            (if (unsafe-struct*-cas!
+                                                                                 self_0
+                                                                                 2
+                                                                                 #t
+                                                                                 #f)
+                                                                              (void)
+                                                                              (port-unlock-slow
+                                                                               self_0)))
+                                                                          (void))
                                                                         (unsafe-end-uninterruptible))
                                                                       (begin0
                                                                         (protect-in_0
@@ -27971,15 +28472,18 @@
                                                                             progress-evt_0)))
                                                                         (begin
                                                                           (unsafe-start-uninterruptible)
-                                                                          (if (unsafe-struct*-cas!
-                                                                               self_0
-                                                                               2
-                                                                               #f
-                                                                               #t)
-                                                                            (void)
-                                                                            (port-lock-slow
-                                                                             self_0))
-                                                                          (memory-order-acquire))))))))
+                                                                          (if (unsafe-parallel-active?)
+                                                                            (begin
+                                                                              (if (unsafe-struct*-cas!
+                                                                                   self_0
+                                                                                   2
+                                                                                   #f
+                                                                                   #t)
+                                                                                (void)
+                                                                                (port-lock-slow
+                                                                                 self_0))
+                                                                              (memory-order-acquire))
+                                                                            (void)))))))))
                                                             (begin
                                                               (check-read-result_0
                                                                progress-evt_0
@@ -28052,29 +28556,35 @@
                                                              (lambda (self_0)
                                                                (begin
                                                                  (begin
-                                                                   (memory-order-release)
-                                                                   (if (unsafe-struct*-cas!
-                                                                        self_0
-                                                                        2
-                                                                        #t
-                                                                        #f)
-                                                                     (void)
-                                                                     (port-unlock-slow
-                                                                      self_0))
+                                                                   (if (unsafe-parallel-active?)
+                                                                     (begin
+                                                                       (memory-order-release)
+                                                                       (if (unsafe-struct*-cas!
+                                                                            self_0
+                                                                            2
+                                                                            #t
+                                                                            #f)
+                                                                         (void)
+                                                                         (port-unlock-slow
+                                                                          self_0)))
+                                                                     (void))
                                                                    (unsafe-end-uninterruptible))
                                                                  (|#%app|
                                                                   user-close10_0)
                                                                  (begin
                                                                    (unsafe-start-uninterruptible)
-                                                                   (if (unsafe-struct*-cas!
-                                                                        self_0
-                                                                        2
-                                                                        #f
-                                                                        #t)
-                                                                     (void)
-                                                                     (port-lock-slow
-                                                                      self_0))
-                                                                   (memory-order-acquire)))))))
+                                                                   (if (unsafe-parallel-active?)
+                                                                     (begin
+                                                                       (if (unsafe-struct*-cas!
+                                                                            self_0
+                                                                            2
+                                                                            #f
+                                                                            #t)
+                                                                         (void)
+                                                                         (port-lock-slow
+                                                                          self_0))
+                                                                       (memory-order-acquire))
+                                                                     (void))))))))
                                                        (let ((get-progress-evt_0
                                                               (|#%name|
                                                                get-progress-evt
@@ -28109,15 +28619,18 @@
                                                                              (check-for-break)
                                                                              (begin
                                                                                (begin
-                                                                                 (memory-order-release)
-                                                                                 (if (unsafe-struct*-cas!
-                                                                                      self_0
-                                                                                      2
-                                                                                      #t
-                                                                                      #f)
-                                                                                   (void)
-                                                                                   (port-unlock-slow
-                                                                                    self_0))
+                                                                                 (if (unsafe-parallel-active?)
+                                                                                   (begin
+                                                                                     (memory-order-release)
+                                                                                     (if (unsafe-struct*-cas!
+                                                                                          self_0
+                                                                                          2
+                                                                                          #t
+                                                                                          #f)
+                                                                                       (void)
+                                                                                       (port-unlock-slow
+                                                                                        self_0)))
+                                                                                   (void))
                                                                                  (unsafe-end-uninterruptible))
                                                                                (begin0
                                                                                  (|#%app|
@@ -28127,15 +28640,18 @@
                                                                                   ext-evt_0)
                                                                                  (begin
                                                                                    (unsafe-start-uninterruptible)
-                                                                                   (if (unsafe-struct*-cas!
-                                                                                        self_0
-                                                                                        2
-                                                                                        #f
-                                                                                        #t)
-                                                                                     (void)
-                                                                                     (port-lock-slow
-                                                                                      self_0))
-                                                                                   (memory-order-acquire))))))))
+                                                                                   (if (unsafe-parallel-active?)
+                                                                                     (begin
+                                                                                       (if (unsafe-struct*-cas!
+                                                                                            self_0
+                                                                                            2
+                                                                                            #f
+                                                                                            #t)
+                                                                                         (void)
+                                                                                         (port-lock-slow
+                                                                                          self_0))
+                                                                                       (memory-order-acquire))
+                                                                                     (void)))))))))
                                                                      (if (not
                                                                           r_0)
                                                                        #f
@@ -28165,29 +28681,35 @@
                                                                        (lambda (self_0)
                                                                          (begin
                                                                            (begin
-                                                                             (memory-order-release)
-                                                                             (if (unsafe-struct*-cas!
-                                                                                  self_0
-                                                                                  2
-                                                                                  #t
-                                                                                  #f)
-                                                                               (void)
-                                                                               (port-unlock-slow
-                                                                                self_0))
+                                                                             (if (unsafe-parallel-active?)
+                                                                               (begin
+                                                                                 (memory-order-release)
+                                                                                 (if (unsafe-struct*-cas!
+                                                                                      self_0
+                                                                                      2
+                                                                                      #t
+                                                                                      #f)
+                                                                                   (void)
+                                                                                   (port-unlock-slow
+                                                                                    self_0)))
+                                                                               (void))
                                                                              (unsafe-end-uninterruptible))
                                                                            (|#%app|
                                                                             user-count-lines!4_0)
                                                                            (begin
                                                                              (unsafe-start-uninterruptible)
-                                                                             (if (unsafe-struct*-cas!
-                                                                                  self_0
-                                                                                  2
-                                                                                  #f
-                                                                                  #t)
-                                                                               (void)
-                                                                               (port-lock-slow
-                                                                                self_0))
-                                                                             (memory-order-acquire)))))
+                                                                             (if (unsafe-parallel-active?)
+                                                                               (begin
+                                                                                 (if (unsafe-struct*-cas!
+                                                                                      self_0
+                                                                                      2
+                                                                                      #f
+                                                                                      #t)
+                                                                                   (void)
+                                                                                   (port-lock-slow
+                                                                                    self_0))
+                                                                                 (memory-order-acquire))
+                                                                               (void))))))
                                                                       #f)))
                                                                (call-with-values
                                                                 (lambda ()
@@ -28628,15 +29150,18 @@
                                                         (void)
                                                         (begin
                                                           (begin
-                                                            (memory-order-release)
-                                                            (if (unsafe-struct*-cas!
-                                                                 self17_0
-                                                                 2
-                                                                 #t
-                                                                 #f)
-                                                              (void)
-                                                              (port-unlock-slow
-                                                               self17_0))
+                                                            (if (unsafe-parallel-active?)
+                                                              (begin
+                                                                (memory-order-release)
+                                                                (if (unsafe-struct*-cas!
+                                                                     self17_0
+                                                                     2
+                                                                     #t
+                                                                     #f)
+                                                                  (void)
+                                                                  (port-unlock-slow
+                                                                   self17_0)))
+                                                              (void))
                                                             (unsafe-end-uninterruptible))
                                                           (raise-arguments-error
                                                            who15_0
@@ -28715,15 +29240,18 @@
                                                    (begin
                                                      (begin
                                                        (unsafe-start-uninterruptible)
-                                                       (if (unsafe-struct*-cas!
-                                                            self_0
-                                                            2
-                                                            #f
-                                                            #t)
-                                                         (void)
-                                                         (port-lock-slow
-                                                          self_0))
-                                                       (memory-order-acquire))
+                                                       (if (unsafe-parallel-active?)
+                                                         (begin
+                                                           (if (unsafe-struct*-cas!
+                                                                self_0
+                                                                2
+                                                                #f
+                                                                #t)
+                                                             (void)
+                                                             (port-lock-slow
+                                                              self_0))
+                                                           (memory-order-acquire))
+                                                         (void)))
                                                      (check-write-result_0
                                                       #t
                                                       who_0
@@ -28733,15 +29261,18 @@
                                                       end_0
                                                       non-block/buffer?_0)
                                                      (begin
-                                                       (memory-order-release)
-                                                       (if (unsafe-struct*-cas!
-                                                            self_0
-                                                            2
-                                                            #t
-                                                            #f)
-                                                         (void)
-                                                         (port-unlock-slow
-                                                          self_0))
+                                                       (if (unsafe-parallel-active?)
+                                                         (begin
+                                                           (memory-order-release)
+                                                           (if (unsafe-struct*-cas!
+                                                                self_0
+                                                                2
+                                                                #t
+                                                                #f)
+                                                             (void)
+                                                             (port-unlock-slow
+                                                              self_0)))
+                                                         (void))
                                                        (unsafe-end-uninterruptible))
                                                      (if (pipe-output-port?*
                                                           r_0)
@@ -28844,15 +29375,18 @@
                                                                   (check-for-break)
                                                                   (begin
                                                                     (begin
-                                                                      (memory-order-release)
-                                                                      (if (unsafe-struct*-cas!
-                                                                           self_0
-                                                                           2
-                                                                           #t
-                                                                           #f)
-                                                                        (void)
-                                                                        (port-unlock-slow
-                                                                         self_0))
+                                                                      (if (unsafe-parallel-active?)
+                                                                        (begin
+                                                                          (memory-order-release)
+                                                                          (if (unsafe-struct*-cas!
+                                                                               self_0
+                                                                               2
+                                                                               #t
+                                                                               #f)
+                                                                            (void)
+                                                                            (port-unlock-slow
+                                                                             self_0)))
+                                                                        (void))
                                                                       (unsafe-end-uninterruptible))
                                                                     (begin0
                                                                       (|#%app|
@@ -28864,15 +29398,18 @@
                                                                        enable-break?_1)
                                                                       (begin
                                                                         (unsafe-start-uninterruptible)
-                                                                        (if (unsafe-struct*-cas!
-                                                                             self_0
-                                                                             2
-                                                                             #f
-                                                                             #t)
-                                                                          (void)
-                                                                          (port-lock-slow
-                                                                           self_0))
-                                                                        (memory-order-acquire)))))))))
+                                                                        (if (unsafe-parallel-active?)
+                                                                          (begin
+                                                                            (if (unsafe-struct*-cas!
+                                                                                 self_0
+                                                                                 2
+                                                                                 #f
+                                                                                 #t)
+                                                                              (void)
+                                                                              (port-lock-slow
+                                                                               self_0))
+                                                                            (memory-order-acquire))
+                                                                          (void))))))))))
                                                         (begin
                                                           (check-write-result_0
                                                            #f
@@ -28934,15 +29471,18 @@
                                                                 imm-end_0)
                                                          (begin
                                                            (begin
-                                                             (memory-order-release)
-                                                             (if (unsafe-struct*-cas!
-                                                                  self_0
-                                                                  2
-                                                                  #t
-                                                                  #f)
-                                                               (void)
-                                                               (port-unlock-slow
-                                                                self_0))
+                                                             (if (unsafe-parallel-active?)
+                                                               (begin
+                                                                 (memory-order-release)
+                                                                 (if (unsafe-struct*-cas!
+                                                                      self_0
+                                                                      2
+                                                                      #t
+                                                                      #f)
+                                                                   (void)
+                                                                   (port-unlock-slow
+                                                                    self_0)))
+                                                               (void))
                                                              (unsafe-end-uninterruptible))
                                                            (let ((r_0
                                                                   (|#%app|
@@ -28959,15 +29499,18 @@
                                                                   r_0))
                                                                (begin
                                                                  (unsafe-start-uninterruptible)
-                                                                 (if (unsafe-struct*-cas!
-                                                                      self_0
-                                                                      2
-                                                                      #f
-                                                                      #t)
-                                                                   (void)
-                                                                   (port-lock-slow
-                                                                    self_0))
-                                                                 (memory-order-acquire))
+                                                                 (if (unsafe-parallel-active?)
+                                                                   (begin
+                                                                     (if (unsafe-struct*-cas!
+                                                                          self_0
+                                                                          2
+                                                                          #f
+                                                                          #t)
+                                                                       (void)
+                                                                       (port-lock-slow
+                                                                        self_0))
+                                                                     (memory-order-acquire))
+                                                                   (void)))
                                                                (wrap-check-write-evt-result_0
                                                                 '|user port write-evt|
                                                                 r_0
@@ -28996,15 +29539,18 @@
                                                              (check-for-break)
                                                              (begin
                                                                (begin
-                                                                 (memory-order-release)
-                                                                 (if (unsafe-struct*-cas!
-                                                                      self_0
-                                                                      2
-                                                                      #t
-                                                                      #f)
-                                                                   (void)
-                                                                   (port-unlock-slow
-                                                                    self_0))
+                                                                 (if (unsafe-parallel-active?)
+                                                                   (begin
+                                                                     (memory-order-release)
+                                                                     (if (unsafe-struct*-cas!
+                                                                          self_0
+                                                                          2
+                                                                          #t
+                                                                          #f)
+                                                                       (void)
+                                                                       (port-unlock-slow
+                                                                        self_0)))
+                                                                   (void))
                                                                  (unsafe-end-uninterruptible))
                                                                (begin0
                                                                  (|#%app|
@@ -29014,15 +29560,18 @@
                                                                   enable-break?_1)
                                                                  (begin
                                                                    (unsafe-start-uninterruptible)
-                                                                   (if (unsafe-struct*-cas!
-                                                                        self_0
-                                                                        2
-                                                                        #f
-                                                                        #t)
-                                                                     (void)
-                                                                     (port-lock-slow
-                                                                      self_0))
-                                                                   (memory-order-acquire)))))))))))
+                                                                   (if (unsafe-parallel-active?)
+                                                                     (begin
+                                                                       (if (unsafe-struct*-cas!
+                                                                            self_0
+                                                                            2
+                                                                            #f
+                                                                            #t)
+                                                                         (void)
+                                                                         (port-lock-slow
+                                                                          self_0))
+                                                                       (memory-order-acquire))
+                                                                     (void))))))))))))
                                                 (let ((get-location_0
                                                        (if user-get-location4_0
                                                          (make-get-location
@@ -29035,29 +29584,35 @@
                                                             (lambda (self_0)
                                                               (begin
                                                                 (begin
-                                                                  (memory-order-release)
-                                                                  (if (unsafe-struct*-cas!
-                                                                       self_0
-                                                                       2
-                                                                       #t
-                                                                       #f)
-                                                                    (void)
-                                                                    (port-unlock-slow
-                                                                     self_0))
+                                                                  (if (unsafe-parallel-active?)
+                                                                    (begin
+                                                                      (memory-order-release)
+                                                                      (if (unsafe-struct*-cas!
+                                                                           self_0
+                                                                           2
+                                                                           #t
+                                                                           #f)
+                                                                        (void)
+                                                                        (port-unlock-slow
+                                                                         self_0)))
+                                                                    (void))
                                                                   (unsafe-end-uninterruptible))
                                                                 (|#%app|
                                                                  user-count-lines!5_0)
                                                                 (begin
                                                                   (unsafe-start-uninterruptible)
-                                                                  (if (unsafe-struct*-cas!
-                                                                       self_0
-                                                                       2
-                                                                       #f
-                                                                       #t)
-                                                                    (void)
-                                                                    (port-lock-slow
-                                                                     self_0))
-                                                                  (memory-order-acquire)))))
+                                                                  (if (unsafe-parallel-active?)
+                                                                    (begin
+                                                                      (if (unsafe-struct*-cas!
+                                                                           self_0
+                                                                           2
+                                                                           #f
+                                                                           #t)
+                                                                        (void)
+                                                                        (port-lock-slow
+                                                                         self_0))
+                                                                      (memory-order-acquire))
+                                                                    (void))))))
                                                            #f)))
                                                     (call-with-values
                                                      (lambda ()
@@ -29077,29 +29632,35 @@
                                                                  (lambda (self_0)
                                                                    (begin
                                                                      (begin
-                                                                       (memory-order-release)
-                                                                       (if (unsafe-struct*-cas!
-                                                                            self_0
-                                                                            2
-                                                                            #t
-                                                                            #f)
-                                                                         (void)
-                                                                         (port-unlock-slow
-                                                                          self_0))
+                                                                       (if (unsafe-parallel-active?)
+                                                                         (begin
+                                                                           (memory-order-release)
+                                                                           (if (unsafe-struct*-cas!
+                                                                                self_0
+                                                                                2
+                                                                                #t
+                                                                                #f)
+                                                                             (void)
+                                                                             (port-unlock-slow
+                                                                              self_0)))
+                                                                         (void))
                                                                        (unsafe-end-uninterruptible))
                                                                      (|#%app|
                                                                       user-close11_0)
                                                                      (begin
                                                                        (unsafe-start-uninterruptible)
-                                                                       (if (unsafe-struct*-cas!
-                                                                            self_0
-                                                                            2
-                                                                            #f
-                                                                            #t)
-                                                                         (void)
-                                                                         (port-lock-slow
-                                                                          self_0))
-                                                                       (memory-order-acquire)))))))
+                                                                       (if (unsafe-parallel-active?)
+                                                                         (begin
+                                                                           (if (unsafe-struct*-cas!
+                                                                                self_0
+                                                                                2
+                                                                                #f
+                                                                                #t)
+                                                                             (void)
+                                                                             (port-lock-slow
+                                                                              self_0))
+                                                                           (memory-order-acquire))
+                                                                         (void))))))))
                                                            (finish-port/count
                                                             (port-lock-init-atomic-mode
                                                              (let ((app_0
@@ -29585,10 +30146,13 @@
                           (begin
                             (begin
                               (unsafe-start-uninterruptible)
-                              (if (unsafe-struct*-cas! in_1 2 #f #t)
-                                (void)
-                                (port-lock-slow in_1))
-                              (memory-order-acquire))
+                              (if (unsafe-parallel-active?)
+                                (begin
+                                  (if (unsafe-struct*-cas! in_1 2 #f #t)
+                                    (void)
+                                    (port-lock-slow in_1))
+                                  (memory-order-acquire))
+                                (void)))
                             (begin
                               (prepare-change in_1)
                               (begin
@@ -29596,10 +30160,17 @@
                                 (let ((r_0 (|#%app| byte-ready_0 in_1 void)))
                                   (begin
                                     (begin
-                                      (memory-order-release)
-                                      (if (unsafe-struct*-cas! in_1 2 #t #f)
-                                        (void)
-                                        (port-unlock-slow in_1))
+                                      (if (unsafe-parallel-active?)
+                                        (begin
+                                          (memory-order-release)
+                                          (if (unsafe-struct*-cas!
+                                               in_1
+                                               2
+                                               #t
+                                               #f)
+                                            (void)
+                                            (port-unlock-slow in_1)))
+                                        (void))
                                       (unsafe-end-uninterruptible))
                                     (let ((or-part_0 (eq? #t r_0)))
                                       (if or-part_0

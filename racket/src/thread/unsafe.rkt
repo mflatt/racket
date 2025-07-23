@@ -3,7 +3,9 @@
          "atomic.rkt"
          "thread.rkt"
          "schedule.rkt"
-         "evt.rkt")
+         "evt.rkt"
+         (only-in "parameter.rkt"
+                  current-parallel-active))
 
 (provide unsafe-start-atomic
          unsafe-end-atomic
@@ -13,7 +15,9 @@
          unsafe-set-on-atomic-timeout!
 
          unsafe-start-uninterruptible
-         unsafe-end-uninterruptible)
+         unsafe-end-uninterruptible
+
+         unsafe-parallel-active?)
 
 (define (unsafe-start-breakable-atomic)
   (start-atomic)
@@ -39,3 +43,6 @@
   (start-uninterruptible))
 (define (unsafe-end-uninterruptible)
   (end-uninterruptible))
+
+(define (unsafe-parallel-active?)
+  (current-parallel-active))

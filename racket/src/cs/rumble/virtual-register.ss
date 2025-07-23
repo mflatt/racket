@@ -2,10 +2,11 @@
 ;; pthread-specific bindings.
 
 ;; The last few virtual registers are reserved for use by the thread system
-(meta define num-reserved-virtual-registers 3)
+(meta define num-reserved-virtual-registers 4)
 (meta define current-atomic-virtual-register (- (virtual-register-count) 1))
 (meta define end-atomic-virtual-register (- (virtual-register-count) 2))
 (meta define current-future-virtual-register (- (virtual-register-count) 3))
+(meta define current-parallel-active-virtual-register (- (virtual-register-count) 4))
 
 (meta define virtual-register-initial-values '())
 

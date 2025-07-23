@@ -162,6 +162,7 @@
          unsafe-set-on-atomic-timeout!
          unsafe-start-uninterruptible
          unsafe-end-uninterruptible
+         unsafe-parallel-active?
 
          unsafe-thread-at-root
          unsafe-make-custodian-at-root

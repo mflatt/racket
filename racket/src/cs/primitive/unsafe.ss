@@ -148,6 +148,7 @@
   [unsafe-os-semaphore-post (known-procedure 2)]
   [unsafe-os-semaphore-wait (known-procedure 2)]
   [unsafe-os-thread-enabled? (known-procedure 1)]
+  [unsafe-parallel-active? (known-procedure 1)]
   [unsafe-place-local-ref (known-procedure/then-pure 2)]
   [unsafe-place-local-set! (known-procedure/then-pure 4)]
   [unsafe-poll-ctx-eventmask-wakeup (known-procedure 4)]

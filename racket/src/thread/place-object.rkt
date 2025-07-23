@@ -33,7 +33,8 @@
                [dequeue-semas #:mutable] ; semaphores reflecting place-channel waits to recheck
                [future-scheduler #:mutable] ; #f or a scheduler of futures
                [schedulers #:mutable]    ; a hash table of additional future schedulers
-               [active-parallel #:mutable]) ; number of parallel-thread futures running or scheduled
+               [active-parallel #:mutable] ; number of futures running or scheduled
+               [active-parallel-threads #:mutable]) ; number of parallel-thread futures running or scheduled
   #:authentic
   #:property host:prop:unsafe-authentic-override #t ; allow evt chaperone
   #:property prop:evt (struct-field-index pch)
@@ -62,7 +63,8 @@
          '()                  ; dequeue-semas
          #f                   ; future scheduler
          (hasheq)             ; schedulers
-         0))                  ; active-parallel
+         0                    ; active-parallel
+         0))                  ; active-parallel-threads
 
 ;; in atomic mode; returns #t if count goes to 0
 (define (increment-place-parallel-count! delta)

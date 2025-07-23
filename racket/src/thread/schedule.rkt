@@ -33,11 +33,13 @@
 (define (call-in-main-thread thunk)
   (call-in-new-main-thread
    (lambda ()
+     (current-parallel-active #f)
      (set-place-host-roots! initial-place (host:current-place-roots))
      (thunk))))
 
 ;; Initializes the thread system in a new place:
 (define (call-in-another-main-thread c thunk)
+  (current-parallel-active #f)
   (make-another-initial-thread-group)
   (set-root-custodian! c)
   (init-system-idle-evt!)
