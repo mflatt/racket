@@ -60200,7 +60200,9 @@
 (define file->stamp
   (lambda (path_0 old-stamp_0)
     (if (if old-stamp_0
-          (if (cdr old-stamp_0) (not (sync/timeout 0 (cdr old-stamp_0))) #f)
+          (if (cdr old-stamp_0)
+            (not (filesystem-change-evt-ready? (cdr old-stamp_0)))
+            #f)
           #f)
       old-stamp_0
       (call-with-continuation-prompt
