@@ -602,8 +602,7 @@
       "libxcb"
       "libX11"
       "libXext"
-      "libXrender"
-      "libxml2")
+      "libXrender")
      (linux-only)
      (config #:env path-flags
              #:setup (if aarch64?
