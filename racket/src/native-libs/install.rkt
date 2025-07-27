@@ -74,7 +74,7 @@
 (define macx86-libs
   '("PSMTabBarControl.framework"))
 
-(define stuck-on-openssl1? (or linux?
+(define stuck-on-openssl1? (or (and linux? (not aarch64?))
                                (and mac? (or m32? ppc?))))
 
 (define nonwin-libs
@@ -684,10 +684,14 @@
         "libatk-1.0"
         "libgdk-x11-2.0"
         "libgtk-x11-2.0"))
+    (define skip-exists?
+      (for/or ([rn (in-list renames)])
+        (and (equal? orig-p (cadr rn)))))    
     (let loop ([p orig-p] [suffix ""])
       (define p-so (string-append p ".so" suffix))
       (cond
-       [(or (file-exists? (build-path from p-so))
+        [(or (file-exists? (build-path from p-so))
+             skip-exists?
             (and only-meta? (member p special-cases)))
         p-so]
        [else
