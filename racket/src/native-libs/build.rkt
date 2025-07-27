@@ -558,7 +558,9 @@
                            (list "./Configure"
                                  #f
                                  "shared"
-                                 "linux-x86_64")])
+                                 (if aarch64?
+                                     "linux-aarch64"
+                                     "linux-x86_64"))])
              #:post-patches (if (and win? aarch64?)
                                 (list openssl-no-rcflags-patch)
                                 null)
