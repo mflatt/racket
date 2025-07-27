@@ -610,6 +610,10 @@
                          (list
                           (~a "cp " config.guess " config.guess"))
                          null))]
+    [("libxml2")
+     (linux-only)
+     (config #:env path-flags
+             #:configure '("--without-python"))]
     [("shared-mime-info")
      (config #:depends '("libxml2")
 	     #:configure-exe (find-executable-path "meson")
