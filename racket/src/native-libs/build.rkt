@@ -609,23 +609,10 @@
                          (list
                           (~a "cp " config.guess " config.guess"))
                          null))]
-    [("libxml2")
-     (linux-only)
-     (config #:env path-flags
-             #:configure '("--without-python"))]
-    [("shared-mime-info")
-     (config #:depends '("libxml2")
-	     #:configure-exe (find-executable-path "meson")
-             #:configure (append '("setup")
-                                 '(#f "_build"))
-             #:use-cross-file (cross-file)
-             #:make "meson compile -C _build"
-             #:make-install "meson install -C _build")]
     [("gdk-pixbuf")
      (linux-only)
      (config #:depends '("libX11" "shared-mime-info")
-	     #:configure '("--without-libtiff"
-                           "--disable-gio-sniffing")
+	     #:configure '("--without-libtiff")
 	     #:env (append path-flags
 			   ld-library-path-flags))]
     [("atk")
