@@ -688,9 +688,12 @@
                                                    (if mac?
                                                        " -include Kernel/uuid/uuid.h"
                                                        "")))
-                             "LDFLAGS" (if (and win? (not aarch64?))
-                                           "-Wl,--allow-multiple-definition"
-                                           ""))
+                             "LDFLAGS" (cond
+                                         [(and win? (not aarch64?))
+                                          "-Wl,--allow-multiple-definition"]
+                                         [linux?
+                                          (~a "-Wl,-rpath," dest "/lib")]
+                                         [else ""]))
              #:patches (cond
                          [win? (list glib-strerror-patch)]
                          [mac? (list glib-objc-mixed-def-patch)]
@@ -755,7 +758,11 @@
                                  (add-flag path-flags
                                            "LDFLAGS"
                                            "-static-libgcc -static-libstdc++ -Wl,-static -Wl,--whole-archive -lwinpthread -Wl,-shared -Wl,--no-whole-archive")
-                                 path-flags)
+                                 (if linux?
+                                     (add-flag path-flags
+                                           "LDFLAGS"
+                                           (~a "-Wl,-rpath," dest "/lib"))
+                                     path-flags))
                              "CPPFLAGS"
                              (if mac?
                                  " -include Kernel/uuid/uuid.h"

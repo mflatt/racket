@@ -23,7 +23,7 @@
 (when (and mac? aarch64? (not sign-as))
   (error "supply `--sign-as` for AArch64 Mac OS"))
 
-;; Hack to make AArch64 Mac OS and Windows libraries look like other Macs:
+;; Hack to make AArch64 libraries look like other architecture:
 (define aarch64-renames
   `(("libmpfr.6" "libmpfr.4")))
 
