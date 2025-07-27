@@ -684,10 +684,7 @@
         "libatk-1.0"
         "libgdk-x11-2.0"
         "libgtk-x11-2.0"))
-    (define skip-exists?
-      (for/or ([rn (in-list renames)])
-        (and (equal? orig-p (cadr rn)))))    
-    (let loop ([p orig-p] [suffix ""])
+    (let loop ([p orig-p] [suffix ""] [skip-exists? #f])
       (define p-so (string-append p ".so" suffix))
       (cond
         [(or (file-exists? (build-path from p-so))
@@ -698,7 +695,10 @@
         (define m (regexp-match #rx"^(.*)[.](.*)$" p))
         (cond
          [m
-          (loop (cadr m) (string-append "." (caddr m) suffix))]
+          (define skip-exists?
+            (for/or ([rn (in-list renames)])
+              (and (equal? orig-p (cadr rn)))))    
+          (loop (cadr m) (string-append "." (caddr m) suffix) skip-exists?)]
          [only-meta?
           p-so]
          [else
