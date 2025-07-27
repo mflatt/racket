@@ -611,7 +611,7 @@
                          null))]
     [("gdk-pixbuf")
      (linux-only)
-     (config #:depends '("libX11" "shared-mime-info")
+     (config #:depends '("libX11")
 	     #:configure '("--without-libtiff")
 	     #:env (append path-flags
 			   ld-library-path-flags))]
