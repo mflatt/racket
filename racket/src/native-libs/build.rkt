@@ -611,6 +611,8 @@
                          null))]    
     [("shared-mime-info")
      (config #:configure-exe (find-executable-path "meson")
+             #:configure (append '("setup")
+                                 '(#f "_build"))
              #:use-cross-file (cross-file)
              #:make "meson compile -C _build"
              #:make-install "meson install -C _build")]
