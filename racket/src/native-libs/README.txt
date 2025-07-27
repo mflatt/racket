@@ -21,7 +21,7 @@ older versions):
  sed-4.2 (Windows only, to avoid non-GNU `sed`)
  sqlite[-autoconf]-3360000 (Windows and Linux)
  libedit-20191231-3.1 (Mac OS only)
- openssl-3.4.1 (Mac OS i386 and PowerPC, Linux: openssl-1.1.1o)
+ openssl-3.4.1 (Mac OS i386 and PowerPC, Linux x86_64: openssl-1.1.1o)
  libiconv-1.15 (Windows only)
  zlib-1.2.12 (Windows and Linux only)
  libffi-3.2.1 (Mac OS AArch64, Windows AArch64: libffi-3.3)

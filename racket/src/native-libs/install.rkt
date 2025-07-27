@@ -664,9 +664,10 @@
     ;; Might fail if there are no external references:
     (system (format "chrpath -r '$ORIGIN' ~a" p-new)))
 
-  (define platform (~a (if m32?
-                           "i386"
-                           "x86_64")
+  (define platform (~a (cond
+                         [aarch64? "aarch64"]
+                         [m32? "i386"]
+                         [else "x86_64"])
                        "-linux-natipkg"))
 
   (define (add-so orig-p)
@@ -699,12 +700,16 @@
          [else
           (error 'add-so "not found: ~s" orig-p)])])))
 
+  (define renames (if aarch64?
+                      aarch64-renames
+                      null))
+
   (install platform platform add-so fixup
            (append (remove* linux-remove-libs
                             libs)
                    nonwin-libs
                    linux-libs)
-           null))
+           renames))
 
 (cond
  [win? (install-win)]
