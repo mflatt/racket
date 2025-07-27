@@ -230,7 +230,9 @@
 
 ;; libffi via MinGW for AArch64:
 (define-runtime-path libffi-arm64nt-patch "patches/libffi-arm64nt.patch")
-  
+
+(define-runtime-path config.guess "../lt/config.guess")
+
 ;; --------------------------------------------------
 
 (define (replace-in-file file orig new)
@@ -602,7 +604,11 @@
       "libXext"
       "libXrender")
      (linux-only)
-     (config #:env path-flags)]
+     (config #:env path-flags
+             #:setup (if aarch64?
+                         (list
+                          (~a "cp " config.guess " config.guess"))
+                         null))]
     [("gdk-pixbuf")
      (linux-only)
      (config #:depends '("libX11")
