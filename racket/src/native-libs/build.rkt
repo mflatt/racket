@@ -234,6 +234,9 @@
 ;; Avoid shared-mime-info and libxml2 dependency:
 (define-runtime-path gdk-pixbuf-no-sniff-patch "patches/gdk-pixbuf-no-sniff.patch")
 
+(define-runtime-path gtk-with-newer-gdk-patch "patches/gtk-with-newer-gdk.patch")
+  
+
 (define-runtime-path config.guess "../lt/config.guess")
 
 ;; --------------------------------------------------
@@ -628,6 +631,7 @@
     [("gtk+")
      (linux-only)
      (config #:depends '("gdk-pixbuf" "atk" "libXrender")
+             #:patches (list gtk-with-newer-gdk-patch)
 	     #:env (append path-flags
 			   ld-library-path-flags))]
     [("freefont")
