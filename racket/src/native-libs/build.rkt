@@ -603,7 +603,7 @@
       "libX11"
       "libXext"
       "libXrender"
-      "libxml-2")
+      "libxml2")
      (linux-only)
      (config #:env path-flags
              #:setup (if aarch64?
@@ -611,7 +611,7 @@
                           (~a "cp " config.guess " config.guess"))
                          null))]
     [("shared-mime-info")
-     (config #:depends '("libxml-2")
+     (config #:depends '("libxml2")
 	     #:configure-exe (find-executable-path "meson")
              #:configure (append '("setup")
                                  '(#f "_build"))
