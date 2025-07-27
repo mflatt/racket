@@ -618,7 +618,7 @@
              #:make-install "meson install -C _build")]
     [("gdk-pixbuf")
      (linux-only)
-     (config #:depends '("libX11")
+     (config #:depends '("libX11" "shared-mime-info")
 	     #:configure '("--without-libtiff"
                            "--disable-gio-sniffing")
 	     #:env (append path-flags
