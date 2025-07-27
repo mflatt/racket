@@ -76,7 +76,8 @@
     [else null])
    (cond
     [linux?
-     '("shared-mime-info"
+     '("libxml-2"
+       "shared-mime-info"
        "gdk-pixbuf"
        "gtk+")]
     [else null])))

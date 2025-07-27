@@ -602,7 +602,8 @@
       "libxcb"
       "libX11"
       "libXext"
-      "libXrender")
+      "libXrender"
+      "libxml-2")
      (linux-only)
      (config #:env path-flags
              #:setup (if aarch64?
@@ -610,7 +611,8 @@
                           (~a "cp " config.guess " config.guess"))
                          null))]
     [("shared-mime-info")
-     (config #:configure-exe (find-executable-path "meson")
+     (config #:depends '("libxml-2")
+	     #:configure-exe (find-executable-path "meson")
              #:configure (append '("setup")
                                  '(#f "_build"))
              #:use-cross-file (cross-file)
