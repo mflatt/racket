@@ -602,14 +602,18 @@
       "libxcb"
       "libX11"
       "libXext"
-      "libXrender"
-      "shared-mime-info")
+      "libXrender")
      (linux-only)
      (config #:env path-flags
              #:setup (if aarch64?
                          (list
                           (~a "cp " config.guess " config.guess"))
-                         null))]
+                         null))]    
+    [("shared-mime-info")
+     (config #:configure-exe (find-executable-path "meson")
+             #:use-cross-file (cross-file)
+             #:make "meson compile -C _build"
+             #:make-install "meson install -C _build")]
     [("gdk-pixbuf")
      (linux-only)
      (config #:depends '("libX11" "shared-mime-info")
