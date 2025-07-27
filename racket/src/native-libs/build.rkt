@@ -602,7 +602,8 @@
       "libxcb"
       "libX11"
       "libXext"
-      "libXrender")
+      "libXrender"
+      "shared-mime-info")
      (linux-only)
      (config #:env path-flags
              #:setup (if aarch64?
@@ -611,7 +612,7 @@
                          null))]
     [("gdk-pixbuf")
      (linux-only)
-     (config #:depends '("libX11")
+     (config #:depends '("libX11" "shared-mime-info")
 	     #:configure '("--without-libtiff")
 	     #:env (append path-flags
 			   ld-library-path-flags))]
@@ -867,6 +868,11 @@
        "libtool"
        #:exists 'truncate
        (lambda (o) (display s2 o))))))
+
+(when (and linux? aarch64?)
+  (unless (link-exists? (build-path dest "lib" "aarch64-linux-gnu"))
+    (make-directory* (build-path dest "lib"))
+    (make-file-or-directory-link "." (build-path dest "lib" "aarch64-linux-gnu"))))
 
 (parameterize ([current-directory package-dir]
                [current-environment-variables

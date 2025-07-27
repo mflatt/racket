@@ -29,8 +29,8 @@ older versions):
  gettext-0.19.8
  glib-2.72.2
  libpng-1.6.37
- pixman-0.44.2 (Mac OS i386 and PowerPC, Linux: pixman-0.38.4)
- cairo-1.18.2 (Mac OS i386 and PowerPC, Linux: cairo-1.16.0)
+ pixman-0.44.2 (Mac OS i386 and PowerPC, Linux x86_64: pixman-0.38.4)
+ cairo-1.18.2 (Mac OS i386 and PowerPC, Linux x86_64: cairo-1.16.0)
  jpegsrc.v9e
  harfbuzz-1.7.6
  fribidi-1.0.2

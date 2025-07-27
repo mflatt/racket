@@ -25,8 +25,7 @@
     [else
      null])
    (cond
-     [(or (and mac? (or m32? ppc?))
-          linux?)
+     [(and mac? (or m32? ppc?))
       '("openssl-1")]
      [else
       '("openssl-3")])
@@ -77,7 +76,8 @@
     [else null])
    (cond
     [linux?
-     '("gdk-pixbuf"
+     '("shared-mime-info"
+       "gdk-pixbuf"
        "gtk+")]
     [else null])))
 
