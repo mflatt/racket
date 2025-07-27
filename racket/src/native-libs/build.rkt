@@ -619,7 +619,8 @@
     [("gdk-pixbuf")
      (linux-only)
      (config #:depends '("libX11")
-	     #:configure '("--without-libtiff")
+	     #:configure '("--without-libtiff"
+                           "--disable-gio-sniffing")
 	     #:env (append path-flags
 			   ld-library-path-flags))]
     [("atk")
