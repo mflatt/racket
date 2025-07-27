@@ -231,6 +231,9 @@
 ;; libffi via MinGW for AArch64:
 (define-runtime-path libffi-arm64nt-patch "patches/libffi-arm64nt.patch")
 
+;; Avoid shared-mime-info and libxml2 dependency:
+(define-runtime-path gdk-pixbuf-no-sniff-patch "patches/gdk-pixbuf-no-sniff.patch")
+
 (define-runtime-path config.guess "../lt/config.guess")
 
 ;; --------------------------------------------------
@@ -613,6 +616,7 @@
      (linux-only)
      (config #:depends '("libX11")
 	     #:configure '("--without-libtiff")
+             #:patches (list gdk-pixbuf-no-sniff-patch)
 	     #:env (append path-flags
 			   ld-library-path-flags))]
     [("atk")
