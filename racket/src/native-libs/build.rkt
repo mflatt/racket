@@ -234,8 +234,11 @@
 ;; Avoid shared-mime-info and libxml2 dependency:
 (define-runtime-path gdk-pixbuf-no-sniff-patch "patches/gdk-pixbuf-no-sniff.patch")
 
+;; Make the Gtk+ build work with a newer GDK that deprecates some bindings
 (define-runtime-path gtk-with-newer-gdk-patch "patches/gtk-with-newer-gdk.patch")
-  
+
+;; Disable test and demo executables
+(define-runtime-path gtk-no-demos-patch "patches/gtk-no-demos.patch")  
 
 (define-runtime-path config.guess "../lt/config.guess")
 
@@ -631,7 +634,8 @@
     [("gtk+")
      (linux-only)
      (config #:depends '("gdk-pixbuf" "atk" "libXrender")
-             #:patches (list gtk-with-newer-gdk-patch)
+             #:patches (list gtk-with-newer-gdk-patch
+                             gtk-no-demos-patch)
 	     #:env (append path-flags
 			   ld-library-path-flags))]
     [("freefont")
