@@ -630,7 +630,10 @@
                            '("libX11")
                            '())
 	     #:env (append path-flags
-			   ld-library-path-flags))]
+			   ld-library-path-flags
+                           (if linux?
+                               (list (list "LDFLAGS" (~a "-Wl,-rpath," dest "/lib")))
+                               null)))]
     [("gtk+")
      (linux-only)
      (config #:depends '("gdk-pixbuf" "atk" "libXrender")
