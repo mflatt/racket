@@ -25,7 +25,8 @@
     [else
      null])
    (cond
-     [(and mac? (or m32? ppc?))
+     [(or (and mac? (or m32? ppc?))
+          linux?)
       '("openssl-1")]
      [else
       '("openssl-3")])
