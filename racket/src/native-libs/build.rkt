@@ -608,7 +608,7 @@
              #:setup (if aarch64?
                          (list
                           (~a "cp " config.guess " config.guess"))
-                         null))]    
+                         null))]
     [("shared-mime-info")
      (config #:configure-exe (find-executable-path "meson")
              #:configure (append '("setup")
@@ -618,7 +618,7 @@
              #:make-install "meson install -C _build")]
     [("gdk-pixbuf")
      (linux-only)
-     (config #:depends '("libX11" "shared-mime-info")
+     (config #:depends '("libX11")
 	     #:configure '("--without-libtiff")
 	     #:env (append path-flags
 			   ld-library-path-flags))]
