@@ -171,6 +171,8 @@
          unsafe-make-custodian-at-root
          unsafe-custodian-register
          unsafe-custodian-unregister
+         unsafe-uninterruptible-custodian-lock-acquire
+         unsafe-uninterruptible-custodian-lock-release
 
          dynamic-place  ; not the one from `racket/place`
          place?
