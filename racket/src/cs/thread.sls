@@ -281,4 +281,4 @@
                                       (lambda ()
                                         (current-atomic (fx- (current-atomic) 1))))
 
-  (set-future-callbacks! future-block future-unblock future-sync current-future-prompt))
+  (set-future-callbacks! future-block future-unblock current-future-prompt))

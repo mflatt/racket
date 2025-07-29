@@ -40,7 +40,6 @@
          parallel-thread-pool-close
          parallel-thread-pool?
          future-block
-         future-sync
          current-future-prompt
          currently-running-future
          reset-future-logs-for-tracing!
@@ -756,48 +755,6 @@
      ;; used by `call-in-future` on a would-be future
      (when (eq? (future*-state f) 'stop)
        (set-future*-state! f 'running))]))
-
-;; ----------------------------------------
-
-;; Can be in a future thread
-;; Call `thunk` in the place's main thread, where it can
-;; run atomically and return a result
-(define (future-sync who thunk)
-  (start-uninterruptible)
-  (define me-f (current-future))
-  (cond
-    [(not me-f)
-     ;; Between the time that `future-sync` was requested and
-     ;; we get here, the continuation was apparently moved
-     (end-uninterruptible)
-     (thunk)]
-    [(eq? (future*-kind me-f) 'would-be)
-     (current-future #f)
-     (end-uninterruptible)
-     (log-future 'sync (future*-id me-f) #:prim-name who)
-     (let ([v (thunk)])
-       (log-future 'result (future*-id me-f))
-       (current-future me-f)
-       v)]
-    [(in-racket-thread?)
-     (end-uninterruptible)
-     ;; can run directly, since we're not in a future pthread
-     (thunk)]
-    [else
-     (end-uninterruptible)
-     ;; In case the main thread is trying to shut down futures, check in:
-     (engine-block)
-     ;; Host's `call-as-asynchronous-callback` will post `thunk`
-     ;; so that it's returned by `host:poll-async-callbacks` to
-     ;; the scheduler in the place's main thread; it will also
-     ;; tell the scheduler to be in atomic mode so that we don't
-     ;; get terminated or swapped out while blocking on the main thread
-     (host:call-as-asynchronous-callback
-      (lambda ()
-        (log-future 'sync (future*-id me-f) #:prim-name who)
-        (let ([v (thunk)])
-          (log-future 'result (future*-id me-f))
-          v)))]))
 
 ;; ----------------------------------------
 

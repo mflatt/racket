@@ -140,3 +140,23 @@ potential for an associated parallel future, it calls the more general
 precisely when a parallel future is available to continue the work of
 the current coroutine thread, and it kicks the continuation back over
 to the parallel thread's future if so.
+
+Locks
+-----
+
+In addition to uninterruptible and atomic mode, the this layer has a
+few locks that are implemented as host-supplied mutexes. These
+generally must be take in uninterruptible mode, so that a thread is
+not swapped out or otherwise suspended while it holds a lock.
+
+The custodian lock is the only one that isn't purely internal. A
+custodian can only be shut down in a thread that is in atomic mode and
+also holds the custodian lock. Meanwhile, an object can be registered
+with a custodian or unregistered using only the custodian lock. The
+lock is exposed, so that a `custodian-closed?` check, registration,
+and unregistration can be uninterruptably combined with other
+operations.
+
+The interaction of a garbage-collection callback and custodians is
+governed by a lock that is different than the custodian lock. That
+lock can be taken only with GC interrupts disabled.

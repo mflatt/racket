@@ -53,7 +53,6 @@
                 (1/fsemaphore? fsemaphore?)
                 (1/future future)
                 (future-block future-block)
-                (future-sync future-sync)
                 (1/future? future?)
                 (1/futures-enabled? futures-enabled?)
                 (guard-evt guard-evt)
@@ -12750,53 +12749,6 @@
       (if (eq? (future*-state f_0) 'stop)
         (set-future*-state! f_0 'running)
         (void)))))
-(define future-sync
-  (lambda (who_0 thunk_0)
-    (begin
-      (start-uninterruptible)
-      (let ((me-f_0 (1/current-future)))
-        (if (not me-f_0)
-          (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
-          (if (eq? (future*-kind me-f_0) 'would-be)
-            (begin
-              (1/current-future #f)
-              (end-atomic/no-barrier-exit)
-              (let ((temp102_0 (future*-id me-f_0)))
-                (log-future.1 #f who_0 #f unsafe-undefined 'sync temp102_0))
-              (let ((v_0 (|#%app| thunk_0)))
-                (begin
-                  (let ((temp105_0 (future*-id me-f_0)))
-                    (log-future.1 #f #f #f unsafe-undefined 'result temp105_0))
-                  (1/current-future me-f_0)
-                  v_0)))
-            (if (in-racket-thread?)
-              (begin (end-atomic/no-barrier-exit) (|#%app| thunk_0))
-              (begin
-                (end-atomic/no-barrier-exit)
-                (engine-block)
-                (|#%app|
-                 host:call-as-asynchronous-callback
-                 (lambda ()
-                   (begin
-                     (let ((temp107_0 (future*-id me-f_0)))
-                       (log-future.1
-                        #f
-                        who_0
-                        #f
-                        unsafe-undefined
-                        'sync
-                        temp107_0))
-                     (let ((v_0 (|#%app| thunk_0)))
-                       (begin
-                         (let ((temp110_0 (future*-id me-f_0)))
-                           (log-future.1
-                            #f
-                            #f
-                            #f
-                            unsafe-undefined
-                            'result
-                            temp110_0))
-                         v_0)))))))))))))
 (define pthread-count 1)
 (define set-processor-count! (lambda (n_0) (set! pthread-count n_0)))
 (define finish_2666
@@ -13265,9 +13217,9 @@
                                                       (future-stop? f_0)))
                                                  (begin
                                                    (set-future*-state! f_0 #f)
-                                                   (let ((temp124_0
+                                                   (let ((temp114_0
                                                           (not stop?_0)))
-                                                     (let ((temp125_0
+                                                     (let ((temp115_0
                                                             (lambda ()
                                                               (begin
                                                                 (|#%app|
@@ -13277,8 +13229,8 @@
                                                                  future-scheduler-prompt-tag
                                                                  (void))))))
                                                        (future-suspend.1
-                                                        temp125_0
-                                                        temp124_0
+                                                        temp115_0
+                                                        temp114_0
                                                         #f)))
                                                    (void)))))
                                            (void))))))
@@ -13295,8 +13247,8 @@
                               (void))
                             (|#%app| done_0 (void))))))))))
                 (loop_0 e_0))))
-            (let ((temp122_0 (future*-id f_0)))
-              (log-future.1 #f #f #f unsafe-undefined 'end-work temp122_0))
+            (let ((temp112_0 (future*-id f_0)))
+              (log-future.1 #f #f #f unsafe-undefined 'end-work temp112_0))
             (1/current-future 'worker)
             (set-box! (worker-current-future-box w_0) #f)
             (if (scheduler-round-robin s_0)
