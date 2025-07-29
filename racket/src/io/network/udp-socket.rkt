@@ -49,7 +49,7 @@
     #:tcp? #f
     ;; in atomic mode, *not* rktio mode
     (lambda (addr)
-      (check-current-custodian who)
+      (check-current-custodian who #:unlock end-atomic)
       (define s (rktioly (rktio_udp_open rktio addr (udp-default-family))))
       (cond
         [(rktio-error? s)

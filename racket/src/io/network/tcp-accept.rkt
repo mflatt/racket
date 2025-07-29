@@ -28,7 +28,7 @@
       [(tcp-listener-closed? listener)
        (closed-error who listener)]
       [(accept-ready? listener)
-       (check-current-custodian who)
+       (check-current-custodian who #:unlock end-atomic)
        (define fd (rktioly (rktio_accept rktio (tcp-listener-lnr listener))))
        (cond
          [(rktio-error? fd)
@@ -83,9 +83,8 @@
        [(custodian-shut-down? (current-custodian))
         (let ([c (current-custodian)])
           (error-result (lambda ()
-                          (start-atomic)
                           (parameterize ([current-custodian c])
-                            (check-current-custodian 'tcp-accept-evt)))))]
+                            (check-current-custodian 'tcp-accept-evt #:unlock void)))))]
        [(accept-ready? listener)
         (define fd (rktioly (rktio_accept rktio (tcp-listener-lnr listener))))
         (cond

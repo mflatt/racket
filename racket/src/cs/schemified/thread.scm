@@ -160,9 +160,9 @@
                 (1/unsafe-start-breakable-atomic unsafe-start-breakable-atomic)
                 (1/unsafe-start-uninterruptible unsafe-start-uninterruptible)
                 (1/unsafe-thread-at-root unsafe-thread-at-root)
-                (unsafe-uninterruptible-custodian-lock-acquire
+                (1/unsafe-uninterruptible-custodian-lock-acquire
                  unsafe-uninterruptible-custodian-lock-acquire)
-                (unsafe-uninterruptible-custodian-lock-release
+                (1/unsafe-uninterruptible-custodian-lock-release
                  unsafe-uninterruptible-custodian-lock-release)
                 (1/unsafe-uninterruptible-lock-acquire
                  unsafe-uninterruptible-lock-acquire)
@@ -4830,12 +4830,14 @@
                    proc5_0))
                 (let ((h_0 (plumber-flush-handle2.1 p4_0 proc5_0)))
                   (begin
+                    (lock-custodians)
                     (hash-set!
                      (if weak?3_0
                        (plumber-weak-callbacks p4_0)
                        (plumber-callbacks p4_0))
                      h_0
                      #t)
+                    (unlock-custodians)
                     h_0))))))))
     (|#%name|
      plumber-add-flush!
@@ -4855,60 +4857,65 @@
         (lambda (proc_0 h_0) (|#%app| proc_0 h_0)))))))
 (define plumber-flush-all/wrap
   (lambda (p_0 app_0)
-    (let ((hs_0
-           (reverse$1
-            (let ((lst_0
-                   (list
-                    (plumber-callbacks p_0)
-                    (plumber-weak-callbacks p_0))))
-              (letrec*
-               ((for-loop_0
-                 (|#%name|
-                  for-loop
-                  (lambda (fold-var_0 lst_1)
-                    (if (pair? lst_1)
-                      (let ((cbs_0 (unsafe-car lst_1)))
-                        (let ((rest_0 (unsafe-cdr lst_1)))
-                          (let ((fold-var_1
-                                 (letrec*
-                                  ((for-loop_1
-                                    (|#%name|
-                                     for-loop
-                                     (lambda (fold-var_1 i_0)
-                                       (if i_0
-                                         (let ((h_0
-                                                (hash-iterate-key cbs_0 i_0)))
-                                           (let ((fold-var_2
-                                                  (cons h_0 fold-var_1)))
-                                             (let ((fold-var_3
-                                                    (values fold-var_2)))
-                                               (for-loop_1
-                                                fold-var_3
-                                                (hash-iterate-next
-                                                 cbs_0
-                                                 i_0)))))
-                                         fold-var_1)))))
-                                  (for-loop_1
-                                   fold-var_0
-                                   (hash-iterate-first cbs_0)))))
-                            (for-loop_0 fold-var_1 rest_0))))
-                      fold-var_0)))))
-               (for-loop_0 null lst_0))))))
-      (begin
-        (letrec*
-         ((for-loop_0
-           (|#%name|
-            for-loop
-            (lambda (lst_0)
-              (if (pair? lst_0)
-                (let ((h_0 (unsafe-car lst_0)))
-                  (let ((rest_0 (unsafe-cdr lst_0)))
-                    (begin
-                      (|#%app| app_0 (plumber-flush-handle-proc h_0) h_0)
-                      (for-loop_0 rest_0))))
-                (values))))))
-         (for-loop_0 hs_0))
-        (void)))))
+    (begin
+      (lock-custodians)
+      (let ((hs_0
+             (reverse$1
+              (let ((lst_0
+                     (list
+                      (plumber-callbacks p_0)
+                      (plumber-weak-callbacks p_0))))
+                (letrec*
+                 ((for-loop_0
+                   (|#%name|
+                    for-loop
+                    (lambda (fold-var_0 lst_1)
+                      (if (pair? lst_1)
+                        (let ((cbs_0 (unsafe-car lst_1)))
+                          (let ((rest_0 (unsafe-cdr lst_1)))
+                            (let ((fold-var_1
+                                   (letrec*
+                                    ((for-loop_1
+                                      (|#%name|
+                                       for-loop
+                                       (lambda (fold-var_1 i_0)
+                                         (if i_0
+                                           (let ((h_0
+                                                  (hash-iterate-key
+                                                   cbs_0
+                                                   i_0)))
+                                             (let ((fold-var_2
+                                                    (cons h_0 fold-var_1)))
+                                               (let ((fold-var_3
+                                                      (values fold-var_2)))
+                                                 (for-loop_1
+                                                  fold-var_3
+                                                  (hash-iterate-next
+                                                   cbs_0
+                                                   i_0)))))
+                                           fold-var_1)))))
+                                    (for-loop_1
+                                     fold-var_0
+                                     (hash-iterate-first cbs_0)))))
+                              (for-loop_0 fold-var_1 rest_0))))
+                        fold-var_0)))))
+                 (for-loop_0 null lst_0))))))
+        (begin
+          (unlock-custodians)
+          (letrec*
+           ((for-loop_0
+             (|#%name|
+              for-loop
+              (lambda (lst_0)
+                (if (pair? lst_0)
+                  (let ((h_0 (unsafe-car lst_0)))
+                    (let ((rest_0 (unsafe-cdr lst_0)))
+                      (begin
+                        (|#%app| app_0 (plumber-flush-handle-proc h_0) h_0)
+                        (for-loop_0 rest_0))))
+                  (values))))))
+           (for-loop_0 hs_0))
+          (void))))))
 (define 1/plumber-flush-handle-remove!
   (|#%name|
    plumber-flush-handle-remove!
@@ -4922,8 +4929,10 @@
           h_0))
        (let ((p_0 (plumber-flush-handle-plumber h_0)))
          (begin
+           (lock-custodians)
            (hash-remove! (plumber-callbacks p_0) h_0)
-           (hash-remove! (plumber-weak-callbacks p_0) h_0)))))))
+           (hash-remove! (plumber-weak-callbacks p_0) h_0)
+           (unlock-custodians)))))))
 (define 1/exit-handler
   (make-parameter
    (let ((root-plumber_0 (1/current-plumber)))
@@ -14601,10 +14610,14 @@
      (begin
        (if (|#%app| threaded?) (|#%app| host:mutex-release m_0) (void))
        (end-atomic/no-barrier-exit)))))
-(define unsafe-uninterruptible-custodian-lock-acquire
-  (lambda () (lock-custodians)))
-(define unsafe-uninterruptible-custodian-lock-release
-  (lambda () (unlock-custodians)))
+(define 1/unsafe-uninterruptible-custodian-lock-acquire
+  (|#%name|
+   unsafe-uninterruptible-custodian-lock-acquire
+   (lambda () (lock-custodians))))
+(define 1/unsafe-uninterruptible-custodian-lock-release
+  (|#%name|
+   unsafe-uninterruptible-custodian-lock-release
+   (lambda () (unlock-custodians))))
 (define 1/current-process-milliseconds
   (let ((current-process-milliseconds_0
          (|#%name|

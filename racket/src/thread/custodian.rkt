@@ -328,7 +328,7 @@
 (define (custodian-this-place? c)
   (eq? (custodian-place c) current-place))
 
-;; In atomic mode
+;; In atomic mode (as promised with `custodian-shut-down?`
 (define (do-custodian-shutdown-all c [only-at-exit? #f])
   (lock-custodians)
   (unless (custodian-shut-down? c)

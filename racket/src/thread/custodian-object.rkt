@@ -71,9 +71,10 @@
              #f     ; sync-futures?
              null)) ; post-shutdown
 
-;; May be called with the custodian lock already held, so that
-;; a shut-down check can guard work taht sholdn't be done if
-;; it can't be registered with the custodian
+;; Might be called with the custodian lock already held or in atomic mode, so that
+;; a shut-down check can guard work that sholdn't be done if
+;; it can't be registered with the custodian. (A custodian can only
+;; be shut down with the lock and in atomic mode.)
 (define (custodian-shut-down? c)
   (lock-custodians)
   (define shut-down? (unbox* (custodian-shut-down?-box c)))

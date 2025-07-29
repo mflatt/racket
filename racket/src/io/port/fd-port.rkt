@@ -32,7 +32,7 @@
          fd-port-fd
          prop:fd-place-message-opener)
 
-;; lock on `p` held, in atomic mode, in rktio mode
+;; lock on `p` held, in rktio mode
 (define (fd-close fd fd-refcount p
                   #:discard-errors? [discard-errors? #f])
   (set-box! fd-refcount (sub1 (unbox fd-refcount)))
@@ -50,7 +50,7 @@
 (class fd-input-port #:extends peek-via-read-input-port
   #:field
   [fd #f]
-  [fd-refcount (box 1)] ; atomic mode serves as a lock for a refcount
+  [fd-refcount (box 1)] ; rktio mode serves as a lock for a refcount
   [custodian-reference #f]
   [is-converted #f]
   
@@ -98,15 +98,15 @@
 
   [close
    (lambda ()
-     (also-atomically ; for custodian
-      this
-      (start-rktio)
-      (unless (zero? (unbox fd-refcount)) ; double-check, since we left locked mode
-        (send fd-input-port this on-close)
-        (fd-close fd fd-refcount this)
-        (unsafe-custodian-unregister this custodian-reference)
-        (close-peek-buffer))
-      (end-rktio)))]
+     (start-rktio)
+     (unless (zero? (unbox fd-refcount)) ; double-check, since we left locked mode
+       (unsafe-uninterruptible-custodian-lock-acquire)
+       (send fd-input-port this on-close)
+       (fd-close fd fd-refcount this)
+       (unsafe-custodian-unregister this custodian-reference)
+       (unsafe-uninterruptible-custodian-lock-release)
+       (close-peek-buffer))
+     (end-rktio))]
 
   [file-position
    (case-lambda
@@ -125,8 +125,8 @@
 
 ;; ----------------------------------------
 
-;; in atomic mode
-;; Current custodian must not be shut down.
+;; in atomic mode or with custodian lock
+;; current custodian must not be shut down
 (define (open-input-fd fd name
                        #:fd-refcount [fd-refcount (box 1)]
                        #:custodian [cust (current-custodian)])
@@ -138,7 +138,8 @@
         [fd-refcount fd-refcount])
    #:custodian cust))
 
-;; in atomic mode
+;; in atomic mode or with custodian lock
+;; current custodian must not be shut down
 (define (finish-fd-input-port p
                               #:custodian [cust (current-custodian)])
   (define fd (fd-input-port-fd p))
@@ -151,7 +152,7 @@
 (class fd-output-port #:extends core-output-port
   #:field
   [fd fd]
-  [fd-refcount (box 1)] ; atomic mode serves as a lock for a refcount
+  [fd-refcount (box 1)] ; rktio mode serves as a lock for a refcount
   [bstr (make-bytes 4096)]
   [start-pos 0]
   [end-pos 0]
@@ -322,17 +323,17 @@
      (flush-buffer-fully #f) ; can temporarily leave lock
      (flush-rktio-buffer-fully) ; can temporarily leave lock
      (when bstr ; <- in case a concurrent close succeeded
-       (also-atomically ; for custodian and plumber
-        this
-        (start-rktio)
-        (when bstr ; check again, since we left locked mode again
-          (send fd-output-port this on-close)
-          (when flush-handle
-            (plumber-flush-handle-remove! flush-handle))
-          (set! bstr #f)
-          (fd-close fd fd-refcount this)
-          (unsafe-custodian-unregister this custodian-reference))
-        (end-rktio))))]
+       (start-rktio)
+       (unsafe-uninterruptible-custodian-lock-acquire)
+       (when bstr ; check again, since we left locked mode again
+         (send fd-output-port this on-close)
+         (when flush-handle
+           (plumber-flush-handle-remove! flush-handle))
+         (set! bstr #f)
+         (fd-close fd fd-refcount this)
+         (unsafe-custodian-unregister this custodian-reference))
+       (unsafe-uninterruptible-custodian-lock-release)
+       (end-rktio)))]
 
   ;; lock held
   [file-position
@@ -374,9 +375,10 @@
 
 ;; ----------------------------------------
 
-;; in atomic mode
-;; Current custodian must not be shut down.
+;; in atomic mode or with custodian lock
+;; current custodian must not be shut down
 (define (open-output-fd fd name
+                        #:is-terminal? [is-terminal? #f]
                         #:buffer-mode [buffer-mode 'infer]
                         #:fd-refcount [fd-refcount (box 1)]
                         #:plumber [plumber (current-plumber)]
@@ -389,13 +391,15 @@
         [fd-refcount fd-refcount]
         [buffer-mode
          (if (eq? buffer-mode 'infer)
-             (if (rktioly (rktio_fd_is_terminal rktio fd))
+             (if is-terminal?
                  'line
                  'block)
              buffer-mode)])
    #:plumber plumber
    #:custodian cust))
 
+;; in atomic mode or with custodian lock
+;; current custodian must not be shut down
 (define (finish-fd-output-port p
                                #:plumber [plumber (current-plumber)]
                                #:custodian [cust (current-custodian)])
@@ -416,14 +420,18 @@
 ;; ----------------------------------------
 
 (define (terminal-port? p)
-  (define fd (fd-port-fd p))
-  (and fd
-       (rktioly (rktio_fd_is_terminal rktio fd))))
-
-;; with lock held or in atomic mode, the latter when the port's lock has been forced to be atomic
-(define (fd-port-fd p)
   (define cp (or (->core-input-port p #:default #f)
                  (->core-output-port p #:default #f)))
+  (cond
+    [(not cp) #f]
+    [else
+     (with-lock cp
+       (define fd (fd-port-fd cp))
+       (and fd
+            (rktioly (rktio_fd_is_terminal rktio fd))))]))
+
+;; with lock held or in atomic mode, the latter when the port's lock has been forced to be atomic
+(define (fd-port-fd cp)
   (cond
     [(fd-input-port? cp)
      (fd-input-port-fd cp)]
@@ -460,7 +468,7 @@
       (rktio_free ppos)
       pos])))
 
-;; lock held for p and in atomic mode
+;; lock held for p and *not* in rktio mode
 (define (set-file-position fd pos p)
   (define r
     (rktioly

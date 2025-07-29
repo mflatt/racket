@@ -31,9 +31,11 @@
                                 (if (memq 'text mode) RKTIO_OPEN_TEXT 0)
                                 (if (memq 'regular-file mode) RKTIO_OPEN_REGFILE 0)))))
   (define i (and read?
-                 (open-input-fd fd name #:fd-refcount refcount)))
+                 (atomically
+                  (open-input-fd fd name #:fd-refcount refcount))))
   (define o (and write?
-                 (open-output-fd fd name #:fd-refcount refcount)))
+                 (atomically
+                  (open-output-fd fd name #:fd-refcount refcount))))
   (if (and i o)
       (values i o)
       (or i o)))
@@ -42,8 +44,9 @@
   (check who exact-integer? system-fd)
   (check who bytes? name)
   (check who list? #:contract "(listof (or/c 'no-close))" mode)
-  (open-input-output-tcp system-fd (string->symbol (bytes->string/utf-8 name))
-                         #:close? (not (memq 'no-close mode))))
+  (atomically
+   (open-input-output-tcp system-fd (string->symbol (bytes->string/utf-8 name))
+                          #:close? (not (memq 'no-close mode)))))
 
 (define (unsafe-port->file-descriptor p)
   (define fd (fd-port-fd p))

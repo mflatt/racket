@@ -54,19 +54,24 @@
 
 (define do-subprocess
   (let ()
-    (define/who (subprocess stdout stdin stderr group/command . command/args)
+    (define/who (subprocess orig-stdout orig-stdin orig-stderr group/command . command/args)
       (check who
              (lambda (p) (or (not p) (and (output-port? p) (file-stream-port? p))))
              #:contract "(or/c (and/c output-port? file-stream-port?) #f)"
-             stdout)
+             orig-stdout)
       (check who
              (lambda (p) (or (not p) (and (input-port? p) (file-stream-port? p))))
              #:contract "(or/c (and/c input-port? file-stream-port?) #f)"
-             stdin)
+             orig-stdin)
       (check who
              (lambda (p) (or (not p) (eq? p 'stdout) (and (output-port? p) (file-stream-port? p))))
              #:contract "(or/c (and/c output-port? file-stream-port?) #f 'stdout)"
-             stderr)
+             orig-stderr)
+      (define stdout (and orig-stdout (->core-output-port orig-stdout)))
+      (define stdin (and orig-stdin (->core-input-port orig-stdin)))
+      (define stderr (if (eq? orig-stderr 'stdout)
+                         'stdout
+                         (and orig-stderr (->core-output-port orig-stderr))))
       (define-values (group command exact/args)
         (cond
           [(path-string? group/command)
@@ -152,7 +157,7 @@
         (when stdin (check-not-closed who stdin #:unlock end-atomic))
         (when (and stderr (not (eq? stderr 'stdout))) (check-not-closed who stderr #:unlock end-atomic))
         (poll-subprocess-finalizations)
-        (check-current-custodian who)
+        (check-current-custodian who #:unlock end-atomic)
         (start-rktio)
         (define envvars (rktio_empty_envvars rktio))
         (for ([name (in-list (environment-variables-names env-vars))])
