@@ -30,7 +30,7 @@
          current-subprocess-keep-file-descriptors
          shell-execute)
 
-(struct subprocess ([process #:mutable]
+(struct subprocess ([process #:mutable] ; locked by atomic mode
                     [cust-ref #:mutable]
                     is-group?)
   #:constructor-name make-subprocess
@@ -42,7 +42,7 @@
               [(eqv? v 0)
                (sandman-poll-ctx-add-poll-set-adder!
                 ctx
-                ;; in atomic and in rktio, must not start nested rktio
+                ;; in atomic and in rktio-sleep-relevant (not rktio), must not start nested rktio
                 (lambda (ps)
                   (rktio_poll_add_process rktio (subprocess-process sp) ps)))
                (values #f sp)]
@@ -193,7 +193,7 @@
         (define in (let ([fd (rktio_process_result_stdout_fd r)])
                      (and fd (open-input-fd fd 'subprocess-stdout))))
         (define out (let ([fd (rktio_process_result_stdin_fd r)])
-                      (and fd (open-output-fd fd 'subprocess-stdin))))
+                      (and fd (open-output-fd fd 'subprocess-stdin #:is-terminal? (rktio_fd_is_terminal rktio fd)))))
         (define err (let ([fd (rktio_process_result_stderr_fd r)])
                       (and fd (open-input-fd fd 'subprocess-stderr))))
         (define sp (make-subprocess (rktio_process_result_process r)

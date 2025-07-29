@@ -157,7 +157,7 @@
             [else
              (sandman-poll-ctx-add-poll-set-adder!
               poll-ctx
-              ;; in atomic and in rktio, must not start nested rktio
+              ;; in atomic and in rktio-sleep-relevant (not rktio), must not start nested rktio
               (lambda (ps)
                 (rktio_poll_add rktio (udp-s (udp-receiving-evt-u self)) ps RKTIO_POLL_READ)))
              (values #f self)])]))))

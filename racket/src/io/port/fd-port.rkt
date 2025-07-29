@@ -32,7 +32,8 @@
          fd-port-fd
          prop:fd-place-message-opener)
 
-;; lock on `p` held, in rktio mode
+;; lock on `p` held, in rktio and rktio-sleep-relevant mode,
+;; and with custodian lock unless errors are being discarded
 (define (fd-close fd fd-refcount p
                   #:discard-errors? [discard-errors? #f])
   (set-box! fd-refcount (sub1 (unbox fd-refcount)))
@@ -41,6 +42,8 @@
     (define v (rktio_close rktio fd))
     (when (and (rktio-error? v)
                (not discard-errors?))
+      (unsafe-uninterruptible-custodian-lock-release)
+      (end-rktio-sleep-relevant)
       (end-rktio)
       (port-unlock p)
       (raise-rktio-error #f v "error closing stream port"))))
@@ -50,12 +53,12 @@
 (class fd-input-port #:extends peek-via-read-input-port
   #:field
   [fd #f]
-  [fd-refcount (box 1)] ; rktio mode serves as a lock for a refcount
+  [fd-refcount (box 1)] ; rktio-sleep-relevant mode serves as a lock for a refcount
   [custodian-reference #f]
   [is-converted #f]
   
   #:public
-  [on-close (lambda () (void))] ; lock held and in rktio mode
+  [on-close (lambda () (void))] ; lock held and in rktio and rktio-sleep-relevant mode
   [raise-read-error (lambda (n)
                       (raise-filesystem-error #f n "error reading from stream port"))]
 
@@ -100,11 +103,13 @@
    (lambda ()
      (start-rktio)
      (unless (zero? (unbox fd-refcount)) ; double-check, since we left locked mode
+       (start-rktio-sleep-relevant)
        (unsafe-uninterruptible-custodian-lock-acquire)
        (send fd-input-port this on-close)
        (fd-close fd fd-refcount this)
        (unsafe-custodian-unregister this custodian-reference)
        (unsafe-uninterruptible-custodian-lock-release)
+       (end-rktio-sleep-relevant)
        (close-peek-buffer))
      (end-rktio))]
 
@@ -324,6 +329,7 @@
      (flush-rktio-buffer-fully) ; can temporarily leave lock
      (when bstr ; <- in case a concurrent close succeeded
        (start-rktio)
+       (start-rktio-sleep-relevant)
        (unsafe-uninterruptible-custodian-lock-acquire)
        (when bstr ; check again, since we left locked mode again
          (send fd-output-port this on-close)
@@ -333,6 +339,7 @@
          (fd-close fd fd-refcount this)
          (unsafe-custodian-unregister this custodian-reference))
        (unsafe-uninterruptible-custodian-lock-release)
+       (end-rktio-sleep-relevant)
        (end-rktio)))]
 
   ;; lock held
@@ -378,7 +385,7 @@
 ;; in atomic mode or with custodian lock
 ;; current custodian must not be shut down
 (define (open-output-fd fd name
-                        #:is-terminal? [is-terminal? #f]
+                        #:is-terminal? is-terminal?
                         #:buffer-mode [buffer-mode 'infer]
                         #:fd-refcount [fd-refcount (box 1)]
                         #:plumber [plumber (current-plumber)]
@@ -535,7 +542,7 @@
             ;; Cooperate with the sandman by registering
             ;; a function that takes a poll set and
             ;; adds to it:
-            ;; in atomic and in rktio, must not start nested rktio
+            ;; in atomic and in rktio-sleep-relevant (not rktio), must not start nested rktio
             (lambda (ps)
               (if (zero? (unbox (fd-evt-fd-refcount fde)))
                   (rktio_poll_set_add_nosleep rktio ps)
@@ -577,11 +584,13 @@
                                  (plumber-flush-handle-remove! flush-handle))
                                (with-lock port
                                  (rktioly
+                                  (start-rktio-sleep-relevant)
                                   (if (input-port? port)
                                       (send fd-input-port port on-close)
                                       (send fd-output-port port on-close))
                                   (fd-close fd fd-refcount port #:discard-errors? #t)
-                                  (set-closed-state! port))))
+                                  (set-closed-state! port)
+                                  (end-rktio-sleep-relevant))))
                              #f
                              #f))
 
@@ -600,10 +609,12 @@
      (define input? (input-port? port))
      (define fd-dup (dup-port-fd port))
      (define name (core-port-name port))
+     (define is-terminal? (and (not input?)
+                               (rktioly (rktio_fd_is_terminal rktio (unbox fd-dup)))))
      (define opener (or (fd-place-message-opener-ref port #f)
                         (if input?
-                            (lambda (port name) (open-input-fd port name))
-                            (lambda (port name) (open-output-fd port name)))))
+                            (lambda (fd name) (open-input-fd fd name))
+                            (lambda (fd name) (open-output-fd fd name #:is-terminal? is-terminal?)))))
      (port-unlock port)
      (lambda ()
        (atomically

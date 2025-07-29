@@ -22,7 +22,7 @@
 (module+ init
   (provide rktio-filesyste-change-evt-init!))
 
-;; locked by rktio
+;; locked by rktio and rktio-sleep-relevant
 (struct fs-change-evt ([rfc #:mutable]
                        [cust-ref #:mutable])
   #:reflection-name 'filesystem-change-evt
@@ -38,7 +38,7 @@
                             [else
                              (sandman-poll-ctx-add-poll-set-adder!
                               ctx
-                              ;; atomic and in rktio, must not start nested rktio
+                              ;; atomic and in rktio-sleep-relevant (not rktio), must not start nested rktio
                               (lambda (ps)
                                 (rktio_poll_add_fs_change rktio rfc ps)))
                              (values #f fc)])))))

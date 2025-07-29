@@ -23,19 +23,21 @@
   (define read? (memq 'read mode))
   (define write? (memq 'write mode))
   (define refcount (box (if (and read? write?) 2 1)))
-  (define fd (rktioly
-              (rktio_system_fd rktio system-fd
-                               (bitwise-ior
-                                (if read? RKTIO_OPEN_READ 0)
-                                (if write? RKTIO_OPEN_WRITE 0)
-                                (if (memq 'text mode) RKTIO_OPEN_TEXT 0)
-                                (if (memq 'regular-file mode) RKTIO_OPEN_REGFILE 0)))))
+  (start-rktio)
+  (define fd (rktio_system_fd rktio system-fd
+                              (bitwise-ior
+                               (if read? RKTIO_OPEN_READ 0)
+                               (if write? RKTIO_OPEN_WRITE 0)
+                               (if (memq 'text mode) RKTIO_OPEN_TEXT 0)
+                               (if (memq 'regular-file mode) RKTIO_OPEN_REGFILE 0))))
+  (define is-terminal? (rktio_fd_is_terminal rktio fd))
+  (end-rktio)
   (define i (and read?
                  (atomically
                   (open-input-fd fd name #:fd-refcount refcount))))
   (define o (and write?
                  (atomically
-                  (open-output-fd fd name #:fd-refcount refcount))))
+                  (open-output-fd fd name #:fd-refcount refcount #:is-terminal? is-terminal?))))
   (if (and i o)
       (values i o)
       (or i o)))

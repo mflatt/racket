@@ -31,6 +31,7 @@
          set-udp-is-connected?!)
 
 ;; a udp record is locked by `start-rktio`/`end-rktio`
+;; and closing is further guarded by rktio-sleep-relevant mode
 (struct udp (s-box is-bound? is-connected? custodian-reference)
   #:mutable
   #:authentic)
@@ -68,26 +69,26 @@
 
 ; in rktio mode
 (define (do-udp-close s-box)
+  (start-rktio-sleep-relevant)
   (define s (unbox s-box))
   (when s
     (rktio_close rktio s)
-    (set-box! s-box #f)))
+    (set-box! s-box #f))
+  (end-rktio-sleep-relevant))
 
-;; for external, so *not* in rktio mode
+;; for external use, so *not* in rktio mode
 (define/who (udp-close u)
   (check who udp? u)
-  (atomically ; because `unsafe-custodian-unregister`
-   (rktioly
-    (cond
-      [(udp-s u)
-       (define s-box (udp-s-box u))
-       (do-udp-close s-box)
-       (unsafe-custodian-unregister s-box (udp-custodian-reference u))]
-      [else
-       (end-rktio)
-       (end-atomic)
-       (raise-network-arguments-error who "udp socket was already closed"
-                                      "socket" u)]))))
+  (rktioly
+   (cond
+     [(udp-s u)
+      (define s-box (udp-s-box u))
+      (do-udp-close s-box)
+      (unsafe-custodian-unregister s-box (udp-custodian-reference u))]
+     [else
+      (end-rktio)
+      (raise-network-arguments-error who "udp socket was already closed"
+                                     "socket" u)])))
 
 ;; ----------------------------------------
 

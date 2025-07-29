@@ -3283,29 +3283,38 @@
     (let ((app_0 (make-mutex)))
       (let ((app_1 (box #f)))
         (m+s1.1 app_0 app_1 (|#%app| rktio_get_signal_handle rktio_0))))))
-(define cell.2$1
+(define cell.2$1 (unsafe-make-place-local (make-mutex)))
+(define cell.3$1
   (unsafe-make-place-local
    (make-rktio-mutex+sleep (unsafe-place-local-ref cell.1))))
 (define start-rktio
   (lambda ()
     (begin
       (unsafe-start-uninterruptible)
-      (mutex-acquire/wakeup-sleep (unsafe-place-local-ref cell.2$1)))))
+      (mutex-acquire (unsafe-place-local-ref cell.2$1)))))
 (define end-rktio
   (lambda ()
     (begin
-      (let ((mutex+sleep_0 (unsafe-place-local-ref cell.2$1)))
+      (mutex-release (unsafe-place-local-ref cell.2$1))
+      (unsafe-end-uninterruptible))))
+(define start-some-rktio (lambda (mutex_0) (mutex-acquire mutex_0)))
+(define end-some-rktio (lambda (mutex_0) (mutex-release mutex_0)))
+(define start-rktio-sleep-relevant
+  (lambda ()
+    (begin
+      (unsafe-start-uninterruptible)
+      (mutex-acquire/wakeup-sleep (unsafe-place-local-ref cell.3$1)))))
+(define end-rktio-sleep-relevant
+  (lambda ()
+    (begin
+      (let ((mutex+sleep_0 (unsafe-place-local-ref cell.3$1)))
         (mutex-release (m+s-mutex mutex+sleep_0)))
       (unsafe-end-uninterruptible))))
 (define maybe-start-sleep-rktio
   (lambda ()
-    (maybe-mutex-acquire/start-sleep (unsafe-place-local-ref cell.2$1))))
+    (maybe-mutex-acquire/start-sleep (unsafe-place-local-ref cell.3$1))))
 (define end-sleep-rktio
-  (lambda () (mutex-release/end-sleep (unsafe-place-local-ref cell.2$1))))
-(define start-some-rktio
-  (lambda (mutex+sleep_0) (mutex-acquire/wakeup-sleep mutex+sleep_0)))
-(define end-some-rktio
-  (lambda (mutex+sleep_0) (mutex-release (m+s-mutex mutex+sleep_0))))
+  (lambda () (mutex-release/end-sleep (unsafe-place-local-ref cell.3$1))))
 (define end-rktio+atomic (lambda () (begin (end-rktio) (unsafe-end-atomic))))
 (define mutex-acquire/wakeup-sleep
   (lambda (mutex+sleep_0)
@@ -3383,8 +3392,9 @@
   (lambda ()
     (begin
       (unsafe-place-local-set! cell.1 (|#%app| rktio_init))
+      (unsafe-place-local-set! cell.2$1 (make-mutex))
       (unsafe-place-local-set!
-       cell.2$1
+       cell.3$1
        (make-rktio-mutex+sleep (unsafe-place-local-ref cell.1))))))
 (define rktio-place-destroy!
   (lambda ()
@@ -3468,40 +3478,38 @@
       #f
       (begin
         (start-rktio)
-        (begin0
-          (begin
-            (|#%app|
-             rktio_ltps_poll
-             (unsafe-place-local-ref cell.1)
-             (unsafe-place-local-ref cell.1$5))
-            (letrec*
-             ((loop_0
-               (|#%name|
-                loop
-                (lambda (did?_0)
-                  (let ((h_0
+        (start-rktio-sleep-relevant)
+        (|#%app|
+         rktio_ltps_poll
+         (unsafe-place-local-ref cell.1)
+         (unsafe-place-local-ref cell.1$5))
+        (letrec*
+         ((loop_0
+           (|#%name|
+            loop
+            (lambda (did?_0)
+              (let ((h_0
+                     (|#%app|
+                      rktio_ltps_get_signaled_handle
+                      (unsafe-place-local-ref cell.1)
+                      (unsafe-place-local-ref cell.1$5))))
+                (if (vector? h_0)
+                  (begin (end-rktio-sleep-relevant) (end-rktio) did?_0)
+                  (let ((ib_0
                          (|#%app|
-                          rktio_ltps_get_signaled_handle
-                          (unsafe-place-local-ref cell.1)
-                          (unsafe-place-local-ref cell.1$5))))
-                    (if (vector? h_0)
-                      did?_0
-                      (let ((ib_0
-                             (|#%app|
-                              address->immobile-cell
-                              (|#%app|
-                               rktio_ltps_handle_get_data
-                               (unsafe-place-local-ref cell.1)
-                               h_0))))
-                        (begin
+                          address->immobile-cell
                           (|#%app|
-                           semaphore-post-all
-                           (|#%app| immobile-cell-ref ib_0))
-                          (free-immobile-cell ib_0)
-                          (|#%app| rktio_free h_0)
-                          (loop_0 #t)))))))))
-             (loop_0 #f)))
-          (end-rktio))))))
+                           rktio_ltps_handle_get_data
+                           (unsafe-place-local-ref cell.1)
+                           h_0))))
+                    (begin
+                      (|#%app|
+                       semaphore-post-all
+                       (|#%app| immobile-cell-ref ib_0))
+                      (free-immobile-cell ib_0)
+                      (|#%app| rktio_free h_0)
+                      (loop_0 #t)))))))))
+         (loop_0 #f))))))
 (define finish_2882
   (make-struct-type-install-properties
    '(exts)
@@ -8302,6 +8310,8 @@
                   (|#%app| rktio_close (unsafe-place-local-ref cell.1) fd3_0)))
              (if (if (vector? v_0) (not discard-errors?1_0) #f)
                (begin
+                 (unsafe-uninterruptible-custodian-lock-release)
+                 (end-rktio-sleep-relevant)
                  (end-rktio)
                  (begin
                    (memory-order-release)
@@ -8500,6 +8510,7 @@
                                (unbox (fd-input-port-fd-refcount this-id_0)))
                             (void)
                             (begin
+                              (start-rktio-sleep-relevant)
                               (unsafe-uninterruptible-custodian-lock-acquire)
                               (|#%app|
                                (fd-input-port-methods-on-close.1
@@ -8519,6 +8530,7 @@
                                this-id_0
                                (fd-input-port-custodian-reference this-id_0))
                               (unsafe-uninterruptible-custodian-lock-release)
+                              (end-rktio-sleep-relevant)
                               (temp7.1 this-id_0)))
                           (end-rktio))))
                      app_0
@@ -8956,6 +8968,7 @@
                 (if (fd-output-port-bstr this-id_0)
                   (begin
                     (start-rktio)
+                    (start-rktio-sleep-relevant)
                     (unsafe-uninterruptible-custodian-lock-acquire)
                     (if (fd-output-port-bstr this-id_0)
                       (begin
@@ -8983,6 +8996,7 @@
                          (fd-output-port-custodian-reference this-id_0)))
                       (void))
                     (unsafe-uninterruptible-custodian-lock-release)
+                    (end-rktio-sleep-relevant)
                     (end-rktio))
                   (void)))))
            app_0
@@ -9791,6 +9805,7 @@
                (start-rktio)
                (begin0
                  (begin
+                   (start-rktio-sleep-relevant)
                    (if (1/input-port? port_1)
                      (|#%app|
                       (fd-input-port-methods-on-close.1
@@ -9801,7 +9816,8 @@
                        (core-port-vtable port_1))
                       port_1))
                    (fd-close.1 #t fd_0 fd-refcount_0 port_1)
-                   (set-closed-state! port_1))
+                   (set-closed-state! port_1)
+                   (end-rktio-sleep-relevant))
                  (end-rktio)))
              (begin
                (memory-order-release)
@@ -9837,44 +9853,56 @@
         (let ((input?_0 (1/input-port? port_0)))
           (let ((fd-dup_0 (dup-port-fd port_0)))
             (let ((name_0 (core-port-name port_0)))
-              (let ((opener_0
-                     (let ((or-part_0 (fd-place-message-opener-ref port_0 #f)))
-                       (if or-part_0
-                         or-part_0
-                         (if input?_0
-                           (|#%name|
-                            opener
-                            (lambda (port_1 name_1)
-                              (open-input-fd.1
-                               unsafe-undefined
-                               unsafe-undefined
-                               port_1
-                               name_1)))
-                           (|#%name|
-                            opener
-                            (lambda (port_1 name_1)
-                              (open-output-fd.1
-                               'infer
-                               unsafe-undefined
-                               unsafe-undefined
-                               #f
-                               unsafe-undefined
-                               port_1
-                               name_1))))))))
-                (begin
+              (let ((is-terminal?_0
+                     (if (not input?_0)
+                       (begin
+                         (start-rktio)
+                         (begin0
+                           (|#%app|
+                            rktio_fd_is_terminal
+                            (unsafe-place-local-ref cell.1)
+                            (unbox fd-dup_0))
+                           (end-rktio)))
+                       #f)))
+                (let ((opener_0
+                       (let ((or-part_0
+                              (fd-place-message-opener-ref port_0 #f)))
+                         (if or-part_0
+                           or-part_0
+                           (if input?_0
+                             (|#%name|
+                              opener
+                              (lambda (fd_0 name_1)
+                                (open-input-fd.1
+                                 unsafe-undefined
+                                 unsafe-undefined
+                                 fd_0
+                                 name_1)))
+                             (|#%name|
+                              opener
+                              (lambda (fd_0 name_1)
+                                (open-output-fd.1
+                                 'infer
+                                 unsafe-undefined
+                                 unsafe-undefined
+                                 is-terminal?_0
+                                 unsafe-undefined
+                                 fd_0
+                                 name_1))))))))
                   (begin
-                    (memory-order-release)
-                    (if (unsafe-struct*-cas! port_0 2 #t #f)
-                      (void)
-                      (port-unlock-slow port_0))
-                    (unsafe-end-atomic))
-                  (lambda ()
                     (begin
-                      (unsafe-start-atomic)
-                      (begin0
-                        (let ((fd_0 (claim-dup fd-dup_0)))
-                          (|#%app| opener_0 fd_0 name_0))
-                        (unsafe-end-atomic)))))))))))))
+                      (memory-order-release)
+                      (if (unsafe-struct*-cas! port_0 2 #t #f)
+                        (void)
+                        (port-unlock-slow port_0))
+                      (unsafe-end-atomic))
+                    (lambda ()
+                      (begin
+                        (unsafe-start-atomic)
+                        (begin0
+                          (let ((fd_0 (claim-dup fd-dup_0)))
+                            (|#%app| opener_0 fd_0 name_0))
+                          (unsafe-end-atomic))))))))))))))
 (define dup-port-fd
   (lambda (port_0)
     (let ((fd_0 (fd-port-fd port_0)))
@@ -9940,32 +9968,40 @@
       (open-input-fd.1 unsafe-undefined unsafe-undefined temp1_0 'stdin))))
 (define make-stdout
   (lambda ()
-    (let ((temp3_0
-           (check-rktio-error
-            (|#%app| rktio_std_fd (unsafe-place-local-ref cell.1) 1)
-            "error initializing stdout")))
-      (open-output-fd.1
-       'infer
-       unsafe-undefined
-       unsafe-undefined
-       #f
-       unsafe-undefined
-       temp3_0
-       'stdout))))
+    (let ((fd_0 (|#%app| rktio_std_fd (unsafe-place-local-ref cell.1) 1)))
+      (let ((temp3_0 (check-rktio-error fd_0 "error initializing stdout")))
+        (let ((temp6_0
+               (|#%app|
+                rktio_fd_is_terminal
+                (unsafe-place-local-ref cell.1)
+                fd_0)))
+          (let ((temp3_1 temp3_0))
+            (open-output-fd.1
+             'infer
+             unsafe-undefined
+             unsafe-undefined
+             temp6_0
+             unsafe-undefined
+             temp3_1
+             'stdout)))))))
 (define make-stderr
   (lambda ()
-    (let ((temp6_0
-           (check-rktio-error
-            (|#%app| rktio_std_fd (unsafe-place-local-ref cell.1) 2)
-            "error initializing stderr")))
-      (open-output-fd.1
-       'none
-       unsafe-undefined
-       unsafe-undefined
-       #f
-       unsafe-undefined
-       temp6_0
-       'stderr))))
+    (let ((fd_0 (|#%app| rktio_std_fd (unsafe-place-local-ref cell.1) 2)))
+      (let ((temp7_0 (check-rktio-error fd_0 "error initializing stderr")))
+        (let ((temp10_0
+               (|#%app|
+                rktio_fd_is_terminal
+                (unsafe-place-local-ref cell.1)
+                fd_0)))
+          (let ((temp7_1 temp7_0))
+            (open-output-fd.1
+             'none
+             unsafe-undefined
+             unsafe-undefined
+             temp10_0
+             unsafe-undefined
+             temp7_1
+             'stderr)))))))
 (define cell.1$11 (unsafe-make-place-local (make-stdin)))
 (define cell.2$3 (unsafe-make-place-local (make-stdout)))
 (define cell.3 (unsafe-make-place-local (make-stderr)))
@@ -10004,32 +10040,44 @@
     (begin
       (unsafe-place-local-set!
        cell.1$11
-       (let ((temp10_0 "stdin"))
-         (open-input-fd.1 cust_0 unsafe-undefined in-fd_0 temp10_0)))
+       (let ((temp12_0 "stdin"))
+         (open-input-fd.1 cust_0 unsafe-undefined in-fd_0 temp12_0)))
       (1/current-input-port (unsafe-place-local-ref cell.1$11))
       (unsafe-place-local-set!
        cell.2$3
-       (let ((temp13_0 "stdout"))
-         (open-output-fd.1
-          'infer
-          cust_0
-          unsafe-undefined
-          #f
-          plumber_0
-          out-fd_0
-          temp13_0)))
+       (let ((temp15_0 "stdout"))
+         (let ((temp18_0
+                (|#%app|
+                 rktio_fd_is_terminal
+                 (unsafe-place-local-ref cell.1)
+                 out-fd_0)))
+           (let ((temp15_1 temp15_0))
+             (open-output-fd.1
+              'infer
+              cust_0
+              unsafe-undefined
+              temp18_0
+              plumber_0
+              out-fd_0
+              temp15_1)))))
       (1/current-output-port (unsafe-place-local-ref cell.2$3))
       (unsafe-place-local-set!
        cell.3
-       (let ((temp17_0 "srderr"))
-         (open-output-fd.1
-          'infer
-          cust_0
-          unsafe-undefined
-          #f
-          plumber_0
-          err-fd_0
-          temp17_0)))
+       (let ((temp20_0 "srderr"))
+         (let ((temp23_0
+                (|#%app|
+                 rktio_fd_is_terminal
+                 (unsafe-place-local-ref cell.1)
+                 err-fd_0)))
+           (let ((temp20_1 temp20_0))
+             (open-output-fd.1
+              'infer
+              cust_0
+              unsafe-undefined
+              temp23_0
+              plumber_0
+              err-fd_0
+              temp20_1)))))
       (1/current-error-port (unsafe-place-local-ref cell.3)))))
 (define get-original-error-port (lambda () (unsafe-place-local-ref cell.3)))
 (define prepare-change
@@ -33171,7 +33219,7 @@
     (if (let ((q_0 (queue-log-receiver-waiters lr_0))) (not (queue-start q_0)))
       (set-box! (queue-log-receiver-backref lr_0) lr_0)
       (void))))
-(define finish_2275
+(define finish_2706
   (make-struct-type-install-properties
    '(stdio-log-receiver)
    3
@@ -33182,15 +33230,14 @@
      prop:receiver-send
      (lambda (lr_0 msg_0)
        (let ((rktio_0 (stdio-log-receiver-rktio lr_0)))
-         (let ((rktio-mutex+sleep_0
-                (stdio-log-receiver-rktio-mutex+sleep lr_0)))
+         (let ((rktio-mutex_0 (stdio-log-receiver-rktio-mutex lr_0)))
            (let ((bstr_0
                   (bytes-append
                    (1/string->bytes/utf-8 (vector-ref msg_0 1))
                    #vu8(10))))
              (let ((len_0 (unsafe-bytes-length bstr_0)))
                (begin
-                 (mutex-acquire/wakeup-sleep rktio-mutex+sleep_0)
+                 (mutex-acquire rktio-mutex_0)
                  (let ((fd_0
                         (|#%app|
                          rktio_std_fd
@@ -33216,7 +33263,7 @@
                                  (if (= i_1 len_0) (void) (loop_0 i_1)))))))))
                       (loop_0 0))
                      (|#%app| rktio_forget rktio_0 fd_0)
-                     (mutex-release (m+s-mutex rktio-mutex+sleep_0))))))))))))
+                     (mutex-release rktio-mutex_0)))))))))))
    (current-inspector)
    #f
    '(0 1 2)
@@ -33230,7 +33277,7 @@
    #f
    #f
    '(3 . 0)))
-(define effect_2591 (finish_2275 struct:stdio-log-receiver))
+(define effect_2591 (finish_2706 struct:stdio-log-receiver))
 (define stdio-log-receiver3.1
   (|#%name|
    stdio-log-receiver
@@ -33265,23 +33312,23 @@
          0
          s
          'rktio))))))
-(define stdio-log-receiver-rktio-mutex+sleep_2480
+(define stdio-log-receiver-rktio-mutex_2480
   (|#%name|
-   stdio-log-receiver-rktio-mutex+sleep
+   stdio-log-receiver-rktio-mutex
    (record-accessor struct:stdio-log-receiver 1)))
-(define stdio-log-receiver-rktio-mutex+sleep
+(define stdio-log-receiver-rktio-mutex
   (|#%name|
-   stdio-log-receiver-rktio-mutex+sleep
+   stdio-log-receiver-rktio-mutex
    (lambda (s)
      (if (stdio-log-receiver?_2188 s)
-       (stdio-log-receiver-rktio-mutex+sleep_2480 s)
+       (stdio-log-receiver-rktio-mutex_2480 s)
        ($value
         (impersonate-ref
-         stdio-log-receiver-rktio-mutex+sleep_2480
+         stdio-log-receiver-rktio-mutex_2480
          struct:stdio-log-receiver
          1
          s
-         'rktio-mutex+sleep))))))
+         'rktio-mutex))))))
 (define stdio-log-receiver-which_2452
   (|#%name|
    stdio-log-receiver-which
@@ -33342,7 +33389,7 @@
      args_0
      'make-stdio-log-receiver
      1)))
-(define finish_2225
+(define finish_2379
   (make-struct-type-install-properties
    '(syslog-log-receiver)
    3
@@ -33353,8 +33400,7 @@
      prop:receiver-send
      (lambda (lr_0 msg_0)
        (let ((rktio_0 (syslog-log-receiver-rktio lr_0)))
-         (let ((rktio-mutex+sleep_0
-                (stdio-log-receiver-rktio-mutex+sleep lr_0)))
+         (let ((rktio-mutex_0 (stdio-log-receiver-rktio-mutex lr_0)))
            (let ((bstr_0
                   (bytes-append
                    (1/string->bytes/utf-8 (vector-ref msg_0 1))
@@ -33369,7 +33415,7 @@
                             3
                             (if (eq? tmp_0 'info) 4 5)))))))
                (begin
-                 (mutex-acquire/wakeup-sleep rktio-mutex+sleep_0)
+                 (mutex-acquire rktio-mutex_0)
                  (|#%app|
                   rktio_syslog
                   rktio_0
@@ -33377,7 +33423,7 @@
                   #f
                   bstr_0
                   (syslog-log-receiver-cmd lr_0))
-                 (mutex-release (m+s-mutex rktio-mutex+sleep_0))))))))))
+                 (mutex-release rktio-mutex_0)))))))))
    (current-inspector)
    #f
    '(0 1 2)
@@ -33391,7 +33437,7 @@
    #f
    #f
    '(3 . 0)))
-(define effect_2288 (finish_2225 struct:syslog-log-receiver))
+(define effect_2288 (finish_2379 struct:syslog-log-receiver))
 (define syslog-log-receiver4.1
   (|#%name|
    syslog-log-receiver
@@ -33428,23 +33474,23 @@
          0
          s
          'rktio))))))
-(define syslog-log-receiver-rktio-mutex+sleep_2652
+(define syslog-log-receiver-rktio-mutex_2652
   (|#%name|
-   syslog-log-receiver-rktio-mutex+sleep
+   syslog-log-receiver-rktio-mutex
    (record-accessor struct:syslog-log-receiver 1)))
-(define syslog-log-receiver-rktio-mutex+sleep
+(define syslog-log-receiver-rktio-mutex
   (|#%name|
-   syslog-log-receiver-rktio-mutex+sleep
+   syslog-log-receiver-rktio-mutex
    (lambda (s)
      (if (syslog-log-receiver?_2295 s)
-       (syslog-log-receiver-rktio-mutex+sleep_2652 s)
+       (syslog-log-receiver-rktio-mutex_2652 s)
        ($value
         (impersonate-ref
-         syslog-log-receiver-rktio-mutex+sleep_2652
+         syslog-log-receiver-rktio-mutex_2652
          struct:syslog-log-receiver
          1
          s
-         'rktio-mutex+sleep))))))
+         'rktio-mutex))))))
 (define syslog-log-receiver-cmd_2395
   (|#%name|
    syslog-log-receiver-cmd
@@ -35457,14 +35503,20 @@
                                                                                                     rktio_process_result_stdin_fd
                                                                                                     r_0)))
                                                                                               (if fd_0
-                                                                                                (open-output-fd.1
-                                                                                                 'infer
-                                                                                                 unsafe-undefined
-                                                                                                 unsafe-undefined
-                                                                                                 #f
-                                                                                                 unsafe-undefined
-                                                                                                 fd_0
-                                                                                                 'subprocess-stdin)
+                                                                                                (let ((temp21_0
+                                                                                                       (|#%app|
+                                                                                                        rktio_fd_is_terminal
+                                                                                                        (unsafe-place-local-ref
+                                                                                                         cell.1)
+                                                                                                        fd_0)))
+                                                                                                  (open-output-fd.1
+                                                                                                   'infer
+                                                                                                   unsafe-undefined
+                                                                                                   unsafe-undefined
+                                                                                                   temp21_0
+                                                                                                   unsafe-undefined
+                                                                                                   fd_0
+                                                                                                   'subprocess-stdin))
                                                                                                 #f))))
                                                                                        (let ((err_0
                                                                                               (let ((fd_0
@@ -37537,41 +37589,40 @@
       ((family-hostname2_0) (udp-open-socket_0 family-hostname2_0 #f))))))
 (define do-udp-close
   (lambda (s-box_0)
-    (let ((s_0 (unbox s-box_0)))
-      (if s_0
+    (begin
+      (start-rktio-sleep-relevant)
+      (let ((s_0 (unbox s-box_0)))
         (begin
-          (|#%app| rktio_close (unsafe-place-local-ref cell.1) s_0)
-          (set-box! s-box_0 #f))
-        (void)))))
+          (if s_0
+            (begin
+              (|#%app| rktio_close (unsafe-place-local-ref cell.1) s_0)
+              (set-box! s-box_0 #f))
+            (void))
+          (end-rktio-sleep-relevant))))))
 (define 1/udp-close
   (|#%name|
    udp-close
    (lambda (u_0)
      (begin
        (if (1/udp? u_0) (void) (raise-argument-error 'udp-close "udp?" u_0))
-       (unsafe-start-atomic)
+       (start-rktio)
        (begin0
-         (begin
-           (start-rktio)
-           (begin0
-             (if (unbox (udp-s-box u_0))
-               (let ((s-box_0 (udp-s-box u_0)))
-                 (begin
-                   (do-udp-close s-box_0)
-                   (|#%app|
-                    1/unsafe-custodian-unregister
-                    s-box_0
-                    (udp-custodian-reference u_0))))
-               (begin
-                 (end-rktio)
-                 (unsafe-end-atomic)
-                 (raise-network-arguments-error
-                  'udp-close
-                  "udp socket was already closed"
-                  "socket"
-                  u_0)))
-             (end-rktio)))
-         (unsafe-end-atomic))))))
+         (if (unbox (udp-s-box u_0))
+           (let ((s-box_0 (udp-s-box u_0)))
+             (begin
+               (do-udp-close s-box_0)
+               (|#%app|
+                1/unsafe-custodian-unregister
+                s-box_0
+                (udp-custodian-reference u_0))))
+           (begin
+             (end-rktio)
+             (raise-network-arguments-error
+              'udp-close
+              "udp socket was already closed"
+              "socket"
+              u_0)))
+         (end-rktio))))))
 (define 1/udp-bound?
   (|#%name|
    udp-bound?
@@ -39804,51 +39855,56 @@
          (let ((read?_0 (memq 'read mode_0)))
            (let ((write?_0 (memq 'write mode_0)))
              (let ((refcount_0 (box (if (if read?_0 write?_0 #f) 2 1))))
-               (let ((fd_0
-                      (begin
-                        (start-rktio)
-                        (begin0
+               (begin
+                 (start-rktio)
+                 (let ((fd_0
+                        (|#%app|
+                         rktio_system_fd
+                         (unsafe-place-local-ref cell.1)
+                         system-fd_0
+                         (let ((app_0 (if (memq 'text mode_0) 4 0)))
+                           (bitwise-ior
+                            (if read?_0 1 0)
+                            (if write?_0 2 0)
+                            app_0
+                            (if (memq 'regular-file mode_0) 512 0))))))
+                   (let ((is-terminal?_0
                           (|#%app|
-                           rktio_system_fd
+                           rktio_fd_is_terminal
                            (unsafe-place-local-ref cell.1)
-                           system-fd_0
-                           (let ((app_0 (if (memq 'text mode_0) 4 0)))
-                             (bitwise-ior
-                              (if read?_0 1 0)
-                              (if write?_0 2 0)
-                              app_0
-                              (if (memq 'regular-file mode_0) 512 0))))
-                          (end-rktio)))))
-                 (let ((i_0
-                        (if read?_0
-                          (begin
-                            (unsafe-start-atomic)
-                            (begin0
-                              (open-input-fd.1
-                               unsafe-undefined
-                               refcount_0
-                               fd_0
-                               name_0)
-                              (unsafe-end-atomic)))
-                          #f)))
-                   (let ((o_0
-                          (if write?_0
-                            (begin
-                              (unsafe-start-atomic)
-                              (begin0
-                                (open-output-fd.1
-                                 'infer
-                                 unsafe-undefined
-                                 refcount_0
-                                 #f
-                                 unsafe-undefined
-                                 fd_0
-                                 name_0)
-                                (unsafe-end-atomic)))
-                            #f)))
-                     (if (if i_0 o_0 #f)
-                       (values i_0 o_0)
-                       (if i_0 i_0 o_0)))))))))))))
+                           fd_0)))
+                     (begin
+                       (end-rktio)
+                       (let ((i_0
+                              (if read?_0
+                                (begin
+                                  (unsafe-start-atomic)
+                                  (begin0
+                                    (open-input-fd.1
+                                     unsafe-undefined
+                                     refcount_0
+                                     fd_0
+                                     name_0)
+                                    (unsafe-end-atomic)))
+                                #f)))
+                         (let ((o_0
+                                (if write?_0
+                                  (begin
+                                    (unsafe-start-atomic)
+                                    (begin0
+                                      (open-output-fd.1
+                                       'infer
+                                       unsafe-undefined
+                                       refcount_0
+                                       is-terminal?_0
+                                       unsafe-undefined
+                                       fd_0
+                                       name_0)
+                                      (unsafe-end-atomic)))
+                                  #f)))
+                           (if (if i_0 o_0 #f)
+                             (values i_0 o_0)
+                             (if i_0 i_0 o_0))))))))))))))))
 (define 1/unsafe-socket->port
   (|#%name|
    unsafe-socket->port
@@ -39871,10 +39927,10 @@
           mode_0))
        (unsafe-start-atomic)
        (begin0
-         (let ((temp13_0 (string->symbol (1/bytes->string/utf-8 name_0))))
-           (let ((temp14_0 (not (memq 'no-close mode_0))))
-             (let ((temp13_1 temp13_0))
-               (open-input-output-tcp.1 temp14_0 system-fd_0 temp13_1))))
+         (let ((temp14_0 (string->symbol (1/bytes->string/utf-8 name_0))))
+           (let ((temp15_0 (not (memq 'no-close mode_0))))
+             (let ((temp14_1 temp14_0))
+               (open-input-output-tcp.1 temp15_0 system-fd_0 temp14_1))))
          (unsafe-end-atomic))))))
 (define 1/unsafe-port->file-descriptor
   (|#%name|
@@ -40171,23 +40227,23 @@
                           #f)))
                    (let ((app_1
                           (if parent-out-fd_0
-                            (let ((temp4_0 "place-out"))
+                            (let ((temp5_0 "place-out"))
                               (open-input-fd.1
                                unsafe-undefined
                                unsafe-undefined
                                parent-out-fd_0
-                               temp4_0))
+                               temp5_0))
                             #f)))
                      (values
                       app_0
                       app_1
                       (if parent-err-fd_0
-                        (let ((temp6_0 "place-err"))
+                        (let ((temp7_0 "place-err"))
                           (open-input-fd.1
                            unsafe-undefined
                            unsafe-undefined
                            parent-err-fd_0
-                           temp6_0))
+                           temp7_0))
                         #f)
                       child-in-fd_0
                       child-out-fd_0
