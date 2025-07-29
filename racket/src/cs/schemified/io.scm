@@ -3316,6 +3316,8 @@
 (define end-sleep-rktio
   (lambda () (mutex-release/end-sleep (unsafe-place-local-ref cell.3$1))))
 (define end-rktio+atomic (lambda () (begin (end-rktio) (unsafe-end-atomic))))
+(define end-rktio+uninterruptible
+  (lambda () (begin (end-rktio) (unsafe-end-uninterruptible))))
 (define mutex-acquire/wakeup-sleep
   (lambda (mutex+sleep_0)
     (let ((maybe-increment-sleep-wakeup_0
@@ -29660,10 +29662,10 @@
              (lambda () (begin0 (|#%app| handle_0 r_0) (set! completed?_0 #t)))
              (lambda ()
                (begin
-                 (unsafe-start-atomic)
                  (|#%app| thread-pop-kill-callback!)
+                 (unsafe-start-uninterruptible)
                  (do-destroy_0)
-                 (unsafe-end-atomic))))))))))
+                 (unsafe-end-uninterruptible))))))))))
 (define 1/directory-exists?
   (|#%name|
    directory-exists?
@@ -29844,83 +29846,89 @@
                               '())
                              host-path/initial_0))))
                     (begin
-                      (unsafe-start-atomic)
-                      (begin0
-                        (call-with-resource
-                         (begin
-                           (start-rktio)
-                           (begin0
-                             (|#%app|
-                              rktio_directory_list_start
-                              (unsafe-place-local-ref cell.1)
-                              host-path_0)
-                             (end-rktio)))
-                         (lambda (dl_0)
-                           (begin
-                             (start-rktio)
-                             (begin0
-                               (|#%app|
-                                rktio_directory_list_stop
-                                (unsafe-place-local-ref cell.1)
-                                dl_0)
-                               (end-rktio))))
-                         (lambda (dl_0)
-                           (if (vector? dl_0)
-                             (begin
-                               (unsafe-end-atomic)
-                               (raise-filesystem-error
-                                'directory-list
-                                dl_0
-                                (let ((app_0
-                                       (string-append
-                                        "could not open directory\n"
-                                        "  path: ~a")))
-                                  (1/format app_0 (host-> host-path_0)))))
-                             (begin
-                               (start-rktio)
-                               (letrec*
-                                ((loop_0
-                                  (|#%name|
-                                   loop
-                                   (lambda (accum_0 len_0)
-                                     (let ((fnp_0
-                                            (|#%app|
-                                             rktio_directory_list_step
-                                             (unsafe-place-local-ref cell.1)
-                                             dl_0)))
-                                       (let ((fn_0
-                                              (if (vector? fnp_0)
-                                                fnp_0
-                                                (|#%app|
-                                                 rktio_to_bytes
-                                                 fnp_0))))
-                                         (if (vector? fn_0)
-                                           (begin
-                                             (end-rktio)
-                                             (unsafe-end-atomic)
-                                             (check-rktio-error
-                                              fn_0
-                                              "error reading directory"))
-                                           (if (equal? fn_0 #vu8())
-                                             (begin (end-rktio) accum_0)
-                                             (let ((new-accum_0
-                                                    (cons
-                                                     (host-element-> fn_0)
-                                                     accum_0)))
-                                               (begin
-                                                 (|#%app| rktio_free fnp_0)
-                                                 (if (= len_0 128)
-                                                   (begin
-                                                     (end-rktio)
-                                                     (unsafe-end-atomic)
-                                                     (unsafe-start-atomic)
-                                                     (start-rktio)
-                                                     (loop_0 new-accum_0 0))
-                                                   (loop_0
-                                                    new-accum_0
-                                                    (add1 len_0)))))))))))))
-                                (loop_0 null 0))))))
-                        (unsafe-end-atomic)))))))))))
+                      (unsafe-start-uninterruptible)
+                      (let ((lst_0
+                             (call-with-resource
+                              (begin
+                                (start-rktio)
+                                (begin0
+                                  (|#%app|
+                                   rktio_directory_list_start
+                                   (unsafe-place-local-ref cell.1)
+                                   host-path_0)
+                                  (end-rktio)))
+                              (lambda (dl_0)
+                                (begin
+                                  (start-rktio)
+                                  (begin0
+                                    (|#%app|
+                                     rktio_directory_list_stop
+                                     (unsafe-place-local-ref cell.1)
+                                     dl_0)
+                                    (end-rktio))))
+                              (lambda (dl_0)
+                                (if (vector? dl_0)
+                                  (begin
+                                    (unsafe-end-uninterruptible)
+                                    (raise-filesystem-error
+                                     'directory-list
+                                     dl_0
+                                     (let ((app_0
+                                            (string-append
+                                             "could not open directory\n"
+                                             "  path: ~a")))
+                                       (1/format app_0 (host-> host-path_0)))))
+                                  (begin
+                                    (start-rktio)
+                                    (letrec*
+                                     ((loop_0
+                                       (|#%name|
+                                        loop
+                                        (lambda (accum_0 len_0)
+                                          (let ((fnp_0
+                                                 (|#%app|
+                                                  rktio_directory_list_step
+                                                  (unsafe-place-local-ref
+                                                   cell.1)
+                                                  dl_0)))
+                                            (let ((fn_0
+                                                   (if (vector? fnp_0)
+                                                     fnp_0
+                                                     (|#%app|
+                                                      rktio_to_bytes
+                                                      fnp_0))))
+                                              (if (vector? fn_0)
+                                                (begin
+                                                  (end-rktio)
+                                                  (unsafe-end-uninterruptible)
+                                                  (check-rktio-error
+                                                   fn_0
+                                                   "error reading directory"))
+                                                (if (equal? fn_0 #vu8())
+                                                  (begin (end-rktio) accum_0)
+                                                  (let ((new-accum_0
+                                                         (cons
+                                                          (host-element-> fn_0)
+                                                          accum_0)))
+                                                    (begin
+                                                      (|#%app|
+                                                       rktio_free
+                                                       fnp_0)
+                                                      (if (= len_0 128)
+                                                        (begin
+                                                          (end-rktio)
+                                                          (unsafe-end-uninterruptible)
+                                                          (unsafe-start-uninterruptible)
+                                                          (start-rktio)
+                                                          (loop_0
+                                                           new-accum_0
+                                                           0))
+                                                        (loop_0
+                                                         new-accum_0
+                                                         (add1
+                                                          len_0)))))))))))))
+                                     (loop_0 null 0))))))))
+                        (begin (unsafe-end-uninterruptible) lst_0)))))))))))
     (|#%name|
      directory-list
      (case-lambda
@@ -30377,7 +30385,7 @@
                               report-error
                               (lambda (r_0)
                                 (begin
-                                  (unsafe-end-atomic)
+                                  (unsafe-end-uninterruptible)
                                   (raise-filesystem-error
                                    'copy-file
                                    r_0
@@ -30394,85 +30402,83 @@
                                           app_2
                                           (host-> dest-host_0)))))))))))
                         (begin
-                          (unsafe-start-atomic)
-                          (begin0
-                            (call-with-resource
+                          (unsafe-start-uninterruptible)
+                          (call-with-resource
+                           (begin
+                             (start-rktio)
+                             (begin0
+                               (|#%app|
+                                rktio_copy_file_start_permissions
+                                (unsafe-place-local-ref cell.1)
+                                dest-host_0
+                                src-host_0
+                                exists-ok?15_0
+                                permissions16_0
+                                (if permissions16_0 permissions16_0 0)
+                                override-create-permissions?17_0)
+                               (end-rktio)))
+                           (lambda (cp_0)
                              (begin
                                (start-rktio)
                                (begin0
                                  (|#%app|
-                                  rktio_copy_file_start_permissions
+                                  rktio_copy_file_stop
                                   (unsafe-place-local-ref cell.1)
-                                  dest-host_0
-                                  src-host_0
-                                  exists-ok?15_0
-                                  permissions16_0
-                                  (if permissions16_0 permissions16_0 0)
-                                  override-create-permissions?17_0)
-                                 (end-rktio)))
-                             (lambda (cp_0)
+                                  cp_0)
+                                 (end-rktio))))
+                           (lambda (cp_0)
+                             (if (vector? cp_0)
+                               (report-error_0 cp_0)
                                (begin
                                  (start-rktio)
-                                 (begin0
-                                   (|#%app|
-                                    rktio_copy_file_stop
-                                    (unsafe-place-local-ref cell.1)
-                                    cp_0)
-                                   (end-rktio))))
-                             (lambda (cp_0)
-                               (if (vector? cp_0)
-                                 (report-error_0 cp_0)
-                                 (begin
-                                   (start-rktio)
-                                   (letrec*
-                                    ((loop_0
-                                      (|#%name|
-                                       loop
-                                       (lambda (steps_0)
-                                         (if (|#%app|
-                                              rktio_copy_file_is_done
+                                 (letrec*
+                                  ((loop_0
+                                    (|#%name|
+                                     loop
+                                     (lambda (steps_0)
+                                       (if (|#%app|
+                                            rktio_copy_file_is_done
+                                            (unsafe-place-local-ref cell.1)
+                                            cp_0)
+                                         (let ((r_0
+                                                (|#%app|
+                                                 rktio_copy_file_finish_permissions
+                                                 (unsafe-place-local-ref
+                                                  cell.1)
+                                                 cp_0)))
+                                           (begin
+                                             (if (vector? r_0)
+                                               (begin
+                                                 (unsafe-end-uninterruptible)
+                                                 (report-error_0 r_0))
+                                               (void))
+                                             (|#%app|
+                                              rktio_copy_file_stop
                                               (unsafe-place-local-ref cell.1)
                                               cp_0)
-                                           (let ((r_0
-                                                  (|#%app|
-                                                   rktio_copy_file_finish_permissions
-                                                   (unsafe-place-local-ref
-                                                    cell.1)
-                                                   cp_0)))
-                                             (begin
-                                               (if (vector? r_0)
-                                                 (begin
-                                                   (end-rktio)
-                                                   (report-error_0 r_0))
-                                                 (void))
-                                               (|#%app|
-                                                rktio_copy_file_stop
-                                                (unsafe-place-local-ref cell.1)
-                                                cp_0)
-                                               (end-rktio)))
-                                           (let ((r_0
-                                                  (|#%app|
-                                                   rktio_copy_file_step
-                                                   (unsafe-place-local-ref
-                                                    cell.1)
-                                                   cp_0)))
-                                             (begin
-                                               (if (vector? r_0)
-                                                 (begin
-                                                   (end-rktio)
-                                                   (report-error_0 r_0))
-                                                 (void))
-                                               (if (= steps_0 10)
-                                                 (begin
-                                                   (end-rktio)
-                                                   (unsafe-end-atomic)
-                                                   (unsafe-start-atomic)
-                                                   (start-rktio)
-                                                   (loop_0 0))
-                                                 (loop_0
-                                                  (add1 steps_0))))))))))
-                                    (loop_0 0))))))
-                            (unsafe-end-atomic)))))))))))))
+                                             (end-rktio)))
+                                         (let ((r_0
+                                                (|#%app|
+                                                 rktio_copy_file_step
+                                                 (unsafe-place-local-ref
+                                                  cell.1)
+                                                 cp_0)))
+                                           (begin
+                                             (if (vector? r_0)
+                                               (begin
+                                                 (end-rktio)
+                                                 (report-error_0 r_0))
+                                               (void))
+                                             (if (= steps_0 10)
+                                               (begin
+                                                 (end-rktio)
+                                                 (unsafe-end-uninterruptible)
+                                                 (unsafe-start-uninterruptible)
+                                                 (start-rktio)
+                                                 (loop_0 0))
+                                               (loop_0 (add1 steps_0))))))))))
+                                  (loop_0 0))))))
+                          (unsafe-end-uninterruptible))))))))))))
     (|#%name|
      copy-file
      (case-lambda
@@ -36372,135 +36378,133 @@
             port-no18_0
             proc19_0)
      (let ((family_0 (if (eq? family5_0 unsafe-undefined) -1 family5_0)))
-       (begin
-         (poll-address-finalizations)
-         (if (if (not hostname17_0) (not port-no18_0) #f)
-           (|#%app| proc19_0 #f)
-           (call-with-resource
-            (box
-             (begin
-               (start-rktio)
-               (begin0
-                 (|#%app|
-                  rktio_start_addrinfo_lookup
-                  (unsafe-place-local-ref cell.1)
-                  (if hostname17_0 (1/string->bytes/utf-8 hostname17_0) #f)
-                  (if port-no18_0 port-no18_0 0)
-                  family_0
-                  passive?6_0
-                  tcp?7_0)
-                 (end-rktio))))
-            (lambda (lookup-box_0)
-              (let ((lookup_0 (unbox lookup-box_0)))
-                (if lookup_0
-                  (begin
-                    (start-rktio)
-                    (begin0
-                      (|#%app|
-                       rktio_addrinfo_lookup_stop
-                       (unsafe-place-local-ref cell.1)
-                       lookup_0)
-                      (end-rktio)))
-                  (void))))
-            (lambda (lookup-box_0)
-              (let ((lookup_0 (unbox lookup-box_0)))
-                (letrec*
-                 ((loop_0
-                   (|#%name|
-                    loop
-                    (lambda ()
-                      (if (if (not (vector? lookup_0))
-                            (eqv?
-                             (begin
-                               (start-rktio)
-                               (begin0
-                                 (|#%app|
-                                  rktio_poll_addrinfo_lookup_ready
-                                  (unsafe-place-local-ref cell.1)
-                                  lookup_0)
-                                 (end-rktio)))
-                             0)
-                            #f)
-                        (begin
-                          (unsafe-end-atomic)
-                          (|#%app|
-                           (if enable-break?4_0 sync/enable-break sync)
-                           (rktio-evt1.1
-                            (lambda ()
-                              (not
-                               (eqv?
-                                (begin
-                                  (start-rktio)
-                                  (begin0
-                                    (|#%app|
-                                     rktio_poll_addrinfo_lookup_ready
-                                     (unsafe-place-local-ref cell.1)
-                                     lookup_0)
-                                    (end-rktio)))
-                                0)))
-                            (lambda (ps_0)
-                              (|#%app|
-                               rktio_poll_add_addrinfo_lookup
-                               (unsafe-place-local-ref cell.1)
-                               lookup_0
-                               ps_0))))
-                          (unsafe-start-atomic)
-                          (loop_0))
-                        (begin
-                          (set-box! lookup-box_0 #f)
-                          (call-with-resource
-                           (if (vector? lookup_0)
+       (if (if (not hostname17_0) (not port-no18_0) #f)
+         (|#%app| proc19_0 #f)
+         (call-with-resource
+          (box
+           (begin
+             (start-rktio)
+             (begin0
+               (|#%app|
+                rktio_start_addrinfo_lookup
+                (unsafe-place-local-ref cell.1)
+                (if hostname17_0 (1/string->bytes/utf-8 hostname17_0) #f)
+                (if port-no18_0 port-no18_0 0)
+                family_0
+                passive?6_0
+                tcp?7_0)
+               (end-rktio))))
+          (lambda (lookup-box_0)
+            (let ((lookup_0 (unbox lookup-box_0)))
+              (if lookup_0
+                (begin
+                  (start-rktio)
+                  (begin0
+                    (|#%app|
+                     rktio_addrinfo_lookup_stop
+                     (unsafe-place-local-ref cell.1)
+                     lookup_0)
+                    (end-rktio)))
+                (void))))
+          (lambda (lookup-box_0)
+            (let ((lookup_0 (unbox lookup-box_0)))
+              (letrec*
+               ((loop_0
+                 (|#%name|
+                  loop
+                  (lambda ()
+                    (if (if (not (vector? lookup_0))
+                          (eqv?
+                           (begin
+                             (start-rktio)
+                             (begin0
+                               (|#%app|
+                                rktio_poll_addrinfo_lookup_ready
+                                (unsafe-place-local-ref cell.1)
+                                lookup_0)
+                               (end-rktio)))
+                           0)
+                          #f)
+                      (begin
+                        (unsafe-end-uninterruptible)
+                        (|#%app|
+                         (if enable-break?4_0 sync/enable-break sync)
+                         (rktio-evt1.1
+                          (lambda ()
+                            (not
+                             (eqv?
+                              (begin
+                                (start-rktio)
+                                (begin0
+                                  (|#%app|
+                                   rktio_poll_addrinfo_lookup_ready
+                                   (unsafe-place-local-ref cell.1)
+                                   lookup_0)
+                                  (end-rktio)))
+                              0)))
+                          (lambda (ps_0)
+                            (|#%app|
+                             rktio_poll_add_addrinfo_lookup
+                             (unsafe-place-local-ref cell.1)
                              lookup_0
+                             ps_0))))
+                        (unsafe-start-uninterruptible)
+                        (loop_0))
+                      (begin
+                        (set-box! lookup-box_0 #f)
+                        (call-with-resource
+                         (if (vector? lookup_0)
+                           lookup_0
+                           (begin
+                             (start-rktio)
+                             (begin0
+                               (|#%app|
+                                rktio_addrinfo_lookup_get
+                                (unsafe-place-local-ref cell.1)
+                                lookup_0)
+                               (end-rktio))))
+                         (lambda (addr_0)
+                           (begin
+                             (start-rktio)
+                             (begin0
+                               (|#%app|
+                                rktio_addrinfo_free
+                                (unsafe-place-local-ref cell.1)
+                                addr_0)
+                               (end-rktio))))
+                         (lambda (addr_0)
+                           (if (if who1_0 (vector? addr_0) #f)
                              (begin
-                               (start-rktio)
-                               (begin0
-                                 (|#%app|
-                                  rktio_addrinfo_lookup_get
-                                  (unsafe-place-local-ref cell.1)
-                                  lookup_0)
-                                 (end-rktio))))
-                           (lambda (addr_0)
-                             (begin
-                               (start-rktio)
-                               (begin0
-                                 (|#%app|
-                                  rktio_addrinfo_free
-                                  (unsafe-place-local-ref cell.1)
-                                  addr_0)
-                                 (end-rktio))))
-                           (lambda (addr_0)
-                             (if (if who1_0 (vector? addr_0) #f)
-                               (begin
-                                 (unsafe-end-atomic)
-                                 (raise-network-error
-                                  who1_0
-                                  addr_0
-                                  (string-append
-                                   "can't resolve "
-                                   which2_0
-                                   "address"
-                                   "\n  address: "
-                                   (if hostname17_0 hostname17_0 "<unspec>")
-                                   (if (if port-number-on-error?3_0
-                                         port-no18_0
-                                         #f)
-                                     (string-append
-                                      "\n  port number: "
-                                      (number->string port-no18_0))
-                                     ""))))
-                               (begin0
-                                 (|#%app| proc19_0 addr_0)
-                                 (if retain-address?8_0
-                                   (void)
-                                   (begin
-                                     (start-rktio)
-                                     (begin0
-                                       (|#%app|
-                                        rktio_addrinfo_free
-                                        (unsafe-place-local-ref cell.1)
-                                        addr_0)
-                                       (end-rktio))))))))))))))
-                 (loop_0)))))))))))
+                               (unsafe-end-uninterruptible)
+                               (raise-network-error
+                                who1_0
+                                addr_0
+                                (string-append
+                                 "can't resolve "
+                                 which2_0
+                                 "address"
+                                 "\n  address: "
+                                 (if hostname17_0 hostname17_0 "<unspec>")
+                                 (if (if port-number-on-error?3_0
+                                       port-no18_0
+                                       #f)
+                                   (string-append
+                                    "\n  port number: "
+                                    (number->string port-no18_0))
+                                   ""))))
+                             (begin0
+                               (|#%app| proc19_0 addr_0)
+                               (if retain-address?8_0
+                                 (void)
+                                 (begin
+                                   (start-rktio)
+                                   (begin0
+                                     (|#%app|
+                                      rktio_addrinfo_free
+                                      (unsafe-place-local-ref cell.1)
+                                      addr_0)
+                                     (end-rktio))))))))))))))
+               (loop_0))))))))))
 (define cell.1$3 (unsafe-make-place-local (make-will-executor)))
 (define register-address-finalizer
   (lambda (addr_0)
@@ -36670,7 +36674,7 @@
                                       port-no16_0
                                       port-no34_0)))
                                (begin
-                                 (unsafe-end-atomic)
+                                 (unsafe-end-uninterruptible)
                                  (raise-network-error
                                   who14_0
                                   err35_0
@@ -36722,176 +36726,200 @@
                       hostname15_0
                       port-no16_0
                       'client)
-                     (unsafe-start-atomic)
-                     (begin0
-                       (let ((temp39_0
-                              (lambda (remote-addr_0)
-                                (if (vector? remote-addr_0)
-                                  (raise-connect-error_1
-                                   remote-addr_0
-                                   "host not found")
-                                  (let ((temp43_0
-                                         (lambda (local-addr_0)
-                                           (if (vector? local-addr_0)
-                                             (raise-connect-error_1
-                                              local-addr_0
-                                              "local host not found"
-                                              local-hostname12_0
-                                              local-port-no13_0)
-                                             (call-with-resource
-                                              (connect-progress1.1
-                                               (begin
-                                                 (start-rktio)
-                                                 (begin0
-                                                   (|#%app|
-                                                    rktio_start_connect
-                                                    (unsafe-place-local-ref
-                                                     cell.1)
-                                                    remote-addr_0
-                                                    local-addr_0)
-                                                   (end-rktio)))
-                                               #f)
-                                              (lambda (conn-prog_0)
-                                                (begin
-                                                  (start-rktio)
+                     (begin
+                       (unsafe-start-uninterruptible)
+                       (call-with-values
+                        (lambda ()
+                          (let ((temp39_0
+                                 (lambda (remote-addr_0)
+                                   (if (vector? remote-addr_0)
+                                     (raise-connect-error_1
+                                      remote-addr_0
+                                      "host not found")
+                                     (let ((temp43_0
+                                            (lambda (local-addr_0)
+                                              (if (vector? local-addr_0)
+                                                (raise-connect-error_1
+                                                 local-addr_0
+                                                 "local host not found"
+                                                 local-hostname12_0
+                                                 local-port-no13_0)
+                                                (call-with-resource
+                                                 (connect-progress1.1
                                                   (begin
-                                                    (remove-trying-fd!
-                                                     conn-prog_0)
-                                                    (let ((conn_0
-                                                           (connect-progress-conn
-                                                            conn-prog_0)))
-                                                      (begin
-                                                        (if conn_0
-                                                          (|#%app|
-                                                           rktio_connect_stop
-                                                           (unsafe-place-local-ref
-                                                            cell.1)
-                                                           conn_0)
-                                                          (void))
-                                                        (end-rktio))))))
-                                              (lambda (conn-prog_0)
-                                                (let ((conn_0
-                                                       (connect-progress-conn
-                                                        conn-prog_0)))
-                                                  (if (vector? conn_0)
-                                                    (raise-connect-error_1
-                                                     conn_0)
-                                                    (letrec*
-                                                     ((loop_0
-                                                       (|#%name|
-                                                        loop
-                                                        (lambda ()
-                                                          (begin
-                                                            (start-rktio)
-                                                            (if (eqv?
-                                                                 (|#%app|
-                                                                  rktio_poll_connect_ready
-                                                                  (unsafe-place-local-ref
-                                                                   cell.1)
-                                                                  conn_0)
-                                                                 0)
-                                                              (begin
-                                                                (init-trying-fd!
-                                                                 conn-prog_0)
-                                                                (end-rktio)
-                                                                (unsafe-end-atomic)
-                                                                (|#%app|
-                                                                 (if enable-break?10_0
-                                                                   sync/enable-break
-                                                                   sync)
-                                                                 (rktio-evt1.1
-                                                                  (lambda ()
-                                                                    (not
-                                                                     (eqv?
-                                                                      (|#%app|
-                                                                       rktio_poll_connect_ready
-                                                                       (unsafe-place-local-ref
-                                                                        cell.1)
-                                                                       conn_0)
-                                                                      0)))
-                                                                  (lambda (ps_0)
+                                                    (start-rktio)
+                                                    (begin0
+                                                      (|#%app|
+                                                       rktio_start_connect
+                                                       (unsafe-place-local-ref
+                                                        cell.1)
+                                                       remote-addr_0
+                                                       local-addr_0)
+                                                      (end-rktio)))
+                                                  #f)
+                                                 (lambda (conn-prog_0)
+                                                   (begin
+                                                     (start-rktio)
+                                                     (begin
+                                                       (remove-trying-fd!
+                                                        conn-prog_0)
+                                                       (let ((conn_0
+                                                              (connect-progress-conn
+                                                               conn-prog_0)))
+                                                         (begin
+                                                           (if conn_0
+                                                             (|#%app|
+                                                              rktio_connect_stop
+                                                              (unsafe-place-local-ref
+                                                               cell.1)
+                                                              conn_0)
+                                                             (void))
+                                                           (end-rktio))))))
+                                                 (lambda (conn-prog_0)
+                                                   (let ((conn_0
+                                                          (connect-progress-conn
+                                                           conn-prog_0)))
+                                                     (if (vector? conn_0)
+                                                       (raise-connect-error_1
+                                                        conn_0)
+                                                       (letrec*
+                                                        ((loop_0
+                                                          (|#%name|
+                                                           loop
+                                                           (lambda ()
+                                                             (begin
+                                                               (start-rktio)
+                                                               (if (eqv?
                                                                     (|#%app|
-                                                                     rktio_poll_add_connect
+                                                                     rktio_poll_connect_ready
                                                                      (unsafe-place-local-ref
                                                                       cell.1)
-                                                                     conn_0
-                                                                     ps_0))))
-                                                                (unsafe-start-atomic)
-                                                                (loop_0))
-                                                              (begin
-                                                                (remove-trying-fd!
-                                                                 conn-prog_0)
-                                                                (begin
-                                                                  (check-current-custodian.1
-                                                                   end-rktio+atomic
-                                                                   who14_0)
-                                                                  (let ((fd_0
+                                                                     conn_0)
+                                                                    0)
+                                                                 (begin
+                                                                   (init-trying-fd!
+                                                                    conn-prog_0)
+                                                                   (end-rktio)
+                                                                   (unsafe-end-uninterruptible)
+                                                                   (|#%app|
+                                                                    (if enable-break?10_0
+                                                                      sync/enable-break
+                                                                      sync)
+                                                                    (rktio-evt1.1
+                                                                     (lambda ()
+                                                                       (not
+                                                                        (eqv?
                                                                          (|#%app|
-                                                                          rktio_connect_finish
+                                                                          rktio_poll_connect_ready
                                                                           (unsafe-place-local-ref
                                                                            cell.1)
-                                                                          conn_0)))
-                                                                    (if (vector?
-                                                                         fd_0)
-                                                                      (begin
-                                                                        (end-rktio)
-                                                                        (if (racket-error?
-                                                                             fd_0
-                                                                             19)
-                                                                          (loop_0)
-                                                                          (begin
-                                                                            (set-connect-progress-conn!
-                                                                             conn-prog_0
-                                                                             #f)
-                                                                            (raise-connect-error_1
-                                                                             fd_0))))
-                                                                      (let ((name_0
-                                                                             (string->immutable-string
-                                                                              hostname15_0)))
-                                                                        (begin
-                                                                          (|#%app|
-                                                                           rktio_tcp_nodelay
-                                                                           (unsafe-place-local-ref
-                                                                            cell.1)
-                                                                           fd_0
-                                                                           #t)
-                                                                          (|#%app|
-                                                                           rktio_tcp_keepalive
-                                                                           (unsafe-place-local-ref
-                                                                            cell.1)
-                                                                           fd_0
-                                                                           #t)
-                                                                          (end-rktio)
-                                                                          (open-input-output-tcp.1
-                                                                           #t
-                                                                           fd_0
-                                                                           name_0)))))))))))))
-                                                     (loop_0))))))))))
-                                    (call-with-resolved-address.1
-                                     enable-break?10_0
-                                     unsafe-undefined
-                                     #f
-                                     #t
-                                     #f
-                                     #t
-                                     ""
-                                     #f
-                                     local-hostname12_0
-                                     local-port-no13_0
-                                     temp43_0))))))
-                         (call-with-resolved-address.1
-                          enable-break?10_0
-                          unsafe-undefined
-                          #f
-                          #t
-                          #f
-                          #t
-                          ""
-                          #f
-                          hostname15_0
-                          port-no16_0
-                          temp39_0))
-                       (unsafe-end-atomic)))))))))))))
+                                                                          conn_0)
+                                                                         0)))
+                                                                     (lambda (ps_0)
+                                                                       (|#%app|
+                                                                        rktio_poll_add_connect
+                                                                        (unsafe-place-local-ref
+                                                                         cell.1)
+                                                                        conn_0
+                                                                        ps_0))))
+                                                                   (unsafe-start-uninterruptible)
+                                                                   (loop_0))
+                                                                 (begin
+                                                                   (remove-trying-fd!
+                                                                    conn-prog_0)
+                                                                   (begin
+                                                                     (unsafe-uninterruptible-custodian-lock-acquire)
+                                                                     (begin
+                                                                       (let ((temp45_0
+                                                                              (lambda ()
+                                                                                (begin
+                                                                                  (unsafe-uninterruptible-custodian-lock-release)
+                                                                                  (end-rktio+uninterruptible)))))
+                                                                         (check-current-custodian.1
+                                                                          temp45_0
+                                                                          who14_0))
+                                                                       (let ((fd_0
+                                                                              (|#%app|
+                                                                               rktio_connect_finish
+                                                                               (unsafe-place-local-ref
+                                                                                cell.1)
+                                                                               conn_0)))
+                                                                         (if (vector?
+                                                                              fd_0)
+                                                                           (begin
+                                                                             (unsafe-uninterruptible-custodian-lock-release)
+                                                                             (end-rktio)
+                                                                             (if (racket-error?
+                                                                                  fd_0
+                                                                                  19)
+                                                                               (loop_0)
+                                                                               (begin
+                                                                                 (set-connect-progress-conn!
+                                                                                  conn-prog_0
+                                                                                  #f)
+                                                                                 (raise-connect-error_1
+                                                                                  fd_0))))
+                                                                           (let ((name_0
+                                                                                  (string->immutable-string
+                                                                                   hostname15_0)))
+                                                                             (begin
+                                                                               (|#%app|
+                                                                                rktio_tcp_nodelay
+                                                                                (unsafe-place-local-ref
+                                                                                 cell.1)
+                                                                                fd_0
+                                                                                #t)
+                                                                               (begin
+                                                                                 (|#%app|
+                                                                                  rktio_tcp_keepalive
+                                                                                  (unsafe-place-local-ref
+                                                                                   cell.1)
+                                                                                  fd_0
+                                                                                  #t)
+                                                                                 (begin
+                                                                                   (end-rktio)
+                                                                                   (call-with-values
+                                                                                    (lambda ()
+                                                                                      (open-input-output-tcp.1
+                                                                                       #t
+                                                                                       fd_0
+                                                                                       name_0))
+                                                                                    (lambda (in_0
+                                                                                             out_0)
+                                                                                      (begin
+                                                                                        (unsafe-uninterruptible-custodian-lock-release)
+                                                                                        (values
+                                                                                         in_0
+                                                                                         out_0)))))))))))))))))))
+                                                        (loop_0))))))))))
+                                       (call-with-resolved-address.1
+                                        enable-break?10_0
+                                        unsafe-undefined
+                                        #f
+                                        #t
+                                        #f
+                                        #t
+                                        ""
+                                        #f
+                                        local-hostname12_0
+                                        local-port-no13_0
+                                        temp43_0))))))
+                            (call-with-resolved-address.1
+                             enable-break?10_0
+                             unsafe-undefined
+                             #f
+                             #t
+                             #f
+                             #t
+                             ""
+                             #f
+                             hostname15_0
+                             port-no16_0
+                             temp39_0)))
+                        (lambda (in_0 out_0)
+                          (begin
+                            (unsafe-end-uninterruptible)
+                            (values in_0 out_0))))))))))))))))
 (define init-trying-fd!
   (lambda (conn-prog_0)
     (if (connect-progress-trying-fd conn-prog_0)
@@ -36903,13 +36931,17 @@
               (connect-progress-conn conn-prog_0))))
         (begin
           (set-connect-progress-trying-fd! conn-prog_0 fd_0)
-          (void (fd-semaphore-update! fd_0 'write)))))))
+          (start-rktio-sleep-relevant)
+          (void (fd-semaphore-update! fd_0 'write))
+          (end-rktio-sleep-relevant))))))
 (define remove-trying-fd!
   (lambda (conn-prog_0)
     (let ((fd_0 (connect-progress-trying-fd conn-prog_0)))
       (if fd_0
         (begin
+          (start-rktio-sleep-relevant)
           (fd-semaphore-update! fd_0 'remove)
+          (end-rktio-sleep-relevant)
           (set-connect-progress-trying-fd! conn-prog_0 #f))
         (void)))))
 (define finish_2775
@@ -37032,7 +37064,7 @@
                           raise-listen-error
                           (lambda (what_0 err_0)
                             (begin
-                              (unsafe-end-atomic)
+                              (unsafe-end-uninterruptible)
                               (raise-network-error
                                'tcp-listen
                                err_0
@@ -37059,75 +37091,89 @@
                          (|#%name|
                           loop
                           (lambda (family_0)
-                            (|#%app|
-                             (begin
-                               (unsafe-start-atomic)
-                               (begin0
-                                 (let ((temp12_0
-                                        (lambda (addr_0)
-                                          (if (vector? addr_0)
-                                            (raise-listen-error_0
-                                             "address-resolution error"
-                                             addr_0)
-                                            (begin
-                                              (check-current-custodian.1
-                                               end-rktio+atomic
-                                               'tcp-listen)
-                                              (let ((lnr_0
-                                                     (begin
-                                                       (start-rktio)
-                                                       (begin0
-                                                         (|#%app|
-                                                          rktio_listen
-                                                          (unsafe-place-local-ref
-                                                           cell.1)
-                                                          addr_0
-                                                          (min
-                                                           max-allow-wait2_0
-                                                           10000)
-                                                          reuse?3_0)
-                                                         (end-rktio)))))
-                                                (if (vector? lnr_0)
-                                                  (if (racket-error? lnr_0 24)
-                                                    (lambda ()
-                                                      (loop_0
-                                                       (|#%app|
-                                                        rktio_get_ipv4_family
-                                                        (unsafe-place-local-ref
-                                                         cell.1))))
-                                                    (raise-listen-error_0
-                                                     "listen failed"
-                                                     lnr_0))
-                                                  (let ((closed_0 (box #f)))
-                                                    (let ((custodian-reference_0
-                                                           (|#%app|
-                                                            1/unsafe-custodian-register
-                                                            (current-custodian)
-                                                            lnr_0
-                                                            (lambda (fd_0)
-                                                              (do-tcp-close
-                                                               lnr_0
-                                                               closed_0))
-                                                            #f
-                                                            #f)))
+                            (begin
+                              (unsafe-start-uninterruptible)
+                              (let ((temp12_0
+                                     (lambda (addr_0)
+                                       (if (vector? addr_0)
+                                         (raise-listen-error_0
+                                          "address-resolution error"
+                                          addr_0)
+                                         (begin
+                                           (start-rktio)
+                                           (begin
+                                             (unsafe-uninterruptible-custodian-lock-acquire)
+                                             (begin
+                                               (let ((temp14_0
                                                       (lambda ()
-                                                        (tcp-listener1.1
-                                                         lnr_0
-                                                         closed_0
-                                                         custodian-reference_0)))))))))))
-                                   (call-with-resolved-address.1
-                                    #f
-                                    family_0
-                                    #t
-                                    #t
-                                    #f
-                                    #t
-                                    ""
-                                    #f
-                                    hostname4_0
-                                    port-no5_0
-                                    temp12_0))
-                                 (unsafe-end-atomic))))))))
+                                                        (begin
+                                                          (unsafe-uninterruptible-custodian-lock-release)
+                                                          (unsafe-end-uninterruptible)))))
+                                                 (check-current-custodian.1
+                                                  temp14_0
+                                                  'tcp-listen))
+                                               (let ((lnr_0
+                                                      (|#%app|
+                                                       rktio_listen
+                                                       (unsafe-place-local-ref
+                                                        cell.1)
+                                                       addr_0
+                                                       (min
+                                                        max-allow-wait2_0
+                                                        10000)
+                                                       reuse?3_0)))
+                                                 (begin
+                                                   (end-rktio)
+                                                   (if (vector? lnr_0)
+                                                     (begin
+                                                       (unsafe-uninterruptible-custodian-lock-release)
+                                                       (if (racket-error?
+                                                            lnr_0
+                                                            24)
+                                                         (lambda ()
+                                                           (loop_0
+                                                            (|#%app|
+                                                             rktio_get_ipv4_family
+                                                             (unsafe-place-local-ref
+                                                              cell.1))))
+                                                         (raise-listen-error_0
+                                                          "listen failed"
+                                                          lnr_0)))
+                                                     (let ((closed_0 (box #f)))
+                                                       (let ((custodian-reference_0
+                                                              (|#%app|
+                                                               1/unsafe-custodian-register
+                                                               (current-custodian)
+                                                               lnr_0
+                                                               (lambda (fd_0)
+                                                                 (do-tcp-close
+                                                                  lnr_0
+                                                                  closed_0))
+                                                               #f
+                                                               #f)))
+                                                         (begin
+                                                           (unsafe-uninterruptible-custodian-lock-release)
+                                                           (lambda ()
+                                                             (tcp-listener1.1
+                                                              lnr_0
+                                                              closed_0
+                                                              custodian-reference_0)))))))))))))))
+                                (let ((get-result_0
+                                       (call-with-resolved-address.1
+                                        #f
+                                        family_0
+                                        #t
+                                        #t
+                                        #f
+                                        #t
+                                        ""
+                                        #f
+                                        hostname4_0
+                                        port-no5_0
+                                        temp12_0)))
+                                  (begin
+                                    (unsafe-end-uninterruptible)
+                                    (|#%app| get-result_0)))))))))
                        (loop_0 -1)))))))))))
     (|#%name|
      tcp-listen
@@ -37142,8 +37188,13 @@
 (define do-tcp-close
   (lambda (lnr_0 closed_0)
     (begin
-      (|#%app| rktio_listen_stop (unsafe-place-local-ref cell.1) lnr_0)
-      (set-box! closed_0 #t))))
+      (start-rktio-sleep-relevant)
+      (if (unbox closed_0)
+        (void)
+        (begin
+          (|#%app| rktio_listen_stop (unsafe-place-local-ref cell.1) lnr_0)
+          (set-box! closed_0 #t)))
+      (end-rktio-sleep-relevant))))
 (define 1/tcp-close
   (|#%name|
    tcp-close
@@ -37154,10 +37205,10 @@
          (raise-argument-error 'tcp-close "tcp-listener?" listener_0))
        (let ((closed_0 (tcp-listener-closed listener_0)))
          (begin
-           (unsafe-start-atomic)
+           (unsafe-start-uninterruptible)
            (if (unbox closed_0)
              (begin
-               (unsafe-end-atomic)
+               (unsafe-end-uninterruptible)
                (raise-arguments-error
                 'tcp-close
                 "listener is closed"
@@ -37170,7 +37221,7 @@
                   1/unsafe-custodian-unregister
                   lnr_0
                   (tcp-listener-custodian-reference listener_0))
-                 (unsafe-end-atomic))))))))))
+                 (unsafe-end-uninterruptible))))))))))
 (define tcp-listener-closed?
   (lambda (listener_0) (unbox (tcp-listener-closed listener_0))))
 (define poll-listener
@@ -37217,42 +37268,51 @@
            loop
            (lambda ()
              (begin
-               (unsafe-start-atomic)
+               (start-rktio)
                (if (unbox (tcp-listener-closed listener4_0))
                  (closed-error who3_0 listener4_0)
                  (if (accept-ready? listener4_0)
                    (begin
-                     (check-current-custodian.1 unsafe-end-atomic who3_0)
-                     (let ((fd_0
-                            (begin
-                              (start-rktio)
-                              (begin0
-                                (|#%app|
-                                 rktio_accept
-                                 (unsafe-place-local-ref cell.1)
-                                 (tcp-listener-lnr listener4_0))
-                                (end-rktio)))))
-                       (if (vector? fd_0)
-                         (begin
-                           (unsafe-end-atomic)
-                           (raise-network-error
-                            who3_0
-                            fd_0
-                            "accept from listener failed"))
-                         (begin0
-                           (open-input-output-accepted-tcp fd_0)
-                           (unsafe-end-atomic)))))
+                     (unsafe-uninterruptible-custodian-lock-acquire)
+                     (begin
+                       (let ((temp15_0
+                              (lambda ()
+                                (begin
+                                  (unsafe-uninterruptible-custodian-lock-release)
+                                  (end-rktio)))))
+                         (check-current-custodian.1 temp15_0 who3_0))
+                       (let ((fd_0
+                              (|#%app|
+                               rktio_accept
+                               (unsafe-place-local-ref cell.1)
+                               (tcp-listener-lnr listener4_0))))
+                         (if (vector? fd_0)
+                           (begin
+                             (end-rktio)
+                             (unsafe-uninterruptible-custodian-lock-acquire)
+                             (raise-network-error
+                              who3_0
+                              fd_0
+                              "accept from listener failed"))
+                           (begin0
+                             (open-input-output-accepted-tcp fd_0)
+                             (unsafe-uninterruptible-custodian-lock-release)
+                             (end-rktio))))))
                    (begin
-                     (unsafe-end-atomic)
+                     (end-rktio)
                      (|#%app|
                       (if enable-break?1_0 sync/enable-break sync)
                       (rktio-evt1.1
                        (lambda ()
-                         (let ((or-part_0
-                                (unbox (tcp-listener-closed listener4_0))))
-                           (if or-part_0
-                             or-part_0
-                             (accept-ready? listener4_0))))
+                         (begin
+                           (start-rktio)
+                           (begin0
+                             (let ((or-part_0
+                                    (unbox (tcp-listener-closed listener4_0))))
+                               (if or-part_0
+                                 or-part_0
+                                 (accept-ready? listener4_0)))
+                             (end-rktio))))
                        (lambda (ps_0)
                          (|#%app|
                           rktio_poll_add_accept
@@ -37269,10 +37329,10 @@
        (if (1/tcp-listener? listener_0)
          (void)
          (raise-argument-error 'tcp-accept-ready? "tcp-listener?" listener_0))
-       (unsafe-start-atomic)
+       (start-rktio)
        (if (unbox (tcp-listener-closed listener_0))
          (closed-error 'tcp-accept-ready? listener_0)
-         (begin0 (accept-ready? listener_0) (unsafe-end-atomic)))))))
+         (begin0 (accept-ready? listener_0) (end-rktio)))))))
 (define 1/tcp-accept-evt
   (|#%name|
    tcp-accept-evt
@@ -37282,7 +37342,7 @@
          (void)
          (raise-argument-error 'tcp-accept-evt "tcp-listener?" listener_0))
        (accept-evt6.1 listener_0)))))
-(define finish_1916
+(define finish_2474
   (make-struct-type-install-properties
    '(tcp-accept-evt)
    1
@@ -37299,7 +37359,7 @@
             (error-result
              (lambda ()
                (begin
-                 (unsafe-start-atomic)
+                 (start-rktio)
                  (closed-error 'tcp-accept-evt listener_0))))
             (if (custodian-shut-down? (current-custodian))
               (let ((c_0 (current-custodian)))
@@ -37313,47 +37373,47 @@
                      current-custodian
                      c_0)
                     (check-current-custodian.1 void 'tcp-accept-evt)))))
-              (if (accept-ready? listener_0)
-                (let ((fd_0
-                       (begin
-                         (start-rktio)
-                         (begin0
-                           (|#%app|
-                            rktio_accept
-                            (unsafe-place-local-ref cell.1)
-                            (tcp-listener-lnr listener_0))
-                           (end-rktio)))))
-                  (if (vector? fd_0)
-                    (begin
-                      (unsafe-end-atomic)
-                      (error-result
-                       (lambda ()
-                         (raise-network-error
-                          'tcp-accept-evt
-                          fd_0
-                          "accept from listener failed"))))
-                    (values
-                     (list
-                      (call-with-values
-                       (lambda () (open-input-output-accepted-tcp fd_0))
-                       list))
-                     #f)))
-                (let ((sched-info_0 (|#%app| poll-ctx-sched-info poll-ctx_0)))
+              (begin
+                (start-rktio)
+                (if (accept-ready? listener_0)
+                  (let ((fd_0
+                         (|#%app|
+                          rktio_accept
+                          (unsafe-place-local-ref cell.1)
+                          (tcp-listener-lnr listener_0))))
+                    (if (vector? fd_0)
+                      (begin
+                        (end-rktio)
+                        (error-result
+                         (lambda ()
+                           (raise-network-error
+                            'tcp-accept-evt
+                            fd_0
+                            "accept from listener failed"))))
+                      (let ((results_0
+                             (call-with-values
+                              (lambda () (open-input-output-accepted-tcp fd_0))
+                              list)))
+                        (begin (end-rktio) (values (list results_0) #f)))))
                   (begin
-                    (if sched-info_0
-                      (|#%app|
-                       schedule-info-current-exts
-                       sched-info_0
-                       (sandman-add-poll-set-adder
-                        (|#%app| schedule-info-current-exts sched-info_0)
-                        (lambda (ps_0)
+                    (end-rktio)
+                    (let ((sched-info_0
+                           (|#%app| poll-ctx-sched-info poll-ctx_0)))
+                      (begin
+                        (if sched-info_0
                           (|#%app|
-                           rktio_poll_add_accept
-                           (unsafe-place-local-ref cell.1)
-                           (tcp-listener-lnr listener_0)
-                           ps_0))))
-                      (void))
-                    (values #f self_0)))))))))))
+                           schedule-info-current-exts
+                           sched-info_0
+                           (sandman-add-poll-set-adder
+                            (|#%app| schedule-info-current-exts sched-info_0)
+                            (lambda (ps_0)
+                              (|#%app|
+                               rktio_poll_add_accept
+                               (unsafe-place-local-ref cell.1)
+                               (tcp-listener-lnr listener_0)
+                               ps_0))))
+                          (void))
+                        (values #f self_0)))))))))))))
    (current-inspector)
    #f
    '(0)
@@ -37367,7 +37427,7 @@
    #f
    #f
    '(1 . 0)))
-(define effect_2608 (finish_1916 struct:accept-evt))
+(define effect_2608 (finish_2474 struct:accept-evt))
 (define accept-evt6.1
   (|#%name|
    accept-evt
@@ -37405,19 +37465,15 @@
   (lambda (listener_0)
     (not
      (eqv?
-      (begin
-        (start-rktio)
-        (begin0
-          (|#%app|
-           rktio_poll_accept_ready
-           (unsafe-place-local-ref cell.1)
-           (tcp-listener-lnr listener_0))
-          (end-rktio)))
+      (|#%app|
+       rktio_poll_accept_ready
+       (unsafe-place-local-ref cell.1)
+       (tcp-listener-lnr listener_0))
       0))))
 (define closed-error
   (lambda (who_0 listener_0)
     (begin
-      (unsafe-end-atomic)
+      (end-rktio)
       (raise-arguments-error
        who_0
        "listener is closed"
@@ -37426,16 +37482,8 @@
 (define open-input-output-accepted-tcp
   (lambda (fd_0)
     (begin
-      (start-rktio)
-      (begin0
-        (begin
-          (|#%app| rktio_tcp_nodelay (unsafe-place-local-ref cell.1) fd_0 #t)
-          (|#%app|
-           rktio_tcp_keepalive
-           (unsafe-place-local-ref cell.1)
-           fd_0
-           #t))
-        (end-rktio))
+      (|#%app| rktio_tcp_nodelay (unsafe-place-local-ref cell.1) fd_0 #t)
+      (|#%app| rktio_tcp_keepalive (unsafe-place-local-ref cell.1) fd_0 #t)
       (let ((temp22_0 "tcp-accepted"))
         (open-input-output-tcp.1 #t fd_0 temp22_0)))))
 (define string->integer
@@ -37511,75 +37559,91 @@
                  'udp-open-socket
                  "(or/c string? #f)"
                  family-hostname2_0))
-              (if (let ((or-part_0 (not family-port-no3_0)))
-                    (if or-part_0 or-part_0 (port-number? family-port-no3_0)))
-                (void)
-                (raise-argument-error
-                 'udp-open-socket
-                 "(or/c port-number? #f)"
-                 family-port-no3_0))
-              (1/security-guard-check-network
-               'udp-open-socket
-               family-hostname2_0
-               family-port-no3_0
-               'server)
-              (unsafe-start-atomic)
-              (begin0
-                (let ((temp21_0
-                       (lambda (addr_0)
-                         (begin
-                           (check-current-custodian.1
-                            unsafe-end-atomic
-                            'udp-open-socket)
-                           (let ((s_0
-                                  (begin
-                                    (start-rktio)
-                                    (begin0
-                                      (|#%app|
-                                       rktio_udp_open
-                                       (unsafe-place-local-ref cell.1)
-                                       addr_0
-                                       (udp-default-family))
-                                      (end-rktio)))))
-                             (if (vector? s_0)
-                               (begin
-                                 (unsafe-end-atomic)
-                                 (raise-network-error
-                                  'udp-open-socket
-                                  s_0
-                                  "creation failed"))
-                               (let ((s-box_0 (box s_0)))
-                                 (let ((custodian-reference_0
-                                        (|#%app|
-                                         1/unsafe-custodian-register
-                                         (current-custodian)
-                                         s-box_0
-                                         (lambda (s-box_1)
-                                           (begin
-                                             (start-rktio)
-                                             (begin0
-                                               (do-udp-close s-box_1)
-                                               (end-rktio))))
-                                         #f
-                                         #f)))
-                                   (udp1.1
-                                    s-box_0
-                                    #f
-                                    #f
-                                    custodian-reference_0)))))))))
-                  (call-with-resolved-address.1
-                   #f
-                   unsafe-undefined
-                   #f
-                   #t
-                   #f
-                   #f
-                   ""
+              (begin
+                (if (let ((or-part_0 (not family-port-no3_0)))
+                      (if or-part_0
+                        or-part_0
+                        (port-number? family-port-no3_0)))
+                  (void)
+                  (raise-argument-error
+                   'udp-open-socket
+                   "(or/c port-number? #f)"
+                   family-port-no3_0))
+                (begin
+                  (1/security-guard-check-network
                    'udp-open-socket
                    family-hostname2_0
                    family-port-no3_0
-                   temp21_0))
-                (unsafe-end-atomic)))))))
+                   'server)
+                  (begin
+                    (unsafe-start-uninterruptible)
+                    (let ((temp21_0
+                           (lambda (addr_0)
+                             (begin
+                               (start-rktio)
+                               (begin
+                                 (unsafe-uninterruptible-custodian-lock-acquire)
+                                 (begin
+                                   (let ((temp23_0
+                                          (lambda ()
+                                            (begin
+                                              (unsafe-uninterruptible-custodian-lock-release)
+                                              (end-rktio)
+                                              (unsafe-end-uninterruptible)))))
+                                     (check-current-custodian.1
+                                      temp23_0
+                                      'udp-open-socket))
+                                   (let ((s_0
+                                          (|#%app|
+                                           rktio_udp_open
+                                           (unsafe-place-local-ref cell.1)
+                                           addr_0
+                                           (udp-default-family))))
+                                     (begin
+                                       (end-rktio)
+                                       (if (vector? s_0)
+                                         (begin
+                                           (unsafe-uninterruptible-custodian-lock-release)
+                                           (unsafe-end-uninterruptible)
+                                           (raise-network-error
+                                            'udp-open-socket
+                                            s_0
+                                            "creation failed"))
+                                         (let ((s-box_0 (box s_0)))
+                                           (let ((custodian-reference_0
+                                                  (|#%app|
+                                                   1/unsafe-custodian-register
+                                                   (current-custodian)
+                                                   s-box_0
+                                                   (lambda (s-box_1)
+                                                     (begin
+                                                       (start-rktio)
+                                                       (begin0
+                                                         (do-udp-close s-box_1)
+                                                         (end-rktio))))
+                                                   #f
+                                                   #f)))
+                                             (begin
+                                               (unsafe-uninterruptible-custodian-lock-release)
+                                               (udp1.1
+                                                s-box_0
+                                                #f
+                                                #f
+                                                custodian-reference_0)))))))))))))
+                      (let ((u_0
+                             (call-with-resolved-address.1
+                              #f
+                              unsafe-undefined
+                              #f
+                              #t
+                              #f
+                              #f
+                              ""
+                              'udp-open-socket
+                              family-hostname2_0
+                              family-port-no3_0
+                              temp21_0)))
+                        (begin (unsafe-end-uninterruptible) u_0)))))))))))
     (|#%name|
      udp-open-socket
      (case-lambda
@@ -37658,65 +37722,62 @@
                hostname6_0
                port-no7_0
                'server)
-              (unsafe-start-atomic)
-              (begin0
-                (let ((temp32_0
-                       (lambda (addr_0)
+              (unsafe-start-uninterruptible)
+              (let ((temp32_0
+                     (lambda (addr_0)
+                       (begin
+                         (start-rktio)
                          (begin
-                           (start-rktio)
+                           (check-udp-closed* 'udp-bind! u5_0)
                            (begin
-                             (check-udp-closed* 'udp-bind! u5_0)
-                             (begin
-                               (if (udp-is-bound? u5_0)
-                                 (begin
-                                   (end-rktio)
-                                   (unsafe-end-atomic)
-                                   (raise-arguments-error
-                                    'udp-bind!
-                                    "udp socket is already bound"
-                                    "socket"
-                                    u5_0))
-                                 (void))
-                               (let ((b_0
-                                      (|#%app|
-                                       rktio_udp_bind
-                                       (unsafe-place-local-ref cell.1)
-                                       (unbox (udp-s-box u5_0))
-                                       addr_0
-                                       reuse?4_0)))
-                                 (begin
-                                   (if (vector? b_0)
-                                     (begin
-                                       (end-rktio)
-                                       (unsafe-end-atomic)
-                                       (raise-network-error
-                                        'udp-bind!
-                                        b_0
-                                        (string-append
-                                         "can't bind"
-                                         (if reuse?4_0 " as reusable" "")
-                                         "\n  address: "
-                                         (if hostname6_0
-                                           hostname6_0
-                                           "<unspec>")
-                                         "\n  port number: "
-                                         (number->string port-no7_0))))
-                                     (void))
-                                   (set-udp-is-bound?! u5_0 #t)
-                                   (end-rktio)))))))))
-                  (call-with-resolved-address.1
-                   #f
-                   unsafe-undefined
-                   #t
-                   #t
-                   #f
-                   #f
-                   ""
-                   'udp-bind!
-                   hostname6_0
-                   port-no7_0
-                   temp32_0))
-                (unsafe-end-atomic)))))))
+                             (if (udp-is-bound? u5_0)
+                               (begin
+                                 (end-rktio)
+                                 (unsafe-end-uninterruptible)
+                                 (raise-arguments-error
+                                  'udp-bind!
+                                  "udp socket is already bound"
+                                  "socket"
+                                  u5_0))
+                               (void))
+                             (let ((b_0
+                                    (|#%app|
+                                     rktio_udp_bind
+                                     (unsafe-place-local-ref cell.1)
+                                     (unbox (udp-s-box u5_0))
+                                     addr_0
+                                     reuse?4_0)))
+                               (begin
+                                 (if (vector? b_0)
+                                   (begin
+                                     (end-rktio)
+                                     (unsafe-end-uninterruptible)
+                                     (raise-network-error
+                                      'udp-bind!
+                                      b_0
+                                      (string-append
+                                       "can't bind"
+                                       (if reuse?4_0 " as reusable" "")
+                                       "\n  address: "
+                                       (if hostname6_0 hostname6_0 "<unspec>")
+                                       "\n  port number: "
+                                       (number->string port-no7_0))))
+                                   (void))
+                                 (set-udp-is-bound?! u5_0 #t)
+                                 (end-rktio)))))))))
+                (call-with-resolved-address.1
+                 #f
+                 unsafe-undefined
+                 #t
+                 #t
+                 #f
+                 #f
+                 ""
+                 'udp-bind!
+                 hostname6_0
+                 port-no7_0
+                 temp32_0))
+              (unsafe-end-uninterruptible))))))
     (|#%name|
      udp-bind!
      (case-lambda
@@ -37764,73 +37825,72 @@
         hostname_0
         port-no_0
         'client)
-       (unsafe-start-atomic)
-       (begin0
-         (if (not hostname_0)
-           (begin
-             (start-rktio)
-             (check-udp-closed* 'udp-connect! u_0)
-             (if (udp-is-connected? u_0)
-               (let ((d_0
-                      (|#%app|
-                       rktio_udp_disconnect
-                       (unsafe-place-local-ref cell.1)
-                       (unbox (udp-s-box u_0)))))
-                 (begin
-                   (if (vector? d_0)
-                     (begin
-                       (end-rktio)
-                       (unsafe-end-atomic)
-                       (raise-network-error
-                        'udp-connect!
-                        d_0
-                        "can't disconnect"))
-                     (void))
-                   (set-udp-is-connected?! u_0 #f)))
-               (void))
-             (end-rktio))
-           (let ((temp39_0
-                  (lambda (addr_0)
+       (unsafe-start-uninterruptible)
+       (if (not hostname_0)
+         (begin
+           (start-rktio)
+           (check-udp-closed* 'udp-connect! u_0)
+           (if (udp-is-connected? u_0)
+             (let ((d_0
+                    (|#%app|
+                     rktio_udp_disconnect
+                     (unsafe-place-local-ref cell.1)
+                     (unbox (udp-s-box u_0)))))
+               (begin
+                 (if (vector? d_0)
+                   (begin
+                     (end-rktio)
+                     (unsafe-end-uninterruptible)
+                     (raise-network-error
+                      'udp-connect!
+                      d_0
+                      "can't disconnect"))
+                   (void))
+                 (set-udp-is-connected?! u_0 #f)))
+             (void))
+           (end-rktio))
+         (let ((temp39_0
+                (lambda (addr_0)
+                  (begin
+                    (start-rktio)
                     (begin
-                      (start-rktio)
-                      (begin
-                        (check-udp-closed* 'udp-connect! u_0)
-                        (let ((c_0
-                               (|#%app|
-                                rktio_udp_connect
-                                (unsafe-place-local-ref cell.1)
-                                (unbox (udp-s-box u_0))
-                                addr_0)))
-                          (begin
-                            (if (vector? c_0)
-                              (begin
-                                (end-rktio)
-                                (unsafe-end-atomic)
-                                (raise-network-error
-                                 'udp-connect!
-                                 c_0
-                                 (string-append
-                                  "can't connect"
-                                  "\n  address: "
-                                  hostname_0
-                                  "\n  port number: "
-                                  (number->string port-no_0))))
-                              (void))
-                            (set-udp-is-connected?! u_0 #t)
-                            (end-rktio))))))))
-             (call-with-resolved-address.1
-              #f
-              unsafe-undefined
-              #f
-              #t
-              #f
-              #f
-              ""
-              'udp-connect!
-              hostname_0
-              port-no_0
-              temp39_0)))
-         (unsafe-end-atomic))))))
+                      (check-udp-closed* 'udp-connect! u_0)
+                      (let ((c_0
+                             (|#%app|
+                              rktio_udp_connect
+                              (unsafe-place-local-ref cell.1)
+                              (unbox (udp-s-box u_0))
+                              addr_0)))
+                        (begin
+                          (if (vector? c_0)
+                            (begin
+                              (end-rktio)
+                              (unsafe-end-uninterruptible)
+                              (raise-network-error
+                               'udp-connect!
+                               c_0
+                               (string-append
+                                "can't connect"
+                                "\n  address: "
+                                hostname_0
+                                "\n  port number: "
+                                (number->string port-no_0))))
+                            (void))
+                          (set-udp-is-connected?! u_0 #t)
+                          (end-rktio))))))))
+           (call-with-resolved-address.1
+            #f
+            unsafe-undefined
+            #f
+            #t
+            #f
+            #f
+            ""
+            'udp-connect!
+            hostname_0
+            port-no_0
+            temp39_0)))
+       (unsafe-end-uninterruptible)))))
 (define check-udp-closed.1
   (|#%name|
    check-udp-closed
@@ -37855,7 +37915,8 @@
 (define handle-error-immediately
   (lambda (thunk_0) (begin (end-rktio) (|#%app| thunk_0))))
 (define handle-error-immediately*
-  (lambda (thunk_0) (begin (end-rktio) (unsafe-end-atomic) (|#%app| thunk_0))))
+  (lambda (thunk_0)
+    (begin (end-rktio) (unsafe-end-uninterruptible) (|#%app| thunk_0))))
 (define udp-default-family
   (lambda () (|#%app| rktio_get_ipv4_family (unsafe-place-local-ref cell.1))))
 (define 1/udp-ttl
@@ -38437,38 +38498,39 @@
             start50_0
             end51_0)
      (begin
-       (unsafe-start-atomic)
-       (begin0
-         (let ((temp127_0
-                (lambda (addr_0)
-                  (do-udp-maybe-send-to-addr.1
-                   enable-break?42_0
-                   unsafe-undefined
-                   wait?41_0
-                   who45_0
-                   u46_0
-                   addr_0
-                   bstr49_0
-                   start50_0
-                   end51_0))))
-           (call-with-resolved-address.1
-            #f
-            unsafe-undefined
-            #f
-            #t
-            #f
-            #f
-            ""
-            who45_0
-            hostname47_0
-            port-no48_0
-            temp127_0))
-         (unsafe-end-atomic))))))
+       (unsafe-start-uninterruptible)
+       (let ((temp127_0
+              (lambda (addr_0)
+                (do-udp-maybe-send-to-addr.1
+                 enable-break?42_0
+                 unsafe-undefined
+                 wait?41_0
+                 who45_0
+                 u46_0
+                 addr_0
+                 bstr49_0
+                 start50_0
+                 end51_0))))
+         (let ((result_0
+                (call-with-resolved-address.1
+                 #f
+                 unsafe-undefined
+                 #f
+                 #t
+                 #f
+                 #f
+                 ""
+                 who45_0
+                 hostname47_0
+                 port-no48_0
+                 temp127_0)))
+           (begin (unsafe-end-uninterruptible) result_0)))))))
 (define do-udp-send-to-evt
   (lambda (who_0 u_0 hostname_0 port-no_0 bstr_0 start_0 end_0)
     (begin
-      (unsafe-start-atomic)
-      (begin0
+      (poll-address-finalizations)
+      (begin
+        (unsafe-start-uninterruptible)
         (let ((temp141_0
                (lambda (addr_0)
                  (udp-sending-evt66.1
@@ -38487,19 +38549,20 @@
                          bstr_0
                          start_0
                          end_0))))))))
-          (call-with-resolved-address.1
-           #f
-           unsafe-undefined
-           #f
-           #t
-           #t
-           #f
-           ""
-           who_0
-           hostname_0
-           port-no_0
-           temp141_0))
-        (unsafe-end-atomic)))))
+          (let ((evt_0
+                 (call-with-resolved-address.1
+                  #f
+                  unsafe-undefined
+                  #f
+                  #t
+                  #t
+                  #f
+                  ""
+                  who_0
+                  hostname_0
+                  port-no_0
+                  temp141_0)))
+            (begin (unsafe-end-uninterruptible) evt_0)))))))
 (define do-udp-maybe-send-to-addr.1
   (|#%name|
    do-udp-maybe-send-to-addr
@@ -38569,7 +38632,7 @@
                                       #f
                                       (begin
                                         (end-rktio)
-                                        (unsafe-end-atomic)
+                                        (unsafe-end-uninterruptible)
                                         (|#%app|
                                          (if enable-break?54_0
                                            sync/enable-break
@@ -38597,7 +38660,7 @@
                                              (unbox (udp-s-box u60_0))
                                              ps_0
                                              2))))
-                                        (unsafe-start-atomic)
+                                        (unsafe-start-uninterruptible)
                                         (loop_0)))
                                     (if (= r_0 (- end64_0 start63_0))
                                       (begin
@@ -39217,75 +39280,74 @@
             (if or-part_0 or-part_0 (string? hostname_0)))
         (void)
         (raise-argument-error who_0 "(or/c string? #f)" hostname_0))
-      (unsafe-start-atomic)
-      (begin0
-        (let ((temp4_0 "multicast "))
-          (let ((temp8_0 (udp-default-family)))
-            (let ((temp10_0
-                   (lambda (multicast-addr_0)
-                     (let ((temp12_0 "interface "))
-                       (let ((temp15_0 (if hostname_0 -1 #f)))
-                         (let ((temp16_0 (udp-default-family)))
-                           (let ((temp18_0
-                                  (lambda (intf-addr_0)
+      (unsafe-start-uninterruptible)
+      (let ((temp4_0 "multicast "))
+        (let ((temp8_0 (udp-default-family)))
+          (let ((temp10_0
+                 (lambda (multicast-addr_0)
+                   (let ((temp12_0 "interface "))
+                     (let ((temp15_0 (if hostname_0 -1 #f)))
+                       (let ((temp16_0 (udp-default-family)))
+                         (let ((temp18_0
+                                (lambda (intf-addr_0)
+                                  (begin
+                                    (start-rktio)
                                     (begin
-                                      (start-rktio)
-                                      (begin
-                                        (check-udp-closed* who_0 u_0)
-                                        (let ((v_0
-                                               (|#%app|
-                                                rktio_udp_change_multicast_group
-                                                (unsafe-place-local-ref cell.1)
-                                                (unbox (udp-s-box u_0))
-                                                multicast-addr_0
-                                                intf-addr_0
-                                                action_0)))
-                                          (begin
-                                            (end-rktio)
-                                            (if (vector? v_0)
-                                              (let ((mode_0 "set"))
-                                                (begin
-                                                  (unsafe-end-atomic)
-                                                  (raise-network-error
-                                                   who_0
-                                                   v_0
-                                                   (string-append
-                                                    mode_0
-                                                    "sockopt failed"))))
-                                              (void)))))))))
-                             (let ((temp16_1 temp16_0)
-                                   (temp15_1 temp15_0)
-                                   (temp12_1 temp12_0))
-                               (call-with-resolved-address.1
-                                #f
-                                temp16_1
-                                #f
-                                #f
-                                #f
-                                #f
-                                temp12_1
-                                who_0
-                                hostname_0
-                                temp15_1
-                                temp18_0)))))))))
-              (let ((temp8_1 temp8_0) (temp4_1 temp4_0))
-                (call-with-resolved-address.1
-                 #f
-                 temp8_1
-                 #f
-                 #f
-                 #f
-                 #f
-                 temp4_1
-                 who_0
-                 multicast-hostname_0
-                 -1
-                 temp10_0)))))
-        (unsafe-end-atomic)))))
+                                      (check-udp-closed* who_0 u_0)
+                                      (let ((v_0
+                                             (|#%app|
+                                              rktio_udp_change_multicast_group
+                                              (unsafe-place-local-ref cell.1)
+                                              (unbox (udp-s-box u_0))
+                                              multicast-addr_0
+                                              intf-addr_0
+                                              action_0)))
+                                        (begin
+                                          (end-rktio)
+                                          (if (vector? v_0)
+                                            (let ((mode_0 "set"))
+                                              (begin
+                                                (unsafe-end-uninterruptible)
+                                                (raise-network-error
+                                                 who_0
+                                                 v_0
+                                                 (string-append
+                                                  mode_0
+                                                  "sockopt failed"))))
+                                            (void)))))))))
+                           (let ((temp16_1 temp16_0)
+                                 (temp15_1 temp15_0)
+                                 (temp12_1 temp12_0))
+                             (call-with-resolved-address.1
+                              #f
+                              temp16_1
+                              #f
+                              #f
+                              #f
+                              #f
+                              temp12_1
+                              who_0
+                              hostname_0
+                              temp15_1
+                              temp18_0)))))))))
+            (let ((temp8_1 temp8_0) (temp4_1 temp4_0))
+              (call-with-resolved-address.1
+               #f
+               temp8_1
+               #f
+               #f
+               #f
+               #f
+               temp4_1
+               who_0
+               multicast-hostname_0
+               -1
+               temp10_0)))))
+      (unsafe-end-uninterruptible))))
 (define raise-option-error*
   (lambda (who_0 mode_0 v_0)
     (begin
-      (unsafe-end-atomic)
+      (unsafe-end-uninterruptible)
       (raise-network-error
        who_0
        v_0
@@ -39347,47 +39409,46 @@
           'udp-multicast-set-interface!
           "(or/c string? #f)"
           hostname_0))
-       (unsafe-start-atomic)
-       (begin0
-         (let ((temp26_0 (if hostname_0 -1 #f)))
-           (let ((temp27_0 (udp-default-family)))
-             (let ((temp29_0
-                    (lambda (addr_0)
+       (unsafe-start-uninterruptible)
+       (let ((temp26_0 (if hostname_0 -1 #f)))
+         (let ((temp27_0 (udp-default-family)))
+           (let ((temp29_0
+                  (lambda (addr_0)
+                    (begin
+                      (start-rktio)
                       (begin
-                        (start-rktio)
-                        (begin
-                          (check-udp-closed* 'udp-multicast-set-interface! u_0)
-                          (let ((r_0
-                                 (|#%app|
-                                  rktio_udp_set_multicast_interface
-                                  (unsafe-place-local-ref cell.1)
-                                  (unbox (udp-s-box u_0))
-                                  addr_0)))
-                            (begin
-                              (end-rktio)
-                              (if (vector? r_0)
-                                (let ((mode_0 "set"))
-                                  (begin
-                                    (unsafe-end-atomic)
-                                    (raise-network-error
-                                     'udp-multicast-set-interface!
-                                     r_0
-                                     (string-append mode_0 "sockopt failed"))))
-                                (void)))))))))
-               (let ((temp27_1 temp27_0) (temp26_1 temp26_0))
-                 (call-with-resolved-address.1
-                  #f
-                  temp27_1
-                  #f
-                  #f
-                  #f
-                  #f
-                  ""
-                  'udp-multicast-set-interface!
-                  hostname_0
-                  temp26_1
-                  temp29_0)))))
-         (unsafe-end-atomic))))))
+                        (check-udp-closed* 'udp-multicast-set-interface! u_0)
+                        (let ((r_0
+                               (|#%app|
+                                rktio_udp_set_multicast_interface
+                                (unsafe-place-local-ref cell.1)
+                                (unbox (udp-s-box u_0))
+                                addr_0)))
+                          (begin
+                            (end-rktio)
+                            (if (vector? r_0)
+                              (let ((mode_0 "set"))
+                                (begin
+                                  (unsafe-end-uninterruptible)
+                                  (raise-network-error
+                                   'udp-multicast-set-interface!
+                                   r_0
+                                   (string-append mode_0 "sockopt failed"))))
+                              (void)))))))))
+             (let ((temp27_1 temp27_0) (temp26_1 temp26_0))
+               (call-with-resolved-address.1
+                #f
+                temp27_1
+                #f
+                #f
+                #f
+                #f
+                ""
+                'udp-multicast-set-interface!
+                hostname_0
+                temp26_1
+                temp29_0)))))
+       (unsafe-end-uninterruptible)))))
 (define 1/udp-multicast-loopback?
   (|#%name|
    udp-multicast-loopback?

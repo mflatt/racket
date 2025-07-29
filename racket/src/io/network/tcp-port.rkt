@@ -67,7 +67,7 @@
   [prop:fd-place-message-opener (lambda (fd name)
                                   (make-tcp-output-port fd name))])
 
-;; in atomic mode or with custodian lock
+;; in uninterrupted mode or with custodian lock
 (define (make-tcp-output-port fd name
                               #:fd-refcount [fd-refcount (box 1)])
   (finish-fd-output-port
@@ -81,7 +81,7 @@
 
 ;; ----------------------------------------
 
-;; in atomic mode or with custodian lock
+;; in rktio mode or with custodian lock
 (define (open-input-output-tcp fd name #:close? [close? #t])
   (define refcount (box (if close? 2 3)))
   (values

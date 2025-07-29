@@ -29,6 +29,7 @@
          end-some-rktio
 
          end-rktio+atomic
+         end-rktio+uninterruptible
 
          rktio-place-init!
          rktio-place-destroy!)
@@ -161,6 +162,9 @@
 (define (end-rktio+atomic)
   (end-rktio)
   (end-atomic))
+(define (end-rktio+uninterruptible)
+  (end-rktio)
+  (end-uninterruptible))
 
 ;; used by thread other than the scheduler, because a sleeping
 ;; scheduler may need to be woken up to release the rktio-sleep-relevant lock

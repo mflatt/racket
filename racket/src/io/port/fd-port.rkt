@@ -130,7 +130,7 @@
 
 ;; ----------------------------------------
 
-;; in atomic mode or with custodian lock
+;; in uninterrupted mode or with custodian lock
 ;; current custodian must not be shut down
 (define (open-input-fd fd name
                        #:fd-refcount [fd-refcount (box 1)]
@@ -143,7 +143,7 @@
         [fd-refcount fd-refcount])
    #:custodian cust))
 
-;; in atomic mode or with custodian lock
+;; in uninterrupted mode or with custodian lock
 ;; current custodian must not be shut down
 (define (finish-fd-input-port p
                               #:custodian [cust (current-custodian)])
