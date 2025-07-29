@@ -184,10 +184,9 @@
     (log-future 'complete (future*-id f)))
   (cond
     [(current-future-in-future-thread)
-     (when (future*-parallel f)
-       (define th (parallel*-thread (future*-parallel f)))
-       (when th
-         (set-engine-thread-cell-state! (thread-cells th))))
+     (define p (future*-parallel f))
+     (when p
+       (set-engine-thread-cell-state! (parallel*-cells p)))
      ;; An attempt to escape will cause the future to block, so
      ;; we only need to handle success
      (call-with-values (lambda ()
@@ -203,7 +202,7 @@
      ;; result is ignored, and will not block, but might suspend
      ;; to be rescheduled to run in a future pthread
      (current-future f)
-     (set-engine-thread-cell-state! (thread-cells (parallel*-thread (future*-parallel f))))
+     (set-engine-thread-cell-state! (parallel*-cells (future*-parallel f)))
      ;; unblock thread's start has `future-start-prompt-tag` prompt:
      (thunk)]
     [(and (eq? (future*-kind f) 'would-be)
@@ -362,13 +361,14 @@
           (default-continuation-prompt-tag)
           no-results-on-abort-handler)))
      (define me-f (create-future thunk-in-prompt #f #f))
-     (define th
+     (define-values (th cells)
        (do-make-thread who
                        #:name (object-name thunk)
                        #:break-enabled-cell parallel-break-disabled-cell
                        #:custodian cust
                        #:schedule? #f
                        #:keep-result? keep-result?
+                       #:return-cells? #t
                        (lambda ()
                          (let loop ()
                            (call-with-continuation-prompt
@@ -376,11 +376,10 @@
                             future-start-prompt-tag
                             (lambda args
                               (loop)))))))
-     (set-future*-parallel! me-f (parallel* pool th #f))
-     (thread-push-kill-callback! (lambda ()
-                                   (future-external-stop me-f)
-                                   (thread-pool-departure pool -1))
-                                 th)
+     (set-future*-parallel! me-f (parallel* pool th #f cells))
+     (thread-init-kill-callback! th (lambda ()
+                                      (future-external-stop me-f)
+                                      (thread-pool-departure pool -1)))
      (thread-push-suspend+resume-callbacks! (lambda () (future-external-stop me-f))
                                             (lambda () (future-external-resume me-f))
                                             th)
@@ -401,7 +400,7 @@
               (let ([pool (create-parallel-thread-pool 'call-in-future 1 +inf.0 #f #f)])
                 (set! fsemaphore-wait-poll pool)
                 pool))))
-       (set-future*-parallel! me-f (parallel* pool #f #f))
+       (set-future*-parallel! me-f (parallel* pool #f #f #f))
        me-f]
       [else (would-be-future thunk)]))
   (dynamic-wind
