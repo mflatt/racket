@@ -27,6 +27,8 @@
          udp-default-family
 
          udp-s
+         udp-is-bound?
+         udp-is-connected?
          set-udp-is-bound?!
          set-udp-is-connected?!)
 

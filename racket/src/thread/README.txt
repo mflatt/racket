@@ -84,10 +84,11 @@ original Racket BC implementation:
 
    Any attempt to enter atomic mode at the level of Racket threads (as
    implemented in this layer) is treated as unsafe and will block the
-   future. For example, attempting to use a port will invariably go
-   into atomic mode, so port operations are still "unsafe". Any
-   attempt to use a semaphore or channel will also involve atomic
-   mode, so those are unsafe in the sense of blocking a future.
+   future. For example, a read or write through a port that needs to
+   wait for data will go into atomic mode, so some port operations are
+   still "unsafe". Any attempt to use a semaphore or channel will also
+   involve atomic mode, so those are unsafe in the sense of blocking a
+   future.
 
    Attempting to use any operation that depends on the current
    continuation or the current thread will also block, as it must.
@@ -101,12 +102,12 @@ original Racket BC implementation:
    won't switch to the main thread just long enough to perform the
    operation and then switch back to parallel mode.
 
-   To put this another way, there are no operations that trigger a 'sync
-   logging output instead of a 'block output. That's main because so
-   many more operations are safe. A second reason is that the futures
-   implementation has a finer-grained view of a computation so that it
-   doesn't see operations like `fprintf`; it sees only `start-atomic`
-   as an unsafe step inside `fprintf`.
+   To put this another way, there are no operations that trigger a
+   'sync logging output for a future instead of a 'block output.
+   That's main because so many more operations are safe. A second
+   reason is that the futures implementation has a finer-grained view
+   of a computation so that it doesn't see operations like `fprintf`;
+   it sees only `start-atomic` as an unsafe step inside `fprintf`.
 
 Each future has a lock that owns the future's representation. Taking a
 future's lock implies `start-uninterruptible`, and releasing the lock
@@ -123,7 +124,9 @@ future is special in two ways: (1) when the future blocks (e.g., hits
 `start-atomic`), the accompanying coroutine thread takes over
 automatically, as if by `touch`; and (2) a continuation that was moved
 to a coroutine thread can move back to the future after the blocking
-operation is handled (e.g., at `end-atomic`).
+operation is handled (e.g., at `end-atomic`). This difference is
+reflected in logging, where operations that would 'block for a future
+are 'sync operations for a parallel thread.
 
 The internal coroutine thread associated with a parallel thread is
 used as the external representative of the parallel thread. If it is

@@ -57,11 +57,9 @@
   (inside
    (lambda ()
      (let ([c (make-custodian)])
-       (log-error "BEF")
        (define u
          (parameterize ([current-custodian c])
            (udp-open-socket)))
-       (log-error "AFT")
        (custodian-shutdown-all c)
        (err/rt-test (udp-bind! u "127.0.0.1" 40008) exn:fail:network?)
        (err/rt-test (parameterize ([current-custodian c])

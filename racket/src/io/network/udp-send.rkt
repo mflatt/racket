@@ -137,12 +137,12 @@
      #:continue
      (lambda ()
        (cond
-         [(and addr (udp-connected? u))
+         [(and addr (udp-is-connected? u))
           (handle-error
            (lambda ()
              (raise-network-arguments-error who "udp socket is connected"
                                             "socket" u)))]
-         [(and (not addr) (not (udp-connected? u)))
+         [(and (not addr) (not (udp-is-connected? u)))
           (handle-error
            (lambda ()
              (raise-network-arguments-error who "udp socket is not connected"

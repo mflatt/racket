@@ -3164,6 +3164,10 @@
   (hash-ref rktio-table 'rktio_wide_path_to_path))
 (define rktio_processor_count (hash-ref rktio-table 'rktio_processor_count))
 (define rktio_syslog (hash-ref rktio-table 'rktio_syslog))
+(define rktio_syslog_best_effort
+  (hash-ref rktio-table 'rktio_syslog_best_effort))
+(define rktio_std_write_in_best_effort
+  (hash-ref rktio-table 'rktio_std_write_in_best_effort))
 (define rktio_convert_properties
   (hash-ref rktio-table 'rktio_convert_properties))
 (define rktio_converter_open (hash-ref rktio-table 'rktio_converter_open))
@@ -3278,43 +3282,48 @@
 (define m+s-mutex (|#%name| m+s-mutex (record-accessor struct:m+s 0)))
 (define m+s-sleep (|#%name| m+s-sleep (record-accessor struct:m+s 1)))
 (define m+s-handle (|#%name| m+s-handle (record-accessor struct:m+s 2)))
+(define cell.2$4 (unsafe-make-place-local (make-mutex)))
+(define start-rktio
+  (lambda ()
+    (begin
+      (unsafe-start-uninterruptible)
+      (assert-push-lock-level! 'rktio)
+      (mutex-acquire (unsafe-place-local-ref cell.2$4)))))
+(define end-rktio
+  (lambda ()
+    (begin
+      (mutex-release (unsafe-place-local-ref cell.2$4))
+      (assert-pop-lock-level! 'rktio)
+      (unsafe-end-uninterruptible))))
 (define make-rktio-mutex+sleep
   (lambda (rktio_0)
     (let ((app_0 (make-mutex)))
       (let ((app_1 (box #f)))
         (m+s1.1 app_0 app_1 (|#%app| rktio_get_signal_handle rktio_0))))))
-(define cell.2$1 (unsafe-make-place-local (make-mutex)))
 (define cell.3$1
   (unsafe-make-place-local
    (make-rktio-mutex+sleep (unsafe-place-local-ref cell.1))))
-(define start-rktio
-  (lambda ()
-    (begin
-      (unsafe-start-uninterruptible)
-      (mutex-acquire (unsafe-place-local-ref cell.2$1)))))
-(define end-rktio
-  (lambda ()
-    (begin
-      (mutex-release (unsafe-place-local-ref cell.2$1))
-      (unsafe-end-uninterruptible))))
-(define start-some-rktio (lambda (mutex_0) (mutex-acquire mutex_0)))
-(define end-some-rktio (lambda (mutex_0) (mutex-release mutex_0)))
 (define start-rktio-sleep-relevant
   (lambda ()
     (begin
       (unsafe-start-uninterruptible)
+      (assert-push-lock-level! 'rktio-sleep-relevant)
       (mutex-acquire/wakeup-sleep (unsafe-place-local-ref cell.3$1)))))
 (define end-rktio-sleep-relevant
   (lambda ()
     (begin
       (let ((mutex+sleep_0 (unsafe-place-local-ref cell.3$1)))
         (mutex-release (m+s-mutex mutex+sleep_0)))
+      (assert-pop-lock-level! 'rktio-sleep-relevant)
       (unsafe-end-uninterruptible))))
 (define maybe-start-sleep-rktio
   (lambda ()
     (maybe-mutex-acquire/start-sleep (unsafe-place-local-ref cell.3$1))))
 (define end-sleep-rktio
-  (lambda () (mutex-release/end-sleep (unsafe-place-local-ref cell.3$1))))
+  (lambda ()
+    (begin
+      (mutex-release/end-sleep (unsafe-place-local-ref cell.3$1))
+      (assert-pop-lock-level! 'rktio-sleep-relevant))))
 (define end-rktio+atomic (lambda () (begin (end-rktio) (unsafe-end-atomic))))
 (define end-rktio+uninterruptible
   (lambda () (begin (end-rktio) (unsafe-end-uninterruptible))))
@@ -3360,6 +3369,7 @@
   (lambda (mutex+sleep_0)
     (if (unsafe-box*-cas! (m+s-sleep mutex+sleep_0) #f 'sleep)
       (begin
+        (assert-push-lock-level! 'rktio-sleep-relevant)
         (mutex-acquire (m+s-mutex mutex+sleep_0))
         (letrec*
          ((loop_0
@@ -3373,7 +3383,10 @@
                       (if or-part_0
                         or-part_0
                         (ping-sleep-wakeup (m+s-sleep mutex+sleep_0))))
-                  (begin (mutex-release (m+s-mutex mutex+sleep_0)) #f)
+                  (begin
+                    (mutex-release (m+s-mutex mutex+sleep_0))
+                    (assert-pop-lock-level! 'rktio-sleep-relevant)
+                    #f)
                   (loop_0)))))))
          (loop_0)))
       (if (ping-sleep-wakeup (m+s-sleep mutex+sleep_0))
@@ -3394,7 +3407,7 @@
   (lambda ()
     (begin
       (unsafe-place-local-set! cell.1 (|#%app| rktio_init))
-      (unsafe-place-local-set! cell.2$1 (make-mutex))
+      (unsafe-place-local-set! cell.2$4 (make-mutex))
       (unsafe-place-local-set!
        cell.3$1
        (make-rktio-mutex+sleep (unsafe-place-local-ref cell.1))))))
@@ -3599,12 +3612,12 @@
 (define sandman-poll-ctx-poll?
   (lambda (poll-ctx_0) (|#%app| poll-ctx-poll? poll-ctx_0)))
 (define cell.1$12 (unsafe-make-place-local #f))
-(define cell.2$4 (unsafe-make-place-local #f))
+(define cell.2$3 (unsafe-make-place-local #f))
 (define sandman-set-background-sleep!
   (lambda (sleep_0 fd_0)
     (begin
       (unsafe-place-local-set! cell.1$12 sleep_0)
-      (unsafe-place-local-set! cell.2$4 fd_0))))
+      (unsafe-place-local-set! cell.2$3 fd_0))))
 (define effect_2513
   (begin
     (void
@@ -3653,7 +3666,7 @@
                                 (if sleep-secs_0 sleep-secs_0 0.0)
                                 ps_0
                                 (unsafe-place-local-ref cell.1$5)
-                                (unsafe-place-local-ref cell.2$4))
+                                (unsafe-place-local-ref cell.2$3))
                                (|#%app| (unsafe-place-local-ref cell.1$12))
                                (|#%app|
                                 rktio_end_sleep
@@ -4125,13 +4138,17 @@
         (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
         (if (eq? lock_0 'atomic)
           (begin
+            (assert-pop-lock-level! 'port)
             (unsafe-end-uninterruptible)
             (unsafe-start-atomic)
+            (assert-push-lock-level! 'port)
             (if (unsafe-struct*-cas! p_0 2 'atomic 'in-atomic)
               (void)
               (begin
+                (assert-pop-lock-level! 'port)
                 (unsafe-end-atomic)
                 (unsafe-start-uninterruptible)
+                (assert-push-lock-level! 'port)
                 (port-lock-slow p_0))))
           (if (let ((or-part_0 (eq? lock_0 #t)))
                 (if or-part_0
@@ -4144,8 +4161,10 @@
                 (port-lock-slow p_0)))
             (if (lock-atomic? lock_0)
               (begin
+                (assert-pop-lock-level! 'port)
                 (unsafe-end-uninterruptible)
                 (unsafe-start-atomic)
+                (assert-push-lock-level! 'port)
                 (lock-acquire lock_0)
                 (set-lock-was-atomic?! lock_0 #t))
               (if (lock? lock_0)
@@ -4166,13 +4185,19 @@
             (port-unlock-slow p_0))
           (if (eq? lock_0 'in-atomic)
             (if (unsafe-struct*-cas! p_0 2 'in-atomic 'atomic)
-              (begin (unsafe-end-atomic) (unsafe-start-uninterruptible))
+              (begin
+                (assert-pop-lock-level! 'port)
+                (unsafe-end-atomic)
+                (unsafe-start-uninterruptible)
+                (assert-push-lock-level! 'port))
               (port-unlock-slow p_0))
             (if (lock-was-atomic? lock_0)
               (begin
                 (lock-release lock_0)
+                (assert-pop-lock-level! 'port)
                 (unsafe-end-atomic)
-                (unsafe-start-uninterruptible))
+                (unsafe-start-uninterruptible)
+                (assert-push-lock-level! 'port))
               (if (lock? lock_0)
                 (lock-release lock_0)
                 (internal-error "tried to release port lock not held")))))))))
@@ -4296,7 +4321,7 @@
              (if who3_0
                (raise-argument-error who3_0 "input-port?" v4_0)
                default_0))))))))
-(define finish_2260
+(define finish_2218
   (make-struct-type-install-properties
    '(core-input-port)
    2
@@ -4324,6 +4349,7 @@
                           (begin
                             (begin
                               (unsafe-start-uninterruptible)
+                              (assert-push-lock-level! 'port)
                               (if (unsafe-struct*-cas! i_1 2 #f #t)
                                 (void)
                                 (port-lock-slow i_1))
@@ -4341,6 +4367,7 @@
                                 (if (unsafe-struct*-cas! i_1 2 #t #f)
                                   (void)
                                   (port-unlock-slow i_1))
+                                (assert-pop-lock-level! 'port)
                                 (unsafe-end-atomic))))))
                      (if (evt? v_0)
                        (values #f v_0)
@@ -4360,7 +4387,7 @@
    #f
    #f
    '(2 . 3)))
-(define effect_2528 (finish_2260 struct:core-input-port))
+(define effect_2528 (finish_2218 struct:core-input-port))
 (define create-core-input-port
   (|#%name|
    create-core-input-port
@@ -4619,7 +4646,7 @@
              (if who3_0
                (raise-argument-error who3_0 "output-port?" v4_0)
                default_0))))))))
-(define finish_2345
+(define finish_3032
   (make-struct-type-install-properties
    '(core-output-port)
    4
@@ -4642,6 +4669,7 @@
                      (if (begin
                            (begin
                              (unsafe-start-uninterruptible)
+                             (assert-push-lock-level! 'port)
                              (if (unsafe-struct*-cas! o_1 2 #f #t)
                                (void)
                                (port-lock-slow o_1))
@@ -4653,6 +4681,7 @@
                                (if (unsafe-struct*-cas! o_1 2 #t #f)
                                  (void)
                                  (port-unlock-slow o_1))
+                               (assert-pop-lock-level! 'port)
                                (unsafe-end-atomic))))
                        (values '(#t) #f)
                        (values #f self_0)))))))
@@ -4670,7 +4699,7 @@
    #f
    #f
    '(4 . 15)))
-(define effect_2808 (finish_2345 struct:core-output-port))
+(define effect_2808 (finish_3032 struct:core-output-port))
 (define create-core-output-port
   (|#%name|
    create-core-output-port
@@ -4854,6 +4883,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! out_0 2 #f #t)
                (void)
                (port-lock-slow out_0))
@@ -4884,6 +4914,7 @@
                  (if (unsafe-struct*-cas! out_0 2 #t #f)
                    (void)
                    (port-unlock-slow out_0))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))
                (if (evt? v_0)
                  (values #f (replace-evt v_0 self-evt_0))
@@ -6729,8 +6760,10 @@
      (if (commit-input-port-commit-manager this-id_0)
        (begin
          (port-unlock-slow this-id_0)
+         (assert-pop-lock-level! 'port)
          (begin0
            (commit-manager-pause (commit-input-port-commit-manager this-id_0))
+           (assert-push-lock-level! 'port)
            (port-lock-slow this-id_0)))
        (void)))))
 (define temp3.1
@@ -6745,7 +6778,11 @@
        (begin
          (begin
            (port-unlock-slow this-id_0)
-           (begin0 (|#%app| finish58_0) (port-lock-slow this-id_0)))
+           (assert-pop-lock-level! 'port)
+           (begin0
+             (|#%app| finish58_0)
+             (assert-push-lock-level! 'port)
+             (port-lock-slow this-id_0)))
          #t)
        (begin
          (if (commit-input-port-commit-manager this-id_0)
@@ -6755,12 +6792,14 @@
             (make-commit-manager)))
          (begin
            (port-unlock-slow this-id_0)
+           (assert-pop-lock-level! 'port)
            (begin0
              (commit-manager-wait
               (commit-input-port-commit-manager this-id_0)
               progress-evt56_0
               ext-evt57_0
               finish58_0)
+             (assert-push-lock-level! 'port)
              (port-lock-slow this-id_0))))))))
 (define temp4.1
   (|#%name|
@@ -7133,6 +7172,7 @@
             (begin
               (begin
                 (unsafe-start-uninterruptible)
+                (assert-push-lock-level! 'port)
                 (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                   (void)
                   (port-lock-slow this-id_0))
@@ -7144,6 +7184,7 @@
                   (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                     (void)
                     (port-unlock-slow this-id_0))
+                  (assert-pop-lock-level! 'port)
                   (unsafe-end-atomic))))))
          (|#%name|
           commit
@@ -7162,6 +7203,7 @@
                  (begin
                    (begin
                      (unsafe-start-uninterruptible)
+                     (assert-push-lock-level! 'port)
                      (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                        (void)
                        (port-lock-slow this-id_0))
@@ -7205,6 +7247,7 @@
                        (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                          (void)
                          (port-unlock-slow this-id_0))
+                       (assert-pop-lock-level! 'port)
                        (unsafe-end-atomic)))))))))
          (commit-input-port-methods-no-more-atomic-for-progress.1
           commit-input-port-vtable.1)
@@ -7485,6 +7528,7 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
+        (assert-push-lock-level! 'port)
         (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
         (memory-order-acquire))
       (begin0
@@ -7496,6 +7540,7 @@
         (begin
           (memory-order-release)
           (if (unsafe-struct*-cas! p_0 2 #t #f) (void) (port-unlock-slow p_0))
+          (assert-pop-lock-level! 'port)
           (unsafe-end-atomic))))))
 (define set-closed-state!
   (lambda (p_0)
@@ -7540,6 +7585,7 @@
                   (begin
                     (begin
                       (unsafe-start-uninterruptible)
+                      (assert-push-lock-level! 'port)
                       (if (unsafe-struct*-cas! p_1 2 #f #t)
                         (void)
                         (port-lock-slow p_1))
@@ -7561,6 +7607,7 @@
                         (if (unsafe-struct*-cas! p_1 2 #t #f)
                           (void)
                           (port-unlock-slow p_1))
+                        (assert-pop-lock-level! 'port)
                         (unsafe-end-atomic))))
                   (unsafe-end-atomic)))))
          (let ((self_0 #f))
@@ -7581,6 +7628,7 @@
              (if (unsafe-struct*-cas! cp4_0 2 #t #f)
                (void)
                (port-unlock-slow cp4_0))
+             (assert-pop-lock-level! 'port)
              (unsafe-end-atomic)))
          (let ((input?_0 (core-input-port? cp4_0)))
            (raise
@@ -7623,6 +7671,7 @@
        (begin
          (begin
            (unsafe-start-uninterruptible)
+           (assert-push-lock-level! 'port)
            (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
            (memory-order-acquire))
          (begin0
@@ -7635,6 +7684,7 @@
              (if (unsafe-struct*-cas! p_0 2 #t #f)
                (void)
                (port-unlock-slow p_0))
+             (assert-pop-lock-level! 'port)
              (unsafe-end-atomic))))))))
 (define 1/file-stream-buffer-mode
   (|#%name|
@@ -7652,6 +7702,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
              (memory-order-acquire))
            (begin0
@@ -7663,6 +7714,7 @@
                (if (unsafe-struct*-cas! p_1 2 #t #f)
                  (void)
                  (port-unlock-slow p_1))
+               (assert-pop-lock-level! 'port)
                (unsafe-end-atomic)))))))
     ((p_0 mode_0)
      (begin
@@ -7696,6 +7748,7 @@
                      (begin
                        (begin
                          (unsafe-start-uninterruptible)
+                         (assert-push-lock-level! 'port)
                          (if (unsafe-struct*-cas! p_1 2 #f #t)
                            (void)
                            (port-lock-slow p_1))
@@ -7714,6 +7767,7 @@
                            (if (unsafe-struct*-cas! p_1 2 #t #f)
                              (void)
                              (port-unlock-slow p_1))
+                           (assert-pop-lock-level! 'port)
                            (unsafe-end-atomic))))))))
              (begin
                (if (1/input-port? p_0)
@@ -7791,6 +7845,7 @@
              (begin
                (begin
                  (unsafe-start-uninterruptible)
+                 (assert-push-lock-level! 'port)
                  (if (unsafe-struct*-cas! cp_0 2 #f #t)
                    (void)
                    (port-lock-slow cp_0))
@@ -7804,6 +7859,7 @@
                    (if (unsafe-struct*-cas! cp_0 2 #t #f)
                      (void)
                      (port-unlock-slow cp_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))))
              (raise-arguments-error
               'file-position
@@ -7828,6 +7884,7 @@
       (begin
         (begin
           (unsafe-start-uninterruptible)
+          (assert-push-lock-level! 'port)
           (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
           (memory-order-acquire))
         (begin
@@ -7842,6 +7899,7 @@
                   (if (unsafe-struct*-cas! p_0 2 #t #f)
                     (void)
                     (port-unlock-slow p_0))
+                  (assert-pop-lock-level! 'port)
                   (unsafe-end-atomic))
                 (do-simple-file-position who_0 file-position_0 fail-k_0))
               (let ((pos_0
@@ -7856,6 +7914,7 @@
                     (if (unsafe-struct*-cas! p_0 2 #t #f)
                       (void)
                       (port-unlock-slow p_0))
+                    (assert-pop-lock-level! 'port)
                     (unsafe-end-atomic))
                   (if pos_0 pos_0 (|#%app| fail-k_0)))))))))))
 (define 1/port-count-lines-enabled
@@ -7878,6 +7937,7 @@
        (begin
          (begin
            (unsafe-start-uninterruptible)
+           (assert-push-lock-level! 'port)
            (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
            (memory-order-acquire))
          (begin0
@@ -7905,6 +7965,7 @@
              (if (unsafe-struct*-cas! p_1 2 #t #f)
                (void)
                (port-unlock-slow p_1))
+             (assert-pop-lock-level! 'port)
              (unsafe-end-atomic))))))))
 (define 1/port-counts-lines?
   (|#%name|
@@ -7933,6 +7994,7 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
+               (assert-push-lock-level! 'port)
                (if (unsafe-struct*-cas! p_1 2 #f #t)
                  (void)
                  (port-lock-slow p_1))
@@ -7953,6 +8015,7 @@
                  (if (unsafe-struct*-cas! p_1 2 #t #f)
                    (void)
                    (port-unlock-slow p_1))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))))
            (if (core-port-methods-file-position.1 (core-port-vtable p_1))
              (let ((offset_0
@@ -7965,6 +8028,7 @@
                     (begin
                       (begin
                         (unsafe-start-uninterruptible)
+                        (assert-push-lock-level! 'port)
                         (if (unsafe-struct*-cas! p_1 2 #f #t)
                           (void)
                           (port-lock-slow p_1))
@@ -7976,6 +8040,7 @@
                           (if (unsafe-struct*-cas! p_1 2 #t #f)
                             (void)
                             (port-unlock-slow p_1))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic))))))
                (values #f #f (if offset_0 (add1 offset_0) #f))))))))))
 (define 1/set-port-next-location!
@@ -8015,6 +8080,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
              (memory-order-acquire))
            (begin0
@@ -8034,6 +8100,7 @@
                (if (unsafe-struct*-cas! p_1 2 #t #f)
                  (void)
                  (port-unlock-slow p_1))
+               (assert-pop-lock-level! 'port)
                (unsafe-end-atomic)))))))))
 (define port-count!
   (lambda (in_0 amt_0 bstr_0 start_0)
@@ -8320,6 +8387,7 @@
                    (if (unsafe-struct*-cas! p5_0 2 #t #f)
                      (void)
                      (port-unlock-slow p5_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))
                  (let ((base-msg_0 "error closing stream port"))
                    (raise
@@ -8638,6 +8706,7 @@
                                     (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                                       (void)
                                       (port-unlock-slow this-id_0))
+                                    (assert-pop-lock-level! 'port)
                                     (unsafe-end-atomic))
                                   (|#%app|
                                    (fd-input-port-methods-raise-read-error.1
@@ -8745,7 +8814,7 @@
               p17_0
               (register-fd-close cust_0 fd_0 fd-refcount_0 #f p17_0))
              (finish-port/count p17_0))))))))
-(define finish_1860
+(define finish_2391
   (make-struct-type-install-properties
    '(fd-output-port)
    8
@@ -8778,6 +8847,7 @@
                  (if (unsafe-struct*-cas! p_0 2 #t #f)
                    (void)
                    (port-unlock-slow p_0))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))
                (let ((base-msg_0 "error setting file size"))
                  (raise
@@ -8809,7 +8879,7 @@
    #f
    #f
    '(8 . 255)))
-(define effect_2896 (finish_1860 struct:fd-output-port))
+(define effect_2896 (finish_2391 struct:fd-output-port))
 (define create-fd-output-port
   (|#%name|
    create-fd-output-port
@@ -9123,6 +9193,7 @@
                                 (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                                   (void)
                                   (port-unlock-slow this-id_0))
+                                (assert-pop-lock-level! 'port)
                                 (unsafe-end-atomic))
                               (|#%app|
                                (fd-output-port-methods-raise-write-error.1
@@ -9240,6 +9311,7 @@
                      (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                        (void)
                        (port-unlock-slow this-id_0))
+                     (assert-pop-lock-level! 'port)
                      (unsafe-end-atomic))
                    (|#%app|
                     (fd-output-port-methods-raise-write-error.1
@@ -9276,12 +9348,14 @@
                  (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                    (void)
                    (port-unlock-slow this-id_0))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))
                (if enable-break?670_0
                  (sync/enable-break (core-output-port-evt this-id_0))
                  (sync (core-output-port-evt this-id_0)))
                (begin
                  (unsafe-start-uninterruptible)
+                 (assert-push-lock-level! 'port)
                  (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                    (void)
                    (port-lock-slow this-id_0))
@@ -9340,10 +9414,12 @@
            (if (unsafe-struct*-cas! this-id_0 2 #t #f)
              (void)
              (port-unlock-slow this-id_0))
+           (assert-pop-lock-level! 'port)
            (unsafe-end-atomic))
          (sync (rktio-fd-flushed-evt48.1 this-id_0))
          (begin
            (unsafe-start-uninterruptible)
+           (assert-push-lock-level! 'port)
            (if (unsafe-struct*-cas! this-id_0 2 #f #t)
              (void)
              (port-lock-slow this-id_0))
@@ -9420,6 +9496,7 @@
                            (begin
                              (begin
                                (unsafe-start-uninterruptible)
+                               (assert-push-lock-level! 'port)
                                (if (unsafe-struct*-cas! p45_0 2 #f #t)
                                  (void)
                                  (port-lock-slow p45_0))
@@ -9431,6 +9508,7 @@
                                  (if (unsafe-struct*-cas! p45_0 2 #t #f)
                                    (void)
                                    (port-unlock-slow p45_0))
+                                 (assert-pop-lock-level! 'port)
                                  (unsafe-end-atomic))))))
                         #f)))
                  (let ((custodian-reference_0
@@ -9459,6 +9537,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! cp_0 2 #f #t)
                (void)
                (port-lock-slow cp_0))
@@ -9480,6 +9559,7 @@
                (if (unsafe-struct*-cas! cp_0 2 #t #f)
                  (void)
                  (port-unlock-slow cp_0))
+               (assert-pop-lock-level! 'port)
                (unsafe-end-atomic)))))))))
 (define fd-port-fd
   (lambda (cp_0)
@@ -9496,6 +9576,7 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
+               (assert-push-lock-level! 'port)
                (if (unsafe-struct*-cas! cp_0 2 #f #t)
                  (void)
                  (port-lock-slow cp_0))
@@ -9515,6 +9596,7 @@
                  (if (unsafe-struct*-cas! cp_0 2 #t #f)
                    (void)
                    (port-unlock-slow cp_0))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))))
            #f)
          (if (1/input-port? p_0)
@@ -9526,14 +9608,10 @@
       (start-rktio)
       (begin0
         (let ((ppos_0
-               (begin
-                 (start-rktio)
-                 (begin0
-                   (|#%app|
-                    rktio_get_file_position
-                    (unsafe-place-local-ref cell.1)
-                    fd_0)
-                   (end-rktio)))))
+               (|#%app|
+                rktio_get_file_position
+                (unsafe-place-local-ref cell.1)
+                fd_0)))
           (if (vector? ppos_0)
             #f
             (let ((pos_0 (|#%app| rktio_filesize_ref ppos_0)))
@@ -9559,6 +9637,7 @@
             (if (unsafe-struct*-cas! p_0 2 #t #f)
               (void)
               (port-unlock-slow p_0))
+            (assert-pop-lock-level! 'port)
             (unsafe-end-atomic))
           (let ((base-msg_0 "error setting stream position"))
             (raise
@@ -9798,6 +9877,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! port_1 2 #f #t)
                (void)
                (port-lock-slow port_1))
@@ -9826,6 +9906,7 @@
                (if (unsafe-struct*-cas! port_1 2 #t #f)
                  (void)
                  (port-unlock-slow port_1))
+               (assert-pop-lock-level! 'port)
                (unsafe-end-atomic))))))
      #f
      #f)))
@@ -9839,6 +9920,7 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
+        (assert-push-lock-level! 'port)
         (if (unsafe-struct*-cas! port_0 2 #f #t)
           (void)
           (port-lock-slow port_0))
@@ -9850,6 +9932,7 @@
             (if (unsafe-struct*-cas! port_0 2 #t #f)
               (void)
               (port-unlock-slow port_0))
+            (assert-pop-lock-level! 'port)
             (unsafe-end-atomic))
           #f)
         (let ((input?_0 (1/input-port? port_0)))
@@ -9897,6 +9980,7 @@
                       (if (unsafe-struct*-cas! port_0 2 #t #f)
                         (void)
                         (port-unlock-slow port_0))
+                      (assert-pop-lock-level! 'port)
                       (unsafe-end-atomic))
                     (lambda ()
                       (begin
@@ -9921,6 +10005,7 @@
                   (if (unsafe-struct*-cas! port_0 2 #t #f)
                     (void)
                     (port-unlock-slow port_0))
+                  (assert-pop-lock-level! 'port)
                   (unsafe-end-atomic))
                 (let ((base-msg_0 "error during dup of file descriptor"))
                   (raise
@@ -10005,7 +10090,7 @@
              temp7_1
              'stderr)))))))
 (define cell.1$11 (unsafe-make-place-local (make-stdin)))
-(define cell.2$3 (unsafe-make-place-local (make-stdout)))
+(define cell.2$2 (unsafe-make-place-local (make-stdout)))
 (define cell.3 (unsafe-make-place-local (make-stderr)))
 (define 1/current-input-port
   (make-parameter
@@ -10019,7 +10104,7 @@
    'current-input-port))
 (define 1/current-output-port
   (make-parameter
-   (unsafe-place-local-ref cell.2$3)
+   (unsafe-place-local-ref cell.2$2)
    (lambda (v_0)
      (begin
        (if (1/output-port? v_0)
@@ -10046,7 +10131,7 @@
          (open-input-fd.1 cust_0 unsafe-undefined in-fd_0 temp12_0)))
       (1/current-input-port (unsafe-place-local-ref cell.1$11))
       (unsafe-place-local-set!
-       cell.2$3
+       cell.2$2
        (let ((temp15_0 "stdout"))
          (let ((temp18_0
                 (|#%app|
@@ -10062,7 +10147,7 @@
               plumber_0
               out-fd_0
               temp15_1)))))
-      (1/current-output-port (unsafe-place-local-ref cell.2$3))
+      (1/current-output-port (unsafe-place-local-ref cell.2$2))
       (unsafe-place-local-set!
        cell.3
        (let ((temp20_0 "srderr"))
@@ -10255,6 +10340,7 @@
                   (begin
                     (begin
                       (unsafe-start-uninterruptible)
+                      (assert-push-lock-level! 'port)
                       (if (unsafe-struct*-cas! in_1 2 #f #t)
                         (void)
                         (port-lock-slow in_1))
@@ -10280,6 +10366,7 @@
                         (if (unsafe-struct*-cas! in_1 2 #t #f)
                           (void)
                           (port-unlock-slow in_1))
+                        (assert-pop-lock-level! 'port)
                         (unsafe-end-atomic)))))))))))
     (|#%name|
      port-commit-peeked
@@ -10324,6 +10411,7 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
+               (assert-push-lock-level! 'port)
                (if (unsafe-struct*-cas! in_0 2 #f #t)
                  (void)
                  (port-lock-slow in_0))
@@ -10336,6 +10424,7 @@
                    (if (unsafe-struct*-cas! in_0 2 #t #f)
                      (void)
                      (port-unlock-slow in_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))
                  0)
                (if (core-port-closed? in_0)
@@ -10350,6 +10439,7 @@
                        (if (unsafe-struct*-cas! in_0 2 #t #f)
                          (void)
                          (port-unlock-slow in_0))
+                       (assert-pop-lock-level! 'port)
                        (unsafe-end-atomic))
                      eof)
                    (let ((buffer_0 (core-port-buffer in_0)))
@@ -10385,6 +10475,7 @@
                                    (if (unsafe-struct*-cas! in_0 2 #t #f)
                                      (void)
                                      (port-unlock-slow in_0))
+                                   (assert-pop-lock-level! 'port)
                                    (unsafe-end-atomic))
                                  v_0)))
                            (let ((read-in_0
@@ -10429,6 +10520,7 @@
                                                 #f)
                                              (void)
                                              (port-unlock-slow in_0))
+                                           (assert-pop-lock-level! 'port)
                                            (unsafe-end-atomic))
                                          (if (exact-nonnegative-integer? v_1)
                                            (if (zero? v_1)
@@ -10483,6 +10575,8 @@
                                                        (begin
                                                          (begin
                                                            (unsafe-start-uninterruptible)
+                                                           (assert-push-lock-level!
+                                                            'port)
                                                            (if (unsafe-struct*-cas!
                                                                 in_0
                                                                 2
@@ -10524,6 +10618,7 @@
                                    (if (unsafe-struct*-cas! in_0 2 #t #f)
                                      (void)
                                      (port-unlock-slow in_0))
+                                   (assert-pop-lock-level! 'port)
                                    (unsafe-end-atomic))
                                  (let ((app_0
                                         (->core-input-port.1
@@ -10559,6 +10654,7 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
+               (assert-push-lock-level! 'port)
                (if (unsafe-struct*-cas! in_0 2 #f #t)
                  (void)
                  (port-lock-slow in_0))
@@ -10571,6 +10667,7 @@
                    (if (unsafe-struct*-cas! in_0 2 #t #f)
                      (void)
                      (port-unlock-slow in_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))
                  0)
                (if (if progress-evt19_0 (sync/timeout 0 progress-evt19_0) #f)
@@ -10580,6 +10677,7 @@
                      (if (unsafe-struct*-cas! in_0 2 #t #f)
                        (void)
                        (port-unlock-slow in_0))
+                     (assert-pop-lock-level! 'port)
                      (unsafe-end-atomic))
                    0)
                  (if (core-port-closed? in_0)
@@ -10591,6 +10689,7 @@
                          (if (unsafe-struct*-cas! in_0 2 #t #f)
                            (void)
                            (port-unlock-slow in_0))
+                         (assert-pop-lock-level! 'port)
                          (unsafe-end-atomic))
                        eof)
                      (let ((buffer_0 (core-port-buffer in_0)))
@@ -10613,6 +10712,7 @@
                                    (if (unsafe-struct*-cas! in_0 2 #t #f)
                                      (void)
                                      (port-unlock-slow in_0))
+                                   (assert-pop-lock-level! 'port)
                                    (unsafe-end-atomic))
                                  v_0))
                              (let ((peek-in_0
@@ -10635,6 +10735,7 @@
                                        (if (unsafe-struct*-cas! in_0 2 #t #f)
                                          (void)
                                          (port-unlock-slow in_0))
+                                       (assert-pop-lock-level! 'port)
                                        (unsafe-end-atomic))
                                      (letrec*
                                       ((result-loop_0
@@ -10711,6 +10812,7 @@
                                      (if (unsafe-struct*-cas! in_0 2 #t #f)
                                        (void)
                                        (port-unlock-slow in_0))
+                                     (assert-pop-lock-level! 'port)
                                      (unsafe-end-atomic))
                                    (loop_0
                                     (->core-input-port.1
@@ -10725,6 +10827,7 @@
      (begin
        (begin
          (unsafe-start-uninterruptible)
+         (assert-push-lock-level! 'port)
          (if (unsafe-struct*-cas! in41_0 2 #f #t)
            (void)
            (port-lock-slow in41_0))
@@ -10743,6 +10846,7 @@
                    (if (unsafe-struct*-cas! in41_0 2 #t #f)
                      (void)
                      (port-unlock-slow in41_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))
                  b_0))
              (begin
@@ -10751,6 +10855,7 @@
                  (if (unsafe-struct*-cas! in41_0 2 #t #f)
                    (void)
                    (port-unlock-slow in41_0))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))
                (read-byte-via-bytes.1 special-ok?38_0 who40_0 in41_0)))))))))
 (define read-byte-via-bytes.1
@@ -10779,6 +10884,7 @@
      (begin
        (begin
          (unsafe-start-uninterruptible)
+         (assert-push-lock-level! 'port)
          (if (unsafe-struct*-cas! in51_0 2 #f #t)
            (void)
            (port-lock-slow in51_0))
@@ -10793,6 +10899,7 @@
                    (if (unsafe-struct*-cas! in51_0 2 #t #f)
                      (void)
                      (port-unlock-slow in51_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))
                  b_0))
              (begin
@@ -10801,6 +10908,7 @@
                  (if (unsafe-struct*-cas! in51_0 2 #t #f)
                    (void)
                    (port-unlock-slow in51_0))
+                 (assert-pop-lock-level! 'port)
                  (unsafe-end-atomic))
                (peek-byte-via-bytes.1
                 #f
@@ -10833,6 +10941,7 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
+        (assert-push-lock-level! 'port)
         (if (unsafe-struct*-cas! in_0 2 #f #t) (void) (port-lock-slow in_0))
         (memory-order-acquire))
       (let ((buffer_0 (core-port-buffer in_0)))
@@ -10870,6 +10979,7 @@
                                   (if (unsafe-struct*-cas! in_0 2 #t #f)
                                     (void)
                                     (port-unlock-slow in_0))
+                                  (assert-pop-lock-level! 'port)
                                   (unsafe-end-atomic))
                                 result_0))))))))
                 (letrec*
@@ -10884,6 +10994,7 @@
                             (if (unsafe-struct*-cas! in_0 2 #t #f)
                               (void)
                               (port-unlock-slow in_0))
+                            (assert-pop-lock-level! 'port)
                             (unsafe-end-atomic))
                           #f)
                         (let ((b_0 (unsafe-bytes-ref bstr_0 i_0)))
@@ -10906,6 +11017,7 @@
                                         (if (unsafe-struct*-cas! in_0 2 #t #f)
                                           (void)
                                           (port-unlock-slow in_0))
+                                        (assert-pop-lock-level! 'port)
                                         (unsafe-end-atomic))
                                       #f)
                                     (finish_0 i_0 (fx+ i_0 1)))
@@ -10957,6 +11069,7 @@
        (begin
          (begin
            (unsafe-start-uninterruptible)
+           (assert-push-lock-level! 'port)
            (if (unsafe-struct*-cas! p_0 2 #f #t) (void) (port-lock-slow p_0))
            (memory-order-acquire))
          (begin0
@@ -10966,6 +11079,7 @@
              (if (unsafe-struct*-cas! p_0 2 #t #f)
                (void)
                (port-unlock-slow p_0))
+             (assert-pop-lock-level! 'port)
              (unsafe-end-atomic))))))))
 (define finish_2207
   (make-struct-type-install-properties
@@ -11452,6 +11566,7 @@
           (begin
             (begin
               (unsafe-start-uninterruptible)
+              (assert-push-lock-level! 'port)
               (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                 (void)
                 (port-lock-slow this-id_0))
@@ -11466,6 +11581,7 @@
                 (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                   (void)
                   (port-unlock-slow this-id_0))
+                (assert-pop-lock-level! 'port)
                 (unsafe-end-atomic))))))
        (|#%name|
         commit
@@ -11480,6 +11596,7 @@
                (begin
                  (begin
                    (unsafe-start-uninterruptible)
+                   (assert-push-lock-level! 'port)
                    (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                      (void)
                      (port-lock-slow this-id_0))
@@ -11536,6 +11653,7 @@
                      (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                        (void)
                        (port-unlock-slow this-id_0))
+                     (assert-pop-lock-level! 'port)
                      (unsafe-end-atomic)))))))))
        (|#%name| no-more-atomic-for-progress (lambda (this-id_0) (void)))))))
 (define temp13.1
@@ -12156,7 +12274,7 @@
        (make-pipe_0 limit_0 input-name_0 output-name26_0))
       ((limit_0 input-name25_0) (make-pipe_0 limit_0 input-name25_0 'pipe))
       ((limit24_0) (make-pipe_0 limit24_0 'pipe 'pipe))))))
-(define finish_2531
+(define finish_2456
   (make-struct-type-install-properties
    '(pipe-write-poller)
    1
@@ -12191,6 +12309,7 @@
                       (begin
                         (begin
                           (unsafe-start-uninterruptible)
+                          (assert-push-lock-level! 'port)
                           (if (unsafe-struct*-cas! in_0 2 #f #t)
                             (void)
                             (port-lock-slow in_0))
@@ -12201,6 +12320,7 @@
                           (if (unsafe-struct*-cas! in_0 2 #t #f)
                             (void)
                             (port-unlock-slow in_0))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic)))
                       (void))
                     (values
@@ -12221,7 +12341,7 @@
    #f
    #f
    '(1 . 0)))
-(define effect_2599 (finish_2531 struct:pipe-write-poller))
+(define effect_2599 (finish_2456 struct:pipe-write-poller))
 (define pipe-write-poller27.1
   (|#%name|
    pipe-write-poller
@@ -12254,7 +12374,7 @@
          0
          s
          'd))))))
-(define finish_2239
+(define finish_2472
   (make-struct-type-install-properties
    '(pipe-read-poller)
    1
@@ -12289,6 +12409,7 @@
                       (begin
                         (begin
                           (unsafe-start-uninterruptible)
+                          (assert-push-lock-level! 'port)
                           (if (unsafe-struct*-cas! out_0 2 #f #t)
                             (void)
                             (port-lock-slow out_0))
@@ -12299,6 +12420,7 @@
                           (if (unsafe-struct*-cas! out_0 2 #t #f)
                             (void)
                             (port-unlock-slow out_0))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic)))
                       (void))
                     (values
@@ -12319,7 +12441,7 @@
    #f
    #f
    '(1 . 0)))
-(define effect_2907 (finish_2239 struct:pipe-read-poller))
+(define effect_2907 (finish_2472 struct:pipe-read-poller))
 (define pipe-read-poller28.1
   (|#%name|
    pipe-read-poller
@@ -12384,6 +12506,7 @@
                                   (begin
                                     (begin
                                       (unsafe-start-uninterruptible)
+                                      (assert-push-lock-level! 'port)
                                       (if (unsafe-struct*-cas! out_0 2 #f #t)
                                         (void)
                                         (port-lock-slow out_0))
@@ -12414,6 +12537,7 @@
                                                  #f)
                                               (void)
                                               (port-unlock-slow out_0))
+                                            (assert-pop-lock-level! 'port)
                                             (unsafe-end-atomic))
                                           (letrec*
                                            ((r-loop_0
@@ -12435,6 +12559,7 @@
                               (begin
                                 (begin
                                   (unsafe-start-uninterruptible)
+                                  (assert-push-lock-level! 'port)
                                   (if (unsafe-struct*-cas! out_0 2 #f #t)
                                     (void)
                                     (port-lock-slow out_0))
@@ -12446,6 +12571,7 @@
                                     (if (unsafe-struct*-cas! out_0 2 #t #f)
                                       (void)
                                       (port-unlock-slow out_0))
+                                    (assert-pop-lock-level! 'port)
                                     (unsafe-end-atomic))))
                               (wo-loop_0 write-out_0)))))))))
                  (wo-loop_0 p_0))))))))
@@ -12458,8 +12584,8 @@
   (lambda (in_0)
     (if (eq? in_0 (unsafe-place-local-ref cell.1$11))
       (begin
-        (if (1/terminal-port? (unsafe-place-local-ref cell.2$3))
-          (1/flush-output (unsafe-place-local-ref cell.2$3))
+        (if (1/terminal-port? (unsafe-place-local-ref cell.2$2))
+          (1/flush-output (unsafe-place-local-ref cell.2$2))
           (void))
         (if (1/terminal-port? (unsafe-place-local-ref cell.3))
           (1/flush-output (unsafe-place-local-ref cell.3))
@@ -14153,6 +14279,7 @@
            (begin
              (begin
                (unsafe-start-uninterruptible)
+               (assert-push-lock-level! 'port)
                (if (unsafe-struct*-cas! out_0 2 #f #t)
                  (void)
                  (port-lock-slow out_0))
@@ -14165,6 +14292,7 @@
                    (if (unsafe-struct*-cas! out_0 2 #t #f)
                      (void)
                      (port-unlock-slow out_0))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))
                  0)
                (let ((buffer_0 (core-port-buffer out_0)))
@@ -14199,6 +14327,7 @@
                              (if (unsafe-struct*-cas! out_0 2 #t #f)
                                (void)
                                (port-unlock-slow out_0))
+                             (assert-pop-lock-level! 'port)
                              (unsafe-end-atomic))
                            v_0))
                        (begin
@@ -14234,6 +14363,7 @@
                                                 #f)
                                              (void)
                                              (port-unlock-slow out_0))
+                                           (assert-pop-lock-level! 'port)
                                            (unsafe-end-atomic))
                                          (if zero-ok?3_0
                                            0
@@ -14257,6 +14387,7 @@
                                                   #f)
                                                (void)
                                                (port-unlock-slow out_0))
+                                             (assert-pop-lock-level! 'port)
                                              (unsafe-end-atomic))
                                            v_1)
                                          (if (evt? v_1)
@@ -14270,6 +14401,7 @@
                                                     #f)
                                                  (void)
                                                  (port-unlock-slow out_0))
+                                               (assert-pop-lock-level! 'port)
                                                (unsafe-end-atomic))
                                              (if zero-ok?3_0
                                                0
@@ -14280,6 +14412,8 @@
                                                  (begin
                                                    (begin
                                                      (unsafe-start-uninterruptible)
+                                                     (assert-push-lock-level!
+                                                      'port)
                                                      (if (unsafe-struct*-cas!
                                                           out_0
                                                           2
@@ -14299,6 +14433,7 @@
                                                     #f)
                                                  (void)
                                                  (port-unlock-slow out_0))
+                                               (assert-pop-lock-level! 'port)
                                                (unsafe-end-atomic))
                                              (internal-error
                                               (format
@@ -14315,6 +14450,7 @@
                                  (if (unsafe-struct*-cas! out_0 2 #t #f)
                                    (void)
                                    (port-unlock-slow out_0))
+                                 (assert-pop-lock-level! 'port)
                                  (unsafe-end-atomic))
                                (let ((app_0
                                       (->core-output-port.1
@@ -14356,6 +14492,7 @@
     (begin
       (begin
         (unsafe-start-uninterruptible)
+        (assert-push-lock-level! 'port)
         (if (unsafe-struct*-cas! out_0 2 #f #t) (void) (port-lock-slow out_0))
         (memory-order-acquire))
       (let ((buffer_0 (core-port-buffer out_0)))
@@ -14373,6 +14510,7 @@
                   (if (unsafe-struct*-cas! out_0 2 #t #f)
                     (void)
                     (port-unlock-slow out_0))
+                  (assert-pop-lock-level! 'port)
                   (unsafe-end-atomic)))
               (begin
                 (begin
@@ -14380,6 +14518,7 @@
                   (if (unsafe-struct*-cas! out_0 2 #t #f)
                     (void)
                     (port-unlock-slow out_0))
+                  (assert-pop-lock-level! 'port)
                   (unsafe-end-atomic))
                 (let ((temp34_0 (bytes b_0)))
                   (write-some-bytes.1
@@ -14690,6 +14829,7 @@
                     (begin
                       (begin
                         (unsafe-start-uninterruptible)
+                        (assert-push-lock-level! 'port)
                         (if (unsafe-struct*-cas! out_1 2 #f #t)
                           (void)
                           (port-lock-slow out_1))
@@ -14709,6 +14849,7 @@
                                     (if (unsafe-struct*-cas! out_1 2 #t #f)
                                       (void)
                                       (port-unlock-slow out_1))
+                                    (assert-pop-lock-level! 'port)
                                     (unsafe-end-atomic))
                                   (raise-arguments-error
                                    'write-bytes-avail-evt
@@ -14726,6 +14867,7 @@
                           (if (unsafe-struct*-cas! out_1 2 #t #f)
                             (void)
                             (port-unlock-slow out_1))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic))))))))))))
     (|#%name|
      write-bytes-avail-evt
@@ -14750,6 +14892,7 @@
          (if (begin
                (begin
                  (unsafe-start-uninterruptible)
+                 (assert-push-lock-level! 'port)
                  (if (unsafe-struct*-cas! out_1 2 #f #t)
                    (void)
                    (port-lock-slow out_1))
@@ -14762,6 +14905,7 @@
                    (if (unsafe-struct*-cas! out_1 2 #t #f)
                      (void)
                      (port-unlock-slow out_1))
+                   (assert-pop-lock-level! 'port)
                    (unsafe-end-atomic))))
            #t
            #f))))))
@@ -14919,6 +15063,7 @@
                            (begin
                              (begin
                                (unsafe-start-uninterruptible)
+                               (assert-push-lock-level! 'port)
                                (if (unsafe-struct*-cas! o_1 2 #f #t)
                                  (void)
                                  (port-lock-slow o_1))
@@ -14946,6 +15091,7 @@
                                                 #f)
                                              (void)
                                              (port-unlock-slow o_1))
+                                           (assert-pop-lock-level! 'port)
                                            (unsafe-end-atomic))
                                          (if retry?1_0 (loop_0) #f))
                                        (if (evt? r_1)
@@ -14959,6 +15105,7 @@
                                                   #f)
                                                (void)
                                                (port-unlock-slow o_1))
+                                             (assert-pop-lock-level! 'port)
                                              (unsafe-end-atomic))
                                            (if retry?1_0
                                              (result-loop_0 (sync r_1))
@@ -14979,6 +15126,7 @@
                                                   #f)
                                                (void)
                                                (port-unlock-slow o_1))
+                                             (assert-pop-lock-level! 'port)
                                              (unsafe-end-atomic))
                                            #t)))))))
                                 (result-loop_0 r_0))))))))
@@ -17155,14 +17303,14 @@
   (|#%name| set-cache-from! (record-mutator struct:cache 3)))
 (define new-cache (lambda () (cache1.1 #f #f #f #f)))
 (define cell.1$9 (unsafe-make-place-local (new-cache)))
-(define cell.2$2
+(define cell.2$1
   (unsafe-make-place-local (|#%app| 1/unsafe-make-custodian-at-root)))
 (define convert-cache-init!
   (lambda ()
     (begin
       (unsafe-place-local-set! cell.1$9 (new-cache))
       (unsafe-place-local-set!
-       cell.2$2
+       cell.2$1
        (|#%app| 1/unsafe-make-custodian-at-root)))))
 (define cache-clear!
   (lambda (get_0 update!_0)
@@ -17212,7 +17360,7 @@
         or-part_0
         (bytes-open-converter-in-custodian
          'bytes-open-converter/cached-to
-         (unsafe-place-local-ref cell.2$2)
+         (unsafe-place-local-ref cell.2$1)
          ucs-4-encoding
          enc_0)))))
 (define bytes-open-converter/cached-to2
@@ -17222,7 +17370,7 @@
         or-part_0
         (bytes-open-converter-in-custodian
          'bytes-open-converter/cached-to2
-         (unsafe-place-local-ref cell.2$2)
+         (unsafe-place-local-ref cell.2$1)
          ucs-4-encoding
          enc_0)))))
 (define bytes-open-converter/cached-from
@@ -17232,7 +17380,7 @@
         or-part_0
         (bytes-open-converter-in-custodian
          'bytes-open-converter/cached-from
-         (unsafe-place-local-ref cell.2$2)
+         (unsafe-place-local-ref cell.2$1)
          enc_0
          "UTF-8")))))
 (define bytes-close-converter/cached-to
@@ -18869,6 +19017,7 @@
             (begin
               (begin
                 (unsafe-start-uninterruptible)
+                (assert-push-lock-level! 'port)
                 (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                   (void)
                   (port-lock-slow this-id_0))
@@ -18892,6 +19041,7 @@
                   (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                     (void)
                     (port-unlock-slow this-id_0))
+                  (assert-pop-lock-level! 'port)
                   (unsafe-end-atomic))))))
          (|#%name|
           commit
@@ -18908,6 +19058,7 @@
                (begin
                  (begin
                    (unsafe-start-uninterruptible)
+                   (assert-push-lock-level! 'port)
                    (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                      (void)
                      (port-lock-slow this-id_0))
@@ -18938,6 +19089,7 @@
                      (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                        (void)
                        (port-unlock-slow this-id_0))
+                     (assert-pop-lock-level! 'port)
                      (unsafe-end-atomic))))))))
          (commit-input-port-methods-no-more-atomic-for-progress.1
           commit-input-port-vtable.1))))))
@@ -19144,6 +19296,7 @@
                                   (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                                     (void)
                                     (port-unlock-slow this-id_0))
+                                  (assert-pop-lock-level! 'port)
                                   (unsafe-end-atomic))
                                 (raise-arguments-error
                                  'file-position
@@ -19336,6 +19489,7 @@
                 (begin
                   (begin
                     (unsafe-start-uninterruptible)
+                    (assert-push-lock-level! 'port)
                     (if (unsafe-struct*-cas! o_0 2 #f #t)
                       (void)
                       (port-lock-slow o_0))
@@ -19353,6 +19507,7 @@
                             (if (unsafe-struct*-cas! o_0 2 #t #f)
                               (void)
                               (port-unlock-slow o_0))
+                            (assert-pop-lock-level! 'port)
                             (unsafe-end-atomic))
                           (raise-range-error
                            'get-output-bytes
@@ -19374,6 +19529,7 @@
                                 (if (unsafe-struct*-cas! o_0 2 #t #f)
                                   (void)
                                   (port-unlock-slow o_0))
+                                (assert-pop-lock-level! 'port)
                                 (unsafe-end-atomic))
                               (raise-range-error
                                'get-output-bytes
@@ -19403,6 +19559,7 @@
                                 (if (unsafe-struct*-cas! o_0 2 #t #f)
                                   (void)
                                   (port-unlock-slow o_0))
+                                (assert-pop-lock-level! 'port)
                                 (unsafe-end-atomic))
                               bstr_0)))))))))))))
     (|#%name|
@@ -19615,6 +19772,7 @@
                                   (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                                     (void)
                                     (port-unlock-slow this-id_0))
+                                  (assert-pop-lock-level! 'port)
                                   (unsafe-end-atomic))
                                 (let ((wrote-len_0
                                        (let ((app_7
@@ -19627,6 +19785,7 @@
                                   (begin
                                     (begin
                                       (unsafe-start-uninterruptible)
+                                      (assert-push-lock-level! 'port)
                                       (if (unsafe-struct*-cas!
                                            this-id_0
                                            2
@@ -19664,6 +19823,7 @@
                           (if (unsafe-struct*-cas! this-id_0 2 #t #f)
                             (void)
                             (port-unlock-slow this-id_0))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic))
                         (let ((len_0
                                (1/write-bytes
@@ -19674,6 +19834,7 @@
                           (begin
                             (begin
                               (unsafe-start-uninterruptible)
+                              (assert-push-lock-level! 'port)
                               (if (unsafe-struct*-cas! this-id_0 2 #f #t)
                                 (void)
                                 (port-lock-slow this-id_0))
@@ -26716,6 +26877,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! cp_0 2 #f #t)
                (void)
                (port-lock-slow cp_0))
@@ -26730,6 +26892,7 @@
                           (if (unsafe-struct*-cas! cp_0 2 #t #f)
                             (void)
                             (port-unlock-slow cp_0))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic)))))
                  (path-or-fd-identity.1
                   #f
@@ -26888,6 +27051,7 @@
          (begin
            (begin
              (unsafe-start-uninterruptible)
+             (assert-push-lock-level! 'port)
              (if (unsafe-struct*-cas! cp_0 2 #f #t)
                (void)
                (port-lock-slow cp_0))
@@ -26902,6 +27066,7 @@
                           (if (unsafe-struct*-cas! cp_0 2 #t #f)
                             (void)
                             (port-unlock-slow cp_0))
+                          (assert-pop-lock-level! 'port)
                           (unsafe-end-atomic)))))
                  (path-or-fd-stat.1
                   #f
@@ -27038,6 +27203,7 @@
           (if (unsafe-struct*-cas! self_0 2 #t #f)
             (void)
             (port-unlock-slow self_0))
+          (assert-pop-lock-level! 'port)
           (unsafe-end-atomic))
         (call-with-values
          (lambda () (|#%app| user-get-location_0))
@@ -27067,6 +27233,7 @@
                 pos_0))
              (begin
                (unsafe-start-uninterruptible)
+               (assert-push-lock-level! 'port)
                (if (unsafe-struct*-cas! self_0 2 #f #t)
                  (void)
                  (port-lock-slow self_0))
@@ -27167,6 +27334,7 @@
            (if (unsafe-struct*-cas! self_0 2 #t #f)
              (void)
              (port-unlock-slow self_0))
+           (assert-pop-lock-level! 'port)
            (unsafe-end-atomic))
          (let ((m_0 (|#%app| user-buffer-mode3_0)))
            (if (let ((or-part_0 (not m_0)))
@@ -27182,6 +27350,7 @@
              (begin
                (begin
                  (unsafe-start-uninterruptible)
+                 (assert-push-lock-level! 'port)
                  (if (unsafe-struct*-cas! self_0 2 #f #t)
                    (void)
                    (port-lock-slow self_0))
@@ -27200,10 +27369,12 @@
            (if (unsafe-struct*-cas! self_0 2 #t #f)
              (void)
              (port-unlock-slow self_0))
+           (assert-pop-lock-level! 'port)
            (unsafe-end-atomic))
          (|#%app| user-buffer-mode3_0 m_0)
          (begin
            (unsafe-start-uninterruptible)
+           (assert-push-lock-level! 'port)
            (if (unsafe-struct*-cas! self_0 2 #f #t)
              (void)
              (port-lock-slow self_0))
@@ -27459,6 +27630,8 @@
                                                               (void)
                                                               (port-unlock-slow
                                                                self18_0))
+                                                            (assert-pop-lock-level!
+                                                             'port)
                                                             (unsafe-end-atomic))
                                                           (raise-arguments-error
                                                            who16_0
@@ -27490,6 +27663,8 @@
                                                                   (void)
                                                                   (port-unlock-slow
                                                                    self18_0))
+                                                                (assert-pop-lock-level!
+                                                                 'port)
                                                                 (unsafe-end-atomic))
                                                               (raise-arguments-error
                                                                who16_0
@@ -27519,9 +27694,13 @@
                                                                       (void)
                                                                       (port-unlock-slow
                                                                        self18_0))
+                                                                    (assert-pop-lock-level!
+                                                                     'port)
                                                                     (unsafe-end-atomic))
                                                                   (begin
                                                                     (unsafe-start-uninterruptible)
+                                                                    (assert-push-lock-level!
+                                                                     'port)
                                                                     (if (unsafe-struct*-cas!
                                                                          self18_0
                                                                          2
@@ -27550,6 +27729,8 @@
                                                                         (void)
                                                                         (port-unlock-slow
                                                                          self18_0))
+                                                                      (assert-pop-lock-level!
+                                                                       'port)
                                                                       (unsafe-end-atomic))
                                                                     (raise-arguments-error
                                                                      who16_0
@@ -27565,6 +27746,8 @@
                                                                       (void)
                                                                       (port-unlock-slow
                                                                        self18_0))
+                                                                    (assert-pop-lock-level!
+                                                                     'port)
                                                                     (unsafe-end-atomic))
                                                                   (raise-result-error
                                                                    who16_0
@@ -27597,6 +27780,8 @@
                                                      (begin
                                                        (begin
                                                          (unsafe-start-uninterruptible)
+                                                         (assert-push-lock-level!
+                                                          'port)
                                                          (if (unsafe-struct*-cas!
                                                               self_0
                                                               2
@@ -27624,6 +27809,8 @@
                                                            (void)
                                                            (port-unlock-slow
                                                             self_0))
+                                                         (assert-pop-lock-level!
+                                                          'port)
                                                          (unsafe-end-atomic))
                                                        (if (pipe-input-port?*
                                                             r_0)
@@ -27777,6 +27964,8 @@
                                                                        (void)
                                                                        (port-unlock-slow
                                                                         self_0))
+                                                                     (assert-pop-lock-level!
+                                                                      'port)
                                                                      (unsafe-end-atomic))
                                                                    (begin0
                                                                      (protect-in_0
@@ -27787,6 +27976,8 @@
                                                                       user-read-in8_0)
                                                                      (begin
                                                                        (unsafe-start-uninterruptible)
+                                                                       (assert-push-lock-level!
+                                                                        'port)
                                                                        (if (unsafe-struct*-cas!
                                                                             self_0
                                                                             2
@@ -27901,6 +28092,8 @@
                                                                           (void)
                                                                           (port-unlock-slow
                                                                            self_0))
+                                                                        (assert-pop-lock-level!
+                                                                         'port)
                                                                         (unsafe-end-atomic))
                                                                       (begin0
                                                                         (protect-in_0
@@ -27916,6 +28109,8 @@
                                                                             progress-evt_0)))
                                                                         (begin
                                                                           (unsafe-start-uninterruptible)
+                                                                          (assert-push-lock-level!
+                                                                           'port)
                                                                           (if (unsafe-struct*-cas!
                                                                                self_0
                                                                                2
@@ -28006,11 +28201,15 @@
                                                                      (void)
                                                                      (port-unlock-slow
                                                                       self_0))
+                                                                   (assert-pop-lock-level!
+                                                                    'port)
                                                                    (unsafe-end-atomic))
                                                                  (|#%app|
                                                                   user-close10_0)
                                                                  (begin
                                                                    (unsafe-start-uninterruptible)
+                                                                   (assert-push-lock-level!
+                                                                    'port)
                                                                    (if (unsafe-struct*-cas!
                                                                         self_0
                                                                         2
@@ -28063,6 +28262,8 @@
                                                                                    (void)
                                                                                    (port-unlock-slow
                                                                                     self_0))
+                                                                                 (assert-pop-lock-level!
+                                                                                  'port)
                                                                                  (unsafe-end-atomic))
                                                                                (begin0
                                                                                  (|#%app|
@@ -28072,6 +28273,8 @@
                                                                                   ext-evt_0)
                                                                                  (begin
                                                                                    (unsafe-start-uninterruptible)
+                                                                                   (assert-push-lock-level!
+                                                                                    'port)
                                                                                    (if (unsafe-struct*-cas!
                                                                                         self_0
                                                                                         2
@@ -28119,11 +28322,15 @@
                                                                                (void)
                                                                                (port-unlock-slow
                                                                                 self_0))
+                                                                             (assert-pop-lock-level!
+                                                                              'port)
                                                                              (unsafe-end-atomic))
                                                                            (|#%app|
                                                                             user-count-lines!4_0)
                                                                            (begin
                                                                              (unsafe-start-uninterruptible)
+                                                                             (assert-push-lock-level!
+                                                                              'port)
                                                                              (if (unsafe-struct*-cas!
                                                                                   self_0
                                                                                   2
@@ -28581,6 +28788,8 @@
                                                               (void)
                                                               (port-unlock-slow
                                                                self17_0))
+                                                            (assert-pop-lock-level!
+                                                             'port)
                                                             (unsafe-end-atomic))
                                                           (raise-arguments-error
                                                            who15_0
@@ -28651,9 +28860,13 @@
                                                                   (void)
                                                                   (port-unlock-slow
                                                                    self17_0))
+                                                                (assert-pop-lock-level!
+                                                                 'port)
                                                                 (unsafe-end-atomic))
                                                               (begin
                                                                 (unsafe-start-uninterruptible)
+                                                                (assert-push-lock-level!
+                                                                 'port)
                                                                 (if (unsafe-struct*-cas!
                                                                      self17_0
                                                                      2
@@ -28688,6 +28901,8 @@
                                                    (begin
                                                      (begin
                                                        (unsafe-start-uninterruptible)
+                                                       (assert-push-lock-level!
+                                                        'port)
                                                        (if (unsafe-struct*-cas!
                                                             self_0
                                                             2
@@ -28715,6 +28930,8 @@
                                                          (void)
                                                          (port-unlock-slow
                                                           self_0))
+                                                       (assert-pop-lock-level!
+                                                        'port)
                                                        (unsafe-end-atomic))
                                                      (if (pipe-output-port?*
                                                           r_0)
@@ -28826,6 +29043,8 @@
                                                                         (void)
                                                                         (port-unlock-slow
                                                                          self_0))
+                                                                      (assert-pop-lock-level!
+                                                                       'port)
                                                                       (unsafe-end-atomic))
                                                                     (begin0
                                                                       (|#%app|
@@ -28837,6 +29056,8 @@
                                                                        enable-break?_1)
                                                                       (begin
                                                                         (unsafe-start-uninterruptible)
+                                                                        (assert-push-lock-level!
+                                                                         'port)
                                                                         (if (unsafe-struct*-cas!
                                                                              self_0
                                                                              2
@@ -28916,6 +29137,8 @@
                                                                (void)
                                                                (port-unlock-slow
                                                                 self_0))
+                                                             (assert-pop-lock-level!
+                                                              'port)
                                                              (unsafe-end-atomic))
                                                            (let ((r_0
                                                                   (|#%app|
@@ -28932,6 +29155,8 @@
                                                                   r_0))
                                                                (begin
                                                                  (unsafe-start-uninterruptible)
+                                                                 (assert-push-lock-level!
+                                                                  'port)
                                                                  (if (unsafe-struct*-cas!
                                                                       self_0
                                                                       2
@@ -28978,6 +29203,8 @@
                                                                    (void)
                                                                    (port-unlock-slow
                                                                     self_0))
+                                                                 (assert-pop-lock-level!
+                                                                  'port)
                                                                  (unsafe-end-atomic))
                                                                (begin0
                                                                  (|#%app|
@@ -28987,6 +29214,8 @@
                                                                   enable-break?_1)
                                                                  (begin
                                                                    (unsafe-start-uninterruptible)
+                                                                   (assert-push-lock-level!
+                                                                    'port)
                                                                    (if (unsafe-struct*-cas!
                                                                         self_0
                                                                         2
@@ -29017,11 +29246,15 @@
                                                                     (void)
                                                                     (port-unlock-slow
                                                                      self_0))
+                                                                  (assert-pop-lock-level!
+                                                                   'port)
                                                                   (unsafe-end-atomic))
                                                                 (|#%app|
                                                                  user-count-lines!5_0)
                                                                 (begin
                                                                   (unsafe-start-uninterruptible)
+                                                                  (assert-push-lock-level!
+                                                                   'port)
                                                                   (if (unsafe-struct*-cas!
                                                                        self_0
                                                                        2
@@ -29059,11 +29292,15 @@
                                                                          (void)
                                                                          (port-unlock-slow
                                                                           self_0))
+                                                                       (assert-pop-lock-level!
+                                                                        'port)
                                                                        (unsafe-end-atomic))
                                                                      (|#%app|
                                                                       user-close11_0)
                                                                      (begin
                                                                        (unsafe-start-uninterruptible)
+                                                                       (assert-push-lock-level!
+                                                                        'port)
                                                                        (if (unsafe-struct*-cas!
                                                                             self_0
                                                                             2
@@ -29557,6 +29794,7 @@
                           (begin
                             (begin
                               (unsafe-start-uninterruptible)
+                              (assert-push-lock-level! 'port)
                               (if (unsafe-struct*-cas! in_1 2 #f #t)
                                 (void)
                                 (port-lock-slow in_1))
@@ -29572,6 +29810,7 @@
                                       (if (unsafe-struct*-cas! in_1 2 #t #f)
                                         (void)
                                         (port-unlock-slow in_1))
+                                      (assert-pop-lock-level! 'port)
                                       (unsafe-end-atomic))
                                     (let ((or-part_0 (eq? #t r_0)))
                                       (if or-part_0
@@ -33225,10 +33464,10 @@
     (if (let ((q_0 (queue-log-receiver-waiters lr_0))) (not (queue-start q_0)))
       (set-box! (queue-log-receiver-backref lr_0) lr_0)
       (void))))
-(define finish_2706
+(define finish_2083
   (make-struct-type-install-properties
    '(stdio-log-receiver)
-   3
+   2
    0
    struct:log-receiver
    (list
@@ -33236,43 +33475,21 @@
      prop:receiver-send
      (lambda (lr_0 msg_0)
        (let ((rktio_0 (stdio-log-receiver-rktio lr_0)))
-         (let ((rktio-mutex_0 (stdio-log-receiver-rktio-mutex lr_0)))
-           (let ((bstr_0
-                  (bytes-append
-                   (1/string->bytes/utf-8 (vector-ref msg_0 1))
-                   #vu8(10))))
-             (let ((len_0 (unsafe-bytes-length bstr_0)))
-               (begin
-                 (mutex-acquire rktio-mutex_0)
-                 (let ((fd_0
-                        (|#%app|
-                         rktio_std_fd
-                         rktio_0
-                         (stdio-log-receiver-which lr_0))))
-                   (begin
-                     (letrec*
-                      ((loop_0
-                        (|#%name|
-                         loop
-                         (lambda (i_0)
-                           (let ((v_0
-                                  (|#%app|
-                                   rktio_write_in
-                                   rktio_0
-                                   fd_0
-                                   bstr_0
-                                   i_0
-                                   len_0)))
-                             (if (vector? v_0)
-                               (void)
-                               (let ((i_1 (+ i_0 v_0)))
-                                 (if (= i_1 len_0) (void) (loop_0 i_1)))))))))
-                      (loop_0 0))
-                     (|#%app| rktio_forget rktio_0 fd_0)
-                     (mutex-release rktio-mutex_0)))))))))))
+         (let ((bstr_0
+                (bytes-append
+                 (1/string->bytes/utf-8 (vector-ref msg_0 1))
+                 #vu8(10))))
+           (let ((len_0 (unsafe-bytes-length bstr_0)))
+             (|#%app|
+              rktio_std_write_in_best_effort
+              rktio_0
+              (stdio-log-receiver-which lr_0)
+              bstr_0
+              0
+              len_0)))))))
    (current-inspector)
    #f
-   '(0 1 2)
+   '(0 1)
    #f
    'stdio-log-receiver))
 (define struct:stdio-log-receiver
@@ -33282,8 +33499,8 @@
    (|#%nongenerative-uid| stdio-log-receiver)
    #f
    #f
-   '(3 . 0)))
-(define effect_2591 (finish_2706 struct:stdio-log-receiver))
+   '(2 . 0)))
+(define effect_2591 (finish_2083 struct:stdio-log-receiver))
 (define stdio-log-receiver3.1
   (|#%name|
    stdio-log-receiver
@@ -33318,38 +33535,21 @@
          0
          s
          'rktio))))))
-(define stdio-log-receiver-rktio-mutex_2480
-  (|#%name|
-   stdio-log-receiver-rktio-mutex
-   (record-accessor struct:stdio-log-receiver 1)))
-(define stdio-log-receiver-rktio-mutex
-  (|#%name|
-   stdio-log-receiver-rktio-mutex
-   (lambda (s)
-     (if (stdio-log-receiver?_2188 s)
-       (stdio-log-receiver-rktio-mutex_2480 s)
-       ($value
-        (impersonate-ref
-         stdio-log-receiver-rktio-mutex_2480
-         struct:stdio-log-receiver
-         1
-         s
-         'rktio-mutex))))))
-(define stdio-log-receiver-which_2452
+(define stdio-log-receiver-which_2480
   (|#%name|
    stdio-log-receiver-which
-   (record-accessor struct:stdio-log-receiver 2)))
+   (record-accessor struct:stdio-log-receiver 1)))
 (define stdio-log-receiver-which
   (|#%name|
    stdio-log-receiver-which
    (lambda (s)
      (if (stdio-log-receiver?_2188 s)
-       (stdio-log-receiver-which_2452 s)
+       (stdio-log-receiver-which_2480 s)
        ($value
         (impersonate-ref
-         stdio-log-receiver-which_2452
+         stdio-log-receiver-which_2480
          struct:stdio-log-receiver
-         2
+         1
          s
          'which))))))
 (define add-stdio-log-receiver!
@@ -33360,14 +33560,13 @@
         (raise-argument-error who_0 "logger?" logger_0))
       (let ((lr_0
              (let ((app_0 (parse-filters.1 'none parse-who_0 args_0)))
-               (let ((app_1 (unsafe-place-local-ref cell.1)))
-                 (stdio-log-receiver3.1
-                  app_0
-                  app_1
-                  (unsafe-place-local-ref cell.2$1)
-                  which_0)))))
+               (stdio-log-receiver3.1
+                app_0
+                (unsafe-place-local-ref cell.1)
+                which_0))))
         (begin
           (|#%app| start-atomic/no-gc-interrupts)
+          (assert-push-lock-level! 'logger)
           (unsafe-uninterruptible-lock-acquire
            (unsafe-place-local-ref cell.1$7))
           (begin0
@@ -33378,6 +33577,7 @@
                (cons lr_0 (logger-permanent-receivers logger_0))))
             (unsafe-uninterruptible-lock-release
              (unsafe-place-local-ref cell.1$7))
+            (assert-pop-lock-level! 'logger)
             (|#%app| end-atomic/no-gc-interrupts)))))))
 (define add-stderr-log-receiver!
   (lambda (logger_0 . args_0)
@@ -33395,10 +33595,10 @@
      args_0
      'make-stdio-log-receiver
      1)))
-(define finish_2379
+(define finish_2544
   (make-struct-type-install-properties
    '(syslog-log-receiver)
-   3
+   2
    0
    struct:log-receiver
    (list
@@ -33406,33 +33606,29 @@
      prop:receiver-send
      (lambda (lr_0 msg_0)
        (let ((rktio_0 (syslog-log-receiver-rktio lr_0)))
-         (let ((rktio-mutex_0 (stdio-log-receiver-rktio-mutex lr_0)))
-           (let ((bstr_0
-                  (bytes-append
-                   (1/string->bytes/utf-8 (vector-ref msg_0 1))
-                   #vu8(10))))
-             (let ((pri_0
-                    (let ((tmp_0 (vector-ref msg_0 0)))
-                      (if (eq? tmp_0 'fatal)
-                        1
-                        (if (eq? tmp_0 'error)
-                          2
-                          (if (eq? tmp_0 'warning)
-                            3
-                            (if (eq? tmp_0 'info) 4 5)))))))
-               (begin
-                 (mutex-acquire rktio-mutex_0)
-                 (|#%app|
-                  rktio_syslog
-                  rktio_0
-                  pri_0
-                  #f
-                  bstr_0
-                  (syslog-log-receiver-cmd lr_0))
-                 (mutex-release rktio-mutex_0)))))))))
+         (let ((bstr_0
+                (bytes-append
+                 (1/string->bytes/utf-8 (vector-ref msg_0 1))
+                 #vu8(10))))
+           (let ((pri_0
+                  (let ((tmp_0 (vector-ref msg_0 0)))
+                    (if (eq? tmp_0 'fatal)
+                      1
+                      (if (eq? tmp_0 'error)
+                        2
+                        (if (eq? tmp_0 'warning)
+                          3
+                          (if (eq? tmp_0 'info) 4 5)))))))
+             (|#%app|
+              rktio_syslog_best_effort
+              rktio_0
+              pri_0
+              #f
+              bstr_0
+              (syslog-log-receiver-cmd lr_0))))))))
    (current-inspector)
    #f
-   '(0 1 2)
+   '(0 1)
    #f
    'syslog-log-receiver))
 (define struct:syslog-log-receiver
@@ -33442,8 +33638,8 @@
    (|#%nongenerative-uid| syslog-log-receiver)
    #f
    #f
-   '(3 . 0)))
-(define effect_2288 (finish_2379 struct:syslog-log-receiver))
+   '(2 . 0)))
+(define effect_2288 (finish_2544 struct:syslog-log-receiver))
 (define syslog-log-receiver4.1
   (|#%name|
    syslog-log-receiver
@@ -33480,38 +33676,21 @@
          0
          s
          'rktio))))))
-(define syslog-log-receiver-rktio-mutex_2652
-  (|#%name|
-   syslog-log-receiver-rktio-mutex
-   (record-accessor struct:syslog-log-receiver 1)))
-(define syslog-log-receiver-rktio-mutex
-  (|#%name|
-   syslog-log-receiver-rktio-mutex
-   (lambda (s)
-     (if (syslog-log-receiver?_2295 s)
-       (syslog-log-receiver-rktio-mutex_2652 s)
-       ($value
-        (impersonate-ref
-         syslog-log-receiver-rktio-mutex_2652
-         struct:syslog-log-receiver
-         1
-         s
-         'rktio-mutex))))))
-(define syslog-log-receiver-cmd_2395
+(define syslog-log-receiver-cmd_2652
   (|#%name|
    syslog-log-receiver-cmd
-   (record-accessor struct:syslog-log-receiver 2)))
+   (record-accessor struct:syslog-log-receiver 1)))
 (define syslog-log-receiver-cmd
   (|#%name|
    syslog-log-receiver-cmd
    (lambda (s)
      (if (syslog-log-receiver?_2295 s)
-       (syslog-log-receiver-cmd_2395 s)
+       (syslog-log-receiver-cmd_2652 s)
        ($value
         (impersonate-ref
-         syslog-log-receiver-cmd_2395
+         syslog-log-receiver-cmd_2652
          struct:syslog-log-receiver
-         2
+         1
          s
          'cmd))))))
 (define add-syslog-log-receiver!
@@ -33520,14 +33699,13 @@
            (let ((app_0
                   (parse-filters.1 'none 'make-syslog-log-receiver args_0)))
              (let ((app_1 (unsafe-place-local-ref cell.1)))
-               (let ((app_2 (unsafe-place-local-ref cell.2$1)))
-                 (syslog-log-receiver4.1
-                  app_0
-                  app_1
-                  app_2
-                  (path-bytes (1/find-system-path 'run-file))))))))
+               (syslog-log-receiver4.1
+                app_0
+                app_1
+                (path-bytes (1/find-system-path 'run-file)))))))
       (begin
         (|#%app| start-atomic/no-gc-interrupts)
+        (assert-push-lock-level! 'logger)
         (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
         (begin0
           (begin
@@ -33537,11 +33715,13 @@
              (cons lr_0 (logger-permanent-receivers logger_0))))
           (unsafe-uninterruptible-lock-release
            (unsafe-place-local-ref cell.1$7))
+          (assert-pop-lock-level! 'logger)
           (|#%app| end-atomic/no-gc-interrupts))))))
 (define add-log-receiver!
   (lambda (logger_0 lr_0 backref_0)
     (begin
       (|#%app| start-atomic/no-gc-interrupts)
+      (assert-push-lock-level! 'logger)
       (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
       (begin0
         (begin
@@ -33592,6 +33772,7 @@
                     (set-box! sema-box_0 #f))
                   (void))))))
         (unsafe-uninterruptible-lock-release (unsafe-place-local-ref cell.1$7))
+        (assert-pop-lock-level! 'logger)
         (|#%app| end-atomic/no-gc-interrupts)))))
 (define log-receiver-send!
   (lambda (r_0 msg_0 in-interrupt?_0)
@@ -33655,10 +33836,12 @@
   (lambda (logger_0)
     (begin
       (|#%app| start-uninterruptible/no-gc-interrupts)
+      (assert-push-lock-level! 'logger)
       (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
       (begin0
         (logger-max-wanted-level* logger_0)
         (unsafe-uninterruptible-lock-release (unsafe-place-local-ref cell.1$7))
+        (assert-pop-lock-level! 'logger)
         (|#%app| end-uninterruptible/no-gc-interrupts)))))
 (define logger-max-wanted-level*
   (lambda (logger_0)
@@ -33948,6 +34131,7 @@
                                        (begin
                                          (|#%app|
                                           start-uninterruptible/no-gc-interrupts)
+                                         (assert-push-lock-level! 'logger)
                                          (unsafe-uninterruptible-lock-acquire
                                           (unsafe-place-local-ref cell.1$7))
                                          (begin0
@@ -33956,6 +34140,7 @@
                                             topic_0)
                                            (unsafe-uninterruptible-lock-release
                                             (unsafe-place-local-ref cell.1$7))
+                                           (assert-pop-lock-level! 'logger)
                                            (|#%app|
                                             end-uninterruptible/no-gc-interrupts))))
                                       topic_0)
@@ -34035,12 +34220,14 @@
               (if (not (eq? level5_0 'none))
                 (begin
                   (|#%app| start-uninterruptible/no-gc-interrupts)
+                  (assert-push-lock-level! 'logger)
                   (unsafe-uninterruptible-lock-acquire
                    (unsafe-place-local-ref cell.1$7))
                   (begin0
                     (log-level?* logger4_0 level5_0 topic3_0)
                     (unsafe-uninterruptible-lock-release
                      (unsafe-place-local-ref cell.1$7))
+                    (assert-pop-lock-level! 'logger)
                     (|#%app| end-uninterruptible/no-gc-interrupts)))
                 #f))))))
     (|#%name|
@@ -34053,19 +34240,23 @@
   (lambda ()
     (begin
       (|#%app| start-uninterruptible/no-gc-interrupts)
+      (assert-push-lock-level! 'logger)
       (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
       (begin0
         (log-level?* (unsafe-place-local-ref cell.1$8) 'debug 'future)
         (unsafe-uninterruptible-lock-release (unsafe-place-local-ref cell.1$7))
+        (assert-pop-lock-level! 'logger)
         (|#%app| end-uninterruptible/no-gc-interrupts)))))
 (define logging-place-events?
   (lambda ()
     (begin
       (|#%app| start-uninterruptible/no-gc-interrupts)
+      (assert-push-lock-level! 'logger)
       (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
       (begin0
         (log-level?* (unsafe-place-local-ref cell.1$8) 'debug 'place)
         (unsafe-uninterruptible-lock-release (unsafe-place-local-ref cell.1$7))
+        (assert-pop-lock-level! 'logger)
         (|#%app| end-uninterruptible/no-gc-interrupts)))))
 (define log-level?*
   (lambda (logger_0 level_0 topic_0)
@@ -34090,12 +34281,14 @@
               (level->user-representation
                (begin
                  (|#%app| start-uninterruptible/no-gc-interrupts)
+                 (assert-push-lock-level! 'logger)
                  (unsafe-uninterruptible-lock-acquire
                   (unsafe-place-local-ref cell.1$7))
                  (begin0
                    (logger-wanted-level logger7_0 topic6_0)
                    (unsafe-uninterruptible-lock-release
                     (unsafe-place-local-ref cell.1$7))
+                   (assert-pop-lock-level! 'logger)
                    (|#%app| end-uninterruptible/no-gc-interrupts)))))))))
     (|#%name|
      log-max-level
@@ -34111,11 +34304,13 @@
          (void)
          (raise-argument-error 'log-all-levels "logger?" logger_0))
        (|#%app| start-uninterruptible/no-gc-interrupts)
+       (assert-push-lock-level! 'logger)
        (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
        (begin0
          (logger-all-levels logger_0)
          (unsafe-uninterruptible-lock-release
           (unsafe-place-local-ref cell.1$7))
+         (assert-pop-lock-level! 'logger)
          (|#%app| end-uninterruptible/no-gc-interrupts))))))
 (define 1/log-level-evt
   (|#%name|
@@ -34128,6 +34323,7 @@
        (let ((s_0
               (begin
                 (|#%app| start-uninterruptible/no-gc-interrupts)
+                (assert-push-lock-level! 'logger)
                 (unsafe-uninterruptible-lock-acquire
                  (unsafe-place-local-ref cell.1$7))
                 (begin0
@@ -34140,6 +34336,7 @@
                           s_0))))
                   (unsafe-uninterruptible-lock-release
                    (unsafe-place-local-ref cell.1$7))
+                  (assert-pop-lock-level! 'logger)
                   (|#%app| end-uninterruptible/no-gc-interrupts)))))
          (semaphore-peek-evt s_0))))))
 (define 1/log-message
@@ -34236,6 +34433,7 @@
         (void)
         (begin
           (|#%app| start-atomic/no-gc-interrupts)
+          (assert-push-lock-level! 'logger)
           (unsafe-uninterruptible-lock-acquire
            (unsafe-place-local-ref cell.1$7))
           (begin0
@@ -34249,11 +34447,13 @@
              #f)
             (unsafe-uninterruptible-lock-release
              (unsafe-place-local-ref cell.1$7))
+            (assert-pop-lock-level! 'logger)
             (|#%app| end-atomic/no-gc-interrupts)))))))
 (define log-future-event
   (lambda (message_0 data_0)
     (begin
       (|#%app| start-atomic/no-gc-interrupts)
+      (assert-push-lock-level! 'logger)
       (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
       (begin0
         (log-message*
@@ -34265,11 +34465,13 @@
          #t
          #f)
         (unsafe-uninterruptible-lock-release (unsafe-place-local-ref cell.1$7))
+        (assert-pop-lock-level! 'logger)
         (|#%app| end-atomic/no-gc-interrupts)))))
 (define log-place-event
   (lambda (message_0 data_0)
     (begin
       (|#%app| start-atomic/no-gc-interrupts)
+      (assert-push-lock-level! 'logger)
       (unsafe-uninterruptible-lock-acquire (unsafe-place-local-ref cell.1$7))
       (begin0
         (log-message*
@@ -34281,6 +34483,7 @@
          #t
          #f)
         (unsafe-uninterruptible-lock-release (unsafe-place-local-ref cell.1$7))
+        (assert-pop-lock-level! 'logger)
         (|#%app| end-atomic/no-gc-interrupts)))))
 (define log-message*
   (lambda (logger_0 level_0 topic_0 message_0 data_0 prefix?_0 in-interrupt?_0)
@@ -34659,13 +34862,10 @@
            (fs-change-evt-cust-ref fc_0))
           (set-fs-change-evt-cust-ref! fc_0 #f)
           (set-fs-change-evt-rfc! fc_0 #f)
-          (start-rktio)
-          (begin0
-            (|#%app|
-             rktio_fs_change_forget
-             (unsafe-place-local-ref cell.1)
-             rfc_0)
-            (end-rktio)))
+          (|#%app|
+           rktio_fs_change_forget
+           (unsafe-place-local-ref cell.1)
+           rfc_0))
         (void)))))
 (define cell.1$6 (unsafe-make-place-local #f))
 (define poll-filesystem-change-finalizations
@@ -34890,7 +35090,7 @@
                   (begin (|#%app| final_0 p_0 bstr_0) bstr_0))))))))))
 (define port-insist-atomic-lock
   (lambda (p_0) (begin (1/port-closed-evt p_0) (void))))
-(define finish_2346
+(define finish_2345
   (make-struct-type-install-properties
    '(subprocess)
    3
@@ -34936,7 +35136,7 @@
    #f
    #f
    '(3 . 3)))
-(define effect_2289 (finish_2346 struct:subprocess))
+(define effect_2289 (finish_2345 struct:subprocess))
 (define make-subprocess
   (|#%name|
    make-subprocess
@@ -35206,7 +35406,8 @@
                            (let ((cust-mode_0
                                   (1/current-subprocess-custodian-mode)))
                              (let ((env-vars_0
-                                    (1/current-environment-variables)))
+                                    (1/environment-variables-copy
+                                     (1/current-environment-variables))))
                                (let ((flags_0 (if (eq? stderr_0 'stdout) 2 0)))
                                  (let ((flags_1
                                         (if exact?_0
@@ -38588,7 +38789,7 @@
                (start-rktio)
                (let ((temp153_0
                       (lambda ()
-                        (if (if addr61_0 (1/udp-connected? u60_0) #f)
+                        (if (if addr61_0 (udp-is-connected? u60_0) #f)
                           (|#%app|
                            handle-error_0
                            (lambda ()
@@ -38598,7 +38799,7 @@
                               "socket"
                               u60_0)))
                           (if (if (not addr61_0)
-                                (not (1/udp-connected? u60_0))
+                                (not (udp-is-connected? u60_0))
                                 #f)
                             (|#%app|
                              handle-error_0
@@ -38987,7 +39188,7 @@
                (lambda ()
                  (let ((temp86_0
                         (lambda ()
-                          (if (not (1/udp-bound? u38_0))
+                          (if (not (udp-is-bound? u38_0))
                             (|#%app|
                              handle-error_0
                              (lambda ()

@@ -1611,7 +1611,7 @@ intptr_t rktio_write(rktio_t *rktio, rktio_fd_t *rfd, const char *buffer, intptr
       /* Convert wchar count to byte count, taking into account leftovers */
       int wrote_all = (winwrote == towrite);
       if (winwrote) {
-	/* Recounting only works right if the outptu was well-formed
+	/* Recounting only works right if the output was well-formed
 	   UTF-8. Weird things happen otherwise... but we guard against
 	   external inconsistency with the `max_winwrote` check below. */
 	winwrote = recount_output_wtext(w_buffer, winwrote);
@@ -1863,6 +1863,101 @@ intptr_t rktio_write(rktio_t *rktio, rktio_fd_t *rfd, const char *buffer, intptr
     set_windows_error(errsaved);
     return RKTIO_WRITE_ERROR;
   }
+#endif
+}
+
+void rktio_std_write_in_best_effort(rktio_t *rktio, int which, char *buffer, intptr_t start, intptr_t end) {
+#ifdef RKTIO_SYSTEM_UNIX
+  intptr_t amt, len;
+
+  while (start < end) {
+    do {
+      amt = end - start;
+      amt = LIMIT_REQUEST_SIZE(amt);
+
+      do {
+        len = write(which, buffer + start, amt);
+      } while ((len == -1) && (errno == EINTR));
+    
+      amt = amt >> 1;
+    } while ((len == -1) && (errno == EAGAIN) && (amt > 0));
+
+    if (len == -1)
+      return;
+
+    start += len;
+  }
+#endif
+#ifdef RKTIO_SYSTEM_WINDOWS
+  HANDLE h = get_std_handle(which);
+  int ok, to_console, can_leftover = 0, keep_leftover = 0;
+  intptr_t towrite = end - start, amt;
+  const char *orig_buffer = buffer;
+  wchar_t *w_buffer = NULL;
+  DWORD winwrote;
+  DWORD max_winwrote;
+  int err;
+    
+  if ((h == INVALID_HANDLE_VALUE) || (h == NULL)) {
+    rktio_create_console();
+    h = get_std_handle(which);
+    if ((h == INVALID_HANDLE_VALUE) || (h == NULL))
+      return;
+  }
+
+  /* Decode UTF-8 */
+  w_buffer = convert_output_wtext(buffer + start, &towrite,
+                                  &can_leftover, &keep_leftover,
+                                  0, NULL);
+
+  start = 0;
+
+  amt = towrite;
+  while (towrite > 0) {
+    ok = WriteConsoleW(h, w_buffer + start, amt, &winwrote, NULL);
+    
+    if (!ok) {
+      err = GetLastError();
+      
+      if (err == ERROR_NOT_ENOUGH_MEMORY) {
+        amt = amt >> 1;
+        if (!amt) {
+          to_write = 0;
+          can_leftover = 0;
+        }
+      } else {
+        to_write = 0;
+        can_leftover = 0;
+      }
+    } else {
+      start += winwrote;
+      towrite -= winwrote;
+      amt = towrite;
+    }
+  }
+
+  amt = can_leftover;
+  while (can_leftover > 0) {
+    ok = WriteFile(h, buffer + end - can_leftover, amt, &winwrote, NULL);
+    
+    if (!ok) {
+      err = GetLastError();
+      
+      if (err == ERROR_NOT_ENOUGH_MEMORY) {
+        amt = amt >> 1;
+        if (!amt) {
+          can_leftover = 0;
+        }
+      } else {
+        can_leftover = 0;
+      }
+    } else {
+      can_leftover -= winwrote;
+      amt = can_leftover;
+    }
+  }
+
+  free(w_buffer);
 #endif
 }
 

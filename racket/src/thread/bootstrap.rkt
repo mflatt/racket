@@ -238,7 +238,9 @@
                   'unsafe-add-global-finalizer (lambda (v proc) (void))
                   'unsafe-root-continuation-prompt-tag unsafe-root-continuation-prompt-tag
                   'break-enabled-key break-enabled-key
-                  'engine-block engine-block))
+                  'engine-block engine-block
+                  'assert-push-lock-level! void
+                  'assert-pop-lock-level! void))
 (primitive-table '#%engine
                  (hash 
                   'make-engine make-engine

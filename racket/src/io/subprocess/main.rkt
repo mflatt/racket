@@ -117,7 +117,7 @@
                                "exact command" (car args)))
 
       (define cust-mode (current-subprocess-custodian-mode))
-      (define env-vars (current-environment-variables))
+      (define env-vars (environment-variables-copy (current-environment-variables)))
 
       (let* ([flags (if (eq? stderr 'stdout)
                         RKTIO_PROCESS_STDOUT_AS_STDERR

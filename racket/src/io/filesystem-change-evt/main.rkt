@@ -115,8 +115,7 @@
     (unsafe-custodian-unregister fc (fs-change-evt-cust-ref fc))
     (set-fs-change-evt-cust-ref! fc #f)
     (set-fs-change-evt-rfc! fc #f)
-    (rktioly
-     (rktio_fs_change_forget rktio rfc))))
+    (rktio_fs_change_forget rktio rfc)))
 
 (define-place-local filesystem-change-evt-will-executor #f)
 

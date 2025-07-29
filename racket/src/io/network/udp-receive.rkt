@@ -89,7 +89,7 @@
       #:continue
       (lambda ()
         (cond
-          [(not (udp-bound? u))
+          [(not (udp-is-bound? u))
            (handle-error
             (lambda ()
               (raise-network-arguments-error who "udp socket is not bound"

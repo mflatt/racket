@@ -465,7 +465,7 @@
 ;; lock held and *not* in rktio mode
 (define (get-file-position fd)
   (rktioly
-   (define ppos (rktioly (rktio_get_file_position rktio fd)))
+   (define ppos (rktio_get_file_position rktio fd))
    (cond
      [(rktio-error? ppos)
       ;; #f => not supported, so use port's own counter, instead

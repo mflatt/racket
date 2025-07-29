@@ -1188,6 +1188,14 @@
   unsafe-root-continuation-prompt-tag)
 (define 1/break-enabled-key break-enabled-key)
 (define 1/engine-block engine-block)
+(define get-pthread-id get-thread-id)
+(define host:make-condition make-condition)
+(define host:condition-wait condition-wait)
+(define host:condition-signal condition-signal)
+(define host:condition-broadcast condition-broadcast)
+(define host:make-mutex make-mutex)
+(define host:mutex-acquire mutex-acquire)
+(define host:mutex-release mutex-release)
 (define make-engine (hash-ref (primitive-table '|#%engine|) 'make-engine #f))
 (define make-engine-thread-cell-state
   (hash-ref (primitive-table '|#%engine|) 'make-engine-thread-cell-state #f))
@@ -1273,23 +1281,6 @@
    #f))
 (define fork-pthread (hash-ref (primitive-table '|#%engine|) 'fork-pthread #f))
 (define pthread? (hash-ref (primitive-table '|#%engine|) 'pthread? #f))
-(define get-pthread-id
-  (hash-ref (primitive-table '|#%engine|) 'get-thread-id #f))
-(define host:make-condition
-  (hash-ref (primitive-table '|#%engine|) 'make-condition #f))
-(define host:condition-wait
-  (hash-ref (primitive-table '|#%engine|) 'condition-wait #f))
-(define host:condition-signal
-  (hash-ref (primitive-table '|#%engine|) 'condition-signal #f))
-(define host:condition-broadcast
-  (hash-ref (primitive-table '|#%engine|) 'condition-broadcast #f))
-(define host:make-mutex
-  (hash-ref (primitive-table '|#%engine|) 'make-mutex #f))
-(define host:mutex-acquire
-  (hash-ref (primitive-table '|#%engine|) 'mutex-acquire #f))
-(define host:mutex-release
-  (hash-ref (primitive-table '|#%engine|) 'mutex-release #f))
-(define threaded? (hash-ref (primitive-table '|#%engine|) 'threaded? #f))
 (define host:call-as-asynchronous-callback
   (hash-ref (primitive-table '|#%engine|) 'call-as-asynchronous-callback #f))
 (define host:post-as-asynchronous-callback
@@ -2809,19 +2800,21 @@
          0
          s
          'proc))))))
-(define cell.1$9 (unsafe-make-place-local (|#%app| host:make-mutex)))
+(define cell.1$9 (unsafe-make-place-local (make-mutex)))
 (define lock-custodians
   (lambda ()
     (begin
       (start-uninterruptible)
-      (|#%app| host:mutex-acquire (unsafe-place-local-ref cell.1$9)))))
+      (assert-push-lock-level! 'custodian)
+      (mutex-acquire (unsafe-place-local-ref cell.1$9)))))
 (define unlock-custodians
   (lambda ()
     (begin
-      (|#%app| host:mutex-release (unsafe-place-local-ref cell.1$9))
+      (mutex-release (unsafe-place-local-ref cell.1$9))
+      (assert-pop-lock-level! 'custodian)
       (end-atomic/no-barrier-exit))))
 (define init-custodian-lock!
-  (lambda () (unsafe-place-local-set! cell.1$9 (|#%app| host:make-mutex))))
+  (lambda () (unsafe-place-local-set! cell.1$9 (make-mutex))))
 (define finish_2379
   (make-struct-type-install-properties
    '(custodian)
@@ -3860,14 +3853,14 @@
   (lambda (delta_0)
     (let ((p_0 (unsafe-place-local-ref cell.1$2)))
       (begin
-        (|#%app| host:mutex-acquire (place-lock p_0))
+        (mutex-acquire (place-lock p_0))
         (let ((n_0 (+ (place-active-parallel p_0) delta_0)))
           (begin
             (set-place-active-parallel! p_0 n_0)
-            (|#%app| host:mutex-release (place-lock p_0))
+            (mutex-release (place-lock p_0))
             (eqv? n_0 0)))))))
 (define initial-place
-  (let ((temp10_0 (|#%app| host:make-mutex)))
+  (let ((temp10_0 (make-mutex)))
     (let ((root-custodian11_0 (unsafe-place-local-ref cell.2$4)))
       (let ((temp10_1 temp10_0))
         (make-place.1 #f #f temp10_1 root-custodian11_0)))))
@@ -5509,7 +5502,7 @@
         (begin
           (|#%app| host:disable-interrupts)
           (begin
-            (|#%app| host:mutex-acquire memory-limit-lock)
+            (mutex-acquire memory-limit-lock)
             (let ((queued_0 queued-shutdowns))
               (begin
                 (set! queued-shutdowns
@@ -5549,7 +5542,7 @@
                                  (for-loop_0 fold-var_1 rest_0))))
                            fold-var_0)))))
                     (for-loop_0 null queued_0))))
-                (|#%app| host:mutex-release memory-limit-lock)
+                (mutex-release memory-limit-lock)
                 (|#%app| host:enable-interrupts)
                 (letrec*
                  ((for-loop_0
@@ -5920,7 +5913,7 @@
       (|#%app| host:disable-interrupts)
       (if (pair? (custodian-memory-limits limit-cust_0))
         (begin
-          (|#%app| host:mutex-acquire memory-limit-lock)
+          (mutex-acquire memory-limit-lock)
           (if (if (custodian-gc-roots limit-cust_0)
                 (positive? (hash-count (custodian-gc-roots limit-cust_0)))
                 #f)
@@ -5928,7 +5921,7 @@
               (hash-set! custodians-with-limits limit-cust_0 #t)
               (set! compute-memory-sizes (max compute-memory-sizes 1)))
             (hash-remove! custodians-with-limits limit-cust_0))
-          (|#%app| host:mutex-release memory-limit-lock))
+          (mutex-release memory-limit-lock))
         (void))
       (|#%app| host:enable-interrupts))))
 (define remove-limit-custodian!
@@ -5989,7 +5982,7 @@
       (set! futures-sync-for-custodian-shutdown sync-shutdown_0)
       (set! future-scheduler-add-thread-custodian-mapping!
         add-custodian-mapping_0))))
-(define memory-limit-lock (|#%app| host:make-mutex))
+(define memory-limit-lock (make-mutex))
 (define compute-memory-sizes 0)
 (define computed-memory-sizes? #f)
 (define effect_2274
@@ -6358,7 +6351,7 @@
                                  (sub1 compute-memory-sizes)))
                              (set! computed-memory-sizes? #t))))))))))))))))
     (void)))
-(define effect_2371
+(define effect_2620
   (begin
     (void
      (|#%app|
@@ -6378,16 +6371,16 @@
                     (start-atomic/no-gc-interrupts)
                     (begin0
                       (begin
-                        (|#%app| host:mutex-acquire memory-limit-lock)
+                        (mutex-acquire memory-limit-lock)
                         (if (zero? compute-memory-sizes)
                           (begin
                             (set! computed-memory-sizes? #f)
                             (set! compute-memory-sizes 2)
-                            (|#%app| host:mutex-release memory-limit-lock)
+                            (mutex-release memory-limit-lock)
                             #t)
                           (let ((done?_0 computed-memory-sizes?))
                             (begin
-                              (|#%app| host:mutex-release memory-limit-lock)
+                              (mutex-release memory-limit-lock)
                               (not done?_0)))))
                       (end-atomic/no-gc-interrupts)))
                 (collect-garbage)
@@ -11609,7 +11602,7 @@
            (let ((e_0
                   (future-event1.1
                    (if future-id10_0 future-id10_0 (future*-id c1_0))
-                   (if pthread-id3_0 pthread-id3_0 (|#%app| get-pthread-id))
+                   (if pthread-id3_0 pthread-id3_0 (get-thread-id))
                    action11_0
                    timestamp_0
                    prim-name2_0
@@ -11750,8 +11743,7 @@
       (set! logging-future-events? logging?_0)
       (set! log-future-event log_0))))
 (define init-future-place! (lambda () (init-future-logging-place!)))
-(define 1/futures-enabled?
-  (|#%name| futures-enabled? (lambda () (|#%app| threaded?))))
+(define 1/futures-enabled? (|#%name| futures-enabled? (lambda () (threaded?))))
 (define finish_2356
   (make-struct-type-install-properties
    '(future-evt)
@@ -12213,9 +12205,9 @@
           pool_0))
        (let ((s_0 (parallel-thread-pool-scheduler pool_0)))
          (begin
-           (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+           (mutex-acquire (scheduler-mutex s_0))
            (set-parallel-thread-pool-capacity! pool_0 0)
-           (|#%app| host:mutex-release (scheduler-mutex s_0))
+           (mutex-release (scheduler-mutex s_0))
            (start-atomic)
            (begin0 (thread-pool-departure pool_0 0) (end-atomic))))))))
 (define 1/thread/parallel
@@ -12621,9 +12613,7 @@
                 (begin
                   (if timestamp_0
                     (begin
-                      (set-future*-suspend-pthread-id!
-                       me-f_0
-                       (|#%app| get-pthread-id))
+                      (set-future*-suspend-pthread-id! me-f_0 (get-thread-id))
                       (set-future*-suspend-timestamp! me-f_0 timestamp_0))
                     (void))
                   (if reschedule?12_0 (schedule-future!.1 #f #f me-f_0) (void))
@@ -12926,13 +12916,13 @@
     (begin
       (|#%app| ensure-place-wakeup-handle)
       (let ((s_0
-             (let ((app_0 (|#%app| host:make-mutex)))
+             (let ((app_0 (make-mutex)))
                (scheduler18.1
                 '()
                 #f
                 #f
                 app_0
-                (|#%app| host:make-condition)
+                (make-condition)
                 (if round-robin?_0 'round #f)
                 pthread-count_0))))
         (let ((workers_0
@@ -12994,7 +12984,7 @@
            (void))
          (let ((s_0 (future-scheduler f28_0)))
            (begin
-             (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+             (mutex-acquire (scheduler-mutex s_0))
              (begin
                (if check-pool-open?25_0
                  (let ((pool_0 (parallel*-pool (future*-parallel f28_0))))
@@ -13004,7 +12994,7 @@
                        (if (>= capacity_0 0)
                          (void)
                          (begin
-                           (|#%app| host:mutex-release (scheduler-mutex s_0))
+                           (mutex-release (scheduler-mutex s_0))
                            (raise-arguments-error
                             'thread/parallel
                             "the parallel thread pool has been closed")))
@@ -13031,8 +13021,8 @@
                          (set-future*-prev! f28_0 old_0)
                          (set-future*-next! old_0 f28_0)
                          (set-scheduler-futures-tail! s_0 f28_0))))
-                   (|#%app| host:condition-signal (scheduler-cond s_0))
-                   (|#%app| host:mutex-release (scheduler-mutex s_0))
+                   (condition-signal (scheduler-cond s_0))
+                   (mutex-release (scheduler-mutex s_0))
                    (end-atomic/no-barrier-exit)))))))))))
 (define try-deschedule-future?.1
   (|#%name|
@@ -13040,7 +13030,7 @@
    (lambda (decrement-count?30_0 f32_0)
      (let ((s_0 (future-scheduler f32_0)))
        (begin
-         (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+         (mutex-acquire (scheduler-mutex s_0))
          (let ((ok?_0
                 (if (let ((or-part_0 (future*-prev f32_0)))
                       (if or-part_0 or-part_0 (future*-next f32_0)))
@@ -13063,7 +13053,7 @@
                       #t)
                     #f))))
            (begin
-             (|#%app| host:mutex-release (scheduler-mutex s_0))
+             (mutex-release (scheduler-mutex s_0))
              (if (if ok?_0
                    (if decrement-count?30_0 (future*-parallel f32_0) #f)
                    #f)
@@ -13110,14 +13100,14 @@
   (lambda (pool_0 delta_0)
     (let ((s_0 (parallel-thread-pool-scheduler pool_0)))
       (begin
-        (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+        (mutex-acquire (scheduler-mutex s_0))
         (begin
           (set-parallel-thread-pool-swimmers!
            pool_0
            (+ (parallel-thread-pool-swimmers pool_0) delta_0))
           (let ((capacity_0 (parallel-thread-pool-capacity pool_0)))
             (begin
-              (|#%app| host:mutex-release (scheduler-mutex s_0))
+              (mutex-release (scheduler-mutex s_0))
               (if (zero? capacity_0)
                 (begin
                   (kill-future-scheduler.1 #t s_0)
@@ -13136,7 +13126,7 @@
               (begin
                 (current-thread/in-racket #f)
                 (1/current-future 'worker)
-                (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+                (mutex-acquire (scheduler-mutex s_0))
                 (letrec*
                  ((loop_0
                    (|#%name|
@@ -13145,15 +13135,13 @@
                       (if (eq? (worker-state w_0) 'exit-request)
                         (begin
                           (set-worker-state! w_0 'exited)
-                          (|#%app| host:mutex-release (scheduler-mutex s_0))
+                          (mutex-release (scheduler-mutex s_0))
                           (|#%app| wakeup-this-place))
                         (let ((c1_0 (scheduler-futures-head s_0)))
                           (if c1_0
                             (begin
                               (worker-check-in w_0)
-                              (|#%app|
-                               host:mutex-release
-                               (scheduler-mutex s_0))
+                              (mutex-release (scheduler-mutex s_0))
                               (lock-acquire (future*-lock c1_0))
                               (if (try-deschedule-future?.1 #f c1_0)
                                 (begin
@@ -13161,23 +13149,18 @@
                                    s_0
                                    (- (scheduler-capacity s_0) 1))
                                   (maybe-run-future-in-worker c1_0 w_0 s_0)
-                                  (|#%app|
-                                   host:mutex-acquire
-                                   (scheduler-mutex s_0))
+                                  (mutex-acquire (scheduler-mutex s_0))
                                   (set-scheduler-capacity!
                                    s_0
                                    (+ (scheduler-capacity s_0) 1))
                                   (loop_0))
                                 (begin
                                   (lock-release (future*-lock c1_0))
-                                  (|#%app|
-                                   host:mutex-acquire
-                                   (scheduler-mutex s_0))
+                                  (mutex-acquire (scheduler-mutex s_0))
                                   (loop_0))))
                             (begin
                               (worker-check-in w_0)
-                              (|#%app|
-                               host:condition-wait
+                              (condition-wait
                                (scheduler-cond s_0)
                                (scheduler-mutex s_0))
                               (loop_0)))))))))
@@ -13235,9 +13218,7 @@
                            (lambda ()
                              (if (worker-pinged? w_0)
                                (begin
-                                 (|#%app|
-                                  host:mutex-acquire
-                                  (scheduler-mutex s_0))
+                                 (mutex-acquire (scheduler-mutex s_0))
                                  (let ((exit?_0
                                         (eq?
                                          (worker-state w_0)
@@ -13247,9 +13228,7 @@
                                            (future*-custodian f_0))))
                                      (begin
                                        (worker-check-in w_0)
-                                       (|#%app|
-                                        host:mutex-release
-                                        (scheduler-mutex s_0))
+                                       (mutex-release (scheduler-mutex s_0))
                                        (values exit?_0 shut-down?_0)))))
                                (values #f #f)))
                            (lambda (exit?_0 shut-down?_0)
@@ -13270,17 +13249,13 @@
                                  (begin
                                    (1/check-for-break)
                                    (begin
-                                     (|#%app|
-                                      host:mutex-acquire
-                                      (scheduler-mutex s_0))
+                                     (mutex-acquire (scheduler-mutex s_0))
                                      (let ((others?_0
                                             (if (scheduler-futures-head s_0)
                                               (zero? (scheduler-capacity s_0))
                                               #f)))
                                        (begin
-                                         (|#%app|
-                                          host:mutex-release
-                                          (scheduler-mutex s_0))
+                                         (mutex-release (scheduler-mutex s_0))
                                          (if others?_0
                                            (begin
                                              (lock-acquire (future*-lock f_0))
@@ -13330,7 +13305,7 @@
 (define scheduler-sync-for-shutdown
   (lambda (s_0 request_0)
     (begin
-      (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+      (mutex-acquire (scheduler-mutex s_0))
       (let ((lst_0 (scheduler-workers s_0)))
         (letrec*
          ((for-loop_0
@@ -13368,15 +13343,15 @@
                 (values))))))
          (for-loop_0 lst_0)))
       (void)
-      (|#%app| host:condition-broadcast (scheduler-cond s_0))
-      (|#%app| host:mutex-release (scheduler-mutex s_0))
+      (condition-broadcast (scheduler-cond s_0))
+      (mutex-release (scheduler-mutex s_0))
       (letrec*
        ((loop_0
          (|#%name|
           loop
           (lambda ()
             (begin
-              (|#%app| host:mutex-acquire (scheduler-mutex s_0))
+              (mutex-acquire (scheduler-mutex s_0))
               (let ((done?_0
                      (let ((lst_0 (scheduler-workers s_0)))
                        (letrec*
@@ -13407,7 +13382,7 @@
                                result_0)))))
                         (for-loop_0 #f lst_0)))))
                 (begin
-                  (|#%app| host:mutex-release (scheduler-mutex s_0))
+                  (mutex-release (scheduler-mutex s_0))
                   (if done?_0
                     (void)
                     (begin
@@ -14636,20 +14611,20 @@
 (define 1/unsafe-make-uninterruptible-lock
   (|#%name|
    unsafe-make-uninterruptible-lock
-   (lambda () (if (|#%app| threaded?) (|#%app| host:make-mutex) 'dummy-lock))))
+   (lambda () (if (threaded?) (make-mutex) 'dummy-lock))))
 (define 1/unsafe-uninterruptible-lock-acquire
   (|#%name|
    unsafe-uninterruptible-lock-acquire
    (lambda (m_0)
      (begin
        (start-uninterruptible)
-       (if (|#%app| threaded?) (|#%app| host:mutex-acquire m_0) (void))))))
+       (if (threaded?) (mutex-acquire m_0) (void))))))
 (define 1/unsafe-uninterruptible-lock-release
   (|#%name|
    unsafe-uninterruptible-lock-release
    (lambda (m_0)
      (begin
-       (if (|#%app| threaded?) (|#%app| host:mutex-release m_0) (void))
+       (if (threaded?) (mutex-release m_0) (void))
        (end-atomic/no-barrier-exit)))))
 (define 1/unsafe-uninterruptible-custodian-lock-acquire
   (|#%name|
@@ -15012,8 +14987,8 @@
          (void))
        (let ((inherited_0 (|#%app| host:place-get-inherit)))
          (let ((orig-cust_0 (create-custodian #f)))
-           (let ((lock_0 (|#%app| host:make-mutex)))
-             (let ((started_0 (|#%app| host:make-condition)))
+           (let ((lock_0 (make-mutex)))
+             (let ((started_0 (make-condition)))
                (call-with-values
                 (lambda () (1/place-channel))
                 (lambda (place-pch_0 child-pch_0)
@@ -15059,18 +15034,14 @@
                                           (start-atomic)
                                           (begin0
                                             (begin
-                                              (|#%app|
-                                               host:mutex-acquire
-                                               lock_0)
+                                              (mutex-acquire lock_0)
                                               (set-place-queued-result!
                                                new-place_0
                                                (if flush-failed?_0
                                                  1
                                                  (if (byte? v9_0) v9_0 0)))
                                               (place-has-activity! new-place_0)
-                                              (|#%app|
-                                               host:mutex-release
-                                               lock_0))
+                                              (mutex-release lock_0))
                                             (end-atomic))
                                           (engine-block))))))))
                             (begin
@@ -15109,7 +15080,7 @@
                                               child-out-fd_0
                                               child-err-fd_0)
                                        (begin
-                                         (|#%app| host:mutex-acquire lock_0)
+                                         (mutex-acquire lock_0)
                                          (let ((host-thread_0
                                                 (|#%app|
                                                  host:fork-place
@@ -15124,8 +15095,7 @@
                                                         (begin
                                                           (set-place-id!
                                                            new-place_0
-                                                           (|#%app|
-                                                            get-pthread-id))
+                                                           (get-thread-id))
                                                           (begin
                                                             (set-place-host-roots!
                                                              new-place_0
@@ -15168,17 +15138,14 @@
                                                                           (call-with-continuation-prompt
                                                                            (lambda ()
                                                                              (begin
-                                                                               (|#%app|
-                                                                                host:mutex-acquire
+                                                                               (mutex-acquire
                                                                                 lock_0)
                                                                                (set-place-wakeup-handle!
                                                                                 new-place_0
                                                                                 (sandman-get-wakeup-handle))
-                                                                               (|#%app|
-                                                                                host:condition-signal
+                                                                               (condition-signal
                                                                                 started_0)
-                                                                               (|#%app|
-                                                                                host:mutex-release
+                                                                               (mutex-release
                                                                                 lock_0)
                                                                                (let ((temp20_0
                                                                                       "enter"))
@@ -15227,15 +15194,11 @@
                                                         (for-loop_0 lst_0)))
                                                      (void)
                                                      (kill-future-schedulers)
-                                                     (|#%app|
-                                                      host:mutex-acquire
-                                                      lock_0)
+                                                     (mutex-acquire lock_0)
                                                      (set-place-result!
                                                       new-place_0
                                                       result_0)
-                                                     (|#%app|
-                                                      host:mutex-release
-                                                      lock_0)
+                                                     (mutex-release lock_0)
                                                      (letrec*
                                                       ((for-loop_0
                                                         (|#%name|
@@ -15264,13 +15227,8 @@
                                              (set-place-host-thread!
                                               new-place_0
                                               host-thread_0)
-                                             (|#%app|
-                                              host:condition-wait
-                                              started_0
-                                              lock_0)
-                                             (|#%app|
-                                              host:mutex-release
-                                              lock_0)
+                                             (condition-wait started_0 lock_0)
+                                             (mutex-release lock_0)
                                              (end-atomic)
                                              (let ((temp11_0 "create"))
                                                (let ((temp12_0
@@ -15307,7 +15265,7 @@
               (start-atomic)
               (begin0
                 (begin
-                  (|#%app| host:mutex-acquire (place-lock p2_0))
+                  (mutex-acquire (place-lock p2_0))
                   (let ((pending-break_0 (place-pending-break p2_0)))
                     (begin
                       (if (let ((or-part_0 (not pending-break_0)))
@@ -15322,7 +15280,7 @@
                            (if kind1_0 kind1_0 'break))
                           (place-has-activity! p2_0))
                         (void))
-                      (|#%app| host:mutex-release (place-lock p2_0)))))
+                      (mutex-release (place-lock p2_0)))))
                 (end-atomic)))))))
     (|#%name|
      place-break
@@ -15348,7 +15306,7 @@
           (|#%app| (sandman-do-wakeup the-sandman) h_0))))))
 (define place-wait-activity
   (lambda (p_0) (|#%app| (sandman-do-sleep the-sandman) #f)))
-(define effect_2952
+(define effect_2321
   (begin
     (void
      (set-check-place-activity!
@@ -15367,7 +15325,7 @@
               (begin
                 (set-box! (place-activity-canary p_0) #f)
                 (begin
-                  (|#%app| host:mutex-acquire (place-lock p_0))
+                  (mutex-acquire (place-lock p_0))
                   (let ((queued-result_0 (place-queued-result p_0)))
                     (let ((break_0 (place-pending-break p_0)))
                       (let ((dequeue-semas_0 (place-dequeue-semas p_0)))
@@ -15376,7 +15334,7 @@
                           (if (pair? dequeue-semas_0)
                             (set-place-dequeue-semas! p_0 null)
                             (void))
-                          (|#%app| host:mutex-release (place-lock p_0))
+                          (mutex-release (place-lock p_0))
                           (if queued-result_0
                             (begin
                               (|#%app|
@@ -15428,21 +15386,19 @@
       (lambda ()
         (let ((p_0 (unsafe-place-local-ref cell.1$2)))
           (begin
-            (|#%app| host:mutex-acquire (place-lock p_0))
+            (mutex-acquire (place-lock p_0))
             (let ((n_0 (place-active-parallel p_0)))
-              (begin
-                (|#%app| host:mutex-release (place-lock p_0))
-                (> n_0 0))))))))
+              (begin (mutex-release (place-lock p_0)) (> n_0 0))))))))
     (void)))
 (define do-place-kill
   (lambda (p_0)
     (begin
-      (|#%app| host:mutex-acquire (place-lock p_0))
+      (mutex-acquire (place-lock p_0))
       (if (let ((or-part_0 (place-result p_0)))
             (if or-part_0 or-part_0 (place-queued-result p_0)))
         (void)
         (begin (set-place-queued-result! p_0 1) (place-has-activity! p_0)))
-      (|#%app| host:mutex-release (place-lock p_0)))))
+      (mutex-release (place-lock p_0)))))
 (define 1/place-kill
   (|#%name|
    place-kill
@@ -15519,7 +15475,7 @@
           loop
           (lambda ()
             (begin
-              (|#%app| host:mutex-acquire (place-lock p_0))
+              (mutex-acquire (place-lock p_0))
               (let ((result_0 (place-result p_0)))
                 (begin
                   (if result_0
@@ -15528,14 +15484,14 @@
                      (place-done-waiting p_0)
                      (unsafe-place-local-ref cell.1$2)
                      #t))
-                  (|#%app| host:mutex-release (place-lock p_0))
+                  (mutex-release (place-lock p_0))
                   (if result_0
                     (void)
                     (begin
                       (|#%app| (sandman-do-sleep the-sandman) #f)
                       (loop_0))))))))))
        (loop_0)))))
-(define finish_3022
+(define finish_2272
   (make-struct-type-install-properties
    '(place-dead-evt)
    2
@@ -15550,7 +15506,7 @@
           (ensure-wakeup-handle!)
           (let ((p_0 (place-done-evt-p self_0)))
             (begin
-              (|#%app| host:mutex-acquire (place-lock p_0))
+              (mutex-acquire (place-lock p_0))
               (let ((result_0 (place-result p_0)))
                 (begin
                   (if result_0
@@ -15559,7 +15515,7 @@
                      (place-done-waiting p_0)
                      (unsafe-place-local-ref cell.1$2)
                      #t))
-                  (|#%app| host:mutex-release (place-lock p_0))
+                  (mutex-release (place-lock p_0))
                   (if result_0
                     (if (place-done-evt-get-result? self_0)
                       (values (list result_0) #f)
@@ -15578,7 +15534,7 @@
    #f
    #f
    '(2 . 0)))
-(define effect_2480 (finish_3022 struct:place-done-evt))
+(define effect_2480 (finish_2272 struct:place-done-evt))
 (define place-done-evt3.1
   (|#%name|
    place-done-evt
@@ -15689,7 +15645,7 @@
    (record-mutator struct:message-queue 4)))
 (define make-message-queue
   (lambda ()
-    (let ((app_0 (|#%app| host:make-mutex)))
+    (let ((app_0 (make-mutex)))
       (message-queue4.1 app_0 '() '() (box #f) hash2610 (box #f)))))
 (define enqueue!
   (lambda (mq_0 msg_0 wk_0)
@@ -15698,7 +15654,7 @@
         (start-atomic)
         (begin0
           (begin
-            (|#%app| host:mutex-acquire lock_0)
+            (mutex-acquire lock_0)
             (begin
               (set-message-queue-rev-q!
                mq_0
@@ -15708,7 +15664,7 @@
                   (set-message-queue-waiters! mq_0 hash2610)
                   (set-box! (message-queue-out-key-box mq_0) wk_0)
                   (set-box! (message-queue-in-key-box mq_0) #f)
-                  (|#%app| host:mutex-release lock_0)
+                  (mutex-release lock_0)
                   (letrec*
                    ((for-loop_0
                      (|#%name|
@@ -15720,12 +15676,12 @@
                            (lambda (pl_0 s_0)
                              (begin
                                (begin
-                                 (|#%app| host:mutex-acquire (place-lock pl_0))
+                                 (mutex-acquire (place-lock pl_0))
                                  (set-place-dequeue-semas!
                                   pl_0
                                   (cons s_0 (place-dequeue-semas pl_0)))
                                  (place-has-activity! pl_0)
-                                 (|#%app| host:mutex-release (place-lock pl_0))
+                                 (mutex-release (place-lock pl_0))
                                  (wakeup-waiting pl_0))
                                (for-loop_0
                                 (hash-iterate-next waiters_0 i_0)))))
@@ -15739,7 +15695,7 @@
       (ensure-wakeup-handle!)
       (let ((lock_0 (message-queue-lock mq_0)))
         (begin
-          (|#%app| host:mutex-acquire lock_0)
+          (mutex-acquire lock_0)
           (begin
             (if (if (null? (message-queue-q mq_0))
                   (not (null? (message-queue-rev-q mq_0)))
@@ -15759,9 +15715,7 @@
                           (unsafe-place-local-ref cell.1$2)
                           #f)))
                     (if c1_0
-                      (begin
-                        (|#%app| host:mutex-release lock_0)
-                        (|#%app| fail-k_0 c1_0))
+                      (begin (mutex-release lock_0) (|#%app| fail-k_0 c1_0))
                       (let ((s_0 (1/make-semaphore)))
                         (begin
                           (set-message-queue-waiters!
@@ -15771,7 +15725,7 @@
                             (unsafe-place-local-ref cell.1$2)
                             s_0))
                           (set-box! (message-queue-in-key-box mq_0) rk_0)
-                          (|#%app| host:mutex-release lock_0)
+                          (mutex-release lock_0)
                           (|#%app| fail-k_0 s_0))))))
                 (let ((new-q_0 (cdr q_0)))
                   (begin
@@ -15779,7 +15733,7 @@
                     (if (null? new-q_0)
                       (set-box! (message-queue-out-key-box mq_0) #f)
                       (void))
-                    (|#%app| host:mutex-release lock_0)
+                    (mutex-release lock_0)
                     (|#%app| success-k_0 (car q_0))))))))))))
 (define finish_2441
   (make-struct-type-install-properties
@@ -16024,12 +15978,12 @@
 (define wakeup-waiting
   (lambda (pl_0)
     (begin
-      (|#%app| host:mutex-acquire (place-lock pl_0))
+      (mutex-acquire (place-lock pl_0))
       (if (place-result pl_0)
         (void)
         (let ((h_0 (place-wakeup-handle pl_0)))
           (|#%app| (sandman-do-wakeup the-sandman) h_0)))
-      (|#%app| host:mutex-release (place-lock pl_0)))))
+      (mutex-release (place-lock pl_0)))))
 (define wakeup-initial-place
   (lambda ()
     (let ((h_0 (place-wakeup-handle initial-place)))
@@ -16220,7 +16174,7 @@
            (lock-acquire lock_0)
            (begin0 (fsemaphore-c fs_0) (lock-release lock_0))))))))
 (define 1/unsafe-os-thread-enabled?
-  (|#%name| unsafe-os-thread-enabled? (lambda () (|#%app| threaded?))))
+  (|#%name| unsafe-os-thread-enabled? (lambda () (threaded?))))
 (define 1/unsafe-call-in-os-thread
   (|#%name|
    unsafe-call-in-os-thread
@@ -16283,8 +16237,8 @@
    (lambda ()
      (begin
        (if threaded? (void) (raise-unsupported 'unsafe-make-os-semaphore))
-       (let ((app_0 (|#%app| host:make-mutex)))
-         (os-semaphore1.1 0 app_0 (|#%app| host:make-condition)))))))
+       (let ((app_0 (make-mutex)))
+         (os-semaphore1.1 0 app_0 (make-condition)))))))
 (define 1/unsafe-os-semaphore-post
   (|#%name|
    unsafe-os-semaphore-post
@@ -16293,12 +16247,12 @@
        (if (os-semaphore? s_0)
          (void)
          (raise-argument-error 'unsafe-os-semaphore-post "os-semaphore?" s_0))
-       (|#%app| host:mutex-acquire (os-semaphore-mutex s_0))
+       (mutex-acquire (os-semaphore-mutex s_0))
        (if (zero? (os-semaphore-count s_0))
-         (|#%app| host:condition-signal (os-semaphore-condition s_0))
+         (condition-signal (os-semaphore-condition s_0))
          (void))
        (set-os-semaphore-count! s_0 (add1 (os-semaphore-count s_0)))
-       (|#%app| host:mutex-release (os-semaphore-mutex s_0))))))
+       (mutex-release (os-semaphore-mutex s_0))))))
 (define 1/unsafe-os-semaphore-wait
   (|#%name|
    unsafe-os-semaphore-wait
@@ -16307,7 +16261,7 @@
        (if (os-semaphore? s_0)
          (void)
          (raise-argument-error 'unsafe-os-semaphore-wait "os-semaphore?" s_0))
-       (|#%app| host:mutex-acquire (os-semaphore-mutex s_0))
+       (mutex-acquire (os-semaphore-mutex s_0))
        (letrec*
         ((loop_0
           (|#%name|
@@ -16315,8 +16269,7 @@
            (lambda ()
              (if (zero? (os-semaphore-count s_0))
                (begin
-                 (|#%app|
-                  host:condition-wait
+                 (condition-wait
                   (os-semaphore-condition s_0)
                   (os-semaphore-mutex s_0))
                  (loop_0))
@@ -16324,7 +16277,7 @@
                 s_0
                 (sub1 (os-semaphore-count s_0))))))))
         (loop_0))
-       (|#%app| host:mutex-release (os-semaphore-mutex s_0))))))
+       (mutex-release (os-semaphore-mutex s_0))))))
 (define raise-unsupported
   (lambda (who_0)
     (raise

@@ -64,7 +64,9 @@
         current-plumber
         plumber-add-flush!
         plumber-flush-handle-remove!
-        prop:place-message)
+        prop:place-message
+        assert-push-lock-level!
+        assert-pop-lock-level!)
 
 (bounce* choice-evt ; raw variant that takes a list of evts
          prop:secondary-evt

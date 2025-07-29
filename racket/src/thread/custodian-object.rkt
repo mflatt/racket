@@ -5,7 +5,9 @@
                   host:unsafe-make-weak-hasheq
                   host:make-mutex
                   host:mutex-acquire
-                  host:mutex-release))
+                  host:mutex-release
+                  assert-push-lock-level!
+                  assert-pop-lock-level!))
 
 (provide (struct-out custodian)
          create-custodian
@@ -29,9 +31,11 @@
 
 (define (lock-custodians)
   (start-uninterruptible)
+  (assert-push-lock-level! 'custodian)
   (host:mutex-acquire custodian-lock))
-(define (unlock-custodians)
+(define (unlock-custodians)  
   (host:mutex-release custodian-lock)
+  (assert-pop-lock-level! 'custodian)
   (end-uninterruptible))
 
 (define (init-custodian-lock!)
