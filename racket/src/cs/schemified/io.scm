@@ -7522,7 +7522,21 @@
               (if (1/output-port? p_0)
                 (->core-output-port.1 unsafe-undefined p_0 #f)
                 (raise-argument-error 'close-input-port "port?" p_0)))))
-       (core-port-closed? p_1)))))
+       (begin
+         (begin
+           (unsafe-start-uninterruptible)
+           (assert-push-lock-level! 'port)
+           (if (unsafe-struct*-cas! p_1 2 #f #t) (void) (port-lock-slow p_1))
+           (memory-order-acquire))
+         (begin0
+           (core-port-closed? p_1)
+           (begin
+             (memory-order-release)
+             (if (unsafe-struct*-cas! p_1 2 #t #f)
+               (void)
+               (port-unlock-slow p_1))
+             (assert-pop-lock-level! 'port)
+             (unsafe-end-atomic))))))))
 (define close-port
   (lambda (p_0)
     (begin
@@ -7580,36 +7594,32 @@
                 (raise-argument-error 'port-closed-evt "port?" p_0)))))
        (let ((sema_0
               (begin
-                (unsafe-start-atomic)
+                (begin
+                  (unsafe-start-uninterruptible)
+                  (assert-push-lock-level! 'port)
+                  (if (unsafe-struct*-cas! p_1 2 #f #t)
+                    (void)
+                    (port-lock-slow p_1))
+                  (memory-order-acquire))
                 (begin0
+                  (let ((or-part_0 (core-port-closed-sema p_1)))
+                    (if or-part_0
+                      or-part_0
+                      (let ((s_0 (make-semaphore)))
+                        (begin
+                          (set-core-port-closed-sema! p_1 s_0)
+                          (port-lock-require-atomic! p_1 #t)
+                          (if (core-port-closed? p_1)
+                            (semaphore-post s_0)
+                            (void))
+                          s_0))))
                   (begin
-                    (begin
-                      (unsafe-start-uninterruptible)
-                      (assert-push-lock-level! 'port)
-                      (if (unsafe-struct*-cas! p_1 2 #f #t)
-                        (void)
-                        (port-lock-slow p_1))
-                      (memory-order-acquire))
-                    (begin0
-                      (let ((or-part_0 (core-port-closed-sema p_1)))
-                        (if or-part_0
-                          or-part_0
-                          (let ((s_0 (make-semaphore)))
-                            (begin
-                              (set-core-port-closed-sema! p_1 s_0)
-                              (port-lock-require-atomic! p_1 #t)
-                              (if (core-port-closed? p_1)
-                                (semaphore-post s_0)
-                                (void))
-                              s_0))))
-                      (begin
-                        (memory-order-release)
-                        (if (unsafe-struct*-cas! p_1 2 #t #f)
-                          (void)
-                          (port-unlock-slow p_1))
-                        (assert-pop-lock-level! 'port)
-                        (unsafe-end-atomic))))
-                  (unsafe-end-atomic)))))
+                    (memory-order-release)
+                    (if (unsafe-struct*-cas! p_1 2 #t #f)
+                      (void)
+                      (port-unlock-slow p_1))
+                    (assert-pop-lock-level! 'port)
+                    (unsafe-end-atomic))))))
          (let ((self_0 #f))
            (begin
              (set! self_0
@@ -9582,15 +9592,17 @@
                  (port-lock-slow cp_0))
                (memory-order-acquire))
              (begin0
-               (let ((fd_0 (fd-port-fd cp_0)))
-                 (begin
-                   (start-rktio)
-                   (begin0
-                     (|#%app|
-                      rktio_fd_is_pending_open
-                      (unsafe-place-local-ref cell.1)
-                      fd_0)
-                     (end-rktio))))
+               (if (core-port-closed? cp_0)
+                 #f
+                 (let ((fd_0 (fd-port-fd cp_0)))
+                   (begin
+                     (start-rktio)
+                     (begin0
+                       (|#%app|
+                        rktio_fd_is_pending_open
+                        (unsafe-place-local-ref cell.1)
+                        fd_0)
+                       (end-rktio)))))
                (begin
                  (memory-order-release)
                  (if (unsafe-struct*-cas! cp_0 2 #t #f)
@@ -9925,7 +9937,7 @@
           (void)
           (port-lock-slow port_0))
         (memory-order-acquire))
-      (if (1/port-closed? port_0)
+      (if (core-port-closed? port_0)
         (begin
           (begin
             (memory-order-release)
@@ -35444,338 +35456,331 @@
                                                  (->path command_0)
                                                  'subprocess
                                                  '(execute))))
-                                           (let ((maybe-wait_0
-                                                  (|#%name|
-                                                   maybe-wait
-                                                   (lambda (fd_0)
-                                                     (if (if fd_0
-                                                           (begin
-                                                             (start-rktio)
-                                                             (begin0
-                                                               (|#%app|
-                                                                rktio_fd_is_pending_open
-                                                                (unsafe-place-local-ref
-                                                                 cell.1)
-                                                                (fd-port-fd
-                                                                 fd_0))
-                                                               (end-rktio)))
-                                                           #f)
-                                                       (sync fd_0)
-                                                       (void))))))
-                                             (begin
-                                               (maybe-wait_0 stdout_0)
+                                           (let ((send-args-list_0
+                                                  (cons
+                                                   command-bstr_0
+                                                   (1/reverse
+                                                    (letrec*
+                                                     ((for-loop_0
+                                                       (|#%name|
+                                                        for-loop
+                                                        (lambda (fold-var_0
+                                                                 lst_0)
+                                                          (if (pair? lst_0)
+                                                            (let ((arg_0
+                                                                   (unsafe-car
+                                                                    lst_0)))
+                                                              (let ((rest_0
+                                                                     (unsafe-cdr
+                                                                      lst_0)))
+                                                                (let ((fold-var_1
+                                                                       (let ((fold-var_1
+                                                                              (cons
+                                                                               (if (string?
+                                                                                    arg_0)
+                                                                                 (1/string->bytes/locale
+                                                                                  arg_0
+                                                                                  63)
+                                                                                 (if (1/path?
+                                                                                      arg_0)
+                                                                                   (path-bytes
+                                                                                    arg_0)
+                                                                                   arg_0))
+                                                                               fold-var_0)))
+                                                                         (values
+                                                                          fold-var_1))))
+                                                                  (for-loop_0
+                                                                   fold-var_1
+                                                                   rest_0))))
+                                                            fold-var_0)))))
+                                                     (for-loop_0
+                                                      null
+                                                      args_0))))))
+                                             (let ((maybe-wait_0
+                                                    (|#%name|
+                                                     maybe-wait
+                                                     (lambda (port_0)
+                                                       (if (if port_0
+                                                             (1/port-waiting-peer?
+                                                              port_0)
+                                                             #f)
+                                                         (sync port_0)
+                                                         (void))))))
                                                (begin
-                                                 (if (eq? stderr_0 'stdout)
-                                                   (void)
-                                                   (maybe-wait_0 stderr_0))
+                                                 (maybe-wait_0 stdout_0)
                                                  (begin
-                                                   (if stdout_0
-                                                     (port-insist-atomic-lock
-                                                      stdout_0)
-                                                     (void))
+                                                   (if (eq? stderr_0 'stdout)
+                                                     (void)
+                                                     (maybe-wait_0 stderr_0))
                                                    (begin
-                                                     (if stdin_0
+                                                     (if stdout_0
                                                        (port-insist-atomic-lock
-                                                        stdin_0)
+                                                        stdout_0)
                                                        (void))
                                                      (begin
-                                                       (if (if stderr_0
-                                                             (not
-                                                              (eq?
-                                                               stderr_0
-                                                               'stdout))
-                                                             #f)
+                                                       (if stdin_0
                                                          (port-insist-atomic-lock
-                                                          stderr_0)
+                                                          stdin_0)
                                                          (void))
                                                        (begin
-                                                         (unsafe-start-atomic)
+                                                         (if (if stderr_0
+                                                               (not
+                                                                (eq?
+                                                                 stderr_0
+                                                                 'stdout))
+                                                               #f)
+                                                           (port-insist-atomic-lock
+                                                            stderr_0)
+                                                           (void))
                                                          (begin
-                                                           (if stdout_0
-                                                             (check-not-closed.1
-                                                              unsafe-end-atomic
-                                                              'subprocess
-                                                              stdout_0)
-                                                             (void))
+                                                           (unsafe-start-atomic)
                                                            (begin
-                                                             (if stdin_0
+                                                             (if stdout_0
                                                                (check-not-closed.1
                                                                 unsafe-end-atomic
                                                                 'subprocess
-                                                                stdin_0)
+                                                                stdout_0)
                                                                (void))
                                                              (begin
-                                                               (if (if stderr_0
-                                                                     (not
-                                                                      (eq?
-                                                                       stderr_0
-                                                                       'stdout))
-                                                                     #f)
+                                                               (if stdin_0
                                                                  (check-not-closed.1
                                                                   unsafe-end-atomic
                                                                   'subprocess
-                                                                  stderr_0)
+                                                                  stdin_0)
                                                                  (void))
                                                                (begin
-                                                                 (poll-subprocess-finalizations)
-                                                                 (begin
-                                                                   (check-current-custodian.1
+                                                                 (if (if stderr_0
+                                                                       (not
+                                                                        (eq?
+                                                                         stderr_0
+                                                                         'stdout))
+                                                                       #f)
+                                                                   (check-not-closed.1
                                                                     unsafe-end-atomic
-                                                                    'subprocess)
+                                                                    'subprocess
+                                                                    stderr_0)
+                                                                   (void))
+                                                                 (begin
+                                                                   (poll-subprocess-finalizations)
                                                                    (begin
-                                                                     (start-rktio)
-                                                                     (let ((envvars_0
-                                                                            (|#%app|
-                                                                             rktio_empty_envvars
-                                                                             (unsafe-place-local-ref
-                                                                              cell.1))))
-                                                                       (begin
-                                                                         (let ((lst_0
-                                                                                (1/environment-variables-names
-                                                                                 env-vars_0)))
-                                                                           (letrec*
-                                                                            ((for-loop_0
-                                                                              (|#%name|
-                                                                               for-loop
-                                                                               (lambda (lst_1)
-                                                                                 (if (pair?
-                                                                                      lst_1)
-                                                                                   (let ((name_0
-                                                                                          (unsafe-car
-                                                                                           lst_1)))
-                                                                                     (let ((rest_0
-                                                                                            (unsafe-cdr
+                                                                     (check-current-custodian.1
+                                                                      unsafe-end-atomic
+                                                                      'subprocess)
+                                                                     (begin
+                                                                       (start-rktio)
+                                                                       (let ((envvars_0
+                                                                              (|#%app|
+                                                                               rktio_empty_envvars
+                                                                               (unsafe-place-local-ref
+                                                                                cell.1))))
+                                                                         (begin
+                                                                           (let ((lst_0
+                                                                                  (1/environment-variables-names
+                                                                                   env-vars_0)))
+                                                                             (letrec*
+                                                                              ((for-loop_0
+                                                                                (|#%name|
+                                                                                 for-loop
+                                                                                 (lambda (lst_1)
+                                                                                   (if (pair?
+                                                                                        lst_1)
+                                                                                     (let ((name_0
+                                                                                            (unsafe-car
                                                                                              lst_1)))
-                                                                                       (begin
-                                                                                         (|#%app|
-                                                                                          rktio_envvars_set
-                                                                                          (unsafe-place-local-ref
-                                                                                           cell.1)
-                                                                                          envvars_0
-                                                                                          name_0
-                                                                                          (1/environment-variables-ref
-                                                                                           env-vars_0
-                                                                                           name_0))
-                                                                                         (for-loop_0
-                                                                                          rest_0))))
-                                                                                   (values))))))
-                                                                            (for-loop_0
-                                                                             lst_0)))
-                                                                         (let ((send-args_0
-                                                                                (|#%app|
-                                                                                 rktio_from_bytes_list
-                                                                                 (cons
-                                                                                  command-bstr_0
-                                                                                  (1/reverse
-                                                                                   (letrec*
-                                                                                    ((for-loop_0
-                                                                                      (|#%name|
-                                                                                       for-loop
-                                                                                       (lambda (fold-var_0
-                                                                                                lst_0)
-                                                                                         (if (pair?
-                                                                                              lst_0)
-                                                                                           (let ((arg_0
-                                                                                                  (unsafe-car
-                                                                                                   lst_0)))
-                                                                                             (let ((rest_0
-                                                                                                    (unsafe-cdr
-                                                                                                     lst_0)))
-                                                                                               (let ((fold-var_1
-                                                                                                      (let ((fold-var_1
-                                                                                                             (cons
-                                                                                                              (if (string?
-                                                                                                                   arg_0)
-                                                                                                                (1/string->bytes/locale
-                                                                                                                 arg_0
-                                                                                                                 63)
-                                                                                                                (if (1/path?
-                                                                                                                     arg_0)
-                                                                                                                  (path-bytes
-                                                                                                                   arg_0)
-                                                                                                                  arg_0))
-                                                                                                              fold-var_0)))
-                                                                                                        (values
-                                                                                                         fold-var_1))))
-                                                                                                 (for-loop_0
-                                                                                                  fold-var_1
-                                                                                                  rest_0))))
-                                                                                           fold-var_0)))))
-                                                                                    (for-loop_0
-                                                                                     null
-                                                                                     args_0)))))))
-                                                                           (let ((r_0
-                                                                                  (let ((app_0
-                                                                                         (add1
-                                                                                          (length
-                                                                                           args_0))))
-                                                                                    (let ((app_1
-                                                                                           (if stdout_0
-                                                                                             (fd-port-fd
-                                                                                              stdout_0)
-                                                                                             #f)))
-                                                                                      (let ((app_2
-                                                                                             (if stdin_0
+                                                                                       (let ((rest_0
+                                                                                              (unsafe-cdr
+                                                                                               lst_1)))
+                                                                                         (begin
+                                                                                           (|#%app|
+                                                                                            rktio_envvars_set
+                                                                                            (unsafe-place-local-ref
+                                                                                             cell.1)
+                                                                                            envvars_0
+                                                                                            name_0
+                                                                                            (1/environment-variables-ref
+                                                                                             env-vars_0
+                                                                                             name_0))
+                                                                                           (for-loop_0
+                                                                                            rest_0))))
+                                                                                     (values))))))
+                                                                              (for-loop_0
+                                                                               lst_0)))
+                                                                           (let ((send-args_0
+                                                                                  (|#%app|
+                                                                                   rktio_from_bytes_list
+                                                                                   send-args-list_0)))
+                                                                             (let ((r_0
+                                                                                    (let ((app_0
+                                                                                           (add1
+                                                                                            (length
+                                                                                             args_0))))
+                                                                                      (let ((app_1
+                                                                                             (if stdout_0
                                                                                                (fd-port-fd
-                                                                                                stdin_0)
+                                                                                                stdout_0)
                                                                                                #f)))
-                                                                                        (let ((app_3
-                                                                                               (if stderr_0
-                                                                                                 (if (not
-                                                                                                      (eq?
-                                                                                                       stderr_0
-                                                                                                       'stdout))
-                                                                                                   (fd-port-fd
-                                                                                                    stderr_0)
-                                                                                                   #f)
+                                                                                        (let ((app_2
+                                                                                               (if stdin_0
+                                                                                                 (fd-port-fd
+                                                                                                  stdin_0)
                                                                                                  #f)))
-                                                                                          (let ((app_4
-                                                                                                 (if (1/subprocess?
-                                                                                                      group_0)
-                                                                                                   (subprocess-process
-                                                                                                    group_0)
+                                                                                          (let ((app_3
+                                                                                                 (if stderr_0
+                                                                                                   (if (not
+                                                                                                        (eq?
+                                                                                                         stderr_0
+                                                                                                         'stdout))
+                                                                                                     (fd-port-fd
+                                                                                                      stderr_0)
+                                                                                                     #f)
                                                                                                    #f)))
-                                                                                            (|#%app|
-                                                                                             rktio_process
-                                                                                             (unsafe-place-local-ref
-                                                                                              cell.1)
-                                                                                             command-bstr_0
-                                                                                             app_0
-                                                                                             send-args_0
-                                                                                             app_1
-                                                                                             app_2
-                                                                                             app_3
-                                                                                             app_4
-                                                                                             (->host
-                                                                                              (current-directory$1)
-                                                                                              #f
-                                                                                              null)
-                                                                                             envvars_0
-                                                                                             flags_4))))))))
-                                                                             (begin
-                                                                               (|#%app|
-                                                                                rktio_free_bytes_list
-                                                                                send-args_0
-                                                                                (length
-                                                                                 args_0))
+                                                                                            (let ((app_4
+                                                                                                   (if (1/subprocess?
+                                                                                                        group_0)
+                                                                                                     (subprocess-process
+                                                                                                      group_0)
+                                                                                                     #f)))
+                                                                                              (|#%app|
+                                                                                               rktio_process
+                                                                                               (unsafe-place-local-ref
+                                                                                                cell.1)
+                                                                                               command-bstr_0
+                                                                                               app_0
+                                                                                               send-args_0
+                                                                                               app_1
+                                                                                               app_2
+                                                                                               app_3
+                                                                                               app_4
+                                                                                               (->host
+                                                                                                (current-directory$1)
+                                                                                                #f
+                                                                                                null)
+                                                                                               envvars_0
+                                                                                               flags_4))))))))
                                                                                (begin
-                                                                                 (if envvars_0
-                                                                                   (|#%app|
-                                                                                    rktio_envvars_free
-                                                                                    (unsafe-place-local-ref
-                                                                                     cell.1)
-                                                                                    envvars_0)
-                                                                                   (void))
+                                                                                 (|#%app|
+                                                                                  rktio_free_bytes_list
+                                                                                  send-args_0
+                                                                                  (length
+                                                                                   args_0))
                                                                                  (begin
-                                                                                   (if (vector?
-                                                                                        r_0)
-                                                                                     (begin
-                                                                                       (end-rktio)
-                                                                                       (unsafe-end-atomic)
-                                                                                       (let ((base-msg_0
-                                                                                              "process creation failed"))
-                                                                                         (raise
-                                                                                          (let ((app_0
-                                                                                                 (let ((msg_0
-                                                                                                        (string-append
-                                                                                                         base-msg_0
-                                                                                                         "\n  system error: "
-                                                                                                         (format-rktio-system-error-message
-                                                                                                          r_0))))
-                                                                                                   (error-message->adjusted-string
-                                                                                                    'subprocess
-                                                                                                    'racket/primitive
-                                                                                                    msg_0
-                                                                                                    'racket/primitive))))
-                                                                                            (|#%app|
-                                                                                             exn:fail
-                                                                                             app_0
-                                                                                             (current-continuation-marks))))))
+                                                                                   (if envvars_0
+                                                                                     (|#%app|
+                                                                                      rktio_envvars_free
+                                                                                      (unsafe-place-local-ref
+                                                                                       cell.1)
+                                                                                      envvars_0)
                                                                                      (void))
-                                                                                   (let ((in_0
-                                                                                          (let ((fd_0
-                                                                                                 (|#%app|
-                                                                                                  rktio_process_result_stdout_fd
-                                                                                                  r_0)))
-                                                                                            (if fd_0
-                                                                                              (open-input-fd.1
-                                                                                               unsafe-undefined
-                                                                                               unsafe-undefined
-                                                                                               fd_0
-                                                                                               'subprocess-stdout)
-                                                                                              #f))))
-                                                                                     (let ((out_0
+                                                                                   (begin
+                                                                                     (if (vector?
+                                                                                          r_0)
+                                                                                       (begin
+                                                                                         (end-rktio)
+                                                                                         (unsafe-end-atomic)
+                                                                                         (let ((base-msg_0
+                                                                                                "process creation failed"))
+                                                                                           (raise
+                                                                                            (let ((app_0
+                                                                                                   (let ((msg_0
+                                                                                                          (string-append
+                                                                                                           base-msg_0
+                                                                                                           "\n  system error: "
+                                                                                                           (format-rktio-system-error-message
+                                                                                                            r_0))))
+                                                                                                     (error-message->adjusted-string
+                                                                                                      'subprocess
+                                                                                                      'racket/primitive
+                                                                                                      msg_0
+                                                                                                      'racket/primitive))))
+                                                                                              (|#%app|
+                                                                                               exn:fail
+                                                                                               app_0
+                                                                                               (current-continuation-marks))))))
+                                                                                       (void))
+                                                                                     (let ((in_0
                                                                                             (let ((fd_0
                                                                                                    (|#%app|
-                                                                                                    rktio_process_result_stdin_fd
+                                                                                                    rktio_process_result_stdout_fd
                                                                                                     r_0)))
                                                                                               (if fd_0
-                                                                                                (let ((temp21_0
-                                                                                                       (|#%app|
-                                                                                                        rktio_fd_is_terminal
-                                                                                                        (unsafe-place-local-ref
-                                                                                                         cell.1)
-                                                                                                        fd_0)))
-                                                                                                  (open-output-fd.1
-                                                                                                   'infer
-                                                                                                   unsafe-undefined
-                                                                                                   unsafe-undefined
-                                                                                                   temp21_0
-                                                                                                   unsafe-undefined
-                                                                                                   fd_0
-                                                                                                   'subprocess-stdin))
+                                                                                                (open-input-fd.1
+                                                                                                 unsafe-undefined
+                                                                                                 unsafe-undefined
+                                                                                                 fd_0
+                                                                                                 'subprocess-stdout)
                                                                                                 #f))))
-                                                                                       (let ((err_0
+                                                                                       (let ((out_0
                                                                                               (let ((fd_0
                                                                                                      (|#%app|
-                                                                                                      rktio_process_result_stderr_fd
+                                                                                                      rktio_process_result_stdin_fd
                                                                                                       r_0)))
                                                                                                 (if fd_0
-                                                                                                  (open-input-fd.1
-                                                                                                   unsafe-undefined
-                                                                                                   unsafe-undefined
-                                                                                                   fd_0
-                                                                                                   'subprocess-stderr)
+                                                                                                  (let ((temp21_0
+                                                                                                         (|#%app|
+                                                                                                          rktio_fd_is_terminal
+                                                                                                          (unsafe-place-local-ref
+                                                                                                           cell.1)
+                                                                                                          fd_0)))
+                                                                                                    (open-output-fd.1
+                                                                                                     'infer
+                                                                                                     unsafe-undefined
+                                                                                                     unsafe-undefined
+                                                                                                     temp21_0
+                                                                                                     unsafe-undefined
+                                                                                                     fd_0
+                                                                                                     'subprocess-stdin))
                                                                                                   #f))))
-                                                                                         (let ((sp_0
-                                                                                                (make-subprocess
-                                                                                                 (|#%app|
-                                                                                                  rktio_process_result_process
-                                                                                                  r_0)
-                                                                                                 #f
-                                                                                                 (eq?
-                                                                                                  group_0
-                                                                                                  'new))))
-                                                                                           (begin
-                                                                                             (register-subprocess-finalizer
-                                                                                              sp_0)
-                                                                                             (if cust-mode_0
-                                                                                               (let ((close_0
-                                                                                                      (if (eq?
-                                                                                                           cust-mode_0
-                                                                                                           'kill)
-                                                                                                        kill-subprocess
-                                                                                                        interrupt-subprocess)))
-                                                                                                 (set-subprocess-cust-ref!
-                                                                                                  sp_0
-                                                                                                  (|#%app|
-                                                                                                   1/unsafe-custodian-register
-                                                                                                   (current-custodian)
-                                                                                                   sp_0
-                                                                                                   close_0
-                                                                                                   #t
-                                                                                                   #f)))
-                                                                                               (void))
-                                                                                             (|#%app|
-                                                                                              rktio_free
-                                                                                              r_0)
-                                                                                             (end-rktio)
-                                                                                             (unsafe-end-atomic)
-                                                                                             (values
-                                                                                              sp_0
-                                                                                              in_0
-                                                                                              out_0
-                                                                                              err_0)))))))))))))))))))))))))))))))))))))))))))))))))
+                                                                                         (let ((err_0
+                                                                                                (let ((fd_0
+                                                                                                       (|#%app|
+                                                                                                        rktio_process_result_stderr_fd
+                                                                                                        r_0)))
+                                                                                                  (if fd_0
+                                                                                                    (open-input-fd.1
+                                                                                                     unsafe-undefined
+                                                                                                     unsafe-undefined
+                                                                                                     fd_0
+                                                                                                     'subprocess-stderr)
+                                                                                                    #f))))
+                                                                                           (let ((sp_0
+                                                                                                  (make-subprocess
+                                                                                                   (|#%app|
+                                                                                                    rktio_process_result_process
+                                                                                                    r_0)
+                                                                                                   #f
+                                                                                                   (eq?
+                                                                                                    group_0
+                                                                                                    'new))))
+                                                                                             (begin
+                                                                                               (register-subprocess-finalizer
+                                                                                                sp_0)
+                                                                                               (if cust-mode_0
+                                                                                                 (let ((close_0
+                                                                                                        (if (eq?
+                                                                                                             cust-mode_0
+                                                                                                             'kill)
+                                                                                                          kill-subprocess
+                                                                                                          interrupt-subprocess)))
+                                                                                                   (set-subprocess-cust-ref!
+                                                                                                    sp_0
+                                                                                                    (|#%app|
+                                                                                                     1/unsafe-custodian-register
+                                                                                                     (current-custodian)
+                                                                                                     sp_0
+                                                                                                     close_0
+                                                                                                     #t
+                                                                                                     #f)))
+                                                                                                 (void))
+                                                                                               (|#%app|
+                                                                                                rktio_free
+                                                                                                r_0)
+                                                                                               (end-rktio)
+                                                                                               (unsafe-end-atomic)
+                                                                                               (values
+                                                                                                sp_0
+                                                                                                in_0
+                                                                                                out_0
+                                                                                                err_0))))))))))))))))))))))))))))))))))))))))))))))))))
 (define 1/subprocess-wait
   (|#%name|
    subprocess-wait
@@ -38178,131 +38183,142 @@
   (let ((tcp-addresses_0
          (|#%name|
           tcp-addresses
-          (lambda (p2_0 port-numbers?1_0)
+          (lambda (p-in2_0 port-numbers?1_0)
             (begin
-              (if (let ((or-part_0 (1/tcp-port? p2_0)))
+              (if (let ((or-part_0 (1/tcp-port? p-in2_0)))
                     (if or-part_0
                       or-part_0
-                      (let ((or-part_1 (1/tcp-listener? p2_0)))
-                        (if or-part_1 or-part_1 (1/udp? p2_0)))))
+                      (let ((or-part_1 (1/tcp-listener? p-in2_0)))
+                        (if or-part_1 or-part_1 (1/udp? p-in2_0)))))
                 (void)
                 (raise-argument-error
                  'tcp-addresses
                  "(or/c tcp-port? tcp-listener? udp?)"
-                 p2_0))
-              (begin
-                (start-rktio)
-                (call-with-values
-                 (lambda ()
-                   (if (1/tcp-listener? p2_0)
-                     (if (unbox (tcp-listener-closed p2_0))
-                       (begin
-                         (end-rktio)
-                         (raise-arguments-error
-                          'tcp-addresses
-                          "listener is closed"
-                          "listener"
-                          p2_0))
-                       (values
-                        (|#%app|
-                         rktio_listener_address
-                         (unsafe-place-local-ref cell.1)
-                         (tcp-listener-lnr p2_0))
-                        #f))
-                     (let ((fd_0
-                            (if (1/udp? p2_0)
-                              (begin
-                                (check-udp-closed.1
-                                 void
-                                 unsafe-undefined
-                                 'tcp-addresses
-                                 p2_0)
-                                (unbox (udp-s-box p2_0)))
-                              (if (1/port-closed? p2_0)
-                                (begin
-                                  (end-rktio)
-                                  (raise-arguments-error
-                                   'tcp-addresses
-                                   "port is closed"
-                                   "port"
-                                   p2_0))
-                                (fd-port-fd p2_0)))))
-                       (let ((app_0
-                              (|#%app|
-                               rktio_socket_address
-                               (unsafe-place-local-ref cell.1)
-                               fd_0)))
-                         (values
-                          app_0
-                          (|#%app|
-                           rktio_socket_peer_address
-                           (unsafe-place-local-ref cell.1)
-                           fd_0))))))
-                 (lambda (local-address_0 peer-address_0)
-                   (let ((local-address-bytes_0
-                          (if (not (vector? local-address_0))
-                            (|#%app| rktio_to_bytes_list local-address_0 2)
-                            #f)))
-                     (let ((peer-address-bytes_0
-                            (if peer-address_0
-                              (if (not (vector? peer-address_0))
-                                (|#%app| rktio_to_bytes_list peer-address_0 2)
-                                #f)
-                              #f)))
-                       (begin
-                         (end-rktio)
+                 p-in2_0))
+              (let ((p_0
+                     (if (1/input-port? p-in2_0)
+                       (->core-input-port.1 unsafe-undefined p-in2_0 #f)
+                       (if (1/output-port? p-in2_0)
+                         (->core-output-port.1 unsafe-undefined p-in2_0 #f)
+                         p-in2_0))))
+                (begin
+                  (start-rktio)
+                  (call-with-values
+                   (lambda ()
+                     (if (1/tcp-listener? p_0)
+                       (if (unbox (tcp-listener-closed p_0))
                          (begin
-                           (if (vector? local-address_0)
-                             (raise-network-error
-                              'tcp-addresses
-                              local-address_0
-                              "could not get address")
-                             (void))
+                           (end-rktio)
+                           (raise-arguments-error
+                            'tcp-addresses
+                            "listener is closed"
+                            "listener"
+                            p_0))
+                         (values
+                          (|#%app|
+                           rktio_listener_address
+                           (unsafe-place-local-ref cell.1)
+                           (tcp-listener-lnr p_0))
+                          #f))
+                       (let ((fd_0
+                              (if (1/udp? p_0)
+                                (begin
+                                  (check-udp-closed.1
+                                   void
+                                   unsafe-undefined
+                                   'tcp-addresses
+                                   p_0)
+                                  (unbox (udp-s-box p_0)))
+                                (if (core-port-closed? p_0)
+                                  (begin
+                                    (end-rktio)
+                                    (raise-arguments-error
+                                     'tcp-addresses
+                                     "port is closed"
+                                     "port"
+                                     p_0))
+                                  (fd-port-fd p_0)))))
+                         (let ((app_0
+                                (|#%app|
+                                 rktio_socket_address
+                                 (unsafe-place-local-ref cell.1)
+                                 fd_0)))
+                           (values
+                            app_0
+                            (|#%app|
+                             rktio_socket_peer_address
+                             (unsafe-place-local-ref cell.1)
+                             fd_0))))))
+                   (lambda (local-address_0 peer-address_0)
+                     (let ((local-address-bytes_0
+                            (if (not (vector? local-address_0))
+                              (|#%app| rktio_to_bytes_list local-address_0 2)
+                              #f)))
+                       (let ((peer-address-bytes_0
+                              (if peer-address_0
+                                (if (not (vector? peer-address_0))
+                                  (|#%app|
+                                   rktio_to_bytes_list
+                                   peer-address_0
+                                   2)
+                                  #f)
+                                #f)))
+                         (begin
+                           (end-rktio)
                            (begin
-                             (if (if (vector? peer-address_0)
-                                   (not (1/udp? p2_0))
-                                   #f)
+                             (if (vector? local-address_0)
                                (raise-network-error
                                 'tcp-addresses
-                                peer-address_0
-                                "could not get peer address")
+                                local-address_0
+                                "could not get address")
                                (void))
-                             (let ((convert_0
-                                    (|#%name|
-                                     convert
-                                     (lambda (bstr_0)
-                                       (1/bytes->string/utf-8
-                                        bstr_0
-                                        '#\x3f)))))
-                               (let ((local-hostname_0
-                                      (convert_0 (car local-address-bytes_0))))
-                                 (let ((peer-hostname_0
-                                        (if peer-address-bytes_0
-                                          (convert_0
-                                           (car peer-address-bytes_0))
-                                          "0.0.0.0")))
-                                   (if port-numbers?1_0
-                                     (let ((app_0
+                             (begin
+                               (if (if (vector? peer-address_0)
+                                     (not (1/udp? p_0))
+                                     #f)
+                                 (raise-network-error
+                                  'tcp-addresses
+                                  peer-address_0
+                                  "could not get peer address")
+                                 (void))
+                               (let ((convert_0
+                                      (|#%name|
+                                       convert
+                                       (lambda (bstr_0)
+                                         (1/bytes->string/utf-8
+                                          bstr_0
+                                          '#\x3f)))))
+                                 (let ((local-hostname_0
+                                        (convert_0
+                                         (car local-address-bytes_0))))
+                                   (let ((peer-hostname_0
+                                          (if peer-address-bytes_0
+                                            (convert_0
+                                             (car peer-address-bytes_0))
+                                            "0.0.0.0")))
+                                     (if port-numbers?1_0
+                                       (let ((app_0
+                                              (string->integer
+                                               (convert_0
+                                                (cadr
+                                                 local-address-bytes_0)))))
+                                         (values
+                                          local-hostname_0
+                                          app_0
+                                          peer-hostname_0
+                                          (if peer-address-bytes_0
                                             (string->integer
                                              (convert_0
-                                              (cadr local-address-bytes_0)))))
+                                              (cadr peer-address-bytes_0)))
+                                            0)))
                                        (values
                                         local-hostname_0
-                                        app_0
-                                        peer-hostname_0
-                                        (if peer-address-bytes_0
-                                          (string->integer
-                                           (convert_0
-                                            (cadr peer-address-bytes_0)))
-                                          0)))
-                                     (values
-                                      local-hostname_0
-                                      peer-hostname_0))))))))))))))))))
+                                        peer-hostname_0)))))))))))))))))))
     (|#%name|
      tcp-addresses
      (case-lambda
-      ((p_0) (tcp-addresses_0 p_0 #f))
-      ((p_0 port-numbers?1_0) (tcp-addresses_0 p_0 port-numbers?1_0))))))
+      ((p-in_0) (tcp-addresses_0 p-in_0 #f))
+      ((p-in_0 port-numbers?1_0) (tcp-addresses_0 p-in_0 port-numbers?1_0))))))
 (define check-bstr
   (lambda (who_0 bstr_0 start_0 end_0)
     (begin
