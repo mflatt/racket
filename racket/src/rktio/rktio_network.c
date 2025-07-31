@@ -920,7 +920,7 @@ void rktio_socket_init(rktio_t *rktio, rktio_fd_t *rfd)
 # ifdef SO_BROADCAST
     {
       int bc = 1;
-      setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bc, sizeof(bc));
+      setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&bc, sizeof(bc));
     }
 # endif
 #endif
@@ -983,7 +983,7 @@ int rktio_tcp_nodelay(rktio_t *rktio, rktio_fd_t *rfd, rktio_bool_t enable)
 {
   rktio_socket_t s = rktio_fd_socket(rktio, rfd);
   int nd = (enable ? 1 : 0), r;
-  r = setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &nd, sizeof(nd));
+  r = setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&nd, sizeof(nd));
   if (r) {
     get_socket_error();
     return 0;
@@ -996,7 +996,7 @@ int rktio_tcp_keepalive(rktio_t *rktio, rktio_fd_t *rfd, rktio_bool_t enable)
 #ifdef SO_KEEPALIVE
   rktio_socket_t s = rktio_fd_socket(rktio, rfd);
   int nd = (enable ? 1 : 0), r;
-  r = setsockopt(s, IPPROTO_TCP, SO_KEEPALIVE, &nd, sizeof(nd));
+  r = setsockopt(s, IPPROTO_TCP, SO_KEEPALIVE, (char *)&nd, sizeof(nd));
   if (r) {
     get_socket_error();
     return 0;
@@ -1005,7 +1005,7 @@ int rktio_tcp_keepalive(rktio_t *rktio, rktio_fd_t *rfd, rktio_bool_t enable)
   return 1;
 }
 
-int rktio_socket_poll_write_ready(rktio_t *rktio, rktio_fd_t *rfd)
+int rktio_socket_poll_write_ready(rktio_t *rktio, rktio_fd_t *rfd, rktio_err_t *err)
 {
 #ifdef RKTIO_SYSTEM_UNIX
   return rktio_poll_write_ready(rktio, rfd);
@@ -1029,7 +1029,7 @@ int rktio_socket_poll_write_ready(rktio_t *rktio, rktio_fd_t *rfd)
     sr = select(RKTIO_SOCKS(s + 1), NULL, writefds, exnfds, &time);
 
     if (sr == -1) {
-      get_socket_error();
+      do_get_socket_error(err);
       return RKTIO_POLL_ERROR;
     } else if (sr)
       return RKTIO_POLL_READY;
@@ -1039,7 +1039,7 @@ int rktio_socket_poll_write_ready(rktio_t *rktio, rktio_fd_t *rfd)
 #endif
 }
 
-int rktio_socket_poll_read_ready(rktio_t *rktio, rktio_fd_t *rfd)
+int rktio_socket_poll_read_ready(rktio_t *rktio, rktio_fd_t *rfd, rktio_err_t *err)
 {
 #ifdef RKTIO_SYSTEM_UNIX
   return rktio_poll_read_ready(rktio, rfd);
@@ -1063,7 +1063,7 @@ int rktio_socket_poll_read_ready(rktio_t *rktio, rktio_fd_t *rfd)
     sr = select(RKTIO_SOCKS(s + 1), readfds, NULL, exnfds, &time);
     
     if (sr == -1) {
-      get_socket_error();
+      do_get_socket_error(err);
       return RKTIO_POLL_ERROR;
     } else if (sr)
       return RKTIO_POLL_READY;
@@ -1280,7 +1280,7 @@ static rktio_connect_t *try_connect(rktio_t *rktio, rktio_connect_t *conn)
 int rktio_poll_connect_ready(rktio_t *rktio, rktio_connect_t *conn)
 {
   if (conn->inprogress)
-    return rktio_socket_poll_write_ready(rktio, conn->trying_fd);
+    return rktio_socket_poll_write_ready(rktio, conn->trying_fd, &rktio->err);
   else
     return RKTIO_POLL_READY;
 }
@@ -1451,7 +1451,7 @@ rktio_listener_t *rktio_listen(rktio_t *rktio, rktio_addrinfo_t *src, int backlo
 	    int ok;
 # ifdef IPV6_V6ONLY
 	    int on = 1;
-	    ok = setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on));
+	    ok = setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&on, sizeof(on));
 # else
 	    ok = -1;
 # endif

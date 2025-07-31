@@ -263,8 +263,8 @@ void rktio_socket_own(rktio_t *rktio, rktio_fd_t *rfd);
 void rktio_socket_forget_owned(rktio_t *rktio, rktio_fd_t *rfd);
 rktio_fd_t *rktio_socket_dup(rktio_t *rktio, rktio_fd_t *rfd);
 
-int rktio_socket_poll_write_ready(rktio_t *rktio, rktio_fd_t *rfd);
-int rktio_socket_poll_read_ready(rktio_t *rktio, rktio_fd_t *rfd);
+int rktio_socket_poll_write_ready(rktio_t *rktio, rktio_fd_t *rfd, rktio_err_t *err);
+int rktio_socket_poll_read_ready(rktio_t *rktio, rktio_fd_t *rfd, rktio_err_t *err);
 
 intptr_t rktio_socket_write(rktio_t *rktio, rktio_fd_t *rfd, const char *buffer, intptr_t len, rktio_err_t *err);
 intptr_t rktio_socket_read(rktio_t *rktio, rktio_fd_t *rfd, char *buffer, intptr_t len, rktio_err_t *err);
@@ -300,7 +300,7 @@ void rktio_cloexec_unlock();
 # define MSC_WIDE_PATH_copy(n, err) WIDE_PATH_copy(n, err)
 # define MSC_WIDE_PATH_free(n) free(n)
 # define MSC_WIDE_PATH_decl(wp, err) wchar_t *wp; rktio_err_t err
-# define MSC_WIDE_PATH_decl_no_err(wp, err) wchar_t *wp
+# define MSC_WIDE_PATH_decl_no_err(wp) wchar_t *wp
 #else
 # define MSC_IZE(n) n
 # define MSC_W_IZE(n) MSC_IZE(n)
@@ -313,7 +313,7 @@ void rktio_cloexec_unlock();
 
 #ifdef RKTIO_SYSTEM_WINDOWS
 
-wchar_t *rktio_convert_to_wchar(rktio_t *rktio, const char *s, int do_copy);
+wchar_t *rktio_convert_to_wchar(rktio_t *rktio, rktio_err_t *err, const char *s, int do_copy);
 char *rktio_convert_from_wchar(const wchar_t *ws, int free_given);
 
 # define WIDE_PATH_temp(s) rktio_convert_to_wchar(rktio, &rktio->err, s, 0)

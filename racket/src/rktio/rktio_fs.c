@@ -237,7 +237,7 @@ static char *UNC_readlink(rktio_t *rktio, rktio_err_t *err, const char *fn)
   mz_REPARSE_DATA_BUFFER *rp;
   int len, off;
   wchar_t *lk;
-  const wchar_t *wp;
+  wchar_t *wp;
 
   init_procs();
 
@@ -255,12 +255,13 @@ static char *UNC_readlink(rktio_t *rktio, rktio_err_t *err, const char *fn)
 		  FILE_FLAG_BACKUP_SEMANTICS | mzFILE_FLAG_OPEN_REPARSE_POINT,
 		  NULL);
 
-  free(wp);
-
   if (h == INVALID_HANDLE_VALUE) {
     rktio_get_windows_error(err);
+    free(wp);
     return NULL;
   }
+
+  free(wp);
 
   while (1) {
     buffer = (char *)malloc(size);
@@ -334,7 +335,7 @@ static char *UNC_readlink(rktio_t *rktio, rktio_err_t *err, const char *fn)
   /* Make sure it's not empty, because that would form a bad path: */
   if (!lk[0]) {
     free(lk);
-    ekrio_set_racket_error(err, RKTIO_ERROR_LINK_FAILED);
+    rktio_set_racket_error(err, RKTIO_ERROR_LINK_FAILED);
     return NULL;
   }
 
@@ -358,7 +359,7 @@ static int UNC_stat(rktio_t *rktio, rktio_err_t *err,
   WIN32_FILE_ATTRIBUTE_DATA fad;
   int len, must_be_dir = 0;
   int same_path = 0; /* to give up on cyclic links */
-  const wchar_t *wp;
+  wchar_t *wp;
 
   if (resolved_path)
     *resolved_path = NULL;
@@ -481,13 +482,14 @@ static int UNC_stat(rktio_t *rktio, rktio_err_t *err,
                         OPEN_EXISTING,
                         FILE_FLAG_BACKUP_SEMANTICS,
                         NULL);
-        free(wp);
-
         if (h == INVALID_HANDLE_VALUE) {
           rktio_get_windows_error(err);
+	  free(wp);
           free(copy);
 	  return 0;
 	}
+
+	free(wp);
 
         do {
           init_procs();
@@ -528,7 +530,7 @@ static int UNC_stat(rktio_t *rktio, rktio_err_t *err,
       else if (attrs & FF_A_RDONLY)
         attrs -= FF_A_RDONLY;
 
-      wp = WIDE_PATH_copy(copy, err)
+      wp = WIDE_PATH_copy(copy, err);
       if (!SetFileAttributesW(wp, attrs)) {
         rktio_get_windows_error(err);
         free(wp);
@@ -1087,7 +1089,7 @@ int rktio_rename_file(rktio_t *rktio, const char *dest, const char *src, int exi
   wchar_t *src_w;
   const wchar_t *dest_w;
 
-  src_w = WIDE_PATH_copy(src);
+  src_w = WIDE_PATH_copy(src, &rktio->err);
   if (!src_w) return 0;
 
   dest_w = WIDE_PATH_temp(dest);
@@ -1285,7 +1287,7 @@ int rktio_make_link(rktio_t *rktio, const char *src, const char *dest, int dest_
     if (dest_is_directory)
       flags |= SYMBOLIC_LINK_FLAG_DIRECTORY; /* directory */
 
-    src_w = WIDE_PATH_copy(src);
+    src_w = WIDE_PATH_copy(src, &rktio->err);
     if (!src_w) return 0;
 
     dest_w = WIDE_PATH_temp(dest);
@@ -1653,7 +1655,7 @@ static rktio_directory_list_t *do_directory_list_start(rktio_t *rktio, const cha
   FF_HANDLE_TYPE hfile;
   FF_TYPE info;
   rktio_directory_list_t *dl;
-  const wchar_t *wp;
+  wchar_t *wp;
 
  retry:
 
@@ -1697,13 +1699,14 @@ static rktio_directory_list_t *do_directory_list_start(rktio_t *rktio, const cha
     memcpy(pattern + len, "*.*", 4);
   }
 
-  wp = WIDE_PATH_temp(pattern); FIXME err
+  wp = WIDE_PATH_copy(pattern, err);
   if (!wp) return NULL;
 
   hfile = FIND_FIRST(wp, &info);
   if (FIND_FAILED(hfile)) {
     int err_val;
     err_val = GetLastError();
+    free(wp);  
     if ((err_val == ERROR_DIRECTORY) && CreateSymbolicLinkProc) {
       /* check for symbolic link */
       const char *resolved;
@@ -1717,6 +1720,8 @@ static rktio_directory_list_t *do_directory_list_start(rktio_t *rktio, const cha
     rktio_get_windows_error(err);
     return NULL;
   }
+
+  free(wp);
 
   dl = malloc(sizeof(rktio_directory_list_t));
   memcpy(&dl->info, &info, sizeof(info));
@@ -1965,17 +1970,17 @@ rktio_file_copy_t *rktio_copy_file_start_permissions(rktio_t *rktio, const char 
   wchar_t *src_w;
   const wchar_t *dest_w;
 
-  src_w = WIDE_PATH_copy(src);
+  src_w = WIDE_PATH_copy(src, &rktio->err);
   if (!src_w) {
     rktio_set_last_error_step(rktio, RKTIO_COPY_STEP_OPEN_SRC);
     return NULL;
   }
   if (use_perm_bits)
-    dest_w = WIDE_PATH_copy(dest);
+    dest_w = WIDE_PATH_copy(dest, &rktio->err);
   else
     dest_w = WIDE_PATH_temp(dest);
   if (!dest_w) {
-    rktio_set_last_error_step(rktio, RKTIO_COPY_STEP_OPEN_DEST);
+    rktio_set_last_error_step(&rktio->err, RKTIO_COPY_STEP_OPEN_DEST);
     return NULL;
   }
 
@@ -1995,7 +2000,7 @@ rktio_file_copy_t *rktio_copy_file_start_permissions(rktio_t *rktio, const char 
     fc->read_only = !(perm_bits & RKTIO_PERMISSION_WRITE);
     return fc;
   }
-  
+
   err_val = GetLastError();
   if ((err_val == ERROR_FILE_EXISTS)
       || (err_val == ERROR_ALREADY_EXISTS))

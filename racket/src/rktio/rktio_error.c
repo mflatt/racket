@@ -63,7 +63,7 @@ void rktio_get_windows_error(rktio_err_t *err)
   err->errkind = RKTIO_ERROR_KIND_WINDOWS;
 }
 
-void rktio_set_windows_error(rktio_err_t *rktio, int errid)
+void rktio_set_windows_error(rktio_err_t *err, int errid)
 {
   err->errid = errid;
   err->errkind = RKTIO_ERROR_KIND_WINDOWS;
