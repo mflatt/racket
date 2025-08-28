@@ -699,13 +699,14 @@ int rktio_get_ipv4_family(rktio_t *rktio)
   return RKTIO_PF_INET;
 }
 
-rktio_addrinfo_lookup_t *rktio_start_addrinfo_lookup(rktio_t *rktio,
-                                                     const char *hostname, int portno,
-                                                     int family, int passive, int tcp)
+static void *do_start_addrinfo_lookup(rktio_t *rktio,
+                                      const char *hostname, int portno,
+                                      int family, int passive, int tcp,
+                                      int immed)
 {
   rktio_addrinfo_lookup_t *lookup;
   char buf[32], *service;
-  struct rktio_addrinfo_t *hints;
+  struct rktio_addrinfo_t *hints, immed_hints;
 
   if (portno >= 0) {
     service = buf;
@@ -718,7 +719,10 @@ rktio_addrinfo_lookup_t *rktio_start_addrinfo_lookup(rktio_t *rktio,
     return NULL;
   }
 
-  hints = malloc(sizeof(rktio_addrinfo_t));
+  if (immed)
+    hints = &immed_hints;
+  else
+    hints = malloc(sizeof(rktio_addrinfo_t));
   memset(hints, 0, sizeof(struct rktio_addrinfo_t));
   RKTIO_AS_ADDRINFO(hints)->ai_family = ((family < 0) ? PF_UNSPEC : family);
   if (passive) {
@@ -745,6 +749,18 @@ rktio_addrinfo_lookup_t *rktio_start_addrinfo_lookup(rktio_t *rktio,
     RKTIO_AS_ADDRINFO(hints)->ai_socktype = SOCK_DGRAM;
   }
 
+#if defined(HAVE_GETADDRINFO) || defined(__MINGW32__)
+  if (immed) {
+    /* try shortcut for numeric addresses */
+    rktio_addrinfo_t *result;
+    RKTIO_AS_ADDRINFO(hints)->ai_flags |= AI_NUMERICHOST | AI_NUMERICSERV;
+    if (do_getaddrinfo(hostname, service, hints, &result) == 0) {
+      return result;
+    }
+    return NULL;
+  }
+#endif
+  
   lookup = malloc(sizeof(rktio_addrinfo_lookup_t));
   lookup->name = (hostname ? MSC_IZE(strdup)(hostname) : NULL);
   lookup->svc = (service ? MSC_IZE(strdup)(service) : NULL);
@@ -752,6 +768,24 @@ rktio_addrinfo_lookup_t *rktio_start_addrinfo_lookup(rktio_t *rktio,
   init_lookup(lookup);
  
   return start_lookup(rktio, lookup);
+}
+
+rktio_addrinfo_lookup_t *rktio_start_addrinfo_lookup(rktio_t *rktio,
+                                                     const char *hostname, int portno,
+                                                     int family, int passive, int tcp)
+{
+  return do_start_addrinfo_lookup(rktio, hostname, portno, family, passive, tcp, 0);
+}
+
+rktio_addrinfo_t *rktio_immediate_addrinfo_lookup(rktio_t *rktio,
+                                                  const char *hostname, int portno,
+                                                  int family, int passive, int tcp)
+{
+#if (defined(HAVE_GETADDRINFO) || defined(__MINGW32__)) && defined(RKTIO_USE_PTHREADS)
+  return do_start_addrinfo_lookup(rktio, hostname, portno, family, passive, tcp, 1);
+#else
+  return NULL;
+#endif
 }
 
 void rktio_addrinfo_free(rktio_t *rktio, rktio_addrinfo_t *a)

@@ -46,7 +46,7 @@
 
   ;; ----------------------------------------
 
-  (module (|#%rktio-instance| ptr->address address->ptr)
+  (module (|#%rktio-instance| ptr->address address->ptr address->ptr/false)
     (meta define (convert-type t)
           (syntax-case t (ref *ref rktio_bool_t rktio_const_string_t)
             [(ref . _) #'uptr]
@@ -95,6 +95,7 @@
     (define-record ptr (address))
     (define (ptr->address v) (if (eqv? v NULL) v (ptr-address v)))
     (define (address->ptr v) (if (eqv? v NULL) v (make-ptr v)))
+    (define (address->ptr/false v) (if (eqv? v NULL) #f (make-ptr v)))
 
     (define-syntax (let-unwrappers stx)
       ;; Unpack plain pointers; when an argument has type
@@ -126,11 +127,16 @@
         [(_ (ref _) v) #'(address->ptr v)]
         [(_ _ v) #'v]))
 
+    (define-syntax (wrap-result/false stx)
+      (syntax-case stx (ref)
+        [(_ (ref _) v) #'(address->ptr/false v)]
+        [(_ _ v) #'v]))
+
     (define-syntax (wrap-result/allow-callbacks stx)
       (syntax-case stx ()
         [(_ t v) #'(call-enabling-ffi-callbacks (lambda () (wrap-result t v)))]))
     
-    (meta define (convert-function stx)
+    (meta define (convert-function stx default-wrap-result)
           (syntax-case stx ()
             [(_ (flag ...) orig-ret-type name ([orig-arg-type arg-name] ...))
              (with-syntax ([ret-type (convert-type #'orig-ret-type)]
@@ -140,7 +146,7 @@
                                            #'())]
                            [wrap-result (if (#%memq 'msg-queue (map syntax->datum #'(flag ...)))
                                             #'wrap-result/allow-callbacks
-                                            #'wrap-result)])
+                                            default-wrap-result)])
                #'(let ([proc (foreign-procedure conv ... (rktio-lookup 'name)
                                                 (arg-type ...)
                                                 ret-type)])
@@ -152,14 +158,15 @@
     (define-syntax (define-function stx)
       (syntax-case stx ()
         [(_ _ _ name . _)
-         (with-syntax ([rhs (convert-function stx)])
+         (with-syntax ([rhs (convert-function stx #'wrap-result/false)])
            #'(define name rhs))]))
 
     (define-syntax (define-function*/errno stx)
       (syntax-case stx ()
         [(_ err? make-err make-val flags ret-type name ([rktio-type rktio] [arg-type arg] ...))
          (with-syntax ([rhs (convert-function
-                             #'(define-function flags ret-type name ([rktio-type rktio] [arg-type arg] ...)))])
+                             #'(define-function flags ret-type name ([rktio-type rktio] [arg-type arg] ...))
+                             #'wrap-result)])
            #'(define name
                (let ([proc rhs])
                  (lambda (rktio arg ...)

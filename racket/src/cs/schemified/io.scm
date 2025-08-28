@@ -2981,6 +2981,8 @@
 (define rktio_addrinfo_lookup_stop
   (hash-ref rktio-table 'rktio_addrinfo_lookup_stop))
 (define rktio_addrinfo_free (hash-ref rktio-table 'rktio_addrinfo_free))
+(define rktio_immediate_addrinfo_lookup
+  (hash-ref rktio-table 'rktio_immediate_addrinfo_lookup))
 (define rktio_listen (hash-ref rktio-table 'rktio_listen))
 (define rktio_listen_stop (hash-ref rktio-table 'rktio_listen_stop))
 (define rktio_poll_accept_ready
@@ -36622,131 +36624,174 @@
      (let ((family_0 (if (eq? family5_0 unsafe-undefined) -1 family5_0)))
        (if (if (not hostname17_0) (not port-no18_0) #f)
          (|#%app| proc19_0 #f)
-         (call-with-resource
-          (box
-           (begin
-             (start-rktio)
-             (begin0
-               (|#%app|
-                rktio_start_addrinfo_lookup
-                (unsafe-place-local-ref cell.1)
-                (if hostname17_0 (1/string->bytes/utf-8 hostname17_0) #f)
-                (if port-no18_0 port-no18_0 0)
-                family_0
-                passive?6_0
-                tcp?7_0)
-               (end-rktio))))
-          (lambda (lookup-box_0)
-            (let ((lookup_0 (unbox lookup-box_0)))
-              (if lookup_0
-                (begin
-                  (start-rktio)
-                  (begin0
-                    (|#%app|
-                     rktio_addrinfo_lookup_stop
-                     (unsafe-place-local-ref cell.1)
-                     lookup_0)
-                    (end-rktio)))
-                (void))))
-          (lambda (lookup-box_0)
-            (let ((lookup_0 (unbox lookup-box_0)))
-              (letrec*
-               ((loop_0
-                 (|#%name|
-                  loop
-                  (lambda ()
-                    (if (if (not (vector? lookup_0))
-                          (eqv?
-                           (begin
-                             (start-rktio)
-                             (begin0
-                               (|#%app|
-                                rktio_poll_addrinfo_lookup_ready
-                                (unsafe-place-local-ref cell.1)
-                                lookup_0)
-                               (end-rktio)))
-                           0)
-                          #f)
-                      (begin
-                        (unsafe-end-uninterruptible)
+         (let ((lookup-hostname_0
+                (if hostname17_0 (1/string->bytes/utf-8 hostname17_0) #f)))
+           (let ((lookup-port-no_0 (if port-no18_0 port-no18_0 0)))
+             (let ((addr_0
+                    (begin
+                      (start-rktio)
+                      (begin0
                         (|#%app|
-                         (if enable-break?4_0 sync/enable-break sync)
-                         (rktio-evt1.1
-                          (lambda ()
-                            (not
-                             (eqv?
-                              (begin
-                                (start-rktio)
-                                (begin0
-                                  (|#%app|
-                                   rktio_poll_addrinfo_lookup_ready
-                                   (unsafe-place-local-ref cell.1)
-                                   lookup_0)
-                                  (end-rktio)))
-                              0)))
-                          (lambda (ps_0)
+                         rktio_immediate_addrinfo_lookup
+                         (unsafe-place-local-ref cell.1)
+                         lookup-hostname_0
+                         lookup-port-no_0
+                         family_0
+                         passive?6_0
+                         tcp?7_0)
+                        (end-rktio)))))
+               (if addr_0
+                 (call-with-resource
+                  addr_0
+                  (lambda (addr_1)
+                    (begin
+                      (start-rktio)
+                      (begin0
+                        (|#%app|
+                         rktio_addrinfo_free
+                         (unsafe-place-local-ref cell.1)
+                         addr_1)
+                        (end-rktio))))
+                  (lambda (addr_1)
+                    (begin0
+                      (|#%app| proc19_0 addr_1)
+                      (if retain-address?8_0
+                        (void)
+                        (begin
+                          (start-rktio)
+                          (begin0
                             (|#%app|
-                             rktio_poll_add_addrinfo_lookup
+                             rktio_addrinfo_free
                              (unsafe-place-local-ref cell.1)
-                             lookup_0
-                             ps_0))))
-                        (unsafe-start-uninterruptible)
-                        (loop_0))
-                      (begin
-                        (set-box! lookup-box_0 #f)
-                        (call-with-resource
-                         (if (vector? lookup_0)
-                           lookup_0
-                           (begin
-                             (start-rktio)
-                             (begin0
-                               (|#%app|
-                                rktio_addrinfo_lookup_get
-                                (unsafe-place-local-ref cell.1)
-                                lookup_0)
-                               (end-rktio))))
-                         (lambda (addr_0)
-                           (begin
-                             (start-rktio)
-                             (begin0
-                               (|#%app|
-                                rktio_addrinfo_free
-                                (unsafe-place-local-ref cell.1)
-                                addr_0)
-                               (end-rktio))))
-                         (lambda (addr_0)
-                           (if (if who1_0 (vector? addr_0) #f)
-                             (begin
-                               (unsafe-end-uninterruptible)
-                               (raise-network-error
-                                who1_0
-                                addr_0
-                                (string-append
-                                 "can't resolve "
-                                 which2_0
-                                 "address"
-                                 "\n  address: "
-                                 (if hostname17_0 hostname17_0 "<unspec>")
-                                 (if (if port-number-on-error?3_0
-                                       port-no18_0
-                                       #f)
-                                   (string-append
-                                    "\n  port number: "
-                                    (number->string port-no18_0))
-                                   ""))))
-                             (begin0
-                               (|#%app| proc19_0 addr_0)
-                               (if retain-address?8_0
-                                 (void)
-                                 (begin
-                                   (start-rktio)
-                                   (begin0
-                                     (|#%app|
-                                      rktio_addrinfo_free
-                                      (unsafe-place-local-ref cell.1)
-                                      addr_0)
-                                     (end-rktio))))))))))))))
-               (loop_0))))))))))
+                             addr_1)
+                            (end-rktio)))))))
+                 (call-with-resource
+                  (box
+                   (begin
+                     (start-rktio)
+                     (begin0
+                       (|#%app|
+                        rktio_start_addrinfo_lookup
+                        (unsafe-place-local-ref cell.1)
+                        lookup-hostname_0
+                        lookup-port-no_0
+                        family_0
+                        passive?6_0
+                        tcp?7_0)
+                       (end-rktio))))
+                  (lambda (lookup-box_0)
+                    (let ((lookup_0 (unbox lookup-box_0)))
+                      (if lookup_0
+                        (begin
+                          (start-rktio)
+                          (begin0
+                            (|#%app|
+                             rktio_addrinfo_lookup_stop
+                             (unsafe-place-local-ref cell.1)
+                             lookup_0)
+                            (end-rktio)))
+                        (void))))
+                  (lambda (lookup-box_0)
+                    (let ((lookup_0 (unbox lookup-box_0)))
+                      (letrec*
+                       ((loop_0
+                         (|#%name|
+                          loop
+                          (lambda ()
+                            (if (if (not (vector? lookup_0))
+                                  (eqv?
+                                   (begin
+                                     (start-rktio)
+                                     (begin0
+                                       (|#%app|
+                                        rktio_poll_addrinfo_lookup_ready
+                                        (unsafe-place-local-ref cell.1)
+                                        lookup_0)
+                                       (end-rktio)))
+                                   0)
+                                  #f)
+                              (begin
+                                (unsafe-end-uninterruptible)
+                                (|#%app|
+                                 (if enable-break?4_0 sync/enable-break sync)
+                                 (rktio-evt1.1
+                                  (lambda ()
+                                    (not
+                                     (eqv?
+                                      (begin
+                                        (start-rktio)
+                                        (begin0
+                                          (|#%app|
+                                           rktio_poll_addrinfo_lookup_ready
+                                           (unsafe-place-local-ref cell.1)
+                                           lookup_0)
+                                          (end-rktio)))
+                                      0)))
+                                  (lambda (ps_0)
+                                    (|#%app|
+                                     rktio_poll_add_addrinfo_lookup
+                                     (unsafe-place-local-ref cell.1)
+                                     lookup_0
+                                     ps_0))))
+                                (unsafe-start-uninterruptible)
+                                (loop_0))
+                              (begin
+                                (set-box! lookup-box_0 #f)
+                                (call-with-resource
+                                 (if (vector? lookup_0)
+                                   lookup_0
+                                   (begin
+                                     (start-rktio)
+                                     (begin0
+                                       (|#%app|
+                                        rktio_addrinfo_lookup_get
+                                        (unsafe-place-local-ref cell.1)
+                                        lookup_0)
+                                       (end-rktio))))
+                                 (lambda (addr_1)
+                                   (begin
+                                     (start-rktio)
+                                     (begin0
+                                       (|#%app|
+                                        rktio_addrinfo_free
+                                        (unsafe-place-local-ref cell.1)
+                                        addr_1)
+                                       (end-rktio))))
+                                 (lambda (addr_1)
+                                   (if (if who1_0 (vector? addr_1) #f)
+                                     (begin
+                                       (unsafe-end-uninterruptible)
+                                       (raise-network-error
+                                        who1_0
+                                        addr_1
+                                        (string-append
+                                         "can't resolve "
+                                         which2_0
+                                         "address"
+                                         "\n  address: "
+                                         (if hostname17_0
+                                           hostname17_0
+                                           "<unspec>")
+                                         (if (if port-number-on-error?3_0
+                                               port-no18_0
+                                               #f)
+                                           (string-append
+                                            "\n  port number: "
+                                            (number->string port-no18_0))
+                                           ""))))
+                                     (begin0
+                                       (|#%app| proc19_0 addr_1)
+                                       (if retain-address?8_0
+                                         (void)
+                                         (begin
+                                           (start-rktio)
+                                           (begin0
+                                             (|#%app|
+                                              rktio_addrinfo_free
+                                              (unsafe-place-local-ref cell.1)
+                                              addr_1)
+                                             (end-rktio))))))))))))))
+                       (loop_0))))))))))))))
 (define cell.1$3 (unsafe-make-place-local (make-will-executor)))
 (define register-address-finalizer
   (lambda (addr_0)

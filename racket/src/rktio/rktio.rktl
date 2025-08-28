@@ -561,6 +561,16 @@
  void
  rktio_addrinfo_free
  (((ref rktio_t) rktio) ((ref rktio_addrinfo_t) a)))
+(define-function
+ ()
+ (ref rktio_addrinfo_t)
+ rktio_immediate_addrinfo_lookup
+ (((ref rktio_t) rktio)
+  (rktio_const_string_t hostname)
+  (int portno)
+  (int family)
+  (rktio_bool_t passive)
+  (rktio_bool_t tcp)))
 (define-function/errno
  NULL
  ()

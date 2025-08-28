@@ -27,59 +27,79 @@
           (not port-no))
      (proc #f)]
     [else
-     (call-with-resource
-      (box (rktioly (rktio_start_addrinfo_lookup rktio
-                                                 (and hostname (string->bytes/utf-8 hostname))
-                                                 (or port-no 0)
+     (define lookup-hostname (and hostname (string->bytes/utf-8 hostname)))
+     (define lookup-port-no (or port-no 0))
+     (define addr
+       (rktioly (rktio_immediate_addrinfo_lookup rktio
+                                                 lookup-hostname
+                                                 lookup-port-no
                                                  family passive? tcp?)))
-      ;; in uninterruptible mode (possibly atomic), *not* in rktio mode
-      (lambda (lookup-box)
-        (define lookup (unbox lookup-box))
-        (when lookup
-          (rktioly (rktio_addrinfo_lookup_stop rktio lookup))))
-      ;; in uninterruptible mode, *not* rktio mode
-      (lambda (lookup-box)
-        (define lookup (unbox lookup-box))
-        (let loop ()
-          (cond
-            [(and (not (rktio-error? lookup))
-                  (eqv? (rktioly (rktio_poll_addrinfo_lookup_ready rktio lookup))
-                        RKTIO_POLL_NOT_READY))
-             (end-uninterruptible)
-             ((if enable-break? sync/enable-break sync)
-              (rktio-evt (lambda ()
-                           (not (eqv? (rktioly (rktio_poll_addrinfo_lookup_ready rktio lookup))
-                                      RKTIO_POLL_NOT_READY)))
-                         ;; in atomic and in rktio-sleep-relevant, must not start nested rktio
-                         (lambda (ps)
-                           (rktio_poll_add_addrinfo_lookup rktio lookup ps))))
-             (start-uninterruptible)
-             (loop)]
-            [else
-             (set-box! lookup-box #f) ; receiving result implies `lookup` is destroyed
-             (call-with-resource
-              (if (rktio-error? lookup)
-                  lookup
-                  (rktioly (rktio_addrinfo_lookup_get rktio lookup)))
-              ;; in uninterruptible mode (possibly atomic), *not* in rktio mode
-              (lambda (addr) (rktioly (rktio_addrinfo_free rktio addr)))
-              ;; in uninterruptible mode, *not* rktio mode
-              (lambda (addr)
-                (cond
-                  [(and who (rktio-error? addr))
-                   (end-uninterruptible)
-                   (raise-network-error who addr (string-append
-                                                  "can't resolve " which "address"
-                                                  "\n  address: " (or hostname "<unspec>")
-                                                  (if (and port-number-on-error? port-no)
-                                                      (string-append "\n  port number: " (number->string port-no))
-                                                      "")))]
-                  [else
-                   ;; `addr` may be an error; if so, let `proc` handle it
-                   (begin0
-                     (proc addr)
-                     (unless retain-address?
-                       (rktioly (rktio_addrinfo_free rktio addr))))])))]))))]))
+     (cond
+       [addr
+        (call-with-resource
+         addr
+         ;; in uninterruptible mode (possibly atomic), *not* in rktio mode
+         (lambda (addr) (rktioly (rktio_addrinfo_free rktio addr)))
+         ;; in uninterruptible mode, *not* rktio mode
+         (lambda (addr)
+           (begin0
+             (proc addr)
+             (unless retain-address?
+               (rktioly (rktio_addrinfo_free rktio addr))))))]
+       [else
+        (call-with-resource
+         (box (rktioly (rktio_start_addrinfo_lookup rktio
+                                                    lookup-hostname
+                                                    lookup-port-no
+                                                    family passive? tcp?)))
+         ;; in uninterruptible mode (possibly atomic), *not* in rktio mode
+         (lambda (lookup-box)
+           (define lookup (unbox lookup-box))
+           (when lookup
+             (rktioly (rktio_addrinfo_lookup_stop rktio lookup))))
+         ;; in uninterruptible mode, *not* rktio mode
+         (lambda (lookup-box)
+           (define lookup (unbox lookup-box))
+           (let loop ()
+             (cond
+               [(and (not (rktio-error? lookup))
+                     (eqv? (rktioly (rktio_poll_addrinfo_lookup_ready rktio lookup))
+                           RKTIO_POLL_NOT_READY))
+                (end-uninterruptible)
+                ((if enable-break? sync/enable-break sync)
+                 (rktio-evt (lambda ()
+                              (not (eqv? (rktioly (rktio_poll_addrinfo_lookup_ready rktio lookup))
+                                         RKTIO_POLL_NOT_READY)))
+                            ;; in atomic and in rktio-sleep-relevant, must not start nested rktio
+                            (lambda (ps)
+                              (rktio_poll_add_addrinfo_lookup rktio lookup ps))))
+                (start-uninterruptible)
+                (loop)]
+               [else
+                (set-box! lookup-box #f) ; receiving result implies `lookup` is destroyed
+                (call-with-resource
+                 (if (rktio-error? lookup)
+                     lookup
+                     (rktioly (rktio_addrinfo_lookup_get rktio lookup)))
+                 ;; in uninterruptible mode (possibly atomic), *not* in rktio mode
+                 (lambda (addr) (rktioly (rktio_addrinfo_free rktio addr)))
+                 ;; in uninterruptible mode, *not* rktio mode
+                 (lambda (addr)
+                   (cond
+                     [(and who (rktio-error? addr))
+                      (end-uninterruptible)
+                      (raise-network-error who addr (string-append
+                                                     "can't resolve " which "address"
+                                                     "\n  address: " (or hostname "<unspec>")
+                                                     (if (and port-number-on-error? port-no)
+                                                         (string-append "\n  port number: " (number->string port-no))
+                                                         "")))]
+                     [else
+                      ;; `addr` may be an error; if so, let `proc` handle it
+                      (begin0
+                        (proc addr)
+                        (unless retain-address?
+                          (rktioly (rktio_addrinfo_free rktio addr))))])))]))))])]))
 
 ;; ----------------------------------------
 

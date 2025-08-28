@@ -500,6 +500,13 @@ RKTIO_EXTERN void rktio_addrinfo_lookup_stop(rktio_t *rktio, rktio_addrinfo_look
 RKTIO_EXTERN void rktio_addrinfo_free(rktio_t *rktio, rktio_addrinfo_t *a);
 /* Frees the result of a lookup. */
 
+RKTIO_EXTERN_NOERR
+rktio_addrinfo_t *rktio_immediate_addrinfo_lookup(rktio_t *rktio,
+                                                  rktio_const_string_t hostname, int portno,
+                                                  int family, rktio_bool_t passive, rktio_bool_t tcp);
+/* Potential shortcut, returns NULL without implying an error if the
+   shortcut doesn't work. */
+
 typedef struct rktio_listener_t rktio_listener_t;
 typedef struct rktio_connect_t rktio_connect_t;
 
