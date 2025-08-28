@@ -12,6 +12,7 @@
 # include <netinet/in.h>
 # include <netinet/tcp.h>
 # include <netdb.h>
+# include <arpa/inet.h>
 # include <sys/socket.h>
 # include <sys/types.h>
 # include <sys/time.h>
@@ -205,7 +206,7 @@ struct rktio_addrinfo_t {
 #endif
 
 /*****************************************************************/
-/* Fallback using gethostbyname where getddrinfo isn't available */
+/* Fallback using gethostbyname where getaddrinfo isn't available */
 
 #ifdef HAVE_GETADDRINFO
 # define rktio_AI_PASSIVE AI_PASSIVE 
@@ -513,6 +514,33 @@ void rktio_free_ghbn(rktio_t *rktio)
 
 static rktio_addrinfo_lookup_t *start_lookup(rktio_t *rktio, rktio_addrinfo_lookup_t *lookup)
 {
+#if defined(HAVE_GETADDRINFO) || defined(__MINGW32__)
+  /* try `inet_pton` shortcut for numeric addresses */
+  {
+    struct sockaddr_in addr;
+    int done = 0;
+    memset(&addr, 0, sizeof(addr));
+    if (((RKTIO_AS_ADDRINFO(lookup->hints)->ai_family == AF_UNSPEC)
+         || RKTIO_AS_ADDRINFO(lookup->hints)->ai_family == AF_INET)
+        && inet_pton(AF_INET, lookup->name, &addr)) {
+      addr.sin_family = AF_INET;
+      done = 1;
+    } else if (((RKTIO_AS_ADDRINFO(lookup->hints)->ai_family == AF_UNSPEC)
+         || RKTIO_AS_ADDRINFO(lookup->hints)->ai_family == AF_INET6)
+        && inet_pton(AF_INET6, lookup->name, &addr)) {
+      addr.sin_family = AF_INET6;
+      done = 1;
+    }
+    if (done) {
+      struct rktio_addrinfo_t *ai;
+      ai = malloc(sizeof(struct rktio_addrinfo_t));
+      memcpy(ai, &addr, sizeof(addr));
+      lookup->result = ai;
+      lookup->mode = GHBN_DONE;
+      return lookup;
+    }
+  }
+#endif
   lookup->mode = GHBN_WAIT;
   
   if (!rktio->ghbn_started) {
