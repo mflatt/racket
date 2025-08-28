@@ -12,6 +12,7 @@
 # include <netinet/in.h>
 # include <netinet/tcp.h>
 # include <netdb.h>
+# include <arpa/inet.h>
 # include <sys/socket.h>
 # include <sys/types.h>
 # include <sys/time.h>
@@ -205,7 +206,7 @@ struct rktio_addrinfo_t {
 #endif
 
 /*****************************************************************/
-/* Fallback using gethostbyname where getddrinfo isn't available */
+/* Fallback using gethostbyname where getaddrinfo isn't available */
 
 #ifdef HAVE_GETADDRINFO
 # define rktio_AI_PASSIVE AI_PASSIVE 
@@ -513,6 +514,22 @@ void rktio_free_ghbn(rktio_t *rktio)
 
 static rktio_addrinfo_lookup_t *start_lookup(rktio_t *rktio, rktio_addrinfo_lookup_t *lookup)
 {
+#if defined(HAVE_GETADDRINFO) || defined(__MINGW32__)
+  {
+    /* try shortcut for numeric addresses */
+    rktio_addrinfo_t *result;
+    int old_flags = RKTIO_AS_ADDRINFO(lookup->hints)->ai_flags;
+    
+    RKTIO_AS_ADDRINFO(lookup->hints)->ai_flags |= AI_NUMERICHOST | AI_NUMERICSERV;
+    if (do_getaddrinfo(lookup->name, lookup->svc, lookup->hints, &result) == 0) {
+      lookup->result = result;
+      lookup->mode = GHBN_DONE;
+      return lookup;
+    }
+    RKTIO_AS_ADDRINFO(lookup->hints)->ai_flags = old_flags;
+  }
+#endif
+
   lookup->mode = GHBN_WAIT;
   
   if (!rktio->ghbn_started) {
