@@ -671,10 +671,16 @@ For @tech{callouts} to foreign functions with the generated type:
  @item{Values that are provided to a @tech{callout} (i.e., the
        underlying callout, and not the replacement produced by a
        @racket[wrapper], if any) are always considered reachable by the
-       garbage collector until the called foreign function returns. If
+       garbage collector until the called foreign function returns. Each
+       argument is retained both as supplied and as converted to a
+       primitive representation based the argument's type (via layers of
+       @racket[_racket-to-c] procedures for @racket[make-ctype], for example). If
        the foreign function invokes Racket callbacks, however, beware
        that values managed by the Racket garbage collector might be
-       moved in memory by the garbage collector.}
+       moved in memory by the garbage collector.
+
+       @history[#:changed "9.0.0.2" @elem{Retain converted arguments as
+                                          well as original arguments.}]}
 
  @item{A @tech{callout} object is finalized internally. Beware
        of trying to use a @tech{callout} object that is reachable

@@ -806,14 +806,25 @@
   (test 1 data-a (cunbox cb1)))
 
 ;; Make sure calling a foreign function retains the function arguments
-;; until the foreign function returns, even if it invokes a callback
-(let ()
-  (define sum_after_callback
-    (get-ffi-obj 'sum_after_callback test-lib (_fun _pointer _int (_fun -> _void) -> _int)))
+;; until the foreign function returns, even if it invokes a callback,
+;; and even if the pointer to retain is allocated by a converting ctype
+(define (sum-after-callback-test convert-via-ctype?)
   (define N 1000)
+  (define _to_interior_pointer
+    (make-ctype _pointer
+                (lambda (p)
+                  (let ([n (malloc 'atomic-interior _int N)])
+                    (memcpy n p N _int)
+                    n))
+                (lambda (p) p)))
+  (define sum_after_callback
+    (get-ffi-obj 'sum_after_callback test-lib
+                 (if convert-via-ctype?
+                     (_fun _to_interior_pointer _int (_fun -> _void) -> _int)
+                     (_fun _pointer _int (_fun -> _void) -> _int))))
   (test 499500
         'sum-after-callback
-        (let ([n (malloc 'atomic-interior _int N)])
+        (let ([n (malloc (if convert-via-ctype? 'atomic 'atomic-interior) _int N)])
           (for ([i (in-range N)])
             (ptr-set! n _int i i))
           (sum_after_callback n N (lambda ()
@@ -824,6 +835,8 @@
                                       (let ([m (malloc _int N)])
                                         (for ([i (in-range N)])
                                           (ptr-set! m _int i 0)))))))))
+(sum-after-callback-test #f)
+(sum-after-callback-test #t)
 
 (let ()
   (define-syntax (_varargs stx)

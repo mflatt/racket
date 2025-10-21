@@ -1572,6 +1572,7 @@
                                                           (when #,lock (mutex-acquire #,lock))
                                                           (let ([r (retain
                                                                     orig ...
+                                                                    id ...
                                                                     (with-interrupts-disabled*
                                                                      (proc id ...)))])
                                                             (when #,lock (mutex-release #,lock))
@@ -1596,6 +1597,7 @@
                          (let ([args (map (lambda (a t) ((ctype-s->c t) name a)) orig-args in-types)])
                            ((ctype-c->s out-type) (retain
                                                    orig-args
+                                                   args
                                                    (with-interrupts-disabled*
                                                     (#%apply proc args))))))]))]
                  [else
@@ -1604,6 +1606,7 @@
                       (when lock (mutex-acquire lock))
                       (let ([r (retain
                                 orig-args
+                                args
                                 (with-interrupts-disabled*
                                  (#%apply (gen-proc (ftype-pointer-address proc-p))
                                           args)))])
@@ -1643,10 +1646,14 @@
                                                         [proc (gen-proc (ftype-pointer-address proc-p))])
                                                     (cond
                                                       [(not exns?)
-                                                       (#%apply proc args)]
+                                                       (retain
+                                                        args
+                                                        (#%apply proc args))]
                                                       [else
                                                        (call-guarding-foreign-escape
-                                                        (lambda () (#%apply proc args))
+                                                        (lambda () (retain
+                                                                    args
+                                                                    (#%apply proc args)))
                                                         (lambda ()
                                                           (when lock (mutex-release lock))
                                                           (begin-foreign-checking
