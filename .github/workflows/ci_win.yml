@@ -3,7 +3,7 @@ name: CI Win
 on:
   push:
     branches:
-      - ci-win
+      - win-ci
   pull_request:
 
 permissions:
