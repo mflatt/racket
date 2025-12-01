@@ -23,6 +23,7 @@
          shell-subst-pwd
 
          configured-targets-at
+         read-saved-config-args
 
          executable->path
 
@@ -281,6 +282,12 @@
                  (hash 'quiet? #t
                        'co-outputs (cdr outputs))))
   ((dynamic-require script 'targets-at) (make-at-dir dir) vars))
+
+(define (read-saved-config-args)
+  (let ([f (at-source "build/configure_args")])
+    (if (file-exists? f)
+        (shell->strings (file->string f))
+        '())))
 
 ;; in a shell, we need to have "./" when running something in the same directory
 (define (ensure-path path)

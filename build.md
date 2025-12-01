@@ -207,6 +207,10 @@ the build system](#3-zuo-and-the-racket-build-system).)
 If you would like to provide arguments to `configure` for the minimal
 Racket build, then you can supply them with by adding
 `CONFIGURE_ARGS="<options>"` to `make in-place` or `make unix-style`.
+You can also put <_options_> in a file
+`"racket/src/build/configure_args"`, and those are added to the end of
+any <_options_> provided as `CONFIGURE_ARGS="<options>"`. On Windows,
+the arguments are supplied to `winfig.bat` instead of `configure`.
 
 The `"pkgs"` directory contains packages that are tied to the Racket
 core implementation and are therefore kept in the same Git repository. A
@@ -315,10 +319,11 @@ options.
 If you don’t want any special configuration and you just want the base
 build, you can use `make base` with the top-level makefile.
 
-Minimal Racket does not require additional native libraries to run, but
-under Windows, encoding-conversion, extflonum, and SSL functionality is
-hobbled until native libraries from the `"racket-win32-i386"` or
-`"racket-win32-x86_64"` package are installed.
+Minimal Racket does not require additional native libraries to run.
+Under Windows, encoding-conversion, extflonum, and SSL functionality is
+hobbled until native libraries from the `"racket-lib"` package’s
+dependencies are installed; that package is installed as part of `nmake
+install`.
 
 On all platforms, from the top-level makefile, the `PLT_SETUP_OPTIONS`
 makefile variable is passed on to the `raco setup` that is used to build
@@ -330,7 +335,8 @@ passed on, but it is meant to be set by some makefile targets when
 For cross compilation, add configuration options to
 `CONFIGURE_ARGS="<options>"` as described in the `"README.txt"` of
 `"racket/src"`, but also add a `RACKET=...` argument for the top-level
-makefile instead of using  `--enable-racket=...` for `configure`.
+makefile instead of using  `--enable-racket=...` for `configure`. \(You
+can also put <_options_> in a file `"racket/src/build/configure_args"`.)
 
 Specify `SETUP_MACHINE_FLAGS=<options>` to set Racket flags that control
 the target machine of compiled bytecode for `raco setup` and `raco pkg

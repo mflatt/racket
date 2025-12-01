@@ -187,6 +187,7 @@
                                                (shell->strings (shell-subst-pwd (lookup 'CONFIGURE_ARGS_qq)
                                                                                 (at-source "racket/src/build" subdir)))
                                                (shell->strings (lookup 'CONFIGURE_ARGS))
+                                               (read-saved-config-args)
                                                (if (hash-ref options 'server-compile-machine? #f)
                                                    '("--enable-crossany")
                                                    '())
