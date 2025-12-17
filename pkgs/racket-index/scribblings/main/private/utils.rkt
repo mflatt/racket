@@ -41,11 +41,12 @@
 ;; the second argument specifies installation/user specific, and if
 ;; it's missing, then it's a page with a single version
 (define (main-page id [installation-specific? '?]
+                   #:title-content [title-content-in #f]
                    #:force-racket-css? [force-racket-css? #f]
                    #:show-root-info? [show-root-info? #f]
                    #:extra-additions [extra-additions '()])
   (define info (page-info id))
-  (define title-string (car info))
+  (define title-content (or title-content-in (car info)))
   (define root (cadr info))
   (define path (caddr info))
   (define user-doc? (eq? installation-specific? #f))
@@ -68,7 +69,7 @@
                                          (make-css-addition (collection-file-path "root-info.css" "scribblings/main/private"))
                                          (make-js-addition (collection-file-path "root-info.js" "scribblings/main/private"))))
                                     extra-additions)))
-           title-string
+           title-content
            #;
            ;; the "(installation)" part shouldn't be visible on the web, but
            ;; there's no way (currently) to not have it in the window title

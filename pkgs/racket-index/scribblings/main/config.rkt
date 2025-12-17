@@ -28,6 +28,7 @@
 (define manual-sections
   '((getting-started #f)
     (tutorial        "Tutorials")
+    (core            "Language and Core Libraries")
     (racket-core     "Racket Language and Core Libraries")
     (teaching        "Teaching")
     (language        (elem "Other "
@@ -44,6 +45,7 @@
     (interop         "Interoperability")
     (drracket-plugin "DrRacket Plugins")
     (library         "Miscellaneous Libraries")
+    (other-library   "Other Libraries") ; not meant to be used directly
     (experimental    "Experimental Languages and Libraries")
     (legacy          "Legacy Languages and Libraries")
     (other           "Other")))

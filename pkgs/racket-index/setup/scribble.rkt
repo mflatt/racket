@@ -981,25 +981,34 @@
                old-tag-prefix
                src-spec
                p))
-      (let ([tag-prefix (let* ([ht (if (hash? old-prefix)
-                                       old-prefix
-                                       #hash())]
-                               [ht (hash-set ht 'tag-prefix p)]
-                               [fam (or (doc-language-family doc)
-                                        (hash-ref ht 'default-language-family #f))]
-                               [ht (if fam
-                                       (hash-set ht 'index-extras
-                                                 (cons
-                                                  ;; keep any existing mappings
-                                                  (hash-ref ht 'index-extras #hash())
-                                                  ;; add lower-precedence default
-                                                  (hash 'language-family fam)))
-                                       ht)])
-                          ht)]
-            [tags (if (member '(part "top") (part-tags v))
-                      (part-tags v)
-                      (cons '(part "top") (part-tags v)))]
-            [style (part-style v)])
+      (let* ([tag-prefix (let* ([ht (if (hash? old-prefix)
+                                        old-prefix
+                                        #hash())]
+                                [ht (hash-set ht 'tag-prefix p)]
+                                [fam (or (doc-language-family doc)
+                                         (hash-ref ht 'default-language-family #f))]
+                                [ht (if fam
+                                        (hash-set ht 'index-extras
+                                                  (cons
+                                                   ;; keep any existing mappings
+                                                   (hash-ref ht 'index-extras #hash())
+                                                   ;; add lower-precedence default
+                                                   (hash 'language-family fam)))
+                                        ht)])
+                           ht)]
+             [tags (if (member '(part "top") (part-tags v))
+                       (part-tags v)
+                       (cons '(part "top") (part-tags v)))]
+             [to-collect (let ([ex (hash-ref tag-prefix 'doc-properties #f)])
+                           (cond
+                             [(not (hash? ex))
+                              (part-to-collect v)]
+                             [else
+                              (define key `(doc-properties (,p "top")))
+                              (cons (collect-element #f null (lambda (ci)
+                                                               (collect-put! ci key ex)))
+                                    (part-to-collect v))]))]
+             [style (part-style v)])
         (make-part
          tag-prefix
          tags
@@ -1018,7 +1027,7 @@
                                                 'scribble))
                          v)])
            (make-style (style-name style) v))
-         (part-to-collect v)
+         to-collect
          (part-blocks v)
          (part-parts v)))))
   (ensure-doc-prefix
