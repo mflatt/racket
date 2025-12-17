@@ -17,8 +17,16 @@
                     setup/cross-system
                     setup/path-to-relative
                     setup/xref scribble/xref
-                    (only-in scribble/core part)
-                    (only-in scribble/base title)
+                    (only-in scribble/core
+                             part
+                             document-version)
+                    (only-in scribble/base
+                             title
+                             secref
+                             other-doc)
+                    (only-in scribble/html-properties
+                             body-id
+                             document-source)
                     ;; info -- no bindings from this are used
                     (only-in info)
                     setup/pack
@@ -453,232 +461,11 @@ Optional @filepath{info.rkt} fields trigger additional actions by
    string that is a collection-relative path to the document's source
    file. A document name (which is derived from the source module's
    name by default) is intended to be globally unique in the same way
-   as a package or module name.
-
-   More precisely a @racketidfont{scribblings} entry must be a value
-   that can be generated from an expression matching the following
-   @racket[_entry] grammar:
-
-   @racketgrammar*[
-     #:literals (list)
-     [entry (list doc ...)]
-     [doc (list src-string)
-          (list src-string flags)
-          (list src-string flags category)
-          (list src-string flags category name)
-          (list src-string flags category name out-k)
-          (list src-string flags category name out-k order-n)]
-     [flags (list mode-symbol ...)]
-     [category (list category-string-or-symbol)
-               (list category-string-or-symbol sort-number)
-               (list category-string-or-symbol sort-number lang-fam)]
-     [lang-fam (list string ...)]
-     [name string
-           #f]
-   ]
-
-   A document's list optionally continues with information on how to
-   build the document. If a document's list contains a second item,
-   @racket[_flags], it must be a list of mode symbols (described
-   below). If a document's list contains a third item,
-   @racket[_category], it must be a list that categorizes the document
-   (described further below). If a document's list contains a fourth
-   item, @racket[_name], it is a name to use for the generated
-   documentation, instead of defaulting to the source file's name
-   (sans extension), where @racket[#f] means to use the default; a
-   non-@racket[#f] value for @racket[_name] must fit the grammar
-   of a collection-name element as checked by 
-   @racket[collection-name-element?]. If a
-   document's list contains a fifth item, @racket[_out-k], it is used
-   a hint for the number of files to use for the document's
-   cross-reference information; see below. If a document's list
-   contains a fourth item, @racket[_order-n], it is used a hint for
-   the order of rendering; see below.
-
-   Each mode symbol in @racket[_flags] can be one of the following,
-   where only @racket['multi-page] is commonly used:
-
-   @itemize[
-
-     @item{@racket['multi-page] : Generates multi-page HTML output,
-           instead of the default single-page format.}
-
-     @item{@racket['main-doc] : Indicates that the generated
-           documentation should be written into the main installation
-           directory, instead of to a user-specific directory. This
-           mode is the default for a collection that is itself located
-           in the main installation.}
-
-     @item{@racket['user-doc] : Indicates that the generated
-           documentation should be written a user-specific
-           directory. This mode is the default for a collection that
-           is not itself located in the main installation.}
-
-     @item{@racket['depends-all] : Indicates that the document should
-           be rebuilt if any other document is rebuilt---except for
-           documents that have the @racket['no-depend-on] flag.}
-
-     @item{@racket['depends-all-main] : Indicates that the document
-           should be rebuilt if any other document is rebuilt that is
-           installed into the main installation---except for documents
-           that have the @racket['no-depend-on] flag.}
-
-     @item{@racket['depends-all-user] : Indicates that the document
-           should be rebuilt if any other document is rebuilt that is
-           installed into the user's space---except for documents
-           that have the @racket['no-depend-on] flag.}
-
-     @item{@racket['always-run] : Build the document every time that
-           @exec{raco setup} is run, even if none of its dependencies
-           change.}
-
-     @item{@racket['no-depend-on] : Removes the document for
-           consideration for other dependencies. Furthermore,
-           references from the document to other documents are always
-           direct, instead of potentially indirect (i.e., resolved at
-           document-viewing time and potentially redirected to a
-           remote site).}
-
-     @item{@racket['main-doc-root] : Designates the root document for
-           the main installation. The document that currently has this
-           mode should be the only one with the mode.}
-
-     @item{@racket['user-doc-root] : Designates the root document for
-           the user-specific documentation directory. The document
-           that currently has this mode should be the only one with
-           the mode.}
-
-     @item{@racket['keep-style] : Leave the document's style as-is,
-           instead of imposing the document style for manuals.}
-
-     @item{@racket['no-search] : Build the document without a search
-           box.}
-
-     @item{@racket['every-main-layer] : With @racket['main-doc],
-           indicates that the document should be rendered separately
-           at every installation layer (see @secref["layered-install"]).}
-
-    ]
-
-    The @racket[_category] list specifies how to show the document in
-    the root table of contents and, for the @racket[_lang-fam] part,
-    how to classify the documentation's content for searching.
-    The list must start with a category,
-    which determines where the manual appears in the root
-    documentation page. A category is either a string or a symbol. If
-    it is a string, then the string is the category label on the root
-    page. If it is a symbol, then a default category label is
-    used. The available symbols and the order of categories on the
-    root documentation page is as below:
-
-   @itemize[
-
-     @item{@racket['getting-started] : High-level, introductory
-           documentation, typeset at the same level as other
-           category titles.}
-
-     @item{@racket['language] : Documentation for a prominent
-           programming language.}
-
-     @item{@racket['tool] : Documentation for an executable.}
-
-     @item{@racket['gui-library] : Documentation for GUI and graphics
-           libraries.}
-
-     @item{@racket['net-library] : Documentation for networking
-           libraries.}
-
-     @item{@racket['parsing-library] : Documentation for parsing
-           libraries.}
-
-     @item{@racket['tool-library] : Documentation for programming-tool
-           libraries (i.e., not important enough for the more
-           prominent @racket['tool] category).}
-
-     @item{@racket['interop] : Documentation for interoperability
-           tools and libraries.}
-
-     @item{All string categories as ordered by @racket[string<=?].}
-     
-     @item{@racket['library] : Documentation for miscellaneous libraries.}
-
-     @item{@racket['drracket-plugin] : Documentation for DrRacket 
-           Plugins.}
-
-     @item{@racket['legacy] : Documentation for deprecated libraries,
-           languages, and tools.}
-
-     @item{@racket['experimental] : Documentation for an experimental
-           language or library.}
-
-     @item{@racket['other] : Other documentation.}
-
-     @item{@racket['omit] : Documentation that should not be listed on
-           the root page or indexed for searching.}
-
-     @item{@racket['omit-start] : Documentation that should not be
-           listed on the root page but should be indexed for
-           searching.}
-
-   ]
-
-   If the @racket[_category] list is not given, or if the category symbol is unrecognized,
-   the documentation is added to the Miscellaneous Libraries (@racket['library]) category.
-
-   If the category list has a second element, @racket[_sort-number], it must be a real number
-   that designates the manual's sorting position with the category;
-   manuals with the same sorting position are ordered
-   alphabetically. For a pair of manuals with sorting numbers
-   @racket[_n] and @racket[_m], the groups for the manuals are
-   separated by space if @racket[(truncate (/ _n 10))]and
-   @racket[(truncate (/ _m 10))] are different.
-
-   If the category list has a third element, @racket[_lang-fam], then
-   it must be a list of strings, where each string names a language
-   family. This language family list is used for index entries that
-   are extracted from the document and used for searching. The
-   document, a part within the document, or an individual index
-   entries may specify its own language family, and @racket[_lang-fam]
-   provides only a default for entries that do not otherwise specify a
-   language family. Alternatively, a document may specify a default
-   that can be overridden by @racket[_lang-fam] through a
-   @racket['default-language-family] key in @racket[tag-prefix] of the
-   document's @racket[part]; that specification, in turn, might be
-   supplied in the document's source via the @racket[#:tag-prefix]
-   argument to @racket[title].
-
-   The @racket[_out-k] specification is a hint on whether to break the
-   document's cross-reference information into multiple parts, which
-   can reduce the time and memory use for resolving a cross-reference
-   into the document. It must be a positive, exact integer, and the
-   default is @racket[1].
-
-   The @racket[_order-n] specification is a hint for ordering document
-   builds, since documentation references can be mutually recursive.
-   The order hint can be any real number. A value of @racket[-10] or
-   less disables running the document in parallel to other documents.
-   The main Racket reference is given a value of @racket[-11], the
-   search page is given a value of @racket[10], and the default is
-   @racket[0].
-
-   A directory for pre-rendered documentation is computed from the
-   source file name by starting with the directory of the
-   @filepath{info.rkt} file, adding @filepath{doc}, and then using the
-   document name (which is usually the source file's name without a
-   suffix); if such a directory exists and does not have a
-   @filepath{synced.rktd} file, then it is treated as pre-rendered
-   documentation and moved into place, in which case the documentation
-   source file need not be present. Moving documentation into place
-   may require no movement at all, depending on the way that the
-   enclosing collection is installed, but movement includes adding a
-   @filepath{synced.rktd} file to represent the installation.
-
-   @history[#:changed "6.4" @elem{Allow a category to be a string
-                                 instead of a symbol.}
-            #:changed "8.9.0.6" @elem{Add the @racket['drracket-plugin]
-                                      category symbol.}
-            #:changed "8.14.0.5" @elem{Added optional @racket[_lang-fam]
-                                       within @racket[_category].}]}
+   as a package or module name. See @secref["doc-info"] for more
+   information about a @racketidfont{scribblings} value.
+   Before a document is rendered by @exec{raco setup}, the document's
+   main @racket[part] is adjusted in several
+   ways; see @secref["doc-adjust"].}
 
  @item{@as-index{@racketidfont{release-note-files}} : @racket[(listof (cons/c string? (cons/c string? list?)))] ---
    A list of release-notes text files to link from the main documentation pages.
@@ -929,6 +716,361 @@ Optional @filepath{info.rkt} fields trigger additional actions by
    Used indirectly via @racket[get-module-suffixes].}
 
 ]
+
+@; ----------------------------------------
+@subsection[#:tag "doc-info"]{Document Descriptions in @filepath{info.rkt} Files}
+
+A @racketidfont{scribblings} entry is introduced in @secref["setup-info"]
+as having the shape @racket[(listof (cons/c string? list?))], but it
+more precisely must be a value that can be generated from an expression
+matching the following @racket[_entry] grammar:
+
+@racketgrammar*[
+  #:literals (list)
+  [entry (list doc ...)]
+  [doc (list src-string)
+       (list src-string flags)
+       (list src-string flags category)
+       (list src-string flags category name)
+       (list src-string flags category name out-k)
+       (list src-string flags category name out-k order-n)]
+  [flags (list mode-symbol ...)]
+  [category (list category-name)
+            (list category-name sort-number)
+            (list category-name sort-number lang-fam)]
+  [category-name symbol
+                 string
+                 (box string)]
+  [lang-fam (list string ...)]
+  [name string
+        #f]
+]
+
+A document entry @racket[_doc] must have at least a @racket[_src-string],
+and it optionally continues with information on how to
+build the document. If a document's list contains a second item,
+@racket[_flags], it must be a list of mode symbols (described
+below). If a document's list contains a third item,
+@racket[_category], it must be a list that categorizes the document
+(described further below). If a document's list contains a fourth
+item, @racket[_name], it is a name to use for the generated
+documentation, instead of defaulting to the source file's name
+(sans extension), where @racket[#f] means to use the default; a
+non-@racket[#f] value for @racket[_name] must fit the grammar
+of a collection-name element as checked by 
+@racket[collection-name-element?]. If a
+document's list contains a fifth item, @racket[_out-k], it is used
+a hint for the number of files to use for the document's
+cross-reference information; see below. If a document's list
+contains a fourth item, @racket[_order-n], it is used a hint for
+the order of rendering; see below.
+
+Each mode symbol in @racket[_flags] can be one of the following,
+where only @racket['multi-page] is commonly used:
+
+@itemize[
+
+  @item{@racket['multi-page] : Generates multi-page HTML output,
+        instead of the default single-page format.}
+
+  @item{@racket['main-doc] : Indicates that the generated
+        documentation should be written into the main installation
+        directory, instead of to a user-specific directory. This
+        mode is the default for a collection that is itself located
+        in the main installation.}
+
+  @item{@racket['user-doc] : Indicates that the generated
+        documentation should be written a user-specific
+        directory. This mode is the default for a collection that
+        is not itself located in the main installation.}
+
+  @item{@racket['depends-all] : Indicates that the document should
+        be rebuilt if any other document is rebuilt---except for
+        documents that have the @racket['no-depend-on] flag.}
+
+  @item{@racket['depends-all-main] : Indicates that the document
+        should be rebuilt if any other document is rebuilt that is
+        installed into the main installation---except for documents
+        that have the @racket['no-depend-on] flag.}
+
+  @item{@racket['depends-all-user] : Indicates that the document
+        should be rebuilt if any other document is rebuilt that is
+        installed into the user's space---except for documents
+        that have the @racket['no-depend-on] flag.}
+
+  @item{@racket['always-run] : Build the document every time that
+        @exec{raco setup} is run, even if none of its dependencies
+        change.}
+
+  @item{@racket['no-depend-on] : Removes the document for
+        consideration for other dependencies. Furthermore,
+        references from the document to other documents are always
+        direct, instead of potentially indirect (i.e., resolved at
+        document-viewing time and potentially redirected to a
+        remote site).}
+
+  @item{@racket['main-doc-root] : Designates the root document for
+        the main installation. The document that currently has this
+        mode should be the only one with the mode.}
+
+  @item{@racket['user-doc-root] : Designates the root document for
+        the user-specific documentation directory. The document
+        that currently has this mode should be the only one with
+        the mode.}
+
+  @item{@racket['keep-style] : Leave the document's style as-is,
+        instead of imposing the document style for manuals.}
+
+  @item{@racket['no-search] : Build the document without a search
+        box.}
+
+  @item{@racket['every-main-layer] : With @racket['main-doc],
+        indicates that the document should be rendered separately
+        at every installation layer (see @secref["layered-install"]).}
+
+]
+
+The @racket[_category] list specifies how to show the document in
+the root table of contents and, for the @racket[_lang-fam] part,
+how to classify the documentation's content for searching. This
+information can be extended or overridden through a
+@racket['doc-properties] table within the @racket[tag-prefix] of
+the document's main @racket[part], but we first consider
+@racket[_category] on its own:
+
+@itemlist[
+
+   @item{A @racket[_category] list must start with a @racket[_category-name], which
+   determines where the manual appears in a document listing such as
+   the root documentation page. A category is a symbol, string, or a
+   boxed string. If it is a string or a boxed string, then the string is the category label on
+   the root page (when the document's language families include the
+   language family used for the listing, which is @racket["Racket"]
+   for the root documentation page). If it is a symbol, then it should
+   be one of the following categories listed below:
+
+   @itemize[
+
+     @item{@racket['getting-started] : High-level, introductory
+        documentation, typeset at the same level as other category
+        titles.}
+
+     @item{@racket['core] : A core reference or library for a language
+        family as may be specified with a @racket[_lang-fam].}
+
+     @item{@racket['racket-core] : A core reference or library for
+        Racket. This category normally should be used only by specific
+        packages in the main Racket distribution. When rendering a
+        listing for a language family other than @racket["Racket"],
+        these documents appear after @racket['library] instead of
+        after @racket['core].}
+
+     @item{@racket['teaching] : Documentation for a teaching language
+        or library. Documents in this category appear after
+        @racket['language] if @racket['racket-core] is moved to
+        later.}
+
+     @item{@racket['language] : Documentation for a prominent
+        programming language. If @racket['racket-core] is moved to
+        later, documents in this category appear immediately after
+        @racket['racket-core] and before @racket['teaching].}
+
+     @item{@racket['tool] : Documentation for an executable.}
+
+     @item{@racket['gui-library] : Documentation for GUI and graphics
+           libraries.}
+
+     @item{@racket['net-library] : Documentation for networking
+           libraries.}
+
+     @item{@racket['parsing-library] : Documentation for parsing
+           libraries.}
+
+     @item{@racket['tool-library] : Documentation for programming-tool
+           libraries (i.e., not important enough for the more
+           prominent @racket['tool] category).}
+
+     @item{@racket['interop] : Documentation for interoperability
+           tools and libraries.}
+
+     @item{@racket['drracket-plugin] : Documentation for DrRacket 
+           Plugins.}
+
+     @item{All string and boxed-string categories as ordered by
+        @racket[string<=?] appear at this point relative to other
+        categories.}
+  
+     @item{@racket['library] : Documentation for miscellaneous libraries.}
+
+     @item{All documents whose language families do not include the
+        current language family appear at this point, at least for
+        most categories. Documents are ordered by @racket[string<=?]
+        on the first family name; within a language family, they are
+        ordered as in a documentation listing for that language
+        family. A document whose category is @racket['language],
+        @racket['teaching], @racket['experimental], @racket['legacy],
+        or @racket['racket-core] is always listed independent of its
+        language family, however. 
+
+        Unless a document's category is a boxed string, the label used
+        for the category in this section is prefixed by the first
+        family name in the document's families. A boxed string avoid
+        this prefixing.}
+  
+     @item{@racket['legacy] : Documentation for deprecated libraries,
+        languages, and tools.}
+
+     @item{@racket['experimental] : Documentation for an experimental
+           language or library.}
+
+     @item{@racket['other] : Other documentation.}
+
+     @item{@racket['omit] : Documentation that should not be listed on
+        the root page or indexed for searching.}
+
+     @item{@racket['omit-start] : Documentation that should not be
+        listed on the root page but should be indexed for
+        searching.}
+
+   ]
+
+   If the @racket[_category] list is not given, or if the category symbol is unrecognized,
+   the documentation is added to the (@racket['library]) category.}
+
+   @item{If the category list has a second element, @racket[_sort-number], it must be a real number
+   that designates the manual's sorting position with the category;
+   manuals with the same sorting position are ordered
+   alphabetically. For a pair of manuals with sorting numbers
+   @racket[_n] and @racket[_m], the groups for the manuals are
+   separated by space if @racket[(truncate (/ _n 10))]and
+   @racket[(truncate (/ _m 10))] are different.}
+   
+   @item{If the category list has a third element, @racket[_lang-fam], then
+   it must be a list of strings, where each string names a language
+   family. The default for @racket[_lang-fam] is @racket[(list "Racket")].
+   This language family list is used to organize a listing of all documentation,
+   and is also used for index entries that are extracted from the
+   document and used for searching. For index entries, the
+   document, a part within the document, or an individual index
+   entry may specify its own language family, and @racket[_lang-fam]
+   provides only a default for entries that do not otherwise specify a
+   language family. See @secref["doc-adjust"] for more information.}
+
+   @item{If a document's main @racket[part] has a @racket[tag-prefix]
+   hash table that maps @racket['doc-properties] to another hash
+   table, the inner hash table can override and generalize the
+   @racket[_category] list:
+
+   @itemlist[
+
+    @item{If @racket['language-family] is mapped to a list of strings,
+    it provides a replacement for @racket[_lang-fam].}
+
+    @item{If @racket['category] is mapped to a hash table
+    @racket[_cat-ht], it is used to get a @racket[_category]
+    replacement specific to a language family. If @racket[_cat-ht]
+    maps the listing's language family name to a list, that list is
+    used of @racket[_category]. Otherwise, if @racket[_cat-ht] maps
+    @racket['default] to a list, that list is used instead of
+    @racket[_category]. In either case, the replacement list cannot
+    contain a @racket[_lang-fam] component; a
+    @racket['language-family] mapping (as described in the previous
+    bullet) is the only way to replace a @racket[_lang-fam] component.}
+
+   ]}
+   
+]
+
+The @racket[_out-k] specification is a hint on whether to break the
+document's cross-reference information into multiple parts, which
+can reduce the time and memory use for resolving a cross-reference
+into the document. It must be a positive, exact integer, and the
+default is @racket[1].
+
+The @racket[_order-n] specification is a hint for ordering document
+builds, since documentation references can be mutually recursive.
+The order hint can be any real number. A value of @racket[-10] or
+less disables running the document in parallel to other documents.
+The main Racket reference is given a value of @racket[-11], the
+search page is given a value of @racket[10], and the default is
+@racket[0].
+
+A directory for pre-rendered documentation is computed from the
+source file name by starting with the directory of the
+@filepath{info.rkt} file, adding @filepath{doc}, and then using the
+document name (which is usually the source file's name without a
+suffix); if such a directory exists and does not have a
+@filepath{synced.rktd} file, then it is treated as pre-rendered
+documentation and moved into place, in which case the documentation
+source file need not be present. Moving documentation into place
+may require no movement at all, depending on the way that the
+enclosing collection is installed, but movement includes adding a
+@filepath{synced.rktd} file to represent the installation.
+
+@history[#:changed "6.4" @elem{Allow a category to be a string
+                              instead of a symbol.}
+         #:changed "8.9.0.6" @elem{Add the @racket['drracket-plugin]
+                                   category symbol.}
+         #:changed "8.14.0.5" @elem{Added optional @racket[_lang-fam]
+                                    within @racket[_category].}
+         #:changed "9.0.0.10" @elem{Added support for @racket['doc-properties]
+                                    in a document's main @racket[part] and for
+                                    boxed-string category names.}]
+                                    
+@subsection[#:tag "doc-adjust"]{Document Setup Adjustments}
+
+Before a document is rendered by @exec{raco setup}, its main
+@racket[part] is adjusted in several ways:
+
+@itemlist[
+
+  @item{The @racket[tag-prefix] field of the @racket[part] is
+  adjusted to have the named document's module path as its
+  @racket['tag-prefix], which means that other documents can refer
+  to the rendered document via @racket[secref] or
+  @racket[other-doc].}
+
+  @item{A @racket['(part "top")] tag is added to the
+  @racket[part]'s @racket[tag] field if it is not present already.}
+
+  @item{A @racket[document-version] style property is added using
+  @racket[(version)] if no @racket[document-version] property is
+  present already.}
+
+  @item{A @racket[body-id] style property is added with
+  @racket["doc-racket-lang-org"] if no @racket[body-id] property
+  is present already.}
+
+  @item{A @racket[document-source] style property is added with
+  the document's module path.}
+
+  @item{A default language family is determined as
+  @racket[_lang-fam] from @racket[_category] in a
+  @racket[scribblings] entry or (if not present) the value of a
+  @racket['default-language-family] key in the @racket[part]'s
+  @racket[tag-prefix] as a hash table (perhaps originally supplied
+  to @racket[title]). That list of strings, if either, is added as
+  @racket['language-family] to a new table that is paired with
+  @racket['index-extras] (if any) already in the table. That way,
+  @racket[_category] or the main @racket[part] of a document can
+  supply the default language family for all index entries
+  generated from the document.}
+
+  @item{When the @racket[part]'s @racket[tag-prefix] is table with
+  @racket['doc-properties] mapped to a hash table value, the value
+  is recorded for cross references using the tag
+  @racket[`(doc-properties "top")] combined with the document's
+  module path. This addition allows a @racket['doc-properties]
+  table to configure the document's listing in more general ways
+  than a @racket[_category] specification within
+  @racketidfont{scribblings} as described in @secref["doc-info"].}
+
+]
+
+The document's rendering may be further adjusted at the renderer
+level (see @secref["renderer" #:doc '(lib
+"scribblings/scribble/scribble.scrbl")]), including configuration
+at the level of CSS or Latex.
 
 @; ------------------------------------------------------------------------
 
