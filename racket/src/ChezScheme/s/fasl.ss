@@ -42,6 +42,7 @@
 (define rtd-name (csv7:record-field-accessor #!base-rtd 'name))
 (define rtd-uid (csv7:record-field-accessor #!base-rtd 'uid))
 (define rtd-flags (csv7:record-field-accessor #!base-rtd 'flags))
+(define rtd-pm (csv7:record-field-accessor #!base-rtd 'pm))
 
 (define-record-type table
   (fields (mutable count) (immutable hash)
@@ -115,6 +116,12 @@
     (let ([rtd ($record-type-descriptor x)])
       (bld rtd t a? d)
       (let ([flds (rtd-flds rtd)])
+        (when (eq? #t (rtd-pm rtd)) ; => created by `make-ftype-scheme-object-pointer`
+          (let ([v (ftype-scheme-object-pointer-object x)])
+            (unless (fixmediate? v)
+              ($oops 'fasl-write
+                     "cannot fasl ftype-scheme-object-pointer containing a non-fixnum, non-immediate value ~s"
+                     v))))
         (if (fixnum? flds)
             (let loop ([i 0])
               (unless (fx= i flds)
