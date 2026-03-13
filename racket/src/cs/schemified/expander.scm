@@ -24046,7 +24046,7 @@
   (lambda (s_0)
     (let ((built-in-s_0 (string->symbol (format ".~s" s_0))))
       (begin (hash-set! built-in-symbols built-in-s_0 #t) built-in-s_0))))
-(define effect_2626
+(define effect_2420
   (begin
     (void
      (begin
@@ -24158,7 +24158,16 @@
              ptr-set!/double
              ptr-ref/float
              ptr-set!/float
-             ffi-static-call-and-callback-core))))
+             ffi-static-call-and-callback-core
+             ffi2-ptr?-maker
+             ffi2-procedure-maker
+             ffi2-callback-maker
+             ffi2-ptr-ref-maker
+             ffi2-ptr-set!-maker
+             ffi2-malloc-maker
+             ffi2-ptr-cast-maker
+             ffi2-sizeof
+             ffi2-offsetof))))
     (void)))
 (define phase-shift-id (make-built-in-symbol! 'phase))
 (define dest-phase-id (make-built-in-symbol! 'dest-phase))
@@ -24196,7 +24205,7 @@
    #f
    #f
    '(2 . 0)))
-(define effect_2627 (finish_2005 struct:module-path-index-table))
+(define effect_2626 (finish_2005 struct:module-path-index-table))
 (define module-path-index-table1.1
   (|#%name|
    module-path-index-table
