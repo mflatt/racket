@@ -31,6 +31,9 @@
 (module+ static
   (provide _fun/static))
 
+(module+ internal
+  (provide get-ffi-lib*))
+
 (define-syntax define*
   (syntax-rules ()
     [(_ (name . args) body ...)
@@ -133,15 +136,16 @@
 
 (provide (protect-out (rename-out [get-ffi-lib ffi-lib]))
          ffi-lib? ffi-lib-name)
-(define (get-ffi-lib name [version/s ""]
-		     #:fail [fail #f]
-		     #:get-lib-dirs [get-lib-dirs get-lib-search-dirs]
-                     #:global? [global? (eq? (system-type 'so-mode) 'global)]
-                     #:custodian [custodian #f])
+(define (get-ffi-lib* name [version/s ""]
+                      #:who [who 'ffi-lib]
+                      #:fail [fail #f]
+                      #:get-lib-dirs [get-lib-dirs get-lib-search-dirs]
+                      #:global? [global? (eq? (system-type 'so-mode) 'global)]
+                      #:custodian [custodian #f])
   (cond
-   [(not name) (ffi-lib name)] ; #f => NULL => open this executable
+   [(not name) (ffi-lib name #f #f who)] ; #f => NULL => open this executable
    [(not (or (string? name) (path? name)))
-    (raise-argument-error 'ffi-lib "(or/c string? path?)" name)]
+    (raise-argument-error who "(or/c string? path?)" name)]
    [else
     ;; A possible way that this might be misleading: say that there is a
     ;; "foo.so" file in the current directory, which refers to some
@@ -155,7 +159,7 @@
     (define (fullpath p) (path->complete-path (cleanse-path p)))
     (define tried '()) ;; (listof path-string), mutated
     (define (try-lib name)
-      (let ([lib (ffi-lib name #t global?)])
+      (let ([lib (ffi-lib name #t global? who)])
         (cond [lib (log-ffi-lib-debug "loaded ~e" name)]
               [else (set! tried (cons name tried))])
         lib))
@@ -208,8 +212,8 @@
                              [else " (using OS library search path)"])))))
            (and (not fail)
                 (if (pair? names)
-                    (ffi-lib (car names) #f global?)
-                    (ffi-lib name0 #f global?))))))
+                    (ffi-lib (car names) #f global? who)
+                    (ffi-lib name0 #f global? who))))))
       (cond
         [lib
          (when custodian
@@ -220,7 +224,19 @@
          lib]
         [fail
          (fail)]
-        [else (error 'ffi-lib "internal error; shouldn't get here")]))]))
+        [else (error who "internal error; shouldn't get here")]))]))
+
+(define (get-ffi-lib name [version/s ""]
+		     #:fail [fail #f]
+		     #:get-lib-dirs [get-lib-dirs get-lib-search-dirs]
+                     #:global? [global? (eq? (system-type 'so-mode) 'global)]
+                     #:custodian [custodian #f])
+  (get-ffi-lib* name version/s
+                #:who 'ffi-lib
+                #:fail fail
+                #:get-lib-dirs get-lib-dirs
+                #:global? global?
+                #:custodian custodian))
 
 (define (get-ffi-lib-internal x)
   (if (ffi-lib? x) x (get-ffi-lib x)))
