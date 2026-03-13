@@ -1,0 +1,18 @@
+#lang racket/base
+(require ffi2
+         rackunit)
+
+(define c-lib (ffi2-lib #f))
+
+(define-ffi2-pointer-type ours_t*)
+
+(define c-malloc (ffi2-procedure (ffi2-lib-ref c-lib "malloc")
+                                 (size_t . -> . void_t*)))
+(define c-free (ffi2-procedure (ffi2-lib-ref c-lib "free")
+                               (void_t* . -> . void_t)))
+
+(define p (c-malloc 100))
+(check-true (ffi2-ptr? p))
+(check-false (ffi2-ptr/gcable? p))
+(check-false (ours_t*? p))
+(c-free p)

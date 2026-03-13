@@ -1,0 +1,50 @@
+#lang racket/base
+(require ffi2
+         rackunit)
+
+(define-ffi2-pointer-type ours_t*)
+(define-ffi2-pointer-type mine_t* #:extends ours_t*)
+
+(let ()
+  (define p (ffi2-malloc #:manual 100))
+  (check-true (ffi2-ptr? p))
+  (check-false (ffi2-ptr/gcable? p))
+  (check-false (ours_t*? p))
+  (check-false (mine_t*? p))
+  (ffi2-free p))
+
+(let ()
+  (define p (ffi2-malloc 100))
+  (check-true (ffi2-ptr? p))
+  (check-true (ffi2-ptr/gcable? p))
+  (check-false (ours_t*? p))
+  (check-false (mine_t*? p)))
+
+(let ()
+  (define op (ffi2-malloc #:manual 100 #:as ours_t*))
+  (check-true (ffi2-ptr? op))
+  (check-false (ffi2-ptr/gcable? op))
+  (check-true (ours_t*? op))
+  (check-false (mine_t*? op))
+  (ffi2-free op))
+
+(let ()
+  (define op (ffi2-malloc 100 #:bytes #:as ours_t*))
+  (check-true (ffi2-ptr? op))
+  (check-true (ffi2-ptr/gcable? op))
+  (check-true (ours_t*? op))
+  (check-false (mine_t*? op)))
+
+(let ()
+  (define mp (ffi2-malloc #:manual 100 #:as mine_t*))
+  (check-true (ffi2-ptr? mp))
+  (check-false (ffi2-ptr/gcable? mp))
+  (check-true (ours_t*? mp))
+  (check-true (mine_t*? mp))
+  (ffi2-free mp))
+
+(let ()
+  (define mp (ffi2-malloc 100 #:as mine_t*))
+  (check-true (ffi2-ptr? mp))
+  (check-true (ours_t*? mp))
+  (check-true (mine_t*? mp)))
