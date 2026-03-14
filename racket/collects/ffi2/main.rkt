@@ -19,6 +19,7 @@
           define-ffi2-pointer-type
           ffi2-struct
           ffi2-procedure
+          define-ffi2-procedure
           ffi2-ptr-ref
           ffi2-ptr-set!
           ffi2-malloc
@@ -26,7 +27,8 @@
           ffi2-sizeof
           ffi2-memcpy
           ffi2-memmove
-          ffi2-memset)
+          ffi2-memset
+          ->)
          ffi2-ptr?
          ffi2-ptr/gcable?)
 
@@ -77,16 +79,16 @@
                         (int64? v)))
 
 (begin-for-syntax
-  (struct ffi2-type (name vm-type predicate-id racket->c-id c->racket-id))
+  (struct ffi2-type (name vm-type predicate racket->c c->racket))
   (struct ffi2-type/proc ffi2-type (proc)
     #:property prop:procedure 0)
-  (define (make-ffi2-type name vm-type predicate-id
+  (define (make-ffi2-type name vm-type predicate
                           #:procedure [proc #f]
-                          #:racket->c [racket->c-id #'values]
-                          #:c->racket [c->racket-id #'values])
+                          #:racket->c [racket->c #'values]
+                          #:c->racket [c->racket #'values])
     (if proc
-        (ffi2-type/proc name vm-type predicate-id racket->c-id c->racket-id proc)
-        (ffi2-type name vm-type predicate-id racket->c-id c->racket-id)))
+        (ffi2-type/proc name vm-type predicate racket->c c->racket proc)
+        (ffi2-type name vm-type predicate racket->c c->racket)))
 
   (define (ffi2-type-compound? t)
     (define vm-type (ffi2-type-vm-type t))
@@ -104,7 +106,7 @@
     (define v (syntax-local-value t-id (lambda () #f)))
     (unless (ffi2-type? v)
       (raise-syntax-error #f "not an ffi2 type" stx t-id))
-    (unless (or for-return? (ffi2-type-racket->c-id v))
+    (unless (or for-return? (ffi2-type-racket->c v))
       (raise-syntax-error #f "ffi2 type allowed only as a procedure return" stx t-id))
     v)
 
@@ -143,6 +145,38 @@
 (define-ffi2-type racket_t 'scheme-object #'any?)
 (define-ffi2-type string_t 'string #'string-or-false?)
 
+(define-syntax (-> stx)
+  (raise-syntax-error #f "allowed only in an ffi2-type context" stx))
+
+(begin-for-syntax
+  (define-syntax-class :maybe-type
+    #:description "an ffi2 type"
+    #:literals (->)
+    (pattern _:id)
+    (pattern (-> _ ...)))
+
+  (define-syntax-class (:type stx [for-return? #f])
+    #:description "an ffi2 type"
+    #:attributes (t)
+    #:literals (->)
+    (pattern type-name:id
+             #:attr t (lookup-type stx #'type-name #:for-return? for-return?))
+    (pattern (~and arrow-type
+                   (-> in-maybe-type::maybe-type ...
+                       (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
+                       out-maybe-type::maybe-type))
+             #:cut
+             #:with ((~var in-type (:type stx)) ...) #'(in-maybe-type ...)
+             #:with ((~var var-in-type (:type stx)) ...) (if (attribute var-in-maybe-type)
+                                                             #'(var-in-maybe-type ...)
+                                                             #'())
+             #:with (~var out-type (:type stx #t)) #'out-maybe-type
+             #:attr t (make-ffi2-type '-> 'pointer procedure?
+                                      #:racket->c #`(lambda (proc)
+                                                      (ffi2-callback proc arrow-type))
+                                      #:c->racket #`(lambda (ptr)
+                                                      (ffi2-procedure ptr arrow-type))))))
+
 (define-syntax (define-ffi2-pointer-type stx)
   (syntax-parse stx
     [(_ name:id)
@@ -167,7 +201,7 @@
 
 (define-syntax (ffi2-struct stx)
   (syntax-parse stx
-    [(_ name:id ([field-name:id field-type:id]
+    [(_ name:id ([field-name:id (~var field-type (:type stx))]
                  ...))
      (with-syntax ([name* (datum->syntax #'name
                                          (string->symbol (format "~a*" (syntax-e #'name)))
@@ -183,17 +217,16 @@
                    [([field-vm-type field-c->racket field-racket->c field-ok? field-type-name
                                     field-compound? field-ptr-vm-type field-ptr/gcable-vm-type]
                      ...)
-                    (map (lambda (field-type)
-                           (define t (lookup-type stx field-type))
+                    (map (lambda (t)
                            (list (ffi2-type-vm-type t)
-                                 (ffi2-type-c->racket-id t)
-                                 (ffi2-type-racket->c-id t)
-                                 (ffi2-type-predicate-id t)
+                                 (ffi2-type-c->racket t)
+                                 (ffi2-type-racket->c t)
+                                 (ffi2-type-predicate t)
                                  (ffi2-type-name t)
                                  (ffi2-type-compound? t)
                                  (ffi2-type-pointer-vm-type t)
                                  (ffi2-type-pointer-vm-type t #:gcable? #t)))
-                         (attribute field-type))]
+                         (attribute field-type.t))]
                    [(name-field ...) (map (lambda (field-name)
                                             (datum->syntax field-name
                                                            (string->symbol (format "~a-~a" (syntax-e #'name) (syntax-e field-name)))
@@ -252,13 +285,13 @@
 
 (define-syntax (ffi2-ptr-ref stx)
   (syntax-parse stx
-    [(form-id ptr-expr type:id (~optional (~seq offset-expr (~optional (~and abs #:bytes)))))
-     (define t (lookup-type stx #'type))
+    [(form-id ptr-expr (~var type (:type stx)) (~optional (~seq offset-expr (~optional (~and abs #:bytes)))))
+     (define t (attribute type.t))
      #`(let ([ptr ptr-expr]
              [offset (~? offset-expr 0)])
          (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr))
          (unless (exact-integer? offset) (raise-argument-error 'form-id "exact-integer?" offset))
-         (#,(ffi2-type-c->racket-id t)
+         (#,(ffi2-type-c->racket t)
           ((#%foreign-inline (ffi2-ptr-ref-maker #,(ffi2-type-vm-type t)))
            ptr
            #,(if (attribute abs)
@@ -267,28 +300,30 @@
 
 (define-syntax (ffi2-ptr-set! stx)
   (syntax-parse stx
-    [(form-id ptr-expr type:id (~optional (~seq offset-expr (~optional (~and abs #:bytes)))) val-expr)
-     (define t (lookup-type stx #'type))
+    [(form-id ptr-expr (~var type (:type stx))
+              (~optional (~seq offset-expr (~optional (~and abs #:bytes))))
+              val-expr)
+     (define t (attribute type.t))
      #`(let ([ptr ptr-expr]
              [offset (~? offset-expr 0)]
              [val val-expr])
          (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr))
          (unless (exact-integer? offset) (raise-argument-error 'form-id "exact-integer?" offset))
-         (unless (#,(ffi2-type-predicate-id t) val) (bad-assign-value 'form-id '#,(ffi2-type-name t) val))
+         (unless (#,(ffi2-type-predicate t) val) (bad-assign-value 'form-id '#,(ffi2-type-name t) val))
          ((#%foreign-inline (ffi2-ptr-set!-maker #,(ffi2-type-vm-type t)))
           ptr
           #,(if (attribute abs)
                 #'offset
                 #`(* offset (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type t)))))
-          (#,(ffi2-type-racket->c-id t) val)))]))
+          (#,(ffi2-type-racket->c t) val)))]))
 
 (define-syntax (ffi2-malloc stx)
   (syntax-parse stx
     [(form-id (~optional kind::malloc-kind)
-              (~or #:bytes type:id)
+              (~or #:bytes (~var type (:type stx)))
               (~optional n-expr))
      (define kind-sym (string->symbol (keyword->string (syntax-e #'(~? kind #:manual)))))
-     (define t (lookup-type stx #'(~? type int8_t)))
+     (define t (or (attribute type.t) (lookup-type stx #'int8_t)))
      (define ptr-vm-type (cond
                            [(ffi2-type-pointer-vm-type t #:gcable? (not (eq? kind-sym 'manual)))
                             => (lambda (vm-type) vm-type)]
@@ -335,39 +370,109 @@
 
 (define-syntax (ffi2-sizeof stx)
   (syntax-parse stx
-    [(form-id type:id)
-     (define t (lookup-type stx #'type))
+    [(form-id (~var type (:type stx)))     
+     (define t (attribute type.t))
      #`(#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type t)))]))
 
 (define-syntax (ffi2-procedure stx)
   (syntax-parse stx
+    #:literals (->)
     [(form-id ptr-expr
-              (-> in-type:id ...
-                  (~optional (~seq #:varargs var-in-type:id ...))
-                  out-type))
-     (define in-ts (map (lambda (type) (lookup-type stx type)) (append (attribute in-type)
-                                                                       (or (attribute var-in-type)
-                                                                           null))))
-     (define out-t (lookup-type stx #'out-type #:for-return? #t))
+              (-> in-maybe-type::maybe-type ...
+                  (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
+                  out-maybe-type::maybe-type))
+     #:cut
+     #:with ((~var in-type (:type stx)) ...) #'(in-maybe-type ...)
+     #:with ((~var var-in-type (:type stx)) ...) (if (attribute var-in-maybe-type)
+                                                     #'(var-in-maybe-type ...)
+                                                     #'())
+     #:with (~var out-type (:type stx #t)) #'out-maybe-type
+     (define in-ts (append (attribute in-type.t) (attribute var-in-type.t)))
+     (define out-t (attribute out-type.t))
      (with-syntax ([(in ...) (generate-temporaries in-ts)]
-                   [(in-ok? ...) (map ffi2-type-predicate-id in-ts)]
+                   [(in-ok? ...) (map ffi2-type-predicate in-ts)]
                    [(in_t-name ...) (map ffi2-type-name in-ts)]
-                   [(in-racket->c ...) (map ffi2-type-racket->c-id in-ts)]
+                   [(in-racket->c ...) (map ffi2-type-racket->c in-ts)]
                    [(conv ...) (append
-                                (if (attribute var-in-type)
+                                (if (attribute var-in-maybe-type)
                                     (list (list '__varargs_after (length (attribute in-type))))
                                     null))])
-       #`(let ([ptr ptr-expr])
-           (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr))
-           (let ([proc ((#%foreign-inline (ffi2-procedure-maker (conv ...)
-                                                                #,(map ffi2-type-vm-type in-ts)
-                                                                #,(ffi2-type-vm-type out-t)))
-                        ptr)])
-             (lambda (in ...)
-               (unless (in-ok? in) (bad-argument 'in_t-name in))
-               ...
-               (#,(ffi2-type-c->racket-id out-t)
-                (proc (in-racket->c in) ...))))))]))
+       (with-syntax ([adjust-proc (cond
+                                    [(ffi2-type-compound? out-t)
+                                     (define kind-sym 'gcable-immobile)
+                                     (define ptr-vm-type (ffi2-type-pointer-vm-type out-t #:gcable? (not (eq? kind-sym 'manual))))
+                                     #`(lambda (in ...)
+                                         (define r
+                                           ((#%foreign-inline (ffi2-malloc-maker #,(ffi2-type-vm-type out-t) #,ptr-vm-type #,kind-sym)) 1))
+                                         (proc r in ...)
+                                         r)]
+                                    [else #'proc])])
+         #`(let ([ptr ptr-expr])
+             (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr))
+             (let ([proc ((#%foreign-inline (ffi2-procedure-maker (conv ...)
+                                                                  #,(map ffi2-type-vm-type in-ts)
+                                                                  #,(ffi2-type-vm-type out-t)))
+                          ptr)])
+               (let ([proc adjust-proc])
+                 (lambda (in ...)
+                   (unless (in-ok? in) (bad-argument 'in_t-name in))
+                   ...
+                   (#,(ffi2-type-c->racket out-t)
+                    (proc (in-racket->c in) ...))))))))]))
+
+(define-syntax (define-ffi2-procedure stx)
+  (syntax-parse stx
+    #:literals (->)
+    [(form-id name:id lib-expr
+              (~and type
+                    (-> in-type::maybe-type ...
+                        (~optional (~seq #:varargs var-in-type::maybe-type ...))
+                        out-type::maybe-type)))
+     (with-syntax ([name-bstr (string->bytes/utf-8 (symbol->string (syntax-e #'name)))])
+       #'(define name (ffi2-procedure (ffi2-lib-ref lib-expr name-bstr)
+                                      type)))]))
+
+(define-syntax (ffi2-callback stx)
+  (syntax-parse stx
+    #:literals (->)
+    [(form-id proc-expr
+              (-> in-maybe-type::maybe-type ...
+                  (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
+                  out-maybe-type::maybe-type))
+     #:cut
+     #:with ((~var in-type (:type stx)) ...) #'(in-maybe-type ...)
+     #:with ((~var var-in-type (:type stx)) ...) (if (attribute var-in-maybe-type)
+                                                     #'(var-in-maybe-type ...)
+                                                     #'())
+     #:with (~var out-type (:type stx #t)) #'out-maybe-type
+     (define in-ts (append (attribute in-type.t) (attribute var-in-type.t)))
+     (define out-t (attribute out-type.t))
+     (with-syntax ([(in ...) (generate-temporaries in-ts)]
+                   [(in-c->racket ...) (map ffi2-type-c->racket in-ts)]
+                   [(conv ...) (append
+                                (if (attribute var-in-maybe-type)
+                                    (list (list '__varargs_after (length (attribute in-type))))
+                                    null))])
+       (with-syntax ([adjust-proc (cond
+                                    [(ffi2-type-compound? out-t)
+                                     #`(lambda (r in ...)
+                                         (define out (proc in ...))
+                                         (ffi2-memcpy r out (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type out-t))))
+                                         r)]
+                                    [else #'proc])])
+         #`(let ([proc proc-expr]
+                 [async-apply #f])
+             (let ([proc (lambda (in ...)
+                           (define out (proc (in-c->racket in) ...))
+                           (unless (#,(ffi2-type-predicate out-t) out)
+                             (bad-result '#,(ffi2-type-name out-t)) out)
+                           (#,(ffi2-type-racket->c out-t) out))])
+               (let ([proc adjust-proc])
+                 ((#%foreign-inline (ffi2-callback-maker (__disable_interrupts conv ...)
+                                                         #,(map ffi2-type-vm-type in-ts)
+                                                         #,(ffi2-type-vm-type out-t)))
+                  proc
+                  async-apply))))))]))
 
 (define (bad-assign-value who what val)
   (raise-arguments-error who "value does not match type"
@@ -378,3 +483,8 @@
   (raise-arguments-error 'ffi2 "foreign-procedure argument does not match type"
                          "argument" val
                          "argument ffi2 type" (unquoted-printing-string (format "~a" what))))
+
+(define (bad-result what val)
+  (raise-arguments-error 'ffi2 "foreign-callback result does not match type"
+                         "result" val
+                         "result ffi2 type" (unquoted-printing-string (format "~a" what))))

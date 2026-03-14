@@ -739,6 +739,7 @@
           ffi2-ptr/gcable?
           ffi2-ptr?-maker
           ffi2-procedure-maker
+          ffi2-callback-maker
           ffi2-ptr-ref-maker
           ffi2-ptr-set!-maker
           ffi2-malloc-maker

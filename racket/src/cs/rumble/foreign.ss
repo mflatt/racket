@@ -2127,23 +2127,27 @@
                              [(struct name . fields) (with-syntax ([fields (convert-fields #'fields)])
                                                        (if for-struct?
                                                            (add-decl! (datum name) #'(struct . fields) #f #t)
-                                                           (with-syntax ([id (add-decl! (datum name) #'ftype-pointer to-c? #f)])
-                                                             #'(& (struct . fields) id))))]
+                                                           (with-syntax ([id (add-decl! (datum name) #'ftype-pointer #t #f)]
+                                                                         [st-id (add-decl! (datum name) #'(struct . fields) #f #t)])
+                                                             #'(& st-id id))))]
                              [(struct/gc name . fields) (with-syntax ([fields (convert-fields #'fields)])
                                                           (if for-struct?
                                                               (add-decl! (datum name) #'(struct . fields) #f #t)
-                                                              (with-syntax ([id (add-decl! (datum name) #'ftype-scheme-object-pointer to-c? #f)])
-                                                                #'(& (struct . fields) id))))]
+                                                              (with-syntax ([id (add-decl! (datum name) #'ftype-scheme-object-pointer #t #f)]
+                                                                            [st-id (add-decl! (datum name) #'(struct . fields) #f #t)])
+                                                                #'(& st-id id))))]
                              [(union name . fields) (with-syntax ([fields (convert-fields #'fields)])
                                                       (if for-struct?
                                                           (add-decl! (datum name) #'(union . fields) #f #t)
-                                                          (with-syntax ([id (add-decl! (datum name) #'ftype-pointer to-c? #f)])
-                                                            #'(& (union . fields) id))))]
+                                                          (with-syntax ([id (add-decl! (datum name) #'ftype-pointer #t #f)]
+                                                                        [un-id (add-decl! (datum name) #'(union . fields) #f #t)])
+                                                            #'(& un-id id))))]
                              [(union/gc name . fields) (with-syntax ([fields (convert-fields #'fields)])
                                                          (if for-struct?
                                                              (add-decl! (datum name) #'(union . fields) #f #t)
-                                                             (with-syntax ([id (add-decl! (datum name) #'ftype-scheme-object-pointer to-c? #f)])
-                                                               #'(& (union . fields) id))))]
+                                                             (with-syntax ([id (add-decl! (datum name) #'ftype-scheme-object-pointer #t #f)]
+                                                                           [un-id (add-decl! (datum name) #'(union . fields) #f #t)])
+                                                               #'(& un-id id))))]
                              [else type-stx])))])
         (let* ([in-types (map (lambda (type-stx) (translate type-stx #t)) in-types)]
                [out-types (map (lambda (type-stx) (translate type-stx #f)) out-types)])
@@ -2178,15 +2182,36 @@
            (lambda (ptr)
              (foreign-procedure conv ... (ftype-pointer-address ptr) (in-type ...) out-type))))]))
 
-(define-syntax (ffi2-callable-maker stx)
+(define-syntax (ffi2-callback-maker stx)
   (syntax-case stx (quote)
     [(_  (conv ...) (in-type ...) out-type)
      (with-syntax ([((decl ...) (in-type ...) (out-type)) (convert-types #'(in-type ...) (list #'out-type) #f 0)])
        #'(let ()
            decl
            ...
-           (lambda (proc)
-             (foreign-callable conv ... proc (in-type ...) out-type))))]))
+           (lambda (proc async-apply)
+             (let ([proc (wrap-atomic-callback proc async-apply)])
+               (callable-to-ftype-pointer
+                (foreign-callable conv ... proc (in-type ...) out-type))))))]))
+
+(define (wrap-atomic-callback proc async-apply)
+  (let ([async-callback-queue (and (procedure? async-apply) (current-async-callback-queue))])
+    (lambda args
+      (call-as-atomic-callback
+       (lambda ()
+         (apply proc args))
+       #t
+       async-apply
+       async-callback-queue))))
+
+(define (callable-to-ftype-pointer callable)
+  ;; The callable is immobile, and its entry point is within the
+  ;; immediate immoblile object. Turn the callbale into a pointer
+  ;; using `make-ftype-scheme-object-pointer` so that the callable
+  ;; is retained as long as the pointer object is retained.
+  (define addr (object->reference-address callable))
+  (define ep-addr (foreign-callable-entry-point callable))
+  (make-ftype-scheme-object-pointer callable (- ep-addr addr)))
 
 (define-syntax (ffi2-ptr-ref-maker stx)
   (syntax-case stx (quote)
