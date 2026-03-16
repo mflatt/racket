@@ -394,30 +394,41 @@
     [(_ name:id (array (~var elem-type (:type stx)) n:exact-nonnegative-integer)
         (~optional (~seq #:tag tag:id)))
      (define elem-t (attribute elem-type.t))
-     (with-syntax ([tag*s (list (or (attribute tag))
-                                (string->symbol (format "~a*" (ffi2-type-name elem-t))))]
+     (with-syntax ([tag*s (list (or (attribute tag)
+                                    (string->symbol (format "~a*" (ffi2-type-name elem-t)))))]
                    [tag-ptr? (datum->syntax #'name
-                                            (string->symbol (format "~a*?" (syntax-e #'name)))
+                                            (string->symbol (format "~a?" (syntax-e #'name)))
                                             #'name)]
                    [tag-ptr?-str (format "~a*?" (syntax-e #'name))]
+                   [name-set! (datum->syntax #'name
+                                             (string->symbol (format "~a-set!" (syntax-e #'name)))
+                                             #'name)]
                    [name-ref (datum->syntax #'name
                                             (string->symbol (format "~a-ref" (syntax-e #'name)))
                                             #'name)]
                    [range-str (format "(integer-in 0 ~a)" (sub1 (syntax-e #'n)))])
        #`(begin
-           (define (tag-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer (tag*)) #:copy) v)
-                                    ((#%foreign-inline (ffi2-ptr?-maker pointer/gc (tag*)) #:copy) v)))           
+           (define (tag-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tag*s) #:copy) v)
+                                    ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))           
            (define-syntax name
              (make-ffi2-type 'name `(array tag*s n #,(ffi2-type-vm-type elem-t)) #'tag-ptr?
                              #:release #'black-box
                              #:category 'ptr))
            (define (name-ref ptr idx)
              (unless (tag-ptr? ptr) (raise-argument-error 'name-ref tag-ptr?-str ptr))
-             (unless (and (fixnum? idx) (fx<= idx (sub1 n))) (raise-argument-error 'name-ref 'range-str idx))
+             (unless (and (fixnum? idx) (fx<= 0 idx (sub1 n))) (raise-argument-error 'name-ref 'range-str idx))
              (#,(ffi2-type-c->racket elem-t)
               ((#%foreign-inline (begin-unsafe (ffi2-ptr-ref-maker #,(ffi2-type-vm-type elem-t))) #:copy)
                ptr
-               (* idx (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type elem-t)) #:copy)))))))]
+               (* idx (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type elem-t)) #:copy)))))
+           (define (name-set! ptr idx val)
+             (unless (tag-ptr? ptr) (raise-argument-error 'name-set! tag-ptr?-str ptr))
+             (unless (and (fixnum? idx) (fx<= 0 idx (sub1 n))) (raise-argument-error 'name-set! 'range-str idx))
+             (unless (#,(ffi2-type-predicate elem-t) val) (bad-assign-value 'name-set! '#,(ffi2-type-name elem-t) val))
+             ((#%foreign-inline (begin-unsafe (ffi2-ptr-set!-maker #,(ffi2-type-vm-type elem-t))) #:copy)
+              ptr
+              (* idx (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type elem-t)) #:copy))
+              (#,(ffi2-type-racket->c elem-t) val)))))]
     [(_ name:id
         (~var parent (:type stx))
         (~optional (~seq #:tag tag:id)))
@@ -586,7 +597,7 @@
                (eq? (car field) (syntax-e #'field-name)))
        (raise-syntax-error #f "field name not found in type" stx #'field-name))
      (cond
-       [(and (pair? vm-type) (eq? vm-type 'union))
+       [(and (pair? vm-type) (eq? (car vm-type) 'union))
         #'0]
        [else
         #`(#%foreign-inline (ffi2-offsetof #,vm-type field-name) #:copy)])]))

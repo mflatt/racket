@@ -2155,7 +2155,10 @@
                                                            (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
                                                                          [un-id (add-decl! (datum names) #'(union . fields) #f #t)])
                                                              #'(& un-id id))))]
-                             [(array names n elem-type) #`(array n #,(car (convert-fields (list #'elem-type))))]
+                             [(array names n elem-type) (if for-struct?
+                                                            (with-syntax ([((_ elem-type)) (convert-fields #'([_ elem-type]))])
+                                                              (add-decl! (datum names) #`(array n elem-type) #f for-struct?))
+                                                            (add-decl! (datum names) #'ftype-pointer #t #f))]
                              [else type-stx])))])
         (let* ([in-types (map (lambda (type-stx) (translate type-stx #t)) in-types)]
                [out-types (map (lambda (type-stx) (translate type-stx #f)) out-types)])

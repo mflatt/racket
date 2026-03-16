@@ -4081,6 +4081,12 @@ static Scheme_Object *translate_type(Scheme_Object *type) {
           argv[0] = scheme_builtin_value("make-union-type");
           return _scheme_apply(scheme_apply_proc, 2, argv);
         }
+      } if (!strcmp(SCHEME_SYM_VAL(head), "array")) {
+        Scheme_Object *argv[2];
+        type = SCHEME_CDR(SCHEME_CDR(type));
+        argv[0] = translate_type(SCHEME_CAR(SCHEME_CDR(type)));
+        argv[1] = SCHEME_CAR(type);
+        return foreign_make_array_type(2, argv);
       } else if (!strcmp(SCHEME_SYM_VAL(head), "pointer"))
         return scheme_pointer_ctype;
       else if (!strcmp(SCHEME_SYM_VAL(head), "pointer/gc"))
