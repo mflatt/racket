@@ -2056,7 +2056,7 @@
                                     (#%apply #%string-append
                                              (#%map (lambda (name)
                                                       (#%string-append
-                                                       (#%number->string (string-length name))
+                                                       (#%number->string (string-length (#%symbol->string name)))
                                                        ":"))
                                                     names))
                                     name-str)))))
@@ -2072,9 +2072,8 @@
       ;;    - `(pointer [<sym> ...])` is like `ftype-pointer` but with a uid gensym based on <sym>
       ;;    - `(pointer/gc [<sym> ...])` is like `ftype-scheme-object-pointer`
       ;;    - `(struct [<sym> ...] (<field-name> <field-type>) ...)` creates a uid gensym based on <sym>
-      ;;    - `(struct/gc [<sym> ...] (<field-name> <field-type>) ...)`
       ;;    - `(union [<sym> ...] (<field-name> <field-type>))`
-      ;;    - `(union/gc [<sym> ...] (<field-name> <field-type>))`
+      ;;    - `(array <int> <elem-type>)`
       (let* ([decls '()]
              [counter counter]
              [add-decl! (lambda (names type-stx to-c? for-struct?)
@@ -2150,24 +2149,13 @@
                                                             (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
                                                                           [st-id (add-decl! (datum names) #'(struct . fields) #f #t)])
                                                               #'(& st-id id))))]
-                             [(struct/gc names . fields) (with-syntax ([fields (convert-fields #'fields)])
-                                                           (if for-struct?
-                                                               (add-decl! (datum names) #'(struct . fields) #f #t)
-                                                               (with-syntax ([id (add-decl! (datum names) #'ftype-scheme-object-pointer #t #f)]
-                                                                             [st-id (add-decl! (datum names) #'(struct . fields) #f #t)])
-                                                                 #'(& st-id id))))]
                              [(union names . fields) (with-syntax ([fields (convert-fields #'fields)])
                                                        (if for-struct?
                                                            (add-decl! (datum names) #'(union . fields) #f #t)
                                                            (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
                                                                          [un-id (add-decl! (datum names) #'(union . fields) #f #t)])
                                                              #'(& un-id id))))]
-                             [(union/gc names . fields) (with-syntax ([fields (convert-fields #'fields)])
-                                                          (if for-struct?
-                                                              (add-decl! (datum names) #'(union . fields) #f #t)
-                                                              (with-syntax ([id (add-decl! (datum names) #'ftype-scheme-object-pointer #t #f)]
-                                                                            [un-id (add-decl! (datum names) #'(union . fields) #f #t)])
-                                                                #'(& un-id id))))]
+                             [(array names n elem-type) #`(array n #,(car (convert-fields (list #'elem-type))))]
                              [else type-stx])))])
         (let* ([in-types (map (lambda (type-stx) (translate type-stx #t)) in-types)]
                [out-types (map (lambda (type-stx) (translate type-stx #f)) out-types)])

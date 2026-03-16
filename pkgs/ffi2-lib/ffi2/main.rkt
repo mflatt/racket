@@ -21,6 +21,7 @@
           define-ffi2-type
           ffi2-procedure
           define-ffi2-procedure
+          define-ffi2-definer
           ffi2-ptr-ref
           ffi2-ptr-set!
           ffi2-ptr-cast
@@ -36,7 +37,9 @@
           ffi2-ptr->cpointer
           cpointer->ffi2-ptr
           ->
-          struct)
+          struct
+          union
+          array)
          ffi2-ptr?
          ffi2-ptr/gcable?)
 
@@ -105,18 +108,18 @@
 (define-syntax (drop stx) #'(void))
 
 (begin-for-syntax
-  (struct ffi2-type (name vm-type predicate racket->c c->racket retain immediate-pointer?))
+  (struct ffi2-type (name vm-type category predicate racket->c c->racket release))
   (struct ffi2-type/proc ffi2-type (proc)
     #:property prop:procedure 0)
   (define (make-ffi2-type name vm-type predicate
+                          #:category [category #f]
                           #:procedure [proc #f]
                           #:racket->c [racket->c #'values]
                           #:c->racket [c->racket #'values]
-                          #:retain [retain #'drop]
-                          #:immediate-pointer? [immediate-pointer? #f])
+                          #:release [release #'drop])
     (if proc
-        (ffi2-type/proc name vm-type predicate racket->c c->racket retain immediate-pointer? proc)
-        (ffi2-type name vm-type predicate racket->c c->racket retain immediate-pointer?)))
+        (ffi2-type/proc name vm-type category predicate racket->c c->racket release proc)
+        (ffi2-type name vm-type category predicate racket->c c->racket release)))
 
   (define (ffi2-type-compound? t)
     (define vm-type (ffi2-type-vm-type t))
@@ -135,11 +138,16 @@
   (define (ffi2-type-pointer-vm-type t #:gcable? [gcable? #f])
     (define vm-type (ffi2-type-vm-type t))
     (or (and (pair? vm-type)
-             (list (if gcable? 'pointer/gc 'pointer)
-                   (cadr vm-type)))
+             (if (pair? (cadr vm-type))
+                 (list (if gcable? 'pointer/gc 'pointer)
+                       (cadr vm-type))
+                 (if gcable? 'pointer/gc 'pointer)))
         (and (or (eq? vm-type 'pointer)
                  (eq? vm-type 'pointer/gc))
              (if gcable? 'pointer/gc 'pointer))))
+
+  (define (ffi2-type-immediate-pointer? t)
+    (eq? (ffi2-type-category t) 'ptr))
 
   (define (lookup-type stx t-id #:for-return? [for-return? #f])
     (define v (syntax-local-value t-id (lambda () #f)))
@@ -180,32 +188,37 @@
 (define-ffi2-base-type double_t 'double #'flonum?)
 (define-ffi2-base-type bool_t 'stdbool #'any?)
 (define-ffi2-base-type intbool_t 'bool #'any?)
-(define-ffi2-base-type void_t* 'pointer #'ffi2-ptr? #:retain #'black-box #:immediate-pointer? #t)
-(define-ffi2-base-type void_t*/gcable 'pointer/gc #'ffi2-ptr? #:retain #'black-box #:immediate-pointer? #t)
-(define-ffi2-base-type racket_t 'scheme-object #'any? #:retain #'black-box)
-(define-ffi2-base-type string_t 'u8* #'string-or-false? #:retain #'black-box
+(define-ffi2-base-type void_t* 'pointer #'ffi2-ptr? #:release #'black-box #:category 'ptr)
+(define-ffi2-base-type void_t*/gcable 'pointer/gc #'ffi2-ptr? #:release #'black-box #:category 'ptr)
+(define-ffi2-base-type racket_t 'scheme-object #'any? #:release #'black-box)
+(define-ffi2-base-type string_t 'u8* #'string-or-false? #:release #'black-box
   #:racket->c #'string->bytes/utf-8/add-terminator
   #:c->racket #'bytes->string/utf-8)
-(define-ffi2-base-type bytes_t 'u8* #'bytes-or-false? #:retain #'black-box
+(define-ffi2-base-type bytes_t 'u8* #'bytes-or-false? #:release #'black-box
   #:racket->c #'bytes-add-terminator)
-(define-ffi2-base-type path_t 'u8* #'string-or-false? #:retain #'black-box
+(define-ffi2-base-type path_t 'u8* #'string-or-false? #:release #'black-box
   #:racket->c #'path->bytes
   #:c->racket #'bytes->path)
-(define-ffi2-base-type bytes_ptr_t 'u8* #'bytes-or-false? #:retain #'black-box)
+(define-ffi2-base-type bytes_ptr_t 'u8* #'bytes-or-false? #:release #'black-box)
 
-(define-syntax (-> stx)
+(define-for-syntax (raise-only-as-ffi-type stx)
   (raise-syntax-error #f "allowed only in an ffi2-type context" stx))
-(define-syntax (struct stx)
-  (raise-syntax-error #f "allowed only in an ffi2-type context" stx))
+
+(define-syntax (-> stx) (raise-only-as-ffi-type stx))
+(define-syntax (struct stx) (raise-only-as-ffi-type stx))
+(define-syntax (union stx) (raise-only-as-ffi-type stx))
+(define-syntax (array stx) (raise-only-as-ffi-type stx))
 
 (begin-for-syntax
   (define-syntax-class :maybe-type
     #:description "an ffi2 type"
-    #:literals (-> struct)
+    #:literals (-> struct union array)
     (pattern t:id
              #:when (ffi2-type? (syntax-local-value #'t (lambda () #f))))
     (pattern (-> _ ...))
-    (pattern (struct _ ...)))
+    (pattern (struct _ ...))
+    (pattern (union _ ...))
+    (pattern (array _ ...)))
 
   (define-syntax-class (:type stx [for-return? #f])
     #:description "an ffi2 type"
@@ -231,20 +244,29 @@
                                                       (ffi2-callback proc arrow-type))
                                       #:c->racket #`(lambda (ptr)
                                                       (ffi2-procedure ptr arrow-type))
-                                      #:retain #'black-box))
-    (pattern (struct (~optional tag:id) [field-name:id (~var field-type (:type stx))]
-               ...)
+                                      #:release #'black-box
+                                      #:category 'arrow))
+    (pattern ((~and compound (~or struct union)) (~optional tag:id)
+                                                 [field-name:id (~var field-type (:type stx))]
+                                                 ...)
              #:with (field-vm-type ...) (map ffi2-type-vm-type (attribute field-type.t))
              #:with tag*s (if (attribute tag)
                               #`(#,(string->symbol (format "~a*" (syntax-e #'tag))))
                               #'())
-             #:attr t (make-ffi2-type 'struct `(struct tag*s (field-name field-vm-type) ...)
+             #:attr t (make-ffi2-type (syntax-e #'(~? tag compound)) (syntax->datum #'(compound tag*s (field-name field-vm-type) ...))
                                       (if (attribute tag)
                                           #'(lambda (v)
                                               (or ((#%foreign-inline (ffi2-ptr?-maker pointer tag*s) #:copy) v)
                                                   ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
                                           #'ffi2-ptr?)
-                                      #:retain #'black-box))))
+                                      #:release #'black-box))
+    (pattern (array (~var elem-type (:type stx)) n:exact-nonnegative-integer)
+             #:with tag*s (list (string->symbol (format "~a*" (ffi2-type-name (attribute elem-type.t)))))
+             #:attr t (make-ffi2-type 'array `(array tag*s n ,(ffi2-type-vm-type (attribute elem-type.t)))
+                                      #'(lambda (v)
+                                          (or ((#%foreign-inline (ffi2-ptr?-maker pointer tag*s) #:copy) v)
+                                              ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
+                                      #:release #'black-box))))
 
 (define-syntax (static-if stx)
   (syntax-parse stx
@@ -253,9 +275,11 @@
 
 (define-syntax (define-ffi2-type stx)
   (syntax-parse stx
-    #:literals (struct)
-    [(_ name:id (struct (~optional tag:id) [field-name:id (~var field-type (:type stx))]
-                  ...))
+    #:literals (struct union array)
+    [(_ name:id ((~and compound (~or (~and is-s? struct) (~and is-u? union)))
+                 (~optional tag:id)
+                 [field-name:id (~var field-type (:type stx))]
+                 ...))
      (with-syntax ([name* (datum->syntax #'name
                                          (string->symbol (format "~a*" (syntax-e #'name)))
                                          #'name)]
@@ -263,7 +287,13 @@
                                                 (string->symbol (format "~a*/gcable" (syntax-e #'name)))
                                                 #'name)]
                    [tag* (string->symbol (format "~a*" (syntax-e #'(~? tag name))))]
-                   [fill-name (car (generate-temporaries (list (format "fill-~a" (syntax-e #'name)))))]
+                   [fill-name (if (attribute is-s?)
+                                  (car (generate-temporaries (list (format "fill-~a" (syntax-e #'name)))))
+                                  #f)]
+                   [(fill-field-name ...) (if (attribute is-u?)
+                                              (generate-temporaries (for/list ([field-name (in-list (attribute field-name))])
+                                                                      (format "fill-~a-~a" (syntax-e #'name) (syntax-e field-name))))
+                                              '())]
                    [tag-ptr? (datum->syntax #'name
                                             (string->symbol (format "~a*?" (syntax-e #'name)))
                                             #'name)]
@@ -296,40 +326,51 @@
            (define (tag-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer (tag*)) #:copy) v)
                                     ((#%foreign-inline (ffi2-ptr?-maker pointer/gc (tag*)) #:copy) v)))
            (define-syntax name* (make-ffi2-type 'name* '(pointer (tag*)) #'tag-ptr?
-                                                #:retain #'black-box
-                                                #:immediate-pointer? #t))
+                                                #:release #'black-box
+                                                #:category 'ptr))
            (define-syntax name*/gcable (make-ffi2-type 'name*/gcable '(pointer/gc (tag*)) #'tag-ptr?
-                                                       #:retain #'black-box
-                                                       #:immediate-pointer? #t))
+                                                       #:release #'black-box
+                                                       #:category 'ptr))
            (define-syntax name
-             (make-ffi2-type 'name '(struct (tag*) (field-name field-vm-type) ...) #'tag-ptr?
-                             #:retain #'black-box
+             (make-ffi2-type 'name '(compound (tag*) (field-name field-vm-type) ...) #'tag-ptr?
+                             #:release #'black-box
                              #:procedure
                              (lambda (stx)
-                               (syntax-parse stx
-                                 [(_ (~optional kind::malloc-kind) field-name ...)
-                                  (with-syntax ([kind (or (attribute kind) #'#:gcable)])
-                                    #'(fill-name (ffi2-malloc kind name)
-                                                 field-name ...))]))))
+                               (~? (syntax-parse stx
+                                     [(_ (~optional kind::malloc-kind) field-name ...)
+                                      'is-s?
+                                      (with-syntax ([kind (or (attribute kind) #'#:gcable)])
+                                        #'(fill-name (ffi2-malloc kind name)
+                                                     field-name ...))])
+                                   (syntax-parse stx
+                                     [(_ (~datum field-name) (~optional kind::malloc-kind) expr)
+                                      (with-syntax ([kind (or (attribute kind) #'#:gcable)])
+                                        #'(fill-field-name (ffi2-malloc kind name)
+                                                           expr))]
+                                     ...)))))
            (define (name-field v)
              (unless (tag-ptr? v) (raise-argument-error 'name-field tag-ptr?-str v))
              (static-if field-compound?
                         ((#%foreign-inline (ffi2-ptr-cast-maker field-ptr-vm-type field-ptr/gcable-vm-type) #:copy)
                          v
-                         (#%foreign-inline (ffi2-offsetof (struct (tag*) (field-name field-vm-type) ...) field-name) #:copy))
+                         (~? (begin 'is-u? 0)
+                             (#%foreign-inline (ffi2-offsetof (compound (tag*) (field-name field-vm-type) ...) field-name) #:copy)))
                         (field-c->racket
                          ((#%foreign-inline (begin-unsafe (ffi2-ptr-ref-maker field-vm-type)) #:copy)
                           v
-                          (#%foreign-inline (ffi2-offsetof (struct (tag*) (field-name field-vm-type) ...) field-name) #:copy)))))
+                          (~? (begin 'is-u? 0)
+                              (#%foreign-inline (ffi2-offsetof (compound (tag*) (field-name field-vm-type) ...) field-name) #:copy))))))
            ...
            (define (set-name-field!/unchecked v val)
              (static-if field-compound?
-                        (ffi2-memcpy* v (#%foreign-inline (ffi2-offsetof (struct (tag*) (field-name field-vm-type) ...) field-name))
+                        (ffi2-memcpy* v (~? (begin 'is-u? 0)
+                                            (#%foreign-inline (ffi2-offsetof (compound (tag*) (field-name field-vm-type) ...) field-name)))
                                       val 0
                                       (#%foreign-inline (ffi2-sizeof field-vm-type) #:copy))
                         ((#%foreign-inline (begin-unsafe (ffi2-ptr-set!-maker field-vm-type)) #:copy)
                          v
-                         (#%foreign-inline (ffi2-offsetof (struct (tag*) (field-name field-vm-type) ...) field-name) #:copy)
+                         (~? (begin 'is-u? 0)
+                             (#%foreign-inline (ffi2-offsetof (compound (tag*) (field-name field-vm-type) ...) field-name) #:copy))
                          (field-racket->c val))))
            ...
            (define (set-name-field! v val)
@@ -337,12 +378,46 @@
              (unless (field-ok? val) (bad-assign-value 'set-name-field! 'field-type-name val))
              (set-name-field!/unchecked v val))
            ...
-           (define (fill-name p field-name ...)
-             (unless (field-ok? field-name) (bad-assign-value 'name 'field-type-name field-name))
-             ...
-             (set-name-field!/unchecked p field-name)
-             ...
-             p)))]    
+           (~? (define (fill-name p field-name ...)
+                 'is-s?
+                 (unless (field-ok? field-name) (bad-assign-value 'name 'field-type-name field-name))
+                 ...
+                 (set-name-field!/unchecked p field-name)
+                 ...
+                 p)
+               (begin
+                 (define (fill-field-name p v)
+                   (unless (field-ok? v) (bad-assign-value 'name 'field-type-name v))
+                   (set-name-field!/unchecked p v)
+                   p)
+                 ...))))]
+    [(_ name:id (array (~var elem-type (:type stx)) n:exact-nonnegative-integer)
+        (~optional (~seq #:tag tag:id)))
+     (define elem-t (attribute elem-type.t))
+     (with-syntax ([tag*s (list (or (attribute tag))
+                                (string->symbol (format "~a*" (ffi2-type-name elem-t))))]
+                   [tag-ptr? (datum->syntax #'name
+                                            (string->symbol (format "~a*?" (syntax-e #'name)))
+                                            #'name)]
+                   [tag-ptr?-str (format "~a*?" (syntax-e #'name))]
+                   [name-ref (datum->syntax #'name
+                                            (string->symbol (format "~a-ref" (syntax-e #'name)))
+                                            #'name)]
+                   [range-str (format "(integer-in 0 ~a)" (sub1 (syntax-e #'n)))])
+       #`(begin
+           (define (tag-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer (tag*)) #:copy) v)
+                                    ((#%foreign-inline (ffi2-ptr?-maker pointer/gc (tag*)) #:copy) v)))           
+           (define-syntax name
+             (make-ffi2-type 'name `(array tag*s n #,(ffi2-type-vm-type elem-t)) #'tag-ptr?
+                             #:release #'black-box
+                             #:category 'ptr))
+           (define (name-ref ptr idx)
+             (unless (tag-ptr? ptr) (raise-argument-error 'name-ref tag-ptr?-str ptr))
+             (unless (and (fixnum? idx) (fx<= idx (sub1 n))) (raise-argument-error 'name-ref 'range-str idx))
+             (#,(ffi2-type-c->racket elem-t)
+              ((#%foreign-inline (begin-unsafe (ffi2-ptr-ref-maker #,(ffi2-type-vm-type elem-t))) #:copy)
+               ptr
+               (* idx (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type elem-t)) #:copy)))))))]
     [(_ name:id
         (~var parent (:type stx))
         (~optional (~seq #:tag tag:id)))
@@ -366,11 +441,11 @@
                 (define (name? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tags) #:copy) v)
                                       ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tags) #:copy) v)))
                 (define-syntax name (make-ffi2-type 'name '(pointer tags) #'name?
-                                                    #:retain #'black-box
-                                                    #:immediate-pointer? #t))
+                                                    #:release #'black-box
+                                                    #:category 'ptr))
                 (define-syntax name/gcable (make-ffi2-type 'name/gcable '(pointer/gc tags) #'name?
-                                                           #:retain #'black-box
-                                                           #:immediate-pointer? #t))))]
+                                                           #:release #'black-box
+                                                           #:category 'ptr))))]
          [else
           (when (attribute tag)
             (raise-syntax-error #f "base type for new tag is not an immediate pointer type" stx #'parent))
@@ -378,11 +453,12 @@
               (define (name? v) (#,(ffi2-type-predicate parent-t) v))
               (define (racket->c v) (#,(ffi2-type-racket->c parent-t) v))
               (define (c->racket v) (#,(ffi2-type-c->racket parent-t) v))
-              (define (retain v) (#,(ffi2-type-retain parent-t) v))
+              (define (release v) (#,(ffi2-type-release parent-t) v))
               (define-syntax name (make-ffi2-type 'name '#,(ffi2-type-vm-type parent-t) #'name?
+                                                  #:category '#,(ffi2-type-category parent-t)
                                                   #:racket->c #'racket->c
                                                   #:c->racket #'c->racket
-                                                  #:retain #'retain)))]))]))
+                                                  #:release #'release)))]))]))
 
 (define-syntax (ffi2-ptr-ref stx)
   (syntax-parse stx
@@ -509,7 +585,11 @@
      (unless (for/or ([field (in-list (if (pair? vm-type) (cddr vm-type) null))])
                (eq? (car field) (syntax-e #'field-name)))
        (raise-syntax-error #f "field name not found in type" stx #'field-name))
-     #`(#%foreign-inline (ffi2-offsetof #,vm-type field-name) #:copy)]))
+     (cond
+       [(and (pair? vm-type) (eq? vm-type 'union))
+        #'0]
+       [else
+        #`(#%foreign-inline (ffi2-offsetof #,vm-type field-name) #:copy)])]))
 
 (define-syntax (ffi2-procedure stx)
   (syntax-parse stx
@@ -530,7 +610,7 @@
                    [(in-ok? ...) (map ffi2-type-predicate in-ts)]
                    [(in_t-name ...) (map ffi2-type-name in-ts)]
                    [(in-racket->c ...) (map ffi2-type-racket->c in-ts)]
-                   [(in-retain ...) (map ffi2-type-retain in-ts)]
+                   [(in-release ...) (map ffi2-type-release in-ts)]
                    [(conv ...) (append
                                 (if (attribute var-in-maybe-type)
                                     (list (list '__varargs_after (length (attribute in-type))))
@@ -561,21 +641,48 @@
                    (#,(ffi2-type-c->racket out-t)
                     (let ([in (in-racket->c in)] ...)
                       (let ([out (proc in ...)])
-                        ;; potentially retain each converted argument until the foreign procedure returns
-                        (in-retain in) ...
-                        out)))))))))]))
+                        ;; the `release` function can usefully be something like `black-box` to
+                        ;; retain a converted argument until the foreign procedure returns
+                        (in-release in) ...
+                        out)))))))))]
+    [(form-id ptr-expr (~var type (:type stx)))
+     (define t (attribute type.t))
+     (unless (eq? (ffi2-type-category t) 'arrow)
+       (raise-syntax-error #f "not a procedure type" stx #'type))
+     #`(let ([ptr ptr-expr])
+         (unless (variable-reference-from-unsafe? (#%variable-reference))
+           (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr)))
+         (#,(ffi2-type-c->racket t) ptr))]))
 
-(define-syntax (define-ffi2-procedure stx)
+(define-for-syntax (parse-define-ffi2-procedure stx use-lib-expr)
   (syntax-parse stx
     #:literals (->)
-    [(form-id name:id lib-expr
-              (~and type
-                    (-> in-type::maybe-type ...
-                        (~optional (~seq #:varargs var-in-type::maybe-type ...))
-                        out-type::maybe-type)))
-     (with-syntax ([name-bstr (string->bytes/utf-8 (symbol->string (syntax-e #'name)))])
-       #'(define name (ffi2-procedure (ffi2-lib-ref lib-expr name-bstr)
-                                      type)))]))
+    [(form-id name:id maybe-type::maybe-type
+              (~alt (~optional (~seq #:lib lib-expr))
+                    (~optional (~seq #:c-id c-name:id)))
+              ...)
+     (cond
+       [(not use-lib-expr)
+        (unless (attribute lib-expr)
+          (raise-syntax-error #f "missing a `#:lib` clause to specify the source foreign library" stx))]
+       [else
+        (when (attribute lib-expr)
+          (raise-syntax-error #f "redundant or conflicting `#:lib`" stx #'lib-expr))])
+     (with-syntax ([lib-expr (or (attribute lib-expr) use-lib-expr)])
+       (with-syntax ([name-bstr (string->bytes/utf-8 (symbol->string (syntax-e #'(~? c-name name))))])
+         #'(define name (ffi2-procedure (ffi2-lib-ref lib-expr name-bstr)
+                                        maybe-type))))]))
+
+(define-syntax (define-ffi2-procedure stx)
+  (parse-define-ffi2-procedure stx #f))
+
+(define-syntax (define-ffi2-definer stx)
+  (syntax-parse stx
+    [(_ name:id
+        #:lib lib-expr)
+     #'(begin
+         (define lib lib-expr)
+         (define-syntax name (lambda (stx) (parse-define-ffi2-procedure stx #'lib))))]))
 
 (define-syntax (ffi2-callback stx)
   (syntax-parse stx
@@ -594,6 +701,7 @@
      (define out-t (attribute out-type.t))
      (with-syntax ([(in ...) (generate-temporaries in-ts)]
                    [(in-c->racket ...) (map ffi2-type-c->racket in-ts)]
+                   [(in-release ...) (map ffi2-type-release in-ts)]
                    [(conv ...) (append
                                 (if (attribute var-in-maybe-type)
                                     (list (list '__varargs_after (length (attribute in-type))))
@@ -612,6 +720,7 @@
                            (define out (proc (in-c->racket in) ...))
                            (unless (#,(ffi2-type-predicate out-t) out)
                              (bad-result '#,(ffi2-type-name out-t)) out)
+                           (in-release in) ...
                            (#,(ffi2-type-racket->c out-t) out))])
                (let ([proc adjust-proc])
                  ((#%foreign-inline (ffi2-callback-maker (__disable_interrupts conv ...)

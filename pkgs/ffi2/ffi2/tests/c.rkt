@@ -6,6 +6,7 @@
 
 (define-ffi2-type ours_t* void_t*)
 
+;; most test use `define-ffi2-procedure`, so try plain `ffi2-procedure` here
 (define c-malloc (ffi2-procedure (ffi2-lib-ref c-lib "malloc")
                                  (size_t . -> . void_t*)))
 (define c-free (ffi2-procedure (ffi2-lib-ref c-lib "free")

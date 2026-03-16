@@ -14,6 +14,17 @@
                            [topleft point_t]
                            [size dimen_t]))
 
+(define-ffi2-type rect_shape_t (struct
+                                 ;; no tag of `struct`s means that any pointer is assumed ok
+                                 [topleft (struct [x int_t] [y int_t])]
+                                 [size (struct [width double_t] [height double_t])]))
+
+(define-ffi2-type picky_rect_shape_t (struct
+                                       [topleft (struct a_point_t [x int_t] [y int_t])]
+                                       [size (struct a_dimen_t [width double_t] [height double_t])]))
+(define-ffi2-type a_point_t* void_t*)
+(define-ffi2-type a_dimen_t* void_t*)
+
 ;; `ffi2-sizeof` and `ffi2-offsetof` generally depend on the
 ;; platform, but `int_t` and `double_t` size and alignment are
 ;; the same everywhere (currently)
@@ -23,6 +34,7 @@
 (check-true ((+ (ffi2-sizeof point_t) (ffi2-sizeof dimen_t))
              . <= .
              (ffi2-sizeof rect_t)))
+(check-equal? (ffi2-sizeof rect_t) (ffi2-sizeof rect_shape_t))
 
 (check-equal? (ffi2-offsetof point_t x) 0)
 (check-equal? (ffi2-offsetof point_t y) 4)
@@ -93,4 +105,18 @@
   (check-equal? (point_t-y (rect_t-topleft r)) 1)
   (check-equal? (dimen_t-width (rect_t-size r)) 3.0)
   (check-equal? (dimen_t-height (rect_t-size r)) 4.0)
+  (void))
+
+(let ()
+  (define r (rect_shape_t (point_t 0 1) (dimen_t 3.0 4.0)))
+  (check-exn exn:fail:contract? (lambda () (point_t-x (rect_shape_t-topleft r)) 0))
+  (check-equal? (point_t-x (ffi2-ptr-cast (rect_shape_t-topleft r) point_t*)) 0)
+  (void))
+
+(let ()
+  (check-exn exn:fail:contract? (lambda () (picky_rect_shape_t (point_t 0 1) (dimen_t 3.0 4.0))))
+  (define r (picky_rect_shape_t (ffi2-ptr-cast (point_t 0 1) a_point_t*)
+                                (ffi2-ptr-cast (dimen_t 3.0 4.0) a_dimen_t*)))
+  (check-exn exn:fail:contract? (lambda () (point_t-x (picky_rect_shape_t-topleft r)) 0))
+  (check-equal? (point_t-x (ffi2-ptr-cast (picky_rect_shape_t-topleft r) point_t*)) 0)
   (void))

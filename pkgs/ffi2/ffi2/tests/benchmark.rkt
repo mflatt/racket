@@ -33,7 +33,8 @@
          (fl+ v)
          (loop (fx- i 1) (double_sum 0.0 0.0))))))
 
-(define-ffi2-procedure double_sum test-lib (double_t double_t . -> . double_t))
+(define-ffi2-procedure double_sum (double_t double_t . -> . double_t)
+  #:lib test-lib)
 
 (time*
  2-double-sum

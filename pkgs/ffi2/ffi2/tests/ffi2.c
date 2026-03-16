@@ -8,6 +8,10 @@ typedef struct {
 typedef double (*double_build_t)(int i, float f);
 typedef intfloat (*intfloat_build_t)(int i, float f);
 
+int int_sum(int a, int b) {
+  return a + b;
+}
+
 double double_sum(double a, double b) {
   return a + b;
 }

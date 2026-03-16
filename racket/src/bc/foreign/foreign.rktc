@@ -4064,8 +4064,9 @@ static Scheme_Object *translate_type(Scheme_Object *type) {
   } else if (SCHEME_PAIRP(type)) {
     Scheme_Object *head = SCHEME_CAR(type);
     if (SCHEME_SYMBOLP(head)) {
-      if (!strcmp(SCHEME_SYM_VAL(head), "struct")) {
-        Scheme_Object *argv[1], *fields, *types = scheme_null;
+      if (!strcmp(SCHEME_SYM_VAL(head), "struct")
+          || !strcmp(SCHEME_SYM_VAL(head), "union")) {
+        Scheme_Object *argv[2], *fields, *types = scheme_null;
         fields = SCHEME_CDR(SCHEME_CDR(type));
         while (!SCHEME_NULLP(fields)) {
           types = scheme_make_pair(translate_type(SCHEME_CADR(SCHEME_CAR(fields))),
@@ -4073,7 +4074,13 @@ static Scheme_Object *translate_type(Scheme_Object *type) {
           fields = SCHEME_CDR(fields);
         }
         argv[0] = scheme_reverse(types);
-        return foreign_make_cstruct_type(1, argv);
+        if (!strcmp(SCHEME_SYM_VAL(head), "struct"))
+          return foreign_make_cstruct_type(1, argv);
+        else {
+          argv[1] = argv[0];
+          argv[0] = scheme_builtin_value("make-union-type");
+          return _scheme_apply(scheme_apply_proc, 2, argv);
+        }
       } else if (!strcmp(SCHEME_SYM_VAL(head), "pointer"))
         return scheme_pointer_ctype;
       else if (!strcmp(SCHEME_SYM_VAL(head), "pointer/gc"))
@@ -4109,9 +4116,7 @@ static Scheme_Object *extract_type_is_compound(Scheme_Object *type) {
   if (SCHEME_PAIRP(type)) {
     type = SCHEME_CAR(type);
     if (SCHEME_SYMBOLP(type) && (!strcmp(SCHEME_SYM_VAL(type), "struct")
-                                 || !strcmp(SCHEME_SYM_VAL(type), "struct/gc")
-                                 || !strcmp(SCHEME_SYM_VAL(type), "union")
-                                 || !strcmp(SCHEME_SYM_VAL(type), "union/gc")))
+                                 || !strcmp(SCHEME_SYM_VAL(type), "union")))
       return scheme_true;
   }
 
