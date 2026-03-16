@@ -2,8 +2,8 @@
 (require ffi2
          rackunit)
 
-(define-ffi2-pointer-type ours_t*)
-(define-ffi2-pointer-type mine_t* #:extends ours_t*)
+(define-ffi2-type ours_t* void_t*)
+(define-ffi2-type mine_t* ours_t*)
 
 (let ()
   (define p (ffi2-malloc #:manual 100))

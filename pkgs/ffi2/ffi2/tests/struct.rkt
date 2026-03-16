@@ -2,14 +2,17 @@
 (require ffi2
          rackunit)
 
-(ffi2-struct point_t ([x int_t]
-                      [y int_t]))
+(define-ffi2-type point_t (struct
+                            [x int_t]
+                            [y int_t]))
 
-(ffi2-struct dimen_t ([width double_t]
-                      [height double_t]))
+(define-ffi2-type dimen_t (struct
+                            [width double_t]
+                            [height double_t]))
 
-(ffi2-struct rect_t ([topleft point_t]
-                     [size dimen_t]))
+(define-ffi2-type rect_t (struct
+                           [topleft point_t]
+                           [size dimen_t]))
 
 ;; `ffi2-sizeof` and `ffi2-offsetof` generally depend on the
 ;; platform, but `int_t` and `double_t` size and alignment are

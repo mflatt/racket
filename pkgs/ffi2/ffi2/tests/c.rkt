@@ -4,7 +4,7 @@
 
 (define c-lib (ffi2-lib #f))
 
-(define-ffi2-pointer-type ours_t*)
+(define-ffi2-type ours_t* void_t*)
 
 (define c-malloc (ffi2-procedure (ffi2-lib-ref c-lib "malloc")
                                  (size_t . -> . void_t*)))
