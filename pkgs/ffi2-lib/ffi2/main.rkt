@@ -19,6 +19,7 @@
           ffi2-lib?
           ffi2-lib-ref
           define-ffi2-type
+          define-ffi2-abi
           ffi2-procedure
           define-ffi2-procedure
           define-ffi2-definer
@@ -40,7 +41,10 @@
           struct
           union
           array
-          system-type-case)
+          system-type-case
+          default_abi
+          cdecl_abi
+          stdcall_abi)
          ffi2-ptr?
          ffi2-ptr/gcable?)
 
@@ -162,7 +166,19 @@
     v)
 
   (define-syntax-class :malloc-kind
-    (pattern (~or #:manual #:gcable #:gcable-traced #:gcable-immobile #:gcable-traced-immobile))))
+    (pattern (~or #:manual #:gcable #:gcable-traced #:gcable-immobile #:gcable-traced-immobile)))
+
+  (struct procedure-abi (vm-abi))
+  
+  (define-syntax-class (:abi stx)
+    #:attributes (a)
+    (pattern name:id
+             #:do [(define abi (syntax-local-value #'name (lambda () #f)))
+                   (unless (procedure-abi? abi)
+                     (raise-syntax-error #f "expected an ffi2 abi" stx #'name))]
+             #:attr a (procedure-abi-vm-abi abi))
+    (pattern (~and all ((~datum system-type-case) . _))
+             #:attr a (parse-system-type-case/abi #'all))))
 
 (define-syntax (define-ffi2-base-type stx)
   (syntax-parse stx
@@ -206,14 +222,19 @@
 (define-ffi2-base-type bytes_ptr_t 'u8* #'bytes-or-false? #:release #'black-box)
 
 (define-for-syntax (raise-only-as-ffi-type stx)
-  (raise-syntax-error #f "allowed only in an ffi2-type context" stx))
+  (raise-syntax-error #f "allowed only in an ffi2 type context" stx))
 
 (define-syntax (-> stx) (raise-only-as-ffi-type stx))
 (define-syntax (struct stx) (raise-only-as-ffi-type stx))
 (define-syntax (union stx) (raise-only-as-ffi-type stx))
 (define-syntax (array stx) (raise-only-as-ffi-type stx))
-(define-syntax (system-type-case stx) (raise-only-as-ffi-type stx))
+(define-syntax (system-type-case stx)
+  (raise-syntax-error #f "allowed only in an ffi2 type or abi context" stx))
 
+(define-syntax default_abi (procedure-abi #f))
+(define-syntax stdcall_abi (procedure-abi '(__select os (windows) __stdcall #f)))
+(define-syntax cdecl_abi (procedure-abi '(__select os (windows) __cdecl #f)))
+    
 (begin-for-syntax
   (define-syntax-class :maybe-type
     #:description "an ffi2 type"
@@ -234,7 +255,8 @@
     (pattern (~and arrow-type
                    (-> in-maybe-type::maybe-type ...
                        (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
-                       out-maybe-type::maybe-type))
+                       out-maybe-type::maybe-type
+                       (~optional (~seq #:abi (~var abi (:abi stx))))))
              #:cut
              #:with ((~var in-type (:type stx)) ...) #'(in-maybe-type ...)
              #:with ((~var var-in-type (:type stx)) ...) (if (attribute var-in-maybe-type)
@@ -273,7 +295,7 @@
                                               ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
                                       #:release #'black-box))
     (pattern (~and all (system-type-case . _))
-             #:attr t (parse-system-type-case #'all))))
+             #:attr t (parse-system-type-case/type #'all))))
 
 (define-syntax (static-if stx)
   (syntax-parse stx
@@ -478,6 +500,11 @@
                                                   #:c->racket #'c->racket
                                                   #:release #'release)))]))]))
 
+(define-syntax (define-ffi2-abi stx)
+  (syntax-parse stx
+    [(_ name:id (~var abi (:abi stx)))
+     #`(define-syntax name (procedure-abi '#,(attribute abi.a)))]))
+
 (define-syntax (ffi2-ptr-ref stx)
   (syntax-parse stx
     [(form-id ptr-expr (~var type (:type stx)) (~optional (~seq offset-expr (~optional (~and abs #:bytes)))))
@@ -615,7 +642,8 @@
     [(form-id ptr-expr
               (-> in-maybe-type::maybe-type ...
                   (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
-                  out-maybe-type::maybe-type))
+                  out-maybe-type::maybe-type
+                  (~optional (~seq #:abi (~var abi (:abi stx))))))
      #:cut
      #:with ((~var in-type (:type stx)) ...) #'(in-maybe-type ...)
      #:with ((~var var-in-type (:type stx)) ...) (if (attribute var-in-maybe-type)
@@ -630,6 +658,9 @@
                    [(in-racket->c ...) (map ffi2-type-racket->c in-ts)]
                    [(in-release ...) (map ffi2-type-release in-ts)]
                    [(conv ...) (append
+                                (if (attribute abi)
+                                    (list (attribute abi.a))
+                                    null)
                                 (if (attribute var-in-maybe-type)
                                     (list (list '__varargs_after (length (attribute in-type))))
                                     null))])
@@ -708,7 +739,8 @@
     [(form-id proc-expr
               (-> in-maybe-type::maybe-type ...
                   (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
-                  out-maybe-type::maybe-type))
+                  out-maybe-type::maybe-type
+                  (~optional (~seq #:abi (~var abi (:abi stx))))))
      #:cut
      #:with ((~var in-type (:type stx)) ...) #'(in-maybe-type ...)
      #:with ((~var var-in-type (:type stx)) ...) (if (attribute var-in-maybe-type)
@@ -721,6 +753,9 @@
                    [(in-c->racket ...) (map ffi2-type-c->racket in-ts)]
                    [(in-release ...) (map ffi2-type-release in-ts)]
                    [(conv ...) (append
+                                (if (attribute abi)
+                                    (list (attribute abi.a))
+                                    null)
                                 (if (attribute var-in-maybe-type)
                                     (list (list '__varargs_after (length (attribute in-type))))
                                     null))])
@@ -839,7 +874,9 @@
                          "result" val
                          "result ffi2 type" (unquoted-printing-string (format "~a" what))))
 
-(define-for-syntax (parse-system-type-case stx)
+(define-for-syntax (parse-system-type-case stx
+                                           parse-one
+                                           make-one make-combined)
   (syntax-parse stx
     [(_
       (~and key (~or (~datum os) (~datum os*) (~datum arch) (~datum word)))
@@ -856,26 +893,44 @@
 
      (define rhs-stxs (append (attribute rhs) (list #'else-rhs)))
      (define rhs-ts (for/list ([rhs-stx (in-list rhs-stxs)])
-                      (syntax-parse rhs-stx
-                        [(~var rhs (:type stx))
-                         (unless (ffi2-type-scalar? (attribute rhs.t))
-                           (raise-syntax-error #f "expected a scalar type" stx rhs-stx))
-                         (attribute rhs.t)])))
+                      (parse-one stx rhs-stx)))
      
-     (define-values (vm-type predicate)
-       (let loop ([rhs-ts rhs-ts] [valss (syntax->list #'((val ...) ...))])
-         (cond
-           [(null? valss) (values (ffi2-type-vm-type (car rhs-ts))
-                                  (ffi2-type-predicate (car rhs-ts)))]
-           [else
-            (define rhs-t (car rhs-ts))
-            (define-values (vm-type predicate) (loop (cdr rhs-ts) (cdr valss)))
-            (values (list 'select (syntax-e #'key) (car valss)
-                          (ffi2-type-vm-type rhs-t)
-                          vm-type)
-                    #`(#%foreign-inline (ffi2-system-type--select key #,(car valss)
-                                                                  #,(ffi2-type-predicate rhs-t)
-                                                                  #,predicate)))])))
+     (let loop ([rhs-ts rhs-ts] [valss (syntax->list #'((val ...) ...))])
+       (cond
+         [(null? valss) (make-one (car rhs-ts))]
+         [else
+          (define combined (loop (cdr rhs-ts) (cdr valss)))
+          (make-combined (syntax-e #'key)
+                         (car valss)
+                         (make-one (car rhs-ts))
+                         combined)]))]))
 
-    (make-ffi2-type 'system-type-case vm-type predicate
-                    #:category 'scalar)]))
+(define-for-syntax (parse-system-type-case/type stx)
+  (define p
+    (parse-system-type-case stx
+                            (lambda (stx rhs-stx)
+                              (syntax-parse rhs-stx
+                                [(~var rhs (:type stx))
+                                 (unless (ffi2-type-scalar? (attribute rhs.t))
+                                   (raise-syntax-error #f "expected a scalar type" stx rhs-stx))
+                                 (attribute rhs.t)]))
+                            (lambda (rhs-t)
+                              (cons (ffi2-type-vm-type rhs-t)
+                                    (ffi2-type-predicate rhs-t)))
+                            (lambda (key vals left right)
+                              (cons (list 'select key vals (car left) (car right))
+                                    #`(#%foreign-inline
+                                       (ffi2-system-type--select #,key #,vals #,(cdr left) #,(cdr right)))))))
+
+    (make-ffi2-type 'system-type-case (car p) (cdr p)
+                    #:category 'scalar))
+
+(define-for-syntax (parse-system-type-case/abi stx)
+  (parse-system-type-case stx
+                          (lambda (stx rhs-stx)
+                            (syntax-parse rhs-stx
+                              [(~var abi (:abi stx))
+                               (attribute abi.a)]))
+                          (lambda (rhs-a) rhs-a)
+                          (lambda (key vals left right)
+                            (list '(__select key vals left right)))))

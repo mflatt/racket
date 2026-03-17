@@ -4676,6 +4676,9 @@ static Scheme_Object *foreign_assert_ctype_representation(int argc, Scheme_Objec
 /* FFI2 layer */
 
 static Scheme_Object *unwrap_type(Scheme_Object *type);
+static Scheme_Object *expand_abi_select(Scheme_Object *a);
+static Scheme_Object *maybe_varargs_after(Scheme_Object *a, Scheme_Object *varargs_after);
+static Scheme_Object *maybe_abi(Scheme_Object *a, Scheme_Object *abi);
 
 #define MYNAME "ffi2-internal-ptr?"
 static Scheme_Object *foreign_ffi2_internal_ptr_p(int argc, Scheme_Object *argv[])
@@ -4834,14 +4837,13 @@ static Scheme_Object *foreign_ffi2_internal_procedure_maker(int argc, Scheme_Obj
     Scheme_Object *in_types = argv[2];
     Scheme_Object *out_type = argv[3];
     Scheme_Object *ret_provided = argv[5];
-    Scheme_Object *varargs_after = scheme_false;
+    Scheme_Object *varargs_after = scheme_false, *abi = scheme_false;
 
     for (l = convs; !SCHEME_NULLP(l); l = SCHEME_CDR(l)) {
       a = SCHEME_CAR(l);
-      if (SCHEME_PAIRP(a)
-          && SCHEME_SYMBOLP(SCHEME_CAR(a))
-          && !strcmp(SCHEME_SYM_VAL(SCHEME_CAR(a)), "__varargs_after"))
-        varargs_after = SCHEME_CADR(a);
+      a = expand_abi_select(a);
+      varargs_after = maybe_varargs_after(a, varargs_after);
+      abi = maybe_abi(a, abi);
     }
 
     in_types = scheme_map_1(unwrap_type, in_types);
@@ -4849,7 +4851,7 @@ static Scheme_Object *foreign_ffi2_internal_procedure_maker(int argc, Scheme_Obj
 
     args[0] = in_types;
     args[1] = out_type;
-    args[2] = scheme_false; /* abi */
+    args[2] = abi;
     args[3] = scheme_false; /* save-errno? */
     args[4] = scheme_false; /* orig-place? */
     args[5] = scheme_false; /* lock-name */
@@ -4883,14 +4885,13 @@ static Scheme_Object *foreign_ffi2_internal_callback_maker(int argc, Scheme_Obje
     Scheme_Object *in_types = argv[3];
     Scheme_Object *out_type = argv[4];
     Scheme_Object *ret_provided = argv[6];
-    Scheme_Object *varargs_after = scheme_false;
+    Scheme_Object *varargs_after = scheme_false, *abi = scheme_false;
 
     for (l = convs; !SCHEME_NULLP(l); l = SCHEME_CDR(l)) {
       a = SCHEME_CAR(l);
-      if (SCHEME_PAIRP(a)
-          && SCHEME_SYMBOLP(SCHEME_CAR(a))
-          && !strcmp(SCHEME_SYM_VAL(SCHEME_CAR(a)), "__varargs_after"))
-        varargs_after = SCHEME_CADR(a);
+      a = expand_abi_select(a);
+      varargs_after = maybe_varargs_after(a, varargs_after);
+      abi = maybe_abi(a, abi);
     }
 
     in_types = scheme_map_1(unwrap_type, in_types);
@@ -4898,7 +4899,7 @@ static Scheme_Object *foreign_ffi2_internal_callback_maker(int argc, Scheme_Obje
 
     args[0] = in_types;
     args[1] = out_type;
-    args[2] = scheme_false; /* abi */
+    args[2] = abi;
     args[3] = scheme_true;  /* atomic? */
     args[4] = scheme_false; /* sync; replaced by curried argument */
     args[5] = varargs_after;
@@ -5053,6 +5054,36 @@ static Scheme_Object *translate_malloc_kind(Scheme_Object *kind) {
 
   scheme_signal_error("unrecognized malloc kind: %V", kind);
   return NULL;
+}
+
+static Scheme_Object *expand_abi_select(Scheme_Object *a) {
+  while (1) {
+    if (SCHEME_PAIRP(a)
+        && SCHEME_SYMBOLP(SCHEME_CAR(a))
+        && !strcmp(SCHEME_SYM_VAL(SCHEME_CAR(a)), "__select"))
+      a = select_match(a);
+    else
+      break;
+  }
+  return a;
+}
+
+static Scheme_Object *maybe_varargs_after(Scheme_Object *a, Scheme_Object *varargs_after) {
+  if (SCHEME_PAIRP(a)
+      && SCHEME_SYMBOLP(SCHEME_CAR(a))
+      && !strcmp(SCHEME_SYM_VAL(SCHEME_CAR(a)), "__varargs_after"))
+    varargs_after = SCHEME_CADR(a);
+  return varargs_after;
+}
+
+static Scheme_Object *maybe_abi(Scheme_Object *a, Scheme_Object *abi) {
+  if (SCHEME_SYMBOLP(a)
+      && !strcmp(SCHEME_SYM_VAL(a), "__cdecl"))
+    abi = sysv_sym;
+  if (SCHEME_SYMBOLP(a)
+      && !strcmp(SCHEME_SYM_VAL(a), "__stdcall"))
+    abi = stdcall_sym;
+  return abi;
 }
 
 static Scheme_Object *list1(Scheme_Object *a) {

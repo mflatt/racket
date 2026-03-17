@@ -33,3 +33,9 @@
                             [(32 64) int8_t]
                             [else int32_t]))
               1)
+
+(define-ffi2-type proc_t (int_t . -> . int_t
+                                #:abi (system-type-case
+                                       os
+                                       [(windows) cdecl_abi]
+                                       [else default_abi])))

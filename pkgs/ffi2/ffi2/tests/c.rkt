@@ -10,7 +10,8 @@
 (define c-malloc (ffi2-procedure (ffi2-lib-ref c-lib "malloc")
                                  (size_t . -> . void_t*)))
 (define c-free (ffi2-procedure (ffi2-lib-ref c-lib "free")
-                               (void_t* . -> . void_t)))
+                               (void_t* . -> . void_t
+                                        #:abi cdecl_abi)))
 
 (define p (c-malloc 100))
 (check-true (ffi2-ptr? p))

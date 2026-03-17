@@ -8,9 +8,12 @@
 
 (define test-lib (ffi2-lib ffi2.so))
 
+(define-ffi2-abi usual_abi default_abi)
+
 ;; ----------------------------------------
 
-(define-ffi2-procedure double_sum (double_t double_t . -> . double_t)
+(define-ffi2-procedure double_sum (double_t double_t . -> . double_t
+                                            #:abi usual_abi)
   #:lib test-lib)
 
 (check-equal? (double_sum 3.25 4.0) 7.25)
