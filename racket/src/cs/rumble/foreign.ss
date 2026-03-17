@@ -2173,6 +2173,11 @@
                                [(select key vals same different) (if (matching-target? (datum key) (datum vals))
                                                                      (loop #'same)
                                                                      (loop #'different))]
+                               [integer-wchar (case (ftype-sizeof wchar_t)
+                                                [(1) #'unsigned-8]
+                                                [(2) #'unsigned-16]
+                                                [(4) #'unsigned-32]
+                                                [else #'unsigned-64])]
                                [else type-stx]))))])
         (let* ([in-types (map (lambda (type-stx) (translate type-stx #t)) in-types)]
                [out-types (map (lambda (type-stx) (translate type-stx #f)) out-types)])
@@ -2200,6 +2205,12 @@
 
 (define (ffi2-ptr->cpointer p)
   (fptr->cptr p))
+
+(define (ffi2-ptr->uintptr p)
+  (ftype-pointer-address p))
+
+(define (ffi2-uintptr->ptr i)
+  (make-ftype-pointer integer-8 i))
 
 (define-syntax (ffi2-ptr?-maker stx)
   (syntax-case stx ()

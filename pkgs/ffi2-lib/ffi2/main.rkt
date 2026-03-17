@@ -99,15 +99,37 @@
 (define-predicate (any? v) #t)
 (define-predicate (string-or-false? s) (or (not s) (string? s)))
 (define-predicate (bytes-or-false? s) (or (not s) (bytes? s)))
+(define-predicate (path-or-false? s) (or (not s) (path-for-some-system? s)))
 (define-predicate (long? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof long) #:copy))
                                 (int32? v)
                                 (int64? v)))
 (define-predicate (ulong? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof long) #:copy))
                                  (uint32? v)
                                  (uint64? v)))
-(define-predicate (size_t? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof size_t) #:copy))
+(define-predicate (intptr? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof iptr) #:copy))
                                   (int32? v)
                                   (int64? v)))
+(define-predicate (uintptr? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof uptr) #:copy))
+                                   (uint32? v)
+                                   (uint64? v)))
+(define-predicate (size_t? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof size_t) #:copy))
+                                  (uint32? v)
+                                  (uint64? v)))
+(define-predicate (ssize_t? v) (if (fx= 4 (#%foreign-inline (ffi2-sizeof size_t) #:copy))
+                                   (int32? v)
+                                   (int64? v)))
+(define-predicate (wchar? v) (cond
+                               [(fx= 1 (#%foreign-inline (ffi2-sizeof integer-wchar) #:copy))
+                                (uint8? v)]
+                               [(fx= 2 (#%foreign-inline (ffi2-sizeof integer-wchar) #:copy))
+                                (uint16? v)]
+                               [(fx= 4 (#%foreign-inline (ffi2-sizeof integer-wchar) #:copy))
+                                (uint32? v)]
+                               [else
+                                (uint64? v)]))
+
+(define null-pointer (ffi2-uintptr->ptr 0))
+(define (null-pointer? ptr) (eqv? 0 (ffi2-ptr->uintptr ptr)))
 
 (define (bytes-add-terminator bstr)
   (define len (bytes-length bstr))
@@ -115,9 +137,49 @@
   (memcpy new-bstr bstr len)
   new-bstr)
 
-(define (string->bytes/utf-8/add-terminator str)
-  (bytes-add-terminator (string->bytes/utf-8 str)))
+(define (maybe-bytes->pointer bstr)
+  (if bstr
+      (cpointer->ffi2-ptr bstr)
+      null-pointer))
 
+(define (maybe-bytes->pointer/add-terminator bstr)
+  (if bstr
+      (cpointer->ffi2-ptr (bytes-add-terminator bstr))
+      null-pointer))
+
+(define (maybe-pointer->bytes ptr)
+  (cond
+    [(null-pointer? ptr)
+     #f]
+    [else
+     (define len (let loop ([i 0])
+                   (cond
+                     [(fx= 0 (ffi2-ptr-ref ptr byte_t i)) i]
+                     [else (loop (fx+ i 1))])))
+     (define bstr (make-bytes len))
+     (memcpy bstr (ffi2-ptr->cpointer ptr) len)
+     bstr]))
+
+(define (maybe-string->pointer str)
+  (if str
+      (maybe-bytes->pointer/add-terminator (string->bytes/utf-8 str))
+      null-pointer))
+
+(define (maybe-pointer->string ptr)
+  (let ([bstr (maybe-pointer->bytes ptr)])
+    (and bstr
+         (bytes->string/utf-8 bstr))))
+  
+(define (maybe-path->pointer path)
+  (if path
+      (maybe-bytes->pointer/add-terminator (path->bytes path))
+      null-pointer))
+
+(define (maybe-pointer->path ptr)
+  (let ([bstr (maybe-pointer->bytes ptr)])
+    (and bstr
+         (bytes->path bstr))))
+  
 (define-syntax (drop stx) #'(void))
 
 (begin-for-syntax
@@ -213,26 +275,31 @@
 (define-ffi2-base-type int_t 'int #'int32? #:category 'scalar)
 (define-ffi2-base-type uint_t 'unsigned #'uint32? #:category 'scalar)
 (define-ffi2-base-type long_t 'long #'long? #:category 'scalar)
-(define-ffi2-base-type ulon_t 'unsigned-long #'ulong? #:category 'scalar)
+(define-ffi2-base-type ulong_t 'unsigned-long #'ulong? #:category 'scalar)
+(define-ffi2-base-type intptr_t 'iptr #'intptr? #:category 'scalar)
+(define-ffi2-base-type uintptr_t 'uptr #'uintptr? #:category 'scalar)
 (define-ffi2-base-type size_t 'size_t #'size_t? #:category 'scalar)
-(define-ffi2-base-type wchar_t 'wchar #'char? #:category 'scalar)
-(define-ffi2-base-type fixnum_t 'fixnum #'fixnum? #:category 'scalar)
+(define-ffi2-base-type ssize_t 'ssize_t #'ssize_t? #:category 'scalar)
 (define-ffi2-base-type float_t 'float #'flonum? #:category 'scalar)
 (define-ffi2-base-type double_t 'double #'flonum? #:category 'scalar)
+(define-ffi2-base-type intwchar_t 'integer-wchar #'wchar? #:category 'scalar)
 (define-ffi2-base-type bool_t 'stdbool #'any? #:category 'scalar)
-(define-ffi2-base-type intbool_t 'bool #'any? #:category 'scalar)
+(define-ffi2-base-type intbool_t 'boolean #'any? #:category 'scalar)
 (define-ffi2-base-type void_t* 'pointer #'ffi2-ptr? #:release #'black-box #:category 'ptr)
 (define-ffi2-base-type void_t*/gcable 'pointer/gc #'ffi2-ptr? #:release #'black-box #:category 'ptr)
 (define-ffi2-base-type racket_t 'scheme-object #'any? #:release #'black-box)
-(define-ffi2-base-type string_t 'u8* #'string-or-false? #:release #'black-box
-  #:racket->c #'string->bytes/utf-8/add-terminator
-  #:c->racket #'bytes->string/utf-8)
-(define-ffi2-base-type bytes_t 'u8* #'bytes-or-false? #:release #'black-box
-  #:racket->c #'bytes-add-terminator)
-(define-ffi2-base-type path_t 'u8* #'string-or-false? #:release #'black-box
-  #:racket->c #'path->bytes
-  #:c->racket #'bytes->path)
-(define-ffi2-base-type bytes_ptr_t 'u8* #'bytes-or-false? #:release #'black-box)
+(define-ffi2-base-type string_t 'pointer #'string-or-false? #:release #'black-box
+  #:racket->c #'maybe-string->pointer
+  #:c->racket #'maybe-pointer->string)
+(define-ffi2-base-type bytes_t 'pointer #'bytes-or-false? #:release #'black-box
+  #:racket->c #'maybe-bytes->pointer/add-terminator
+  #:c->racket #'maybe-pointer->bytes)
+(define-ffi2-base-type bytes_ptr_t'pointer #'bytes-or-false? #:release #'black-box
+  #:racket->c #'maybe-bytes->pointer
+  #:c->racket #'maybe-pointer->bytes)
+(define-ffi2-base-type path_t 'pointer #'path-or-false? #:release #'black-box
+  #:racket->c #'maybe-path->pointer
+  #:c->racket #'maybe-pointer->path)
 
 (define-for-syntax (raise-only-as-ffi-type stx)
   (raise-syntax-error #f "allowed only in an ffi2 type context" stx))

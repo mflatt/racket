@@ -4679,6 +4679,7 @@ static Scheme_Object *unwrap_type(Scheme_Object *type);
 static Scheme_Object *expand_abi_select(Scheme_Object *a);
 static Scheme_Object *maybe_varargs_after(Scheme_Object *a, Scheme_Object *varargs_after);
 static Scheme_Object *maybe_abi(Scheme_Object *a, Scheme_Object *abi);
+static Scheme_Object *add_tagging(Scheme_Object *type, Scheme_Object *ctype);
 
 #define MYNAME "ffi2-internal-ptr?"
 static Scheme_Object *foreign_ffi2_internal_ptr_p(int argc, Scheme_Object *argv[])
@@ -4810,7 +4811,7 @@ static Scheme_Object *foreign_ffi2_internal_offsetof(int argc, Scheme_Object *ar
   intptr_t offset = 0;
   int i;
 
-  type = unwrap_type(type);
+  type = get_ctype_base(unwrap_type(type));
   ft = CTYPE_ARG_PRIMTYPE(type);
 
   for (i = 0; i < SCHEME_INT_VAL(pos); i++) {
@@ -4934,13 +4935,39 @@ static Scheme_Object *select_match(Scheme_Object *type) {
 static Scheme_Object *translate_type(Scheme_Object *type) {
   if (SCHEME_SYMBOLP(type)) {
     if (!strcmp(SCHEME_SYM_VAL(type), "pointer"))
-      return scheme_pointer_ctype;
+      return add_tagging(type, scheme_pointer_ctype);
     if (!strcmp(SCHEME_SYM_VAL(type), "pointer/gc"))
-      return scheme_builtin_value("_gcpointer");
-    if (!strcmp(SCHEME_SYM_VAL(type), "u8*"))
-      return scheme_pointer_ctype;
+      return add_tagging(type, scheme_builtin_value("_gcpointer"));
     if (!strcmp(SCHEME_SYM_VAL(type), "int"))
       return scheme_int32_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "unsigned"))
+      return scheme_uint32_ctype;
+#if SIZEOF_LONG == 4
+    if (!strcmp(SCHEME_SYM_VAL(type), "long"))
+      return scheme_int32_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "unsigned-long"))
+      return scheme_uint32_ctype;
+#else
+    if (!strcmp(SCHEME_SYM_VAL(type), "long"))
+      return scheme_int64_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "unsigned-long"))
+      return scheme_uint64_ctype;
+#endif
+#ifdef SIXTY_FOUR_BIT_INTEGERS
+    if (!strcmp(SCHEME_SYM_VAL(type), "iptr"))
+      return scheme_int64_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "uptr"))
+      return scheme_uint64_ctype;
+#else
+    if (!strcmp(SCHEME_SYM_VAL(type), "iptr"))
+      return scheme_int32_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "uptr"))
+      return scheme_uint32_ctype;
+#endif
+    if (!strcmp(SCHEME_SYM_VAL(type), "boolean"))
+      return scheme_builtin_value("_bool");
+    if (!strcmp(SCHEME_SYM_VAL(type), "stdbool"))
+      return scheme_builtin_value("_stdbool");
     if (!strcmp(SCHEME_SYM_VAL(type), "integer-8"))
       return scheme_int8_ctype;
     if (!strcmp(SCHEME_SYM_VAL(type), "unsigned-8"))
@@ -4961,12 +4988,26 @@ static Scheme_Object *translate_type(Scheme_Object *type) {
       return scheme_double_ctype;
     if (!strcmp(SCHEME_SYM_VAL(type), "float"))
       return scheme_float_ctype;
-    if (!strcmp(SCHEME_SYM_VAL(type), "size_t")) {
 #ifdef SIXTY_FOUR_BIT_INTEGERS
+    if (!strcmp(SCHEME_SYM_VAL(type), "size_t"))
       return scheme_uint64_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "ssize_t"))
+      return scheme_int64_ctype;
 #else
+    if (!strcmp(SCHEME_SYM_VAL(type), "size_t"))
       return scheme_uint32_ctype;
+    if (!strcmp(SCHEME_SYM_VAL(type), "ssize_t"))
+      return scheme_int32_ctype;
 #endif
+    if (!strcmp(SCHEME_SYM_VAL(type), "integer-wchar")) {
+      if (sizeof(wchar_t) == 1)
+        return scheme_uint8_ctype;
+      else if (sizeof(wchar_t) == 2)
+        return scheme_uint16_ctype;
+      else if (sizeof(wchar_t) == 4)
+        return scheme_uint32_ctype;
+      else
+        return scheme_uint64_ctype;
     }
     if (!strcmp(SCHEME_SYM_VAL(type), "void"))
       return scheme_builtin_value("_void");
@@ -4984,22 +5025,22 @@ static Scheme_Object *translate_type(Scheme_Object *type) {
         }
         argv[0] = scheme_reverse(types);
         if (!strcmp(SCHEME_SYM_VAL(head), "struct"))
-          return foreign_make_cstruct_type(1, argv);
+          return add_tagging(type, foreign_make_cstruct_type(1, argv));
         else {
           argv[1] = argv[0];
           argv[0] = scheme_builtin_value("make-union-type");
-          return _scheme_apply(scheme_apply_proc, 2, argv);
+          return add_tagging(type, _scheme_apply(scheme_apply_proc, 2, argv));
         }
       } if (!strcmp(SCHEME_SYM_VAL(head), "array")) {
         Scheme_Object *argv[2];
         type = SCHEME_CDR(SCHEME_CDR(type));
         argv[0] = translate_type(SCHEME_CAR(SCHEME_CDR(type)));
         argv[1] = SCHEME_CAR(type);
-        return foreign_make_array_type(2, argv);
+        return add_tagging(type, foreign_make_array_type(2, argv));
       } else if (!strcmp(SCHEME_SYM_VAL(head), "pointer"))
-        return scheme_pointer_ctype;
+        return add_tagging(type, scheme_pointer_ctype);
       else if (!strcmp(SCHEME_SYM_VAL(head), "pointer/gc"))
-        return scheme_builtin_value("_gcpointer");
+        return add_tagging(type, scheme_builtin_value("_gcpointer"));
       else if (!strcmp(SCHEME_SYM_VAL(head), "select"))
         return translate_type(select_match(type));
     }
@@ -5084,6 +5125,40 @@ static Scheme_Object *maybe_abi(Scheme_Object *a, Scheme_Object *abi) {
       && !strcmp(SCHEME_SYM_VAL(a), "__stdcall"))
     abi = stdcall_sym;
   return abi;
+}
+
+static Scheme_Object *add_pointer_tag(int argc, Scheme_Object *argv[], Scheme_Object *self) {
+  Scheme_Object *tag = SCHEME_PRIM_CLOSURE_ELS(self)[0];
+  Scheme_Object *ptr = argv[0];
+
+  if (SCHEME_FALSEP(ptr))
+    ptr = scheme_make_external_cptr(NULL, 0);
+
+  if (!SCHEME_NULLP(tag))
+    SCHEME_CPTR_TYPE(ptr) = tag;
+
+  return ptr;
+}
+
+static Scheme_Object *add_tagging(Scheme_Object *type, Scheme_Object *ctype)
+{
+  Scheme_Object *argv[3], *c_to_scheme;
+
+  if (!SCHEME_PAIRP(type))
+    argv[0] = scheme_null;
+  else
+    argv[0] = SCHEME_CADR(type);
+
+  c_to_scheme = scheme_make_prim_closure_w_arity(add_pointer_tag,
+                                                 1, argv,
+                                                 "add-pointer-tag",
+                                                 1, 1);
+
+  argv[0] = ctype;
+  argv[1] = scheme_false;
+  argv[2] = c_to_scheme;
+
+  return foreign_make_ctype(3, argv);
 }
 
 static Scheme_Object *list1(Scheme_Object *a) {
@@ -5364,6 +5439,22 @@ static Scheme_Object *foreign_cpointer_to_ffi2_ptr(int argc, Scheme_Object *argv
 static Scheme_Object *foreign_ffi2_ptr_to_cpointer(int argc, Scheme_Object *argv[])
 {
   return argv[0];
+}
+#undef MYNAME
+
+#define MYNAME "ffi2-uintptr->ptr"
+static Scheme_Object *foreign_ffi2_uintptr_to_ptr(int argc, Scheme_Object *argv[])
+{
+  uintptr_t i;
+  scheme_get_unsigned_int_val(argv[0], &i);
+  return scheme_make_external_cptr((void*)i, NULL);
+}
+#undef MYNAME
+
+#define MYNAME "ffi2-ptr->uintptr"
+static Scheme_Object *foreign_ffi2_ptr_to_uintptr(int argc, Scheme_Object *argv[])
+{
+  return scheme_make_integer_value_from_unsigned((uintptr_t)SCHEME_CPTR_VAL(argv[0]));
 }
 #undef MYNAME
 
@@ -6067,6 +6158,10 @@ void scheme_init_foreign(Scheme_Startup_Env *env)
     scheme_make_noncm_prim(foreign_cpointer_to_ffi2_ptr, "cpointer->ffi2-ptr", 2, 2), env);
   scheme_addto_prim_instance("ffi2-ptr->cpointer",
     scheme_make_noncm_prim(foreign_ffi2_ptr_to_cpointer, "ffi2-ptr->cpointer", 1, 1), env);
+  scheme_addto_prim_instance("ffi2-uintptr->ptr",
+    scheme_make_noncm_prim(foreign_ffi2_uintptr_to_ptr, "ffi2-uintptr->ptr", 1, 1), env);
+  scheme_addto_prim_instance("ffi2-ptr->uintptr",
+    scheme_make_noncm_prim(foreign_ffi2_ptr_to_uintptr, "ffi2-ptr->uintptr", 1, 1), env);
   scheme_addto_prim_instance("saved-errno",
     scheme_make_immed_prim(foreign_saved_errno, "saved-errno", 0, 1), env);
   scheme_addto_prim_instance("lookup-errno",
@@ -6478,6 +6573,10 @@ void scheme_init_foreign(Scheme_Env *env)
    scheme_make_noncm_prim((Scheme_Prim *)unimplemented, "cpointer->ffi2-ptr", 2, 2), env);
   scheme_addto_primitive_instance("ffi2-ptr->cpointer",
    scheme_make_noncm_prim((Scheme_Prim *)unimplemented, "ffi2-ptr->cpointer", 1, 1), env);
+  scheme_addto_primitive_instance("ffi2-uintptr->ptr",
+   scheme_make_noncm_prim((Scheme_Prim *)unimplemented, "ffi2-uintptr->ptr", 1, 1), env);
+  scheme_addto_primitive_instance("ffi2-ptr->uintptr",
+   scheme_make_noncm_prim((Scheme_Prim *)unimplemented, "ffi2-ptr->uintptr", 1, 1), env);
   scheme_addto_primitive_instance("saved-errno",
    scheme_make_immed_prim((Scheme_Prim *)unimplemented, "saved-errno", 0, 1), env);
   scheme_addto_primitive_instance("lookup-errno",

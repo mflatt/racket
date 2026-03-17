@@ -743,6 +743,8 @@
           ffi2-memset
           cpointer->ffi2-ptr
           ffi2-ptr->cpointer
+          ffi2-ptr->uintptr
+          ffi2-uintptr->ptr
 
           ffi2-ptr?-maker
           ffi2-procedure-maker
