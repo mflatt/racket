@@ -9,7 +9,8 @@
                     [ffi2-memset ffi2-memset*]
                     [ffi2-ptr->cpointer ffi2-ptr->cpointer*]
                     [cpointer->ffi2-ptr cpointer->ffi2-ptr*])
-         (submod ffi/unsafe internal)
+         ffi/unsafe/private/ffi-lib
+         ffi/unsafe/private/not-available
          racket/fixnum
          racket/symbol
          setup/dirs)
@@ -46,7 +47,8 @@
           cdecl_abi
           stdcall_abi)
          ffi2-ptr?
-         ffi2-ptr/gcable?)
+         ffi2-ptr/gcable?
+         make-not-available)
 
 (define (ffi2-lib name [version/s ""]
                   #:fail [fail #f]
@@ -63,16 +65,21 @@
 (define (ffi2-lib? v)
   (ffi-lib? v))
 
-(define (ffi2-lib-ref lib name-in)
+(define (ffi2-lib-ref lib name-in #:fail [failure #f])
   (define who 'ffi2-lib-ref)
   (unless (ffi-lib? lib) (raise-argument-error who "ffi2-lib?" lib))
+  (when (and failure (not (and (procedure? failure) (procedure-arity-includes? failure 0))))
+    (raise-argument-error who "(procedure-arity-includes/c 0)" failure))
   (define name
     (cond
       [(bytes? name-in) name-in]
       [(string? name-in) (string->bytes/utf-8 name-in)]
       [(symbol? name-in) (string->bytes/utf-8 (symbol->immutable-string name-in))]
       [else (raise-argument-error who "(or/c bytes? string? symbol?)" name-in)]))
-  (ffi2-lib-ref* lib name))
+  (if failure
+      (with-handlers ([exn:fail:filesystem? (lambda (e) (failure))])
+        (ffi2-lib-ref* lib name))
+      (ffi2-lib-ref* lib name)))
 
 (define-syntax (define-predicate stx)
   (syntax-parse stx
@@ -703,12 +710,17 @@
            (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr)))
          (#,(ffi2-type-c->racket t) ptr))]))
 
-(define-for-syntax (parse-define-ffi2-procedure stx use-lib-expr)
+(define-for-syntax (parse-define-ffi2-procedure stx use-lib-expr
+                                                #:default-fail [default-fail #f]
+                                                #:default-wrap [default-wrap #f]
+                                                #:provide? [provide? #f])
   (syntax-parse stx
     #:literals (->)
     [(form-id name:id maybe-type::maybe-type
               (~alt (~optional (~seq #:lib lib-expr))
-                    (~optional (~seq #:c-id c-name:id)))
+                    (~optional (~seq #:c-id c-name:id))
+                    (~optional (~seq #:fail fail-expr))
+                    (~optional (~seq #:wrap wrap-expr)))
               ...)
      (cond
        [(not use-lib-expr)
@@ -717,21 +729,71 @@
        [else
         (when (attribute lib-expr)
           (raise-syntax-error #f "redundant or conflicting `#:lib`" stx #'lib-expr))])
-     (with-syntax ([lib-expr (or (attribute lib-expr) use-lib-expr)])
-       (with-syntax ([name-bstr (string->bytes/utf-8 (symbol->string (syntax-e #'(~? c-name name))))])
-         #'(define name (ffi2-procedure (ffi2-lib-ref lib-expr name-bstr)
-                                        maybe-type))))]))
+     (with-syntax ([lib-expr (or (attribute lib-expr) use-lib-expr)]
+                   [c-name #'(~? c-name name)])
+       (with-syntax ([name-bstr (string->bytes/utf-8 (symbol->string (syntax-e #'c-name)))]
+                     [wrapper (if (attribute wrap-expr) #'wrap (or default-wrap #'begin))]
+                     [build-default-fail (if default-fail
+                                             #`(lambda () (failure-result (#,default-fail 'c-name)))
+                                             #'#f)]
+                     [(name-provide ...) (if provide?
+                                             #'((provide (protect-out name)))
+                                             #'())])
+         #`(begin
+             name-provide ...
+             (~? (define wrap (check-wrap-proc 'form-id wrap-expr)))
+             (define name-ptr (ffi2-lib-ref lib-expr name-bstr
+                                            #:fail (~? (build-fail 'form-id fail-expr 'c-name)
+                                                       build-default-fail)))             
+             (define name (wrapper
+                           #,(if (or (attribute fail-expr) default-fail)
+                                 #'(if (failure-result? name-ptr)
+                                       (failure-result-v name-ptr)
+                                       (ffi2-procedure name-ptr maybe-type))
+                                 #'(ffi2-procedure name-ptr maybe-type)))))))]))
+
+(define (check-wrap-proc who wrap)
+  (unless (and (procedure? wrap) (procedure-arity-includes? wrap 1))
+    (raise-argument-error who "(procedure-arity-includes/c 1)" wrap))
+  wrap)
+
+(define (check-fail-proc who fail)
+  (unless (or (not fail) (and (procedure? fail) (procedure-arity-includes? fail 1)))
+    (raise-argument-error who "(procedure-arity-includes/c 1)" fail))
+  fail)
+
+(define (build-fail who fail name)
+  (check-fail-proc who fail)
+  (and fail (lambda () (failure-result (fail name)))))
+
+(define-struct failure-result (v))
 
 (define-syntax (define-ffi2-procedure stx)
   (parse-define-ffi2-procedure stx #f))
 
 (define-syntax (define-ffi2-definer stx)
   (syntax-parse stx
-    [(_ name:id
-        #:lib lib-expr)
-     #'(begin
-         (define lib lib-expr)
-         (define-syntax name (lambda (stx) (parse-define-ffi2-procedure stx #'lib))))]))
+    [(form-id name:id
+              (~alt (~optional (~seq #:lib lib-expr))
+                    (~optional (~seq #:default-fail fail-expr))
+                    (~optional (~seq #:default-wrap wrap-expr))
+                    (~optional (~and provide? #:provide)
+                               #:defaults ([provide? #'#f])))
+              ...)
+     (unless (attribute lib-expr)
+       (raise-syntax-error #f "missing a `#:lib` clause" stx))
+     (with-syntax ([fail-id (if (attribute fail-expr) #'(quote-syntax fail) #'#f)]
+                   [wrap-id (if (attribute wrap-expr) #'(quote-syntax wrap) #'#f)])
+       #'(begin
+           (define lib lib-expr)
+           (~? (define wrap (check-wrap-proc 'form-id wrap-expr)))
+           (~? (define fail (check-fail-proc 'form-id fail-expr)))
+           (define-syntax name
+             (lambda (stx)
+               (parse-define-ffi2-procedure stx #'lib
+                                            #:default-fail fail-id
+                                            #:default-wrap wrap-id
+                                            #:provide? 'provide?)))))]))
 
 (define-syntax (ffi2-callback stx)
   (syntax-parse stx
