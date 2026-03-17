@@ -5,6 +5,9 @@
 (define-ffi2-type ours_t* void_t*)
 (define-ffi2-type mine_t* ours_t*)
 
+(define-ffi2-type also_ours_t* ours_t*
+  #:tag #f)
+
 (let ()
   (define p (ffi2-malloc #:manual 100))
   (check-true (ffi2-ptr? p))
@@ -25,6 +28,7 @@
   (check-true (ffi2-ptr? op))
   (check-false (ffi2-ptr/gcable? op))
   (check-true (ours_t*? op))
+  (check-true (also_ours_t*? op))
   (check-false (mine_t*? op))
   (ffi2-free op))
 

@@ -23,6 +23,7 @@
           define-ffi2-abi
           ffi2-procedure
           define-ffi2-procedure
+          ffi2-callback
           define-ffi2-definer
           ffi2-ptr-ref
           ffi2-ptr-set!
@@ -174,6 +175,11 @@
 
   (define-syntax-class :malloc-kind
     (pattern (~or #:manual #:gcable #:gcable-traced #:gcable-immobile #:gcable-traced-immobile)))
+
+  (define-syntax-class :tag
+    #:description "identifier or #f"
+    (pattern #f)
+    (pattern _:id))
 
   (struct procedure-abi (vm-abi))
   
@@ -467,7 +473,7 @@
               (#,(ffi2-type-racket->c elem-t) val)))))]
     [(form-id name:id
               (~var parent (:type stx))
-              (~alt (~optional (~seq #:tag tag:id))
+              (~alt (~optional (~seq #:tag tag::tag))
                     (~optional (~seq #:predicate predicate-expr))
                     (~optional (~seq #:racket->c racket->c-expr))
                     (~optional (~seq #:c->racket c->racket-expr))
@@ -498,12 +504,17 @@
           (with-syntax ([name/gcable (datum->syntax #'name
                                                     (string->symbol (format "~a/gcable" (syntax-e #'name)))
                                                     #'name)]
-                        [tags (cons #'(~? tag name)
-                                    (let ([vm-type (ffi2-type-vm-type parent-t)])
-                                      (if (pair? vm-type)
-                                          (cadr vm-type)
-                                          null)))]
-                        [category (if (or (attribute racket->c-expr)
+                        [tags (let ([parent-tags (let ([vm-type (ffi2-type-vm-type parent-t)])
+                                                   (if (pair? vm-type)
+                                                       (cadr vm-type)
+                                                       null))])
+                                (if (or (not (attribute tag))
+                                        (syntax-e #'tag))
+                                    (cons #'(~? tag name)
+                                          parent-tags)
+                                    parent-tags))]
+                        [category (if (or (attribute predicate-expr)
+                                          (attribute racket->c-expr)
                                           (attribute c->racket-expr)
                                           (attribute release-expr))
                                       #'#f
@@ -526,7 +537,8 @@
                                                            wrapper ... ...
                                                            #:category 'category))))]
          [else
-          (when (attribute tag)
+          (when (and (attribute tag)
+                     (syntax-e #'tag))
             (raise-syntax-error #f "base type for new tag is not an immediate pointer type" stx #'parent))
           (with-syntax ([new-racket->c (if (attribute racket->c-expr)
                                            #'new-racket->c
