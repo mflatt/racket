@@ -465,47 +465,95 @@
               ptr
               (* idx (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type elem-t)) #:copy))
               (#,(ffi2-type-racket->c elem-t) val)))))]
-    [(_ name:id
-        (~var parent (:type stx))
-        (~optional (~seq #:tag tag:id)))
+    [(form-id name:id
+              (~var parent (:type stx))
+              (~alt (~optional (~seq #:tag tag:id))
+                    (~optional (~seq #:predicate predicate-expr))
+                    (~optional (~seq #:racket->c racket->c-expr))
+                    (~optional (~seq #:c->racket c->racket-expr))
+                    (~optional (~seq #:release release-expr)))
+              ...)
      (define parent-t (attribute parent.t))
      (with-syntax ([name? (datum->syntax #'name
                                          (string->symbol (format "~a?" (syntax-e #'name)))
-                                         #'name)])
+                                         #'name)]
+                   [([wrapper-def wrapper ...] ...)
+                    (append (if (attribute racket->c-expr)
+                                (list
+                                 #'((define new-racket->c (compose-racket->c 'form-id racket->c-expr name-ptr?))
+                                    #:racket->c (quote-syntax new-racket->c)))
+                                null)
+                            (if (attribute c->racket-expr)
+                                (list
+                                 #'((define new-c->racket (check-c->racket 'form-id c->racket-expr))
+                                    #:c->racket (quote-syntax new-c->racket)))
+                                null)
+                            (if (attribute release-expr)
+                                (list
+                                 #'((define new-release (check-release 'form-id release-expr))
+                                    #:release (quote-syntax new-release)))
+                                null))])
        (cond
          [(ffi2-type-immediate-pointer? parent-t)
           (with-syntax ([name/gcable (datum->syntax #'name
                                                     (string->symbol (format "~a/gcable" (syntax-e #'name)))
                                                     #'name)]
                         [tags (cons #'(~? tag name)
-                                    (if parent-t
-                                        (let ([vm-type (ffi2-type-vm-type parent-t)])
-                                          (if (pair? vm-type)
-                                              (cadr vm-type)
-                                              null))
-                                        null))])
+                                    (let ([vm-type (ffi2-type-vm-type parent-t)])
+                                      (if (pair? vm-type)
+                                          (cadr vm-type)
+                                          null)))]
+                        [category (if (or (attribute racket->c-expr)
+                                          (attribute c->racket-expr)
+                                          (attribute release-expr))
+                                      #'#f
+                                      #'ptr)]
+                        [(name-ptr? predicate-def ...) (if (attribute predicate-expr)
+                                                           #'(name-ptr?
+                                                              (define name? predicate-expr))
+                                                           #'(name?))])
             #'(begin
-                (define (name? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tags) #:copy) v)
-                                      ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tags) #:copy) v)))
+                (define (name-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tags) #:copy) v)
+                                          ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tags) #:copy) v)))
+                wrapper-def ...
+                predicate-def ...
                 (define-syntax name (make-ffi2-type 'name '(pointer tags) #'name?
                                                     #:release #'black-box
-                                                    #:category 'ptr))
+                                                    wrapper ... ...
+                                                    #:category 'category))
                 (define-syntax name/gcable (make-ffi2-type 'name/gcable '(pointer/gc tags) #'name?
                                                            #:release #'black-box
-                                                           #:category 'ptr))))]
+                                                           wrapper ... ...
+                                                           #:category 'category))))]
          [else
           (when (attribute tag)
             (raise-syntax-error #f "base type for new tag is not an immediate pointer type" stx #'parent))
-          #`(begin
-              (define (name? v) (#,(ffi2-type-predicate parent-t) v))
-              (define (racket->c v) (#,(ffi2-type-racket->c parent-t) v))
-              (define (c->racket v) (#,(ffi2-type-c->racket parent-t) v))
-              (define (release v) (#,(ffi2-type-release parent-t) v))
-              (define-syntax name (make-ffi2-type 'name '#,(ffi2-type-vm-type parent-t) #'name?
-                                                  #:category '#,(ffi2-type-category parent-t)
-                                                  #:racket->c #'racket->c
-                                                  #:c->racket #'c->racket
-                                                  #:release #'release)))]))]))
+          (with-syntax ([new-racket->c (if (attribute racket->c-expr)
+                                           #'new-racket->c
+                                           #'begin)]
+                        [new-c->racket (if (attribute c->racket-expr)
+                                           #'new-c->racket
+                                           #'begin)]
+                        [new-release (if (attribute release-expr)
+                                         #'new-release
+                                         #'begin)]
+                        [(name-ptr? predicate-def ...)
+                         (if (attribute predicate-expr)
+                             #'(name-ptr?
+                                (define name? predicate-expr))
+                             #'(name?))])
+            #`(begin
+                (define (name-ptr? v) (#,(ffi2-type-predicate parent-t) v))
+                wrapper-def ...
+                predicate-def ...
+                (define (racket->c v) (#,(ffi2-type-racket->c parent-t) (new-racket->c v)))
+                (define (c->racket v) (new-c->racket (#,(ffi2-type-c->racket parent-t) v)))
+                (define (release v) (new-release (#,(ffi2-type-release parent-t) v)))
+                (define-syntax name (make-ffi2-type 'name '#,(ffi2-type-vm-type parent-t) #'name?
+                                                    #:category '#,(ffi2-type-category parent-t)
+                                                    #:racket->c #'racket->c
+                                                    #:c->racket #'c->racket
+                                                    #:release #'release))))]))]))
 
 (define-syntax (define-ffi2-abi stx)
   (syntax-parse stx
@@ -752,22 +800,6 @@
                                        (ffi2-procedure name-ptr maybe-type))
                                  #'(ffi2-procedure name-ptr maybe-type)))))))]))
 
-(define (check-wrap-proc who wrap)
-  (unless (and (procedure? wrap) (procedure-arity-includes? wrap 1))
-    (raise-argument-error who "(procedure-arity-includes/c 1)" wrap))
-  wrap)
-
-(define (check-fail-proc who fail)
-  (unless (or (not fail) (and (procedure? fail) (procedure-arity-includes? fail 1)))
-    (raise-argument-error who "(procedure-arity-includes/c 1)" fail))
-  fail)
-
-(define (build-fail who fail name)
-  (check-fail-proc who fail)
-  (and fail (lambda () (failure-result (fail name)))))
-
-(define-struct failure-result (v))
-
 (define-syntax (define-ffi2-procedure stx)
   (parse-define-ffi2-procedure stx #f))
 
@@ -995,4 +1027,54 @@
                                (attribute abi.a)]))
                           (lambda (rhs-a) rhs-a)
                           (lambda (key vals left right)
-                            (list '(__select key vals left right)))))
+                            (list '__select key vals left right))))
+
+(define (check-wrap-proc who wrap)
+  (unless (and (procedure? wrap) (procedure-arity-includes? wrap 1))
+    (raise-argument-error who "(procedure-arity-includes/c 1)" wrap))
+  wrap)
+
+(define (check-fail-proc who fail)
+  (unless (or (not fail) (and (procedure? fail) (procedure-arity-includes? fail 1)))
+    (raise-argument-error who "(procedure-arity-includes/c 1)" fail))
+  fail)
+
+(define (build-fail who fail name)
+  (check-fail-proc who fail)
+  (and fail (lambda () (failure-result (fail name)))))
+
+(define-struct failure-result (v))
+
+(define-syntax (compose-racket->c stx)
+  (syntax-parse stx
+    [(_ who racket->c-expr next-pred)
+     #`(let ([racket->c racket->c-expr])
+         (if (and (procedure? racket->c) (procedure-arity-includes? racket->c 1))
+             (lambda (v)
+               (let ([r (racket->c v)])
+                 (unless (next-pred r)
+                   (bad-convert-result who v r))
+                 r))
+             (raise-argument-error who "(procedure-arity-includes/c 1)" racket->c)))]))
+
+(define-syntax (check-c->racket stx)
+  (syntax-parse stx
+    [(_ who c->racket-expr)
+     #'(let ([c->racket c->racket-expr])
+         (if (and (procedure? c->racket) (procedure-arity-includes? c->racket 1))
+             c->racket
+             (raise-argument-error who "(procedure-arity-includes/c 1)" c->racket)))]))
+
+(define-syntax (check-release stx)
+  (syntax-parse stx
+    [(_ who release-expr)
+     #'(let ([release release-expr])
+         (if (and (procedure? racket->c) (procedure-arity-includes? racket->c 1))
+             release
+             (raise-argument-error who "(procedure-arity-includes/c 1)" release)))]))
+
+(define (bad-convert-result who v r)
+  (raise-arguments-error who
+                         "ffi type converter result does not satisfy next type's predicate"
+                         "converter input" v
+                         "converter result" r))
