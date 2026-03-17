@@ -2064,6 +2064,15 @@
 (define-ftype void_t* ftype-pointer (nongenerative #{void_t* ffi2:void_t*}))
 (define-ftype void_t*/gcable ftype-scheme-object-pointer (nongenerative #{void_t*/gcable ffi2:void_t*/gcable}))
 
+(meta define (matching-target? key vals)
+      (case key
+        [(target-machine) (memq (reflect-machine-type) vals)]
+        [(os) (memq (reflect-os-symbol) vals)]
+        [(os*) (memq (reflect-os*-symbol) vals)]
+        [(arch) (memq (reflect-arch-symbol) vals)]
+        [(word) (memv (reflect-word-size) vals)]
+        [else #f]))
+
 (meta define (convert-types in-types out-types for-struct? counter)
       ;; A `type` is each one of these:
       ;;    - primitive Chez Scheme ftype names, like `int`
@@ -2074,6 +2083,7 @@
       ;;    - `(struct [<sym> ...] (<field-name> <field-type>) ...)` creates a uid gensym based on <sym>
       ;;    - `(union [<sym> ...] (<field-name> <field-type>))`
       ;;    - `(array <int> <elem-type>)`
+      ;;    - `(select <sym> (<val> ...) <then-type> <else-type>)` picks one; see `matching-target?`
       (let* ([decls '()]
              [counter counter]
              [add-decl! (lambda (names type-stx to-c? for-struct?)
@@ -2133,38 +2143,51 @@
                                                #'(syntax-case expr ()
                                                    [pat guard rhs]
                                                    ...))]))])
-                            (syntax-case/head
-                             type-stx
-                             [pointer (if to-c?
-                                          #'ftype-pointer
-                                          #'void_t*)]
-                             [pointer/gc (if to-c?
-                                             #'ftype-pointer
-                                             #'void_t*/gcable)]
-                             [(pointer names) (add-decl! (datum names) #'ftype-pointer to-c? #f)]
-                             [(pointer/gc names) (add-decl! (datum names) #'ftype-scheme-object-pointer to-c? #f)]
-                             [(struct names . fields) (with-syntax ([fields (convert-fields #'fields)])
-                                                        (if for-struct?
-                                                            (add-decl! (datum names) #'(struct . fields) #f #t)
-                                                            (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
-                                                                          [st-id (add-decl! (datum names) #'(struct . fields) #f #t)])
-                                                              #'(& st-id id))))]
-                             [(union names . fields) (with-syntax ([fields (convert-fields #'fields)])
-                                                       (if for-struct?
-                                                           (add-decl! (datum names) #'(union . fields) #f #t)
-                                                           (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
-                                                                         [un-id (add-decl! (datum names) #'(union . fields) #f #t)])
-                                                             #'(& un-id id))))]
-                             [(array names n elem-type) (if for-struct?
-                                                            (with-syntax ([((_ elem-type)) (convert-fields #'([_ elem-type]))])
-                                                              (add-decl! (datum names) #`(array n elem-type) #f for-struct?))
-                                                            (add-decl! (datum names) #'ftype-pointer #t #f))]
-                             [else type-stx])))])
+                            (let loop ([type-stx type-stx])
+                              (syntax-case/head
+                               type-stx
+                               [pointer (if to-c?
+                                            #'ftype-pointer
+                                            #'void_t*)]
+                               [pointer/gc (if to-c?
+                                               #'ftype-pointer
+                                               #'void_t*/gcable)]
+                               [(pointer names) (add-decl! (datum names) #'ftype-pointer to-c? #f)]
+                               [(pointer/gc names) (add-decl! (datum names) #'ftype-scheme-object-pointer to-c? #f)]
+                               [(struct names . fields) (with-syntax ([fields (convert-fields #'fields)])
+                                                          (if for-struct?
+                                                              (add-decl! (datum names) #'(struct . fields) #f #t)
+                                                              (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
+                                                                            [st-id (add-decl! (datum names) #'(struct . fields) #f #t)])
+                                                                #'(& st-id id))))]
+                               [(union names . fields) (with-syntax ([fields (convert-fields #'fields)])
+                                                         (if for-struct?
+                                                             (add-decl! (datum names) #'(union . fields) #f #t)
+                                                             (with-syntax ([id (add-decl! (datum names) #'ftype-pointer #t #f)]
+                                                                           [un-id (add-decl! (datum names) #'(union . fields) #f #t)])
+                                                               #'(& un-id id))))]
+                               [(array names n elem-type) (if for-struct?
+                                                              (with-syntax ([((_ elem-type)) (convert-fields #'([_ elem-type]))])
+                                                                (add-decl! (datum names) #`(array n elem-type) #f for-struct?))
+                                                              (add-decl! (datum names) #'ftype-pointer #t #f))]
+                               [(select key vals same different) (if (matching-target? (datum key) (datum vals))
+                                                                     (loop #'same)
+                                                                     (loop #'different))]
+                               [else type-stx]))))])
         (let* ([in-types (map (lambda (type-stx) (translate type-stx #t)) in-types)]
                [out-types (map (lambda (type-stx) (translate type-stx #f)) out-types)])
           (list (reverse decls)
                 in-types
                 out-types))))
+
+(meta define (convert-convention conv)
+      (syntax-case conv ()
+        [(__select key vals same different)
+         (eq? '__select (datum __select))
+         (if (matching-target? (datum key) (datum vals))
+             (convert-convention #'same)
+             (convert-convention #'different))]
+        [_ conv]))
 
 (define (ffi2-ptr? v)
   (ftype-pointer? v))
@@ -2201,7 +2224,8 @@
 (define-syntax (ffi2-procedure-maker stx)
   (syntax-case stx (quote)
     [(_  (conv ...) (in-type ...) out-type)
-     (with-syntax ([((decl ...) (in-type ...) (out-type)) (convert-types #'(in-type ...) (list #'out-type) #f 0)])
+     (with-syntax ([((decl ...) (in-type ...) (out-type)) (convert-types #'(in-type ...) (list #'out-type) #f 0)]
+                   [(conv ...) (map convert-convention #'(conv ...))])
        #'(let ()
            decl
            ...
@@ -2211,7 +2235,8 @@
 (define-syntax (ffi2-callback-maker stx)
   (syntax-case stx (quote)
     [(_  (conv ...) (in-type ...) out-type)
-     (with-syntax ([((decl ...) (in-type ...) (out-type)) (convert-types #'(in-type ...) (list #'out-type) #f 0)])
+     (with-syntax ([((decl ...) (in-type ...) (out-type)) (convert-types #'(in-type ...) (list #'out-type) #f 0)]
+                   [(conv ...) (map convert-convention #'(conv ...))])
        #'(let ()
            decl
            ...
@@ -2333,6 +2358,13 @@
 
 (define (ffi2-memset to to-offset byte len)
   (memset** to to-offset byte len))
+
+(define-syntax (ffi2-system-type-select stx)
+  (syntax-case stx ()
+    [(_ key (val ...) same different)
+     (if (matching-target? (datum key) (datum (val ...)))
+         #'same
+         #'different)]))
 
 ;; ----------------------------------------
 

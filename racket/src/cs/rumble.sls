@@ -753,6 +753,7 @@
           ffi2-ptr-cast-maker
           ffi2-sizeof
           ffi2-offsetof
+          ffi2-system-type-select
 
           (rename [inline:unsafe-unbox unsafe-unbox]
                   [inline:unsafe-set-box! unsafe-set-box!])

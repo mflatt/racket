@@ -109,6 +109,7 @@ static Scheme_Object *ffi2_malloc_maker_sym;
 static Scheme_Object *ffi2_ptr_cast_maker_sym;
 static Scheme_Object *ffi2_sizeof_sym;
 static Scheme_Object *ffi2_offsetof_sym;
+static Scheme_Object *ffi2_system_type_select_sym;
 static Scheme_Object *lambda_sym;
 static Scheme_Object *quote_sym;
 static Scheme_Object *arg_sym;
@@ -4914,6 +4915,21 @@ static Scheme_Object *foreign_ffi2_internal_callback_maker(int argc, Scheme_Obje
 }
 #undef MYNAME
 
+static Scheme_Object *select_match(Scheme_Object *type) {
+  Scheme_Object *key = SCHEME_CAR(SCHEME_CDR(type));
+  Scheme_Object *vals = SCHEME_CADR(SCHEME_CDR(type)), *now_val;
+  Scheme_Object *argv[1];
+  type = SCHEME_CDR(SCHEME_CDR(SCHEME_CDR(type)));
+  argv[0] = key;
+  now_val = _scheme_apply(scheme_builtin_value("system-type"), 1, argv);
+  while (SCHEME_PAIRP(vals)) {
+    if (SAME_OBJ(SCHEME_CAR(vals), now_val))
+      return SCHEME_CAR(type);
+    vals = SCHEME_CDR(vals);
+  }
+  return SCHEME_CADR(type);
+}
+
 static Scheme_Object *translate_type(Scheme_Object *type) {
   if (SCHEME_SYMBOLP(type)) {
     if (!strcmp(SCHEME_SYM_VAL(type), "pointer"))
@@ -4983,6 +4999,8 @@ static Scheme_Object *translate_type(Scheme_Object *type) {
         return scheme_pointer_ctype;
       else if (!strcmp(SCHEME_SYM_VAL(head), "pointer/gc"))
         return scheme_builtin_value("_gcpointer");
+      else if (!strcmp(SCHEME_SYM_VAL(head), "select"))
+        return translate_type(select_match(type));
     }
   }
 
@@ -5230,6 +5248,21 @@ Scheme_Object *scheme_expand_foreign_form(Scheme_Object *form) {
     proc = scheme_builtin_value("ffi2-internal-offsetof");
 
     return list3(quoted(proc), quoted(type), quoted(pos));
+  } else if (SAME_OBJ(name, ffi2_system_type_select_sym)) {
+    Scheme_Object *key, *vals;
+    form = scheme_syntax_to_datum(form);
+    form = SCHEME_CDR(form);
+    key = SCHEME_CAR(form);
+    vals = SCHEME_CADR(form);
+    form = SCHEME_CDR(SCHEME_CDR(form));
+
+    return list4(scheme_intern_symbol("if"),
+                 list3(scheme_intern_symbol("memq"),
+                       list2(scheme_intern_symbol("system-type"),
+                             quoted(key)),
+                       quoted(vals)),
+                 SCHEME_CAR(form),
+                 SCHEME_CADR(form));
   }
 
   return NULL;
@@ -5810,6 +5843,8 @@ void scheme_init_foreign_globals()
   ffi2_sizeof_sym = scheme_intern_symbol("ffi2-sizeof");
   MZ_REGISTER_STATIC(ffi2_offsetof_sym);
   ffi2_offsetof_sym = scheme_intern_symbol("ffi2-offsetof");
+  MZ_REGISTER_STATIC(ffi2_system_type_select_sym);
+  ffi2_system_type_select_sym = scheme_intern_symbol("ffi2-system-type-select");
   MZ_REGISTER_STATIC(lambda_sym);
   lambda_sym = scheme_intern_symbol("lambda");
   MZ_REGISTER_STATIC(quote_sym);

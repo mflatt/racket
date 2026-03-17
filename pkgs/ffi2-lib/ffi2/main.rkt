@@ -39,7 +39,8 @@
           ->
           struct
           union
-          array)
+          array
+          system-type-case)
          ffi2-ptr?
          ffi2-ptr/gcable?)
 
@@ -149,6 +150,9 @@
   (define (ffi2-type-immediate-pointer? t)
     (eq? (ffi2-type-category t) 'ptr))
 
+  (define (ffi2-type-scalar? t)
+    (eq? (ffi2-type-category t) 'scalar))
+
   (define (lookup-type stx t-id #:for-return? [for-return? #f])
     (define v (syntax-local-value t-id (lambda () #f)))
     (unless (ffi2-type? v)
@@ -168,26 +172,26 @@
          (provide name))]))
 
 (define-ffi2-base-type void_t 'void #'void? #:racket->c #f)
-(define-ffi2-base-type int8_t 'integer-8 #'int8?)
-(define-ffi2-base-type uint8_t 'unsigned-8 #'uint8?)
-(define-ffi2-base-type byte_t 'unsigned-8 #'byte?)
-(define-ffi2-base-type int16_t 'integer-16 #'int16?)
-(define-ffi2-base-type uint16_t 'unsigned-16 #'uint16?)
-(define-ffi2-base-type int32_t 'integer-32 #'int32?)
-(define-ffi2-base-type uint32_t 'unsigned-32 #'uint32?)
-(define-ffi2-base-type int64_t 'integer-64 #'int64?)
-(define-ffi2-base-type uint64_t 'unsigned-64 #'uint64?)
-(define-ffi2-base-type int_t 'int #'int32?)
-(define-ffi2-base-type uint_t 'unsigned #'uint32?)
-(define-ffi2-base-type long_t 'long #'long?)
-(define-ffi2-base-type ulon_t 'unsigned-long #'ulong?)
-(define-ffi2-base-type size_t 'size_t #'size_t?)
-(define-ffi2-base-type wchar_t 'wchar #'char?)
-(define-ffi2-base-type fixnum_t 'fixnum #'fixnum?)
-(define-ffi2-base-type float_t 'float #'flonum?)
-(define-ffi2-base-type double_t 'double #'flonum?)
-(define-ffi2-base-type bool_t 'stdbool #'any?)
-(define-ffi2-base-type intbool_t 'bool #'any?)
+(define-ffi2-base-type int8_t 'integer-8 #'int8? #:category 'scalar)
+(define-ffi2-base-type uint8_t 'unsigned-8 #'uint8? #:category 'scalar)
+(define-ffi2-base-type byte_t 'unsigned-8 #'byte? #:category 'scalar)
+(define-ffi2-base-type int16_t 'integer-16 #'int16? #:category 'scalar)
+(define-ffi2-base-type uint16_t 'unsigned-16 #'uint16? #:category 'scalar)
+(define-ffi2-base-type int32_t 'integer-32 #'int32? #:category 'scalar)
+(define-ffi2-base-type uint32_t 'unsigned-32 #'uint32? #:category 'scalar)
+(define-ffi2-base-type int64_t 'integer-64 #'int64? #:category 'scalar)
+(define-ffi2-base-type uint64_t 'unsigned-64 #'uint64? #:category 'scalar)
+(define-ffi2-base-type int_t 'int #'int32? #:category 'scalar)
+(define-ffi2-base-type uint_t 'unsigned #'uint32? #:category 'scalar)
+(define-ffi2-base-type long_t 'long #'long? #:category 'scalar)
+(define-ffi2-base-type ulon_t 'unsigned-long #'ulong? #:category 'scalar)
+(define-ffi2-base-type size_t 'size_t #'size_t? #:category 'scalar)
+(define-ffi2-base-type wchar_t 'wchar #'char? #:category 'scalar)
+(define-ffi2-base-type fixnum_t 'fixnum #'fixnum? #:category 'scalar)
+(define-ffi2-base-type float_t 'float #'flonum? #:category 'scalar)
+(define-ffi2-base-type double_t 'double #'flonum? #:category 'scalar)
+(define-ffi2-base-type bool_t 'stdbool #'any? #:category 'scalar)
+(define-ffi2-base-type intbool_t 'bool #'any? #:category 'scalar)
 (define-ffi2-base-type void_t* 'pointer #'ffi2-ptr? #:release #'black-box #:category 'ptr)
 (define-ffi2-base-type void_t*/gcable 'pointer/gc #'ffi2-ptr? #:release #'black-box #:category 'ptr)
 (define-ffi2-base-type racket_t 'scheme-object #'any? #:release #'black-box)
@@ -208,6 +212,7 @@
 (define-syntax (struct stx) (raise-only-as-ffi-type stx))
 (define-syntax (union stx) (raise-only-as-ffi-type stx))
 (define-syntax (array stx) (raise-only-as-ffi-type stx))
+(define-syntax (system-type-case stx) (raise-only-as-ffi-type stx))
 
 (begin-for-syntax
   (define-syntax-class :maybe-type
@@ -223,7 +228,7 @@
   (define-syntax-class (:type stx [for-return? #f])
     #:description "an ffi2 type"
     #:attributes (t)
-    #:literals (->)
+    #:literals (-> struct union array system-type-case)
     (pattern type-name:id
              #:attr t (lookup-type stx #'type-name #:for-return? for-return?))
     (pattern (~and arrow-type
@@ -266,7 +271,9 @@
                                       #'(lambda (v)
                                           (or ((#%foreign-inline (ffi2-ptr?-maker pointer tag*s) #:copy) v)
                                               ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
-                                      #:release #'black-box))))
+                                      #:release #'black-box))
+    (pattern (~and all (system-type-case . _))
+             #:attr t (parse-system-type-case #'all))))
 
 (define-syntax (static-if stx)
   (syntax-parse stx
@@ -831,3 +838,44 @@
   (raise-arguments-error 'ffi2 "foreign-callback result does not match type"
                          "result" val
                          "result ffi2 type" (unquoted-printing-string (format "~a" what))))
+
+(define-for-syntax (parse-system-type-case stx)
+  (syntax-parse stx
+    [(_
+      (~and key (~or (~datum os) (~datum os*) (~datum arch) (~datum word)))
+      [(val ...) rhs]
+      ...
+      [(~datum else) else-rhs])
+
+     (for ([val-stx (in-list (syntax->list #'(val ... ...)))])
+       (if (eq? (syntax-e #'key) 'word)
+           (unless (memv (syntax-e val-stx) '(32 64))
+             (raise-syntax-error #f "expected 32 or 64" stx val-stx))
+           (unless (symbol? (syntax-e val-stx))
+             (raise-syntax-error #f "expected an identifier" stx val-stx))))
+
+     (define rhs-stxs (append (attribute rhs) (list #'else-rhs)))
+     (define rhs-ts (for/list ([rhs-stx (in-list rhs-stxs)])
+                      (syntax-parse rhs-stx
+                        [(~var rhs (:type stx))
+                         (unless (ffi2-type-scalar? (attribute rhs.t))
+                           (raise-syntax-error #f "expected a scalar type" stx rhs-stx))
+                         (attribute rhs.t)])))
+     
+     (define-values (vm-type predicate)
+       (let loop ([rhs-ts rhs-ts] [valss (syntax->list #'((val ...) ...))])
+         (cond
+           [(null? valss) (values (ffi2-type-vm-type (car rhs-ts))
+                                  (ffi2-type-predicate (car rhs-ts)))]
+           [else
+            (define rhs-t (car rhs-ts))
+            (define-values (vm-type predicate) (loop (cdr rhs-ts) (cdr valss)))
+            (values (list 'select (syntax-e #'key) (car valss)
+                          (ffi2-type-vm-type rhs-t)
+                          vm-type)
+                    #`(#%foreign-inline (ffi2-system-type--select key #,(car valss)
+                                                                  #,(ffi2-type-predicate rhs-t)
+                                                                  #,predicate)))])))
+
+    (make-ffi2-type 'system-type-case vm-type predicate
+                    #:category 'scalar)]))
