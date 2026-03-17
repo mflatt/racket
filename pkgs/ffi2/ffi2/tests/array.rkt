@@ -28,3 +28,29 @@
 (check-exn exn:fail:contract? (lambda () (triple_t-set! p 3 0)))
 
 (check-exn exn:fail:contract? (lambda () (triple_t-set! p 0 0.0)))
+
+(define-ffi2-type point_t (struct
+                            [x int_t]
+                            [y int_t]))
+(define-ffi2-type triangle_t (array point_t 3))
+
+(define tp (ffi2-malloc triangle_t))
+(check-true (triangle_t? tp))
+(check-true (point_t*? tp))
+(set-point_t-x! (triangle_t-ref tp 1) 100)
+(check-equal? (point_t-x (triangle_t-ref tp 1)) 100)
+(check-equal? (ffi2-ptr-ref tp int_t 2) 100)
+
+(triangle_t-set! tp 2 (point_t 2 20))
+(check-equal? (point_t-x (triangle_t-ref tp 2)) 2)
+(check-equal? (ffi2-ptr-ref tp int_t 4) 2)
+(check-equal? (ffi2-ptr-ref tp int_t 5) 20)
+
+(define pp (ffi2-ptr-ref tp point_t 2))
+(check-equal? (point_t-x pp) 2)
+(check-equal? (point_t-y pp) 20)
+
+(ffi2-ptr-set! tp point_t 0 pp)
+(define pp0 (ffi2-ptr-ref tp point_t 0))
+(check-equal? (point_t-x pp0) 2)
+(check-equal? (point_t-y pp0) 20)

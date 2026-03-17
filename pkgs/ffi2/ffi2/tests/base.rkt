@@ -44,6 +44,7 @@
  [float_t #:good (-1.0 1.0 +inf.0) #:bad (1 1/2 "oops")]
  [double_t #:good (-1.0 1.0 +inf.0) #:bad (1 1/2 "oops")]
  [intwchar_t #:good (0 255) #:bad (-1 1.0 "oops")]
+ [wchar_t #:good (#\a #\!) #:bad (65 1.0 "oops")]
  [bool_t #:good (#t #f) #:bad ()]
  [intbool_t #:good (#t #f) #:bad ()]
  [string_t #:good ("apple" #f) #:bad (1 'apple #"apple") #:gcable-traced]
