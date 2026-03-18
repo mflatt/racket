@@ -250,6 +250,11 @@
     (pattern #f)
     (pattern _:id))
 
+  (define-syntax-class :array-size
+    #:description "array size or `*`"
+    (pattern exact-nonnegative-integer)
+    (pattern (~datum *)))
+
   (struct procedure-abi (vm-abi))
   
   (define-syntax-class (:abi stx)
@@ -377,9 +382,11 @@
                                                   ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
                                           #'ffi2-ptr?)
                                       #:release #'black-box))
-    (pattern (array (~var elem-type (:type stx)) n:exact-nonnegative-integer)
+    (pattern (array (~var elem-type (:type stx)) n::array-size)
              #:with tag*s (list (string->symbol (format "~a*" (ffi2-type-name (attribute elem-type.t)))))
-             #:attr t (make-ffi2-type 'array `(array tag*s n ,(ffi2-type-vm-type (attribute elem-type.t)))
+             #:attr t (make-ffi2-type 'array (if (eq? '* (syntax-e #'n))
+                                                 `(pointer ,(syntax->datum #'tag*s))
+                                                 `(array ,(syntax->datum #'tag*s) #,(syntax-e n) ,(ffi2-type-vm-type (attribute elem-type.t))))
                                       #'(lambda (v)
                                           (or ((#%foreign-inline (ffi2-ptr?-maker pointer tag*s) #:copy) v)
                                               ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
@@ -480,7 +487,9 @@
            (define (set-name-field!/unchecked v val)
              (do-ffi2-ptr-set! field-compound?
                                field-racket->c field-vm-type
-                               v offset val
+                               v (~? (begin 'is-u? 0)
+                                     (#%foreign-inline (ffi2-offsetof (compound (tag*) (field-name field-vm-type) ...) field-name) #:copy))
+                               val
                                field-release))
            ...
            (define (set-name-field! v val)
@@ -501,7 +510,7 @@
                    (set-name-field!/unchecked p v)
                    p)
                  ...))))]
-    [(_ name:id (array (~var elem-type (:type stx)) n:exact-nonnegative-integer)
+    [(_ name:id (array (~var elem-type (:type stx)) n::array-size)
         (~optional (~seq #:tag tag:id)))
      (define elem-t (attribute elem-type.t))
      (with-syntax ([tag*s (list (or (attribute tag)
@@ -510,30 +519,48 @@
                                             (string->symbol (format "~a?" (syntax-e #'name)))
                                             #'name)]
                    [tag-ptr?-str (format "~a*?" (syntax-e #'name))]
+                   [name/gcable (datum->syntax #'name
+                                               (string->symbol (format "~a/gcable" (syntax-e #'name)))
+                                               #'name)]
                    [name-set! (datum->syntax #'name
                                              (string->symbol (format "~a-set!" (syntax-e #'name)))
                                              #'name)]
                    [name-ref (datum->syntax #'name
                                             (string->symbol (format "~a-ref" (syntax-e #'name)))
                                             #'name)]
-                   [range-str (format "(integer-in 0 ~a)" (sub1 (syntax-e #'n)))])
+                   [range-str (and (not (eq? '* (syntax-e #'n)))
+                                   (format "(integer-in 0 ~a)" (sub1 (syntax-e #'n))))])
        #`(begin
            (define (tag-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tag*s) #:copy) v)
-                                    ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))           
+                                    ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tag*s) #:copy) v)))
            (define-syntax name
-             (make-ffi2-type 'name `(array tag*s n #,(ffi2-type-vm-type elem-t)) #'tag-ptr?
+             (make-ffi2-type 'name #,(if (eq? '* (syntax-e #'n))
+                                         #`'(pointer tag*s)
+                                         #`'(array tag*s n #,(ffi2-type-vm-type elem-t))) #'tag-ptr?
                              #:release #'black-box
-                             #:category 'ptr))
+                             #:category #,(if (eq? '* (syntax-e #'n))
+                                              #''ptr
+                                              #'#f)))
+           #,@(if (eq? '* (syntax-e #'n))
+                  #`((define-syntax name/gcable
+                       (make-ffi2-type 'name '(pointer/gc tag*s) #'tag-ptr?
+                                       #:release #'black-box
+                                       #:category 'ptr)))
+                  '())
            (define (name-ref ptr idx)
              (unless (tag-ptr? ptr) (raise-argument-error 'name-ref tag-ptr?-str ptr))
-             (unless (and (fixnum? idx) (fx<= 0 idx (sub1 n))) (raise-argument-error 'name-ref 'range-str idx))
+             #,(if (eq? '* (syntax-e #'n))
+                   #`(unless (exact-integer? idx) (raise-argument-error 'name-ref "exact-integer?" idx))
+                   #`(unless (and (fixnum? idx) (fx<= 0 idx (sub1 n))) (raise-argument-error 'name-ref 'range-str idx)))
              (do-ffi2-ptr-ref #,(ffi2-type-compound? elem-t)
                               #,(ffi2-type-pointer-vm-type elem-t) #,(ffi2-type-pointer-vm-type elem-t #:gcable? #t)
                               #,(ffi2-type-c->racket elem-t) #,(ffi2-type-vm-type elem-t)
                               ptr (* idx (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type elem-t)) #:copy))))
            (define (name-set! ptr idx val)
              (unless (tag-ptr? ptr) (raise-argument-error 'name-set! tag-ptr?-str ptr))
-             (unless (and (fixnum? idx) (fx<= 0 idx (sub1 n))) (raise-argument-error 'name-set! 'range-str idx))
+             #,(if (eq? '* (syntax-e #'n))
+                   #`(unless (exact-integer? idx) (raise-argument-error 'name-ref "exact-integer?" idx))
+                   #`(unless (and (fixnum? idx) (fx<= 0 idx (sub1 n))) (raise-argument-error 'name-ref 'range-str idx)))
              (unless (#,(ffi2-type-predicate elem-t) val) (bad-assign-value 'name-set! '#,(ffi2-type-name elem-t) val))
              (do-ffi2-ptr-set! #,(ffi2-type-compound? elem-t)
                                #,(ffi2-type-racket->c elem-t) #,(ffi2-type-vm-type elem-t)

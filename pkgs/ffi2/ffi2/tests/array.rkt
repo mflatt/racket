@@ -3,13 +3,17 @@
          rackunit)
 
 (define-ffi2-type triple_t (array int32_t 3))
-(define-ffi2-type int32_t* void_t* #:tag int32_t*)
+(define-ffi2-type int32_t* (array int32_t *))
+(define-ffi2-type also_int32_t* void_t* #:tag int32_t*)
 
 (check-equal? (ffi2-sizeof triple_t) 12)
+(check-equal? (ffi2-sizeof int32_t*) (ffi2-sizeof void_t*))
+(check-equal? (ffi2-sizeof int32_t*/gcable) (ffi2-sizeof void_t*))
 
 (define p (ffi2-malloc triple_t))
 (check-true (triple_t? p))
 (check-true (int32_t*? p))
+(check-true (also_int32_t*? p))
 
 (check-equal? (triple_t-set! p 0 101) (void))
 (check-equal? (triple_t-set! p 1 102) (void))

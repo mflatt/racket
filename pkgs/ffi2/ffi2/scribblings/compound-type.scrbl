@@ -165,14 +165,17 @@ expression form:
 }
 
 @defform[#:kind "ffi2 type"
-         (array elem_type count)]{
+         (array elem_type count)
+         #:grammar ([count exact-nonnegative-integer
+                           *])]{
 
-Describes a type that is represented by an array declaration on the C
-side and a @tech{pointer} object in the Racket side. The array's
-@racket[count] must be a literal nonnegative exact integer.
-
-The Racket-side pointer representation of an array uses a tag formed
-by adding a @litchar{*} suffix on the name of @racket[elem_type].
+Describes a type that is represented by an array or pointer
+declaration on the C side and a @tech{pointer} object in the Racket
+side. The array's @racket[count] must be a literal nonnegative exact
+integer for a C array declaration, or it can be literally @racket[*]
+to indicate a C pointer. The Racket-side pointer representation uses a
+tag formed by adding a @litchar{*} suffix on the name of
+@racket[elem_type].
 
 When @racket[array] is used as the @racket[_parent-type] in a
 @racket[define-ffi2-type] definition of @racket[_name] without any
@@ -186,27 +189,30 @@ options (such as @racket[#:racket->c]) other than @racket[#:tag], then
        which is normally @litchar{*} added as suffix on the name of
        @racket[elem_type].}
 
- @item{@racketidfont{@racket[_name]*/gcable} is also defined
-       like @racketidfont{@racket[_name]*}, but it treats a
-       C-to-Scheme conversion like @racket[void_t*/gcable] by treating
-       the C-side pointer as (potentialy) referencing memory that is
-       managed by Racket's garbage collector.}
+ @item{@racketidfont{@racket[_name]/gcable} is also defined like
+       @racketidfont{@racket[_name]*} if @racket[count] is @racket[*].
+       It treats a C-to-Scheme conversion like @racket[void_t*/gcable]
+       by treating the C-side pointer as (potentialy) referencing
+       memory that is managed by Racket's garbage collector.}
 
  @item{@racketidfont{@racket[_name]?} is defined to recognize
        suitably tagged Racket @tech{pointer} representations.}
 
  @item{@racketidfont{@racket[_name]-ref} is defined as an accessor: it
       takes a pointer for a @racket[array] instance and an exact
-      integer in the range @racket[0] (inclusive) to @racket[count]
-      (exclusive), and it extracts a representation of the
-      corresponding element value based on the conversion implied by
-      @racket[elem-type].}
+      integer, and it extracts a representation of the corresponding
+      element value based on the conversion implied by
+      @racket[elem-type]. If @racket[count] is not @racket[*], the
+      integer passed to @racketidfont{@racket[_name]-ref} must be in the range
+      @racket[0] (inclusive) to @racket[count] (exclusive).}
 
  @item{@racketidfont{@racket[_name]-ref} is defined as a mutator: it
-      takes a pointer for a @racket[array] instance, an exact integer
-      in the range @racket[0] (inclusive) to @racket[count]
-      (exclusive), and a field value; it installs a converted value
-      (based @racket[elem-type]) into the @racket[array] instance.}
+      takes a pointer for a @racket[array] instance, an exact integer,
+      and a field value; it installs a converted value
+      (based @racket[elem-type]) into the @racket[array] instance.
+      If @racket[count] is not @racket[*], the
+      integer passed to @racketidfont{@racket[_name]-set!} is
+      constrained in the same way as for @racketidfont{@racket[_name]-ref}.}
 
 ]
 
