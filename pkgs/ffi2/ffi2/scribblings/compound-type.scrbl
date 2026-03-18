@@ -79,7 +79,7 @@ options (such as @racket[#:tag] or @racket[#:racket->c]), then
        each subexpression's result into the allocated memory in the
        same way as
        @racketidfont{set-@racket[_name]-@racket[field-id]!}. An
-       optional allocation mode can be provided after the field
+       optional allocation mode can be provided before the field
        subexpressions, and the default allocation mode is
        @racket[#:gcable].}
 
@@ -144,7 +144,7 @@ expression form:
        followed by a single field subexpression, and it installs that
        field's value after allocating the @racket[union]
        representation. An optional allocation mode can be provided
-       after the field subexpression.}
+       before the field name.}
 
 ]
 

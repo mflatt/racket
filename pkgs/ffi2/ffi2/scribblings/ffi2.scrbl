@@ -11,3 +11,4 @@ C-based API.}
 @include-section["base-type.scrbl"]
 @include-section["compound-type.scrbl"]
 @include-section["define-type.scrbl"]
+@include-section["pointer.scrbl"]

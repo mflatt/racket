@@ -38,11 +38,12 @@
 (define-ffi2-type percentage_box_t void_t*
   #:predicate (lambda (bx) (percentage_t? (unbox bx)))
   #:racket->c (lambda (bx)
-                (define ptr (ffi2-malloc percentage_t #:as percentage_box_t))
+                (define ptr (ffi2-malloc percentage_t))
                 (ffi2-set! ptr percentage_t (unbox bx))
                 ptr)
   #:c->racket (lambda (ptr)
-                (box (ffi2-ref ptr percentage_t))))
+                (box (ffi2-ref ptr percentage_t)))
+  #:tag #f)
 
 (let ()
   (define p (ffi2-malloc #:gcable-traced void_t*))

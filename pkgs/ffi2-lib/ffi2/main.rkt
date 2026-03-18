@@ -579,20 +579,23 @@
      (with-syntax ([name? (datum->syntax #'name
                                          (string->symbol (format "~a?" (syntax-e #'name)))
                                          #'name)]
-                   [([wrapper-def wrapper ...] ...)
+                   [([wrapper-pre-def wrapper-def wrapper ...] ...)
                     (append (if (attribute racket->c-expr)
                                 (list
-                                 #'((define new-racket->c (compose-racket->c 'form-id racket->c-expr name-ptr?))
+                                 #'((define-syntaxes (new-racket->c) (values))
+                                    (define new-racket->c (compose-racket->c 'form-id racket->c-expr name-ptr?))
                                     #:racket->c (quote-syntax new-racket->c)))
                                 null)
                             (if (attribute c->racket-expr)
                                 (list
-                                 #'((define new-c->racket (check-c->racket 'form-id c->racket-expr))
+                                 #'((define-syntaxes (new-c->racket) (values))
+                                    (define new-c->racket (check-c->racket 'form-id c->racket-expr))
                                     #:c->racket (quote-syntax new-c->racket)))
                                 null)
                             (if (attribute release-expr)
                                 (list
-                                 #'((define new-release (check-release 'form-id release-expr))
+                                 #'((define-syntaxes (new-release) (values))
+                                    (define new-release (check-release 'form-id release-expr))
                                     #:release (quote-syntax new-release)))
                                 null))])
        (cond
@@ -618,8 +621,12 @@
                         [(name-ptr? predicate-def ...) (if (attribute predicate-expr)
                                                            #'(name-ptr?
                                                               (define name? predicate-expr))
-                                                           #'(name?))])
+                                                           #'(name?))]
+                        [(wrapper-pre-def ...) (if (eq? 'top-level (syntax-local-context))
+                                                   #'(wrapper-pre-def ...)
+                                                   #'())])
             #'(begin
+                wrapper-pre-def ...
                 (define (name-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tags) #:copy) v)
                                           ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tags) #:copy) v)))
                 predicate-def ...
@@ -755,7 +762,10 @@
                           [else #'pointer/gc]))
     #`(let ([n #,n-expr-stx])
         (unless (exact-nonnegative-integer? n) (raise-argument-error 'form-id "exact-nonnegative-integer?" n))
-        ((#%foreign-inline (ffi2-malloc-maker #,size-vm-type #,ptr-vm-type #,kind-sym) #:copy) n)))
+        (#,(if as-t
+               (ffi2-type-c->racket as-t)
+               #'values)
+         ((#%foreign-inline (ffi2-malloc-maker #,size-vm-type #,ptr-vm-type #,kind-sym) #:copy) n))))
   (syntax-parse stx
     [(form-id (~optional kind::malloc-kind)
               maybe-type::maybe-type

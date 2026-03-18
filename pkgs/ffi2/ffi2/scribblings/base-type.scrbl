@@ -14,7 +14,8 @@
 
 A generic pointer. On the C side, both are represented as an address
 with the same representation as @tt{void*}. On the Racket side, both
-are represented as @deftech{pointer} objects}
+are represented as @tech{pointer} objects. See also
+@secref["pointer"].
 
 When an address is converted from C to Racket, then @racket[void_t*]
 produces a pointer object that references memory (assumed to be) not
@@ -22,17 +23,6 @@ managed by Racket's garbage collector. The @racket[void_t*/gcable]
 type implies that a pointer converted from C should be treated as
 (potentially) managed by Racket/s garbage collector. In both cases,
 conversion from Racket to C allows any pointer object.
-
-A pointer object has an optional sequence of symbolic tags, which are
-intended to enable some amount of checking that the right kind of
-pointer is provided to an operation. If an operation expects a pointer
-with a certain sequence of tags, it accepts a pointer with additional
-tags added to the end. A @racket[void_t*] representation has no
-tags, which means that a C conversion to Racket via @racket[void_t*]
-is not accepted by any context that expects some tag, whereas a
-pointer with any tags is accepted as a @racket[void_t*] representation
-to translate to C. Whether a pointer object represents an address
-managed by Racket's garbage collector is independent of its tags.
 
 }
 
