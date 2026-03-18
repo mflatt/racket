@@ -25,11 +25,10 @@
           define-ffi2-procedure
           ffi2-callback
           define-ffi2-definer
-          ffi2-ptr-ref
-          ffi2-ptr-set!
-          ffi2-ptr-cast
-          ffi2-bytes-cast
-          ffi2-ptr-add
+          ffi2-ref
+          ffi2-set!
+          ffi2-cast
+          ffi2-add
           ffi2-malloc
           ffi2-free
           ffi2-sizeof
@@ -49,6 +48,8 @@
           stdcall_abi)
          ffi2-ptr?
          ffi2-ptr/gcable?
+         ffi2-uintptr->ptr
+         ffi2-ptr->uintptr
          make-not-available)
 
 (define (ffi2-lib name [version/s ""]
@@ -155,7 +156,7 @@
     [else
      (define len (let loop ([i 0])
                    (cond
-                     [(fx= 0 (ffi2-ptr-ref ptr byte_t i)) i]
+                     [(fx= 0 (ffi2-ref ptr byte_t i)) i]
                      [else (loop (fx+ i 1))])))
      (define bstr (make-bytes len))
      (memcpy bstr (ffi2-ptr->cpointer ptr) len)
@@ -569,10 +570,10 @@
     [(form-id name:id
               (~var parent (:type stx))
               (~alt (~optional (~seq #:tag tag::tag))
-                    (~optional (~seq #:predicate predicate-expr))
-                    (~optional (~seq #:racket->c racket->c-expr))
-                    (~optional (~seq #:c->racket c->racket-expr))
-                    (~optional (~seq #:release release-expr)))
+                    (~optional (~seq #:predicate predicate-expr:expr))
+                    (~optional (~seq #:racket->c racket->c-expr:expr))
+                    (~optional (~seq #:c->racket c->racket-expr:expr))
+                    (~optional (~seq #:release release-expr:expr)))
               ...)
      (define parent-t (attribute parent.t))
      (with-syntax ([name? (datum->syntax #'name
@@ -621,7 +622,6 @@
             #'(begin
                 (define (name-ptr? v) (or ((#%foreign-inline (ffi2-ptr?-maker pointer tags) #:copy) v)
                                           ((#%foreign-inline (ffi2-ptr?-maker pointer/gc tags) #:copy) v)))
-                wrapper-def ...
                 predicate-def ...
                 (define-syntax name (make-ffi2-type 'name '(pointer tags) #'name?
                                                     #:release #'black-box
@@ -630,7 +630,8 @@
                 (define-syntax name/gcable (make-ffi2-type 'name/gcable '(pointer/gc tags) #'name?
                                                            #:release #'black-box
                                                            wrapper ... ...
-                                                           #:category 'category))))]
+                                                           #:category 'category))
+                wrapper-def ...))]
          [else
           (when (and (attribute tag)
                      (syntax-e #'tag))
@@ -653,23 +654,23 @@
                 (define (name-ptr? v) (#,(ffi2-type-predicate parent-t) v))
                 wrapper-def ...
                 predicate-def ...
-                (define (racket->c v) (#,(ffi2-type-racket->c parent-t) (new-racket->c v)))
-                (define (c->racket v) (new-c->racket (#,(ffi2-type-c->racket parent-t) v)))
-                (define (release v) (new-release (#,(ffi2-type-release parent-t) v)))
                 (define-syntax name (make-ffi2-type 'name '#,(ffi2-type-vm-type parent-t) #'name?
                                                     #:category '#,(ffi2-type-category parent-t)
                                                     #:racket->c #'racket->c
                                                     #:c->racket #'c->racket
-                                                    #:release #'release))))]))]))
+                                                    #:release #'release))
+                (define (racket->c v) (#,(ffi2-type-racket->c parent-t) (new-racket->c v)))
+                (define (c->racket v) (new-c->racket (#,(ffi2-type-c->racket parent-t) v)))
+                (define (release v) (new-release (#,(ffi2-type-release parent-t) v)))))]))]))
 
 (define-syntax (define-ffi2-abi stx)
   (syntax-parse stx
     [(_ name:id (~var abi (:abi stx)))
      #`(define-syntax name (procedure-abi '#,(attribute abi.a)))]))
 
-(define-syntax (ffi2-ptr-ref stx)
+(define-syntax (ffi2-ref stx)
   (syntax-parse stx
-    [(form-id ptr-expr (~var type (:type stx)) (~optional (~seq offset-expr (~optional (~and abs #:bytes)))))
+    [(form-id ptr-expr:expr (~var type (:type stx)) (~optional (~seq offset-expr:expr (~optional (~and abs #:bytes)))))
      (define t (attribute type.t))
      #`(let ([ptr ptr-expr]
              [offset (~? offset-expr 0)])
@@ -698,11 +699,11 @@
              ptr
              offset)))]))
 
-(define-syntax (ffi2-ptr-set! stx)
+(define-syntax (ffi2-set! stx)
   (syntax-parse stx
-    [(form-id ptr-expr (~var type (:type stx))
-              (~optional (~seq offset-expr (~optional (~and abs #:bytes))))
-              val-expr)
+    [(form-id ptr-expr:expr (~var type (:type stx))
+              (~optional (~seq offset-expr:expr (~optional (~and abs #:bytes))))
+              val-expr:expr)
      (define t (attribute type.t))
      #`(let ([ptr ptr-expr]
              [offset (~? offset-expr 0)]
@@ -835,7 +836,7 @@
 (define-syntax (ffi2-procedure stx)
   (syntax-parse stx
     #:literals (->)
-    [(form-id ptr-expr
+    [(form-id ptr-expr:expr
               (-> in-maybe-type::maybe-type ...
                   (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
                   out-maybe-type::maybe-type
@@ -971,7 +972,7 @@
 (define-syntax (ffi2-callback stx)
   (syntax-parse stx
     #:literals (->)
-    [(form-id proc-expr
+    [(form-id proc-expr:expr
               (-> in-maybe-type::maybe-type ...
                   (~optional (~seq #:varargs var-in-maybe-type::maybe-type ...))
                   out-maybe-type::maybe-type
@@ -1017,57 +1018,63 @@
                   proc
                   async-apply))))))]))
 
-(define-for-syntax (parse-ffi2-ptr-cast stx from-bytes?)
+(define-syntax (ffi2-cast stx)
   (syntax-parse stx
-    [(form-id expr (~var to (:type stx))
-              (~optional (~seq offset-expr #:bytes)))
+    [(form-id expr:expr
+              (~alt (~optional (~seq #:from (~var from (:type stx))))
+                    (~optional (~seq #:offset (~optional maybe-off-type::maybe-type) offset-expr:expr))
+                    (~optional (~seq #:to (~var to (:type stx)))))
+              ...)
+     (define offset-t (and (attribute maybe-off-type)
+                           (syntax-parse #'maybe-off-type
+                             [(~var off-type (:type stx)) (attribute off-type.t)])))
+     (define from-t (attribute from.t))
      (define t (attribute to.t))
-     (unless (ffi2-type-pointer? t)
-       (raise-syntax-error #f "target type is not a pointer type" stx #'to))
-     (define vm-type (and (not from-bytes?)
-                          (ffi2-type-pointer-vm-type t #:gcable? #f)))
-     (define gcable-vm-type (ffi2-type-pointer-vm-type t #:gcable? #t))
+     (when from-t
+       (unless (ffi2-type-pointer? from-t)
+         (raise-syntax-error #f "target type is not a pointer type" stx #'from)))
+     (when t
+       (unless (ffi2-type-pointer? t)
+         (raise-syntax-error #f "target type is not a pointer type" stx #'to)))
+     (define vm-type (if t (ffi2-type-pointer-vm-type t #:gcable? #f) 'pointer))
+     (define gcable-vm-type (if t (ffi2-type-pointer-vm-type t #:gcable? #t) 'pointer/gc))
      #`(let ([ptr expr]
              [offset (~? offset-expr 0)])
          (unless (variable-reference-from-unsafe? (#%variable-reference))
-           #,(if from-bytes?
-                 #`(unless (bytes? ptr) (raise-argument-error 'form-id "bytes?" ptr))
+           #,(if from-t
+                 #`(unless (#,(ffi2-type-predicate from-t) ptr) (bad-cast-value 'form-id '#,(ffi2-type-name from-t) ptr))
                  #`(unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr)))
            (unless (exact-integer? offset) (raise-argument-error 'form-id "exact-integer?" offset)))
-         (#,(if from-bytes?
-                #`(#%foreign-inline (ffi2-ptr-cast-maker #f #,gcable-vm-type) #:copy)
-                #`(#%foreign-inline (ffi2-ptr-cast-maker #,vm-type #,gcable-vm-type) #:copy))
-          #,(if from-bytes?
-                #`(cpointer->ffi2-ptr* #f ptr)
-                #`ptr)
-          offset))]))
+         (let ([c #,(if from-t
+                        #`(#,(ffi2-type-racket->c from-t) ptr)
+                        #`ptr)])
+           (let ([v ((#%foreign-inline (ffi2-ptr-cast-maker #,vm-type #,gcable-vm-type) #:copy)
+                     c
+                     #,(if (not offset-t)
+                           #'offset
+                           #`(* offset (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type offset-t)) #:copy))))])
+             #,@(if from-t
+                    #`(#,(ffi2-type-release from-t) c)
+                    '())
+             #,(if t
+                   #`(#,(ffi2-type-c->racket t) v)
+                   #'v))))]))
 
-(define-syntax (ffi2-ptr-cast stx)
-  (parse-ffi2-ptr-cast stx #f))
-
-(define-syntax (ffi2-bytes-cast stx)
-  (parse-ffi2-ptr-cast stx #t))
-
-(define-syntax (ffi2-ptr-add stx)
+(define-syntax (ffi2-add stx)
   (syntax-parse stx
-    [(form-id expr offset-expr #:bytes)
+    [(form-id expr:expr offset-expr:expr)
      #`(let ([ptr expr]
-             [offset (~? offset-expr 0)])
+             [offset offset-expr])
          (unless (variable-reference-from-unsafe? (#%variable-reference))
            (unless (ffi2-ptr? ptr) (raise-argument-error 'form-id "ffi2-ptr?" ptr))
            (unless (exact-integer? offset) (raise-argument-error 'form-id "exact-integer?" offset)))
          ((#%foreign-inline (ffi2-ptr-cast-maker pointer pointer/gc) #:copy)
           ptr
           offset))]
-    [(form-id expr (~var to (:type stx))
-              offset-expr (~optional (~and abs #:bytes)))
+    [(form-id expr:expr (~var to (:type stx)) offset-expr:expr)
      (define t (attribute to.t))
-     (define vm-type (if (ffi2-type-compound? t)
-                         (ffi2-type-pointer-vm-type t #:gcable? #f)
-                         'pointer))
-     (define gcable-vm-type (if (ffi2-type-compound? t)
-                                (ffi2-type-pointer-vm-type t #:gcable? #t)
-                                'pointer/gc))
+     (define vm-type (or (ffi2-type-pointer-vm-type t #:gcable? #f) 'pointer))
+     (define gcable-vm-type (or (ffi2-type-pointer-vm-type t #:gcable? #t) 'pointer/gc))
      #`(let ([ptr expr]
              [offset (~? offset-expr 0)])
          (unless (variable-reference-from-unsafe? (#%variable-reference))
@@ -1075,9 +1082,7 @@
            (unless (exact-integer? offset) (raise-argument-error 'form-id "exact-integer?" offset)))
          ((#%foreign-inline (ffi2-ptr-cast-maker #,vm-type #,gcable-vm-type) #:copy)
           ptr
-          #,(if (attribute abs)
-                #'offset
-                #`(* offset (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type t)) #:copy)))))]))
+          (* offset (#%foreign-inline (ffi2-sizeof #,(ffi2-type-vm-type t)) #:copy))))]))
 
 (define (ffi2-ptr->cpointer ptr)
   (unless (ffi2-ptr? ptr)
@@ -1095,6 +1100,9 @@
   (raise-arguments-error who "value does not match type"
                          "value" val
                          "ffi2 type" (unquoted-printing-string (format "~a" what))))
+
+(define (bad-cast-value who what val)
+  (bad-assign-value who what val))
 
 (define (bad-argument what val)
   (discourage-inline)

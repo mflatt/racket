@@ -16,7 +16,7 @@
   (set-num_t-i! n 1)
   (check-equal? (num_t-i n) 1)
   (check-equal? (num_t-d n) 5e-324)
-  (check-equal? (ffi2-ptr-ref n double_t) 5e-324)
+  (check-equal? (ffi2-ref n double_t) 5e-324)
   (set-num_t-d! n 100.0)
   (check-equal? (num_t-i n) 4636737291354636288))
 

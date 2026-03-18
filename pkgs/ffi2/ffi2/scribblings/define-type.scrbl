@@ -1,5 +1,10 @@
 #lang scribble/manual
-@(require (for-label ffi2))
+@(require scribble/example
+          (for-label ffi2))
+
+@(define ffi2-eval (make-base-eval))
+@examples[#:eval ffi2-eval #:hidden (require ffi2)]
+
 
 @title[#:tag "define-ffi2-type"]{Defining Foreign Types}
 
@@ -89,5 +94,36 @@ options, which often need accompanying @racket[#:predicate] and
 
 ]
 
+@examples[
+#:eval ffi2-eval
+(define-ffi2-type percentage_t double_t
+  #:predicate (lambda (v) (and (real? v) (<= 0.0 v 100.0)))
+  #:racket->c (lambda (v) (/ v 100.0))
+  #:c->racket (lambda (v) (* v 100.0)))
+(define p (ffi2-malloc double_t))
+(ffi2-set! p double_t 0.5)
+(ffi2-ref p percentage_t)
+(ffi2-set! p percentage_t 25.5)
+(ffi2-ref p double_t)
+]
+
+@examples[
+#:eval ffi2-eval
+#:label #f
+(define-ffi2-type percentage_box_t void_t*
+  #:predicate (lambda (bx) (percentage_t? (unbox bx)))
+  #:racket->c (lambda (bx)
+                (define ptr (ffi2-malloc percentage_t #:as percentage_box_t))
+                (ffi2-set! ptr percentage_t (unbox bx))
+                ptr)
+  #:c->racket (lambda (ptr)
+                (box (ffi2-ref ptr percentage_t))))
+(define p (ffi2-malloc #:gcable-traced void_t*))
+(ffi2-set! p percentage_box_t (box 50.5))
+(ffi2-ref (ffi2-ref p void_t*/gcable) double_t)
+(ffi2-ref p percentage_box_t)
+]
 
 }
+
+@close-eval[ffi2-eval]

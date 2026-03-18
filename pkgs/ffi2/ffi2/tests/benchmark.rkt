@@ -76,10 +76,10 @@
  (let loop ([i N])
    (cond
      [(eqv? i 0)
-      (ffi2-ptr-ref f int8_t)]
+      (ffi2-ref f int8_t)]
      [else
-      (ffi2-ptr-set! f int8_t 1 (ffi2-ptr-ref f int8_t 0))
-      (ffi2-ptr-set! f int8_t 0 (ffi2-ptr-ref f int8_t 1))
+      (ffi2-set! f int8_t 1 (ffi2-ref f int8_t 0))
+      (ffi2-set! f int8_t 0 (ffi2-ref f int8_t 1))
       (loop (fx- i 1))])))
 
 ;; ----------------------------------------
