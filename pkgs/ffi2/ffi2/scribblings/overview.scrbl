@@ -1,12 +1,32 @@
 #lang scribble/manual
-@(require "common.rkt"
-          (for-label ffi/unsafe/alloc))
+@(require scribble/example
+          "common.rkt"
+          (for-label ffi/unsafe/alloc
+                     racket/class))
 
 @(define cpp tt)
 @(define (tech-place)
    (tech "place" #:doc '(lib "scribblings/reference/reference.scrbl")))
 
+@(define ffi2-eval (make-base-eval))
+@examples[#:eval ffi2-eval #:hidden (require ffi2 racket/class)]
+
+@(define-syntax-rule (ffi2-examples c ...)
+   (examples #:eval ffi2-eval #:label #f c ...))
+
+@(define samples-page
+   @hyperlink["https://www.cairographics.org/samples/"]{samples page})
+
 @title[#:tag "overview"]{Overview}
+
+The @racketmodname[ffi2] library supports directly calling C functions from
+Racket. To set up those calls, the C function must be described on the
+Racket side, including the types for it's arguments and result, and
+implying a conversion between Racket and C values. In principle,
+descriptions of C functions could be extracted from C header files, but
+there are so many issues with parsing header files and inferring
+appropriate conversions that most C bindings for Racket are written
+independent of C header files.
 
 Although using the FFI requires writing no new C code, it provides
 relatively little insulation against the issues that C programmers
@@ -22,340 +42,992 @@ own clients.
 
 @; --------------------------------------------------
 
-@section{Libraries, C Types, and Objects}
+@section{Loading C Libraries}
 
 To use the FFI, you must have in mind
 
 @itemlist[
 
- @item{a particular library from which you want to access a function
-       or value, }
+ @item{A particular library from which you want to access a function or
+  value: A library corresponds to a file with a suffix such as
+  @filepath{.dll}, @filepath{.so}, or @filepath{.dylib} (depending on the
+  platform), or it might be a library within a @filepath{.framework}
+  directory on Mac OS. }
 
- @item{a particular symbol exported by the file, and}
+ @item{A particular set of names exported by the library: These are
+  typically function names as used in C.}
 
- @item{the C-level type (typically a function type) of the exported
-       symbol.}
+ @item{The C-level type of the exported name: This is typically a
+  function type that involves a sequence of argument types and a result
+  type.}
 
 ]
 
-The library corresponds to a file with a suffix such as
-@filepath{.dll}, @filepath{.so}, or @filepath{.dylib} (depending on
-the platform), or it might be a library within a @filepath{.framework}
-directory on Mac OS.
-
-Knowing the library's name and/or path is often the trickiest part of
-using the FFI.  Sometimes, when using a library name without a path
-prefix or file suffix, the library file can be located automatically,
-especially on Unix.
-
-The @racket[ffi2-lib] function gets a handle to a library. To extract
-exports of the library, it's simplest to use
-@racket[define-ffi2-definer]:
-
-@racketmod[
-racket/base
-(require ffi2)
-
-(define-ffi2-definer define-curses
-  #:lib (ffi2-lib "libcurses"))
-]
-
-This @racket[define-ffi2-definer] declaration introduces a
-@racket[define-curses] form for binding a Racket name to a value
-extracted from @filepath{libcurses}---which might be located at
-@filepath{/usr/lib/libcurses.so}, depending on the platform.
-
-To use @racket[define-curses], we need the names and C types of
-functions from @filepath{libcurses}. We'll start by using the
-following functions:
+As an example, let's aim to reproduce the output of the ``multi segment caps'' C sample
+code on Cairo's @|samples-page|:
+@margin-note*{This section is based on the original
+ @hyperlink["https://prl.khoury.northeastern.edu/blog/2016/06/27/tutorial-using-racket-s-ffi/"]{FFI
+  tutorial series} written by Asumu Takikawa.}
 
 @verbatim[#:indent 2]{
-  WINDOW* initscr(void);
-  int waddstr(WINDOW *win, char *str);
-  int wrefresh(WINDOW *win);
-  int endwin(void);
+cairo_move_to (cr, 50.0, 75.0);
+cairo_line_to (cr, 200.0, 75.0);
+
+cairo_move_to (cr, 50.0, 125.0);
+cairo_line_to (cr, 200.0, 125.0);
+
+cairo_move_to (cr, 50.0, 175.0);
+cairo_line_to (cr, 200.0, 175.0);
+
+cairo_set_line_width (cr, 30.0);
+cairo_set_line_cap (cr, CAIRO_LINE_CAP_ROUND);
+cairo_stroke (cr);
 }
 
-We make these functions callable from Racket as follows:
+The @tt{cr} variable here is a Cairo drawing context, which renders
+commands to a drawing surface. As it happens, Racket bitmaps are
+implemented using Cairo, and we can get a drawing surface that targets a
+bitmap using its @racket[get-handle] method. That method returns a
+pointer representation compatible with @racketmodname[ffi/unsafe], so we
+must convert for @racketmodname[ffi2] it using @racket[cpointer->ptr_t]:
 
-@margin-note{By convention, a @racketidfont{_t} suffix indicates a
-representation of a C type, even if the type does not use that suffix
-in C headers. Also by convention, a @racketidfont{*} suffix indicates
-a pointer type.}
+@ffi2-examples[
+ #:no-prompt
+ (require racket/draw)
 
-@racketblock[
-(define-ffi2-type WINDOW_t* ptr_t)
-
-(define-curses initscr (-> WINDOW_t*))
-(define-curses waddstr (WINDOW_t* string_t . -> . int_t))
-(define-curses wrefresh (WINDOW_t* . -> . int_t))
-(define-curses endwin (-> int_t))
+ (define bt (make-bitmap 256 256))
+ (define bt-surface (cpointer->ptr_t (send bt get-handle)))
 ]
 
-The definition of @racket[WINDOW_t*] binds a Racket name that reflects
-a C type based on @racket[ptr_t], which creates a type representation
-for a pointer type---usually one that is opaque. When a Racket value
-is created to represent a @racket[WINDOW_t*], it is tagged with the
-name @racket[WINDOW_t*] to distinguish it from other kinds of
-pointers.
+The @racket[ffi2-lib] function gets a handle to a library with a search
+that is based on the library file's base name (without a
+platform-specific suffix for shared libraries) and a list of versions to
+try (where @racket[#f] tries omitting the version):
 
-Each @racket[define-curses] form uses the given identifier as both the
-name of the library export and the Racket identifier to
-bind.@margin-note*{An optional @racket[#:c-id] clause for
-@racket[define-curses] can specify a name for the library export that
-is different from the Racket identifier to bind.} The @racket[(->
-....)] part of each definition describes the C type of the exported
-function, since the library file does not encode that information for
-its exports. The types listed before the last subform of @racket[->]
-are the argument types, while the last subform of @racket[->] is the
-result type. The pre-defined @racket[int_t] type corresponds to the
-@tt{int} C type, while @racket[string_t] corresponds to the @tt{char*}
-type when it is intended as a string that is passed to a foreign
-function.
+@ffi2-examples[
+ #:no-prompt
+ (require ffi2)
 
-At this point, @racket[initscr], @racket[waddstr], @racket[wrefresh],
-and @racket[endwin] are normal Racket bindings to Racket functions
-(that happen to call C functions), and so they can be exported from
-the defining module or called directly:
+ (define cairo-lib (ffi2-lib "libcairo" '("2" #f)))
+]
+
+Knowing the library's name and/or path is often the trickiest part of
+using the FFI. Sometimes, when using a library name without a path
+prefix or file suffix, the library file can be located automatically,
+especially on Unix. In the case of Cairo, the problem is simplified by
+the fact that the library is included with a Racket distribution for
+Windows or Mac OS. Using the base file name @filepath{libcairo} with
+version @filepath{2} is likely to find the library, which is often
+@filepath{/usr/lib/libcairo.2.so} on a Unix installation.
+
+@; --------------------------------------------------
+
+@section{Finding C Functions}
+
+Assuming that @racket[cairo-lib] is successful defined as a reference to
+the Cairo shared library, we can extract the addresses of functions from
+the library. Let's start with @cpp{cairo_create}, which accepts a
+surface (like the one we have from a Racket bitmap) to create a drawing
+context.
+
+@verbatim[#:indent 2]{
+cairo_t * cairo_create (cairo_surface_t *target);
+}
+
+We can get a pointer to this function using @racket[ffi2-lib-ref]:
+
+@ffi2-examples[
+ (ffi2-lib-ref cairo-lib 'cairo_create)
+]
+
+To call this function, we will need to give that pointer a type, casting
+via @racket[ffi2-cast] to convert it to a Racket function. We could give
+the function the simplest possible type, which is a function type using
+@racket[->] that expects a generic pointer argument and returns a
+generic pointer argument:
+@;
+@margin-note*{The @racket[->] form is used here with Racket's ``infix
+ dot'' notation. Surrounding the @racket[->] with space-separated dots
+ causes the @racket[->] to be moved to the front of the parenthesized
+ form.}
+
+@ffi2-examples[
+ #:no-prompt
+ (define cairo_create
+   (ffi2-cast (ffi2-lib-ref cairo-lib 'cairo_create)
+              #:to (ptr_t . -> . ptr_t)))
+]
+
+At this point, calling @racket[cairo_create] on @racket[bt-surface]
+would work:
+
+@ffi2-examples[
+ (cairo_create bt-surface)
+]
+
+@; --------------------------------------------------
+
+@section{More Safety with Tagged Pointers}
+
+Using a generic pointer type is especially dangerous, because
+there will be many pointer types as we use Cairo functions. It's better
+to give each pointer type a specific name. Named pointer types not only
+improve readability, they enable checking that we do not use the wrong
+kind of pointer as a function argument.
+
+@ffi2-examples[
+ #:no-prompt
+ (define-ffi2-type cairo_t* ptr_t)
+ (define-ffi2-type cairo_surface_t* ptr_t)
+]
+
+The type @racket[cairo_surface_t*] is defined here as an extension of
+@racket[ptr_t], which means that the C representation is a pointer. It
+also means that a Racket representation for @racket[cairo_surface_t*]
+will be accepted as a Racket representation of @racket[ptr_t]---but not
+vice versa. The @racket[define-ffi2-type] form for
+@racket[cairo_surface_t*] defines both the type and a predicate
+@racket[cairo_surface_t*?] to recognize Racket pointer representations
+that are specifically tagged as @racket[cairo_surface_t*] pointers. A
+function that expects a @racket[cairo_surface_t*] pointer uses that
+predicate to check arguments.
+
+@ffi2-examples[
+ #:no-prompt
+ (define cairo_create
+   (ffi2-cast (ffi2-lib-ref cairo-lib 'cairo_create)
+              #:to (cairo_surface_t* . -> . cairo_t*)))
+]
+
+@ffi2-examples[
+ (eval:error
+  (cairo_create bt-surface))
+]
+
+In this case, we are sure that @racket[bt-surface] really is a surface
+pointer, so we can cast it using @racket[ffi2-cast]:
+
+@ffi2-examples[
+ (cairo_surface_t*? bt-surface)
+ (cairo_surface_t*? (ffi2-cast bt-surface #:to cairo_surface_t*))
+ (cairo_create (ffi2-cast bt-surface #:to cairo_surface_t*))
+]
+
+@; --------------------------------------------------
+
+@section{Reducing Boilerplate for Function Definitions}
+
+Instead of finding a function pointer and then separately casting it to
+the right function type, combine those two steps using the
+@racket[define-ffi2-procedure] form:
 
 @racketblock[
-(define win (initscr))
-(void (waddstr win "Hello"))
-(void (wrefresh win))
-(sleep 1)
-(void (endwin))
+(define-ffi2-procedure cairo_create (cairo_surface_t* . -> . cairo_t*)
+  #:lib cairo-lib)
+]
+
+In this definition, @racket[cairo_create] is used both as the name to
+define and the name to locate in the C library. As we will see in later
+examples, a @racket[#:c-id] option can separately specify the name to
+find in the C library.
+
+Since we will define many functions from @racket[cairo-lib], it's even
+better to use @racket[define-ffi2-definer] to define a new
+@racket[define-ffi2-procedure]-like form that has the @racket[#:lib]
+part built in:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-ffi2-definer define-cairo
+   #:lib cairo-lib)
+ (eval:alts #,(hspace 1) (void))
+ (define-cairo cairo_create    (cairo_surface_t* . -> . cairo_t*))
+ (define-cairo cairo_move_to   (cairo_t* double_t double_t . -> . void_t))
+ (define-cairo cairo_line_to   (cairo_t* double_t double_t . -> . void_t))
+ (define-cairo cairo_set_line_width (cairo_t* double_t . -> . void_t))
+ (define-cairo cairo_stroke    (cairo_t* . -> . void_t))
+]
+
+At this point, we have enough functions to draw a line on the bitmap.
+
+@ffi2-examples[
+ #:no-prompt
+ (require pict)
+ (define (show bt)
+   (linewidth 2 (frame (bitmap bt))))
+]
+
+@ffi2-examples[
+ (define cr (cairo_create (ffi2-cast bt-surface #:to cairo_surface_t*)))
+ (cairo_move_to cr 50.0 50.0)                                                            
+ (cairo_line_to cr 206.0 206.0)
+ (cairo_set_line_width cr 5.0)
+ (cairo_stroke cr)
+ (show bt)
 ]
 
 @; --------------------------------------------------
 
 @section{Defining a Type Conversion}
 
-Our initial use of functions like @racket[waddstr] is sloppy, because
-we ignore return codes. C functions often return error
-codes, and checking them is a pain. A better approach is to build the
-check into the @racket[waddstr] binding and raise an exception when
-the code is non-zero.
+The @cpp{cairo_set_line_cap} function takes a @cpp{cairo_line_cap_t}
+argument, where @cpp{cairo_line_cap_t} is defined in C using @cpp{enum}.
+The most natural translation to Racket is to use a symbol for each
+variant, instead of integer constants. We can define a new type
+@racket[cairo_line_cap_t] using @racket[define-ffi2-type] and supply
+@racket[#:racket->c] and @racket[#:c->racket] functions to translates
+between symbols and integers:
 
-We can use @racket[define-ffi2-type] again to derive a C type from
-@racket[int_t], where the new type's conversion from C to Racket
-raises an exception if the value is non-zero. More precisely, we
-define a type constructor that is parameterized over a name to use
-when reporting an error.
-
-@racketblock[
-(define-ffi2-type (status_t who) int_t
-  #:c->racket (lambda (v)
-                (unless (zero? v)
-                  (error who "failed: ~a" v))))
-
-(define-curses initscr (-> WINDOW_t*))
-(define-curses waddstr (WINDOW_t* string_t . -> . (status_t 'waddstr)))
-(define-curses wrefresh (WINDOW_t* . -> . (status_t 'wrefresh)))
-(define-curses endwin (-> (status_t 'endwin)))
+@ffi2-examples[
+ #:no-prompt
+ (require racket/list)
+ (eval:alts #,(hspace 1) (void))
+ (define line-cap-symbols '(butt round square))
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type cairo_line_cap_t int_t
+   #:predicate (lambda (v) (memq v line-cap-symbols))
+   #:racket->c (lambda (sym) (index-of line-cap-symbols sym))
+   #:c->racket (lambda (i) (list-ref line-cap-symbols i)))
+ (eval:alts #,(hspace 1) (void))
+ (define-cairo cairo_set_line_cap (cairo_t* cairo_line_cap_t . -> . void_t))
+ (define-cairo cairo_get_line_cap (cairo_t* . -> . cairo_line_cap_t))
 ]
 
-Using @racket[(status_t 'waddstr)] as a result type is the same as
-using @racket[int_t] in terms of its C representation, but the
-function specified with @racket[#:c->racket] is applied to the Racket
-representation of an @racket[int_t] result, and that function can inspect or
-convert the value. In this case, @racket[(status_t 'waddstr)] returns
-@racket[(void)], since the status result is not needed after checking,
-so @racket[waddstr], @racket[wrefresh], and @racket[endwin] will all
-either return @racket[(void)] or raise an exception when they are
-called.
+@ffi2-examples[
+ (eval:error
+  (cairo_set_line_cap cr 'buzz))
+ (cairo_set_line_cap cr 'round)
+ (cairo_get_line_cap cr)
+]
+
+Mapping between symbols and integers is common enough that
+@racketmodname[ffi2] provides @racket[define-ffi-enum], which achieves
+the same result for defining @racket[cairo_line_cap_t]:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-ffi2-enum cairo_line_cap_t int_t
+   butt
+   round
+   square)          
+]
 
 @; --------------------------------------------------
 
-@section{References as Arguments}
+@section{Putting it All Together}
 
-To get mouse events from @filepath{libcurses}, we must explicitly
-enable them through the @racket[mousemask] function:
+We can now implement the original Cairo example. Here's the complete
+code and the result that DrRacket shows:
 
-@verbatim[#:indent 2]{
-typedef unsigned long mmask_t;
-#define BUTTON1_CLICKED 004L
-
-mmask_t mousemask(mmask_t newmask, mmask_t *oldmask);
-}
-
-Setting @racket[BUTTON1_CLICKED] in the mask enables button-click
-events.  At the same time, @racket[mousemask] returns the current mask
-by installing it into the pointer provided as its second
-argument.
-
-These kinds of call-with-a-reference interfaces are common in C. On
-the Racket side, a procedure that returns two values would be better.
-We could create a binding to @racket[mousemask] and then write a
-Racket function to wrap it with an improved interface. Since that
-pattern is common, @racket[->] helps with locally named arguments,
-automatic argument-value expression, and post-processing to provide a
-more Racket-like interface.
-
-@racketblock[
-(define-ffi2-type mmask_t ulong_t)
-(define-ffi2-type mmask_t* (array_t mmask_t *))
-
-(define-curses mousemask
-  (mmask_t [old : mmask_t* = (ffi2-malloc mmask_t)]
-           . -> . [r : mmask_t]
-           #:result (values (ffi2-ref old mmask_t) r)))
-
-(define BUTTON1_CLICKED #o004)
-
-(define-values (old supported) (mousemask BUTTON1_CLICKED))
+@ffi2-examples[
+ #:no-prompt
+ (eval:alts #,(begin @elem{@tt{#lang }@racketmodname[racket]}) (void))
+ (eval:alts #,(hspace 1) (void))
+ (require ffi2
+          racket/draw
+          pict)
+ (eval:alts #,(hspace 1) (void))
+ (define cairo-lib (ffi2-lib "libcairo" '("2" #f)))
+ (define-ffi2-definer define-cairo #:lib cairo-lib)
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type cairo_t* void_t*)
+ (define-ffi2-type cairo_surface_t* void_t*)
+ (define-ffi2-enum cairo_line_cap_t int_t
+   butt
+   round
+   square)
+ (eval:alts #,(hspace 1) (void))
+ (define-cairo cairo_create    (cairo_surface_t* . -> . cairo_t*))
+ (define-cairo cairo_move_to   (cairo_t* double_t double_t . -> . void_t))
+ (define-cairo cairo_line_to   (cairo_t* double_t double_t . -> . void_t))
+ (define-cairo cairo_set_line_width (cairo_t* double_t . -> . void_t))
+ (define-cairo cairo_stroke    (cairo_t* . -> . void_t))
+ (define-cairo cairo_set_line_cap   (cairo_t* cairo_line_cap_t . -> . void_t))
+ (eval:alts #,(hspace 1) (void))
+ (define (make)
+   (define bt (make-bitmap 256 256))
+   (define bt-surface (cpointer->ptr_t (send bt get-handle)))
+   (values bt
+           (cairo_create (ffi2-cast bt-surface #:to cairo_surface_t*))))   
+ (define (show bt)
+   (linewidth 2 (frame (bitmap bt))))
+ (eval:alts #,(hspace 1) (void))
+ (define-values (bt cr) (make))
+ (eval:alts #,(hspace 1) (void))
+ (cairo_move_to cr 50.0 75.0)
+ (cairo_line_to cr 200.0 75.0)
+ (eval:alts #,(hspace 1) (void))
+ (cairo_move_to cr 50.0 125.0)
+ (cairo_line_to cr 200.0 125.0)
+ (eval:alts #,(hspace 1) (void))
+ (cairo_move_to cr 50.0 175.0)
+ (cairo_line_to cr 200.0 175.0)
+ (eval:alts #,(hspace 1) (void))
+ (cairo_set_line_width cr 30.0)
+ (cairo_set_line_cap cr 'round)
+ (cairo_stroke cr)
+ (eval:alts #,(hspace 1) (void))
+ (eval:alts (show bt) (void))
 ]
 
-In this definition of @racket[mousemask], the second argument is
-allocated automatically with @racket[= (ffi2-malloc mmask_t)]. Also,
-the argument is given a name with @racket[old :] so that it can be
-referenced after the C procedure returns. The return value is also
-given a name with @racket[[r : mmask_t]]. Finally, the
-@racket[#:result] option provides an expression that produces the
-result for a call to @racket[mousemask], in this case working with the
-allocated @racket[old] pointer and the original result @racket[r].
+
+@ffi2-examples[
+ #:no-prompt
+ #:result-only
+ #:no-inset
+ (show bt)
+]
+
+@; --------------------------------------------------
+
+@section{Array Arguments}
+
+Let's look at the ``dash'' example from Cairo's @|samples-page|:
+
+@verbatim[#:indent 2]{
+double dashes[] = {50.0, 10.0, 10.0, 10.0};
+int    ndash  = sizeof(dashes)/sizeof(dashes[0]);
+double offset = -50.0;
+
+cairo_set_dash (cr, dashes, ndash, offset);
+cairo_set_line_width (cr, 10.0);
+
+cairo_move_to (cr, 128.0, 25.6);
+cairo_line_to (cr, 230.4, 230.4);
+cairo_rel_line_to (cr, -102.4, 0.0);
+cairo_curve_to (cr, 51.2, 230.4, 51.2, 128.0, 128.0, 128.0);
+
+cairo_stroke (cr);
+}
+
+Two of the new functions are straightforward to use:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-cairo cairo_rel_line_to (cairo_t* double_t double_t . -> . void_t))
+ (define-cairo cairo_curve_to
+   (cairo_t* double_t double_t double_t double_t double_t double_t . -> . void_t))
+]
+
+The most interesting function is @cpp{cairo_set_dash}, which takes an
+array argument. The C type signature for @cpp{cairo_set_dash} is
+
+@verbatim[#:indent 2]{
+void cairo_set_dash (cairo_t *cr,
+                     const double *dashes,
+                     int num_dashes,
+                     double offset);
+}
+
+Note that @cpp{num_dashes} reports the length of the @cpp{dashes} array.
+With @racketmodname[ffi2], we can handle the array by allocating
+memory, filling it, and passing it as a pointer. Here's a wrapper
+approach:
+
+@ffi2-examples[
+ #:no-prompt
+ (code:line
+  (code:comment "Low-level binding: takes a pointer and length")
+  (define-cairo cairo_set_dash_raw
+    (cairo_t* void_t* int_t double_t . -> . void_t)
+    #:c-id cairo_set_dash))
+ (eval:alts #,(hspace 1) (void))
+ (code:line
+  (code:comment "Racket-friendly wrapper that takes a list")
+  (define (cairo-set-dash ctx dashes offset)
+    (define n (length dashes))
+    (define arr (ffi2-malloc double_t n))
+    (for ([d (in-list dashes)]
+          [i (in-naturals)])
+      (ffi2-set! arr double_t i d))
+    (cairo_set_dash_raw ctx arr n offset)))
+]
+
+@ffi2-examples[
+ (cairo-set-dash cr (list 50.0 10.0 10.0 10.0) -50.0)
+]
+
+The conversion from a Racket list to a C array is something that can be
+handled by a new converting type. In fact, the @racketmodname[ffi2]
+library provides a @racket[list_t] type constructor to implement that
+conversion, where @racket[list_t] takes the element type as an argument.
+But we also need to pass the length of the list to the C function, and
+that's a different argument. When you define a function type with
+@racket[->], you can give names to arguments and refer to them in later
+expressions that supply automatic arguments.
+
+@ffi2-examples[
+ #:no-prompt
+ (define-cairo cairo_set_dash
+   (cairo_t* [lst : (list_t double_t)] [int_t = (length lst)] double_t
+             . -> . void_t))
+]
+
+The @racket[lst :] part of this definition gives a name to the value
+supplied as the second argument to @racket[cairo_set_dash]. The
+@racket[= (length lst)] part computes the third argument automatically
+(i.e., it's not merely optional, but never provided by a caller).
+The end result is that @racket[cairo_set_dash] behaves the same as
+the wrapper @racket[cairo-set-dash] function.
+
+@ffi2-examples[
+ #:no-prompt
+ (define-values (bt cr) (make))
+ (eval:alts #,(hspace 1) (void))
+ (define dashes '(50.0 10.0 10.0 10.0))
+ (define offset -50.0)
+ (eval:alts #,(hspace 1) (void))
+ (cairo-set-dash cr dashes offset)
+ (cairo_set_line_width cr 10.0)
+ (eval:alts #,(hspace 1) (void))
+ (cairo_move_to cr 128.0 25.6)
+ (cairo_line_to cr 230.4 230.4)
+ (cairo_rel_line_to cr -102.4 0.0)
+ (cairo_curve_to cr 51.2 230.4 51.2 128.0 128.0 128.0)
+ (eval:alts #,(hspace 1) (void))
+ (cairo_stroke cr)
+]
+
+@ffi2-examples[
+ (show bt)
+]
+
+@; --------------------------------------------------
+
+@section{Callbacks from C to Racket}
+
+To save a drawing using Cairo to a PNG file, we could use the
+@racket[save-file] method of a bitmap. Let's instead use Cairo's
+@cpp{cairo_surface_write_to_png_stream} directly to get the data in
+memory, which we can then write out to a file. The C signature is
+
+@verbatim[#:indent 2]{
+cairo_status_t
+cairo_surface_write_to_png_stream (cairo_surface_t *surface,
+                                   cairo_write_func_t write_func,
+                                   void *closure);
+}
+
+where @cpp{cairo_write_func_t} is a function type:
+
+@verbatim[#:indent 2]{
+cairo_status_t
+(*cairo_write_func_t) (void *closure,
+                       const unsigned char *data,
+                       unsigned int length);
+}
+
+The @cpp{closure} argument passed to
+@cpp{cairo_surface_write_to_png_stream} is sent on to @cpp{write_func},
+which is C's manual way of handling closures. We'll let Racket take care
+of closures automatically for us, so we wil just use a @cpp{NULL}
+pointer for that part.
+
+For the Racket binding @racket[cairo_surface_write_to_png_stream], we
+can nest a @racket[->] type for an argument inside a @racket[->] type:
+
+@ffi2-examples[
+ #:no-prompt
+(define-cairo cairo_surface_write_to_png_stream
+  (cairo_surface_t* (ptr_t ptr_t int_t . -> . int_t) ptr_t . -> . int_t))
+]
+
+Now we can pass a Racket function as the second argument to
+@racket[cairo_surface_write_to_png_stream], and it will be called to
+accumulate bytes of the PNG encoding:
+
+@ffi2-examples[
+ #:no-prompt
+ (define png-buffer (open-output-bytes))
+ (eval:alts #,(hspace 1) (void))
+ (cairo_surface_write_to_png_stream
+  (ffi2-cast bt-surface #:to cairo_surface_t*)
+  (lambda (ignored data len)
+    (define png-data (make-bytes len))
+    (ffi2-memcpy (ffi2-cast png-data #:from bytes_ptr_t)
+                 data
+                 len)
+    (write-bytes png-data png-buffer)
+    (code:comment "return 0 for \"success\"")
+    0)
+  (uintptr->ptr_t 0))
+ (eval:alts #,(hspace 1) (void))
+ (eval:alts  
+  (call-with-output-file "/tmp/img.png"
+    #:exists 'truncate
+    (lambda (o) (write-bytes (get-output-bytes png-buffer) o)))
+  (void))
+]
+
+One catch here is that a callback from a foreign function is always in
+atomic mode. Atomic mode works in this case because the callback writes
+to a byte-string port that is not used from any other thread. Another
+subtlety is that the callback must remain live as long as it might be
+called; in this case, the callback is kept live by virtue of being an
+argument to the foreign function, and it will not be called after the
+foreign function returns.
 
 @; --------------------------------------------------
 
 @section{C Structs}
 
-Assuming that mouse events are supported, the @filepath{libcurses}
-library reports them via @racket[getmouse], which accepts a pointer to
-a @cpp{MEVENT} struct to fill with mouse-event information:
+For a more advanced example, let's measure text to scale it into our bitmap.
+The relevant Cairo function is @cpp{cairo_text_extents}:
 
 @verbatim[#:indent 2]{
- typedef struct {
-    short id;
-    int x, y, z;
-    mmask_t bstate;
- } MEVENT;
-
- int getmouse(MEVENT *event);
+void cairo_text_extents (cairo_t *cr,
+                         const char *utf8,
+                         cairo_text_extents_t *extents);
 }
 
-To work with @cpp{MEVENT} values, we use @racket[define-ffi2-type]
-with a @racket[struct_t] type:
+where @cpp{cairo_text_extents_t} is a @cpp{struct}:
 
-@racketblock[
-(define-ffi2-type MEVENT_t (struct_t
-                             [id short_t]
-                             [x int_t]
-                             [y int_t]
-                             [z int_t]
-                             [bstate mmask_t]))
+@verbatim[#:indent 2]{
+typedef struct {
+    double x_bearing;
+    double y_bearing;
+    double width;
+    double height;
+    double x_advance;
+    double y_advance;
+} cairo_text_extents_t;
+}
+
+We can define a @racket[cairo_text_extents_t] using @racket[define-ffi2-type]
+with the @racket[struct_t] type constructor:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-ffi2-type cairo_text_extents_t
+   (struct_t
+    [x_bearing double_t]
+    [y_bearing double_t]
+    [width     double_t]
+    [height    double_t]
+    [x_advance double_t]
+    [y_advance double_t]))
 ]
 
-This definition binds many names in the same way that
-@racket[define-struct] binds many names: @racket[MEVENT_t] is both a C
-type representing the struct type and a constructor to allocate an
-instance of @racket[MEVENT_t], @racket[MEVENT_t*] is a C type for a
-pointer to an @racket[MEVENT_t], @racket[MEVENT_t-x] extracts the
-@racket[x] field from an @racket[MEVENT_t] instance, and so on.
+This single declaration automatically creates several bindings:
 
-With this C struct declaration, we can define the function type for
-@racket[getmouse]. The simplest approach is to define
-@racket[getmouse] to accept an @racket[MEVENT_t*] pointer, so a caller
-must explicitly allocate @racket[MEVENT_t] instance before calling
-@racket[getmouse]:
+@itemlist[
 
-@racketblock[
-(define-curses getmouse (MEVENT_t* . -> . int_t))
+ @item{@racket[cairo_text_extents_t]: works both as a type and as a
+  constructor of a @racket[cairo_text_extents_t] instance.}
 
-(define m (MEVENT_t 0 0 0 0 0))
-(when (zero? (getmouse m))
-  (code:comment @#,t{use @racket[m]...})
-  ....)
+ @item{@racket[cairo_text_extents_t*]: a type for a pointer to a
+  @racket[cairo_text_extents_t] instance.}
+ 
+ @item{@racket[cairo_text_extents_t*?]: a predicate for pointers to
+  @racket[cairo_text_extents_t] instances.}
+
+ @item{@racket[cairo_text_extents_t-width],
+  @racket[cairo_text_extents_t-x_bearing], etc.: field accessors, which
+  take a pointer to a @racket[cairo_text_extents_t] instances and extract
+  a corresponding field value, converting it from C to Racket as needed.}
+       
+ @item{@racket[set-cairo_text_extents_t-width!], etc.: field mutators.}
+
 ]
 
-For a more Racket-like function, define @racket[getmouse]
-to allocate automatically:
+Using this definition, you can construct instances directly:
 
-@racketblock[
-(define-curses getmouse
-  ([m : MEVENT_t* = (MEVENT_t 0 0 0 0 0)]
-   . -> . (r : int_t)
-   #:result (and (zero? r) m)))
-
-(waddstr win (format "click me fast..."))
-(wrefresh win)
-(sleep 1)
-
-(define m (getmouse))
-(when m
-  (waddstr win (format "at ~a,~a"
-                       (MEVENT_t-x m)
-                       (MEVENT_t-y m)))
-  (wrefresh win)
-  (sleep 1))
-
-(endwin)
+@ffi2-examples[
+ #:no-prompt
+ (define extents (cairo_text_extents_t 0.0 0.0 0.0 0.0 0.0 0.0))
 ]
 
-The difference between @racket[MEVENT_t*] and @racket[MEVENT_t] is
-crucial. If the declared argument type were @racket[MEVENT_t] instead
-of @racket[MEVENT_t*], then calling @racket[getmouse] would pass a
-structure to the C function instead of a pointer---likely triggering a
-crash. A pointer to an @racket[MEVENT_t] with uninitialized content
-could be created with @racket[(ffi2-malloc MEVENT_t)] instead of
-@racket[(MEVENT_t 0 0 0 0 0)], and that would work fine in this case,
-while @racket[(ffi2-malloc MEVENT_t*)] would only allocate enough
-space to hold a pointer---likely triggering a crash only later,
-unfortunately.
+Or allocate one with @racket[ffi2-malloc]:
+
+@ffi2-examples[
+ #:no-prompt
+ (define extents (ffi2-malloc cairo_text_extents_t))
+]
+
+Now we can bind @racket[cairo_text_extents]. The function writes into a struct pointer
+that we provide:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-cairo cairo_text_extents
+   (cairo_t* string_t cairo_text_extents_t* . -> . void_t))
+]
+
+For the second argument, the @racket[string_t] type lets a caller
+provide a Racket string that is converted into a UTF-8-encoded,
+null-terminated representation of the string for the C side.
+Importantly, note that the third argument is
+@racket[cairo_text_extents_t*] (ending with @litchar{*}), not
+@racket[cairo_text_extents_t] (no @litchar{*}), because the C function
+accepts a pointer argument and not an immediate struct argument. On the
+Racket size, @racket[cairo_text_extents_t*] and
+@racket[cairo_text_extents_t] have the same representation, but the
+difference is crucial on the C side.
+
+To use @racket[cairo_text_extents] defined this way, a caller must
+allocate their own @racket[cairo_text_extents_t] instance:
+
+@ffi2-examples[
+ (define extents (ffi2-malloc cairo_text_extents_t))
+ (cairo_text_extents cr "hello world" extents)
+ (cairo_text_extents_t-width extents)
+]
+
+We can improve the way @racket[cairo_text_extents] works on the racket
+side by having it automatically allocate the
+@racket[cairo_text_extents_t] instance. But in addition to passing that
+allocated memory on to the C function, we need to return it to a caller
+in Racket. The @racket[#:result] option for @racket[->] provides a
+result expression to substitute for the C function's result.
+
+@ffi2-examples[
+ #:no-prompt
+ (define-cairo cairo_text_extents
+   (cairo_t* string_t [exts : cairo_text_extents_t*
+                       = (ffi2-malloc cairo_text_extents_t)]
+             . -> . void_t
+             #:result exts))
+ ]
+
+@ffi2-examples[
+ (cairo_text_extents_t-width (cairo_text_extents cr "hello world"))
+]
+
+To round out the example, let's implement a function that draws text
+scaled to fit the bitmap width:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-cairo cairo_show_text (cairo_t* string_t . -> . void_t))
+ (define-cairo cairo_scale     (cairo_t* double_t double_t . -> . void_t))
+ (eval:alts #,(hspace 1) (void))
+ (define (fit-text cr str)
+   (define padding 20)
+   (cairo_move_to cr (/ padding 2.0) 128.0)
+   (define extents (cairo_text_extents cr str))
+   (define x-bearing (cairo_text_extents_t-x_bearing extents))
+   (define width     (cairo_text_extents_t-width extents))
+   (define scale (/ (- 256.0 padding) (+ x-bearing width)))
+   (cairo_scale cr scale scale)
+   (cairo_show_text cr str))
+]
+
+@ffi2-examples[
+ (define-values (txt-bt txt-cr) (make))
+ (fit-text txt-cr "Saluton, Mondo / Hallo, mundo")
+ (show txt-bt)
+]
 
 @; --------------------------------------------------
 
-@section{Pointers and Manual Allocation}
+@section{Reliable Release of Resources}
 
-To get text from the user instead of a mouse click, @filepath{libcurses}
-provides @racket[wgetnstr]:
+We are being sloppy with our calls to @racket[cairo_create]. As the
+function name suggests, @racket[cairo_create] allocates a new drawing
+context, and we are never deallocating it. The Racket pointer object
+that refers to a @racket[cairo_t] is reclaimed, but not the memory (and
+other resources) of the @racket[cairo_t] itself.
+
+A good first step is to define @racket[cairo_destory] and apply it to
+any drawing context that we no longer need, but what if we forget, or
+what if an error occurs before we can reach a @racket[cairo_destory]
+call? The @racketmodname[ffi2] library supports @defterm{finalization}
+on an object to associate a clean-up action with a Racket object when
+the object would otherwise be garbage-collected. Explicit deallocation
+is generally better that relying on finalization, but finalization can
+be appropriate in some cases and a good back-up in many cases. The
+@racketmodname[ffi/unsafe/alloc] library further wraps finalization
+support to make it easy to pair an allocator with a deallocator.
+
+@ffi2-examples[
+ #:no-prompt
+ (require ffi/unsafe/alloc)
+ (eval:alts #,(hspace 1) (void))
+ (define-cairo cairo_destroy (cairo_t* . -> . void_t)
+   #:wrap (deallocator))
+ (define-cairo cairo_create  (cairo_surface_t* . -> . cairo_t*)
+  #:wrap (allocator cairo_destroy))
+]
+
+We define @racket[cairo_destroy] first so that it can be referenced by
+the definition of @racket[cairo_create]. The
+@racket[#:wrap (deallocator)] part of the definition of
+@racket[cairo_destroy] identifies it as a deallocator, which will
+unregister finalization (if any) for its argument. The
+@racket[#:wrap (allocator cairo_destroy)] part of the definition of
+@racket[cairo_create] identifies it as an allocator whose result can be
+finalized by calling the given deallocator.
+
+@; --------------------------------------------------
+
+@section{Unions and Pointer Arithmetic}
+
+Let's work with Cairo
+@hyperlink["https://www.cairographics.org/manual/cairo-Paths.html"]{path}
+objects, which is a vector-graphics representation of a drawing. A path
+is defined as a @cpp{cairo_path_t}:
 
 @verbatim[#:indent 2]{
-int wgetnstr(WINDOW *win, char *str, int n);
+typedef struct {
+    cairo_status_t status;
+    cairo_path_data_t *data;
+    int num_data;
+} cairo_path_t;
 }
 
-While the @cpp{char*} argument to @racket[waddstr] is treated as a
-nul-terminated string, the @cpp{char*} argument to @racket[wgetnstr]
-is treated as a buffer whose size is indicated by the final @cpp{int}
-argument. The type @racket[string_t] does not work for such buffers.
+The @cpp{data} field is a pointer, but not to just one
+@cpp{cairo_path_data_t}; it is a pointer to an array of
+@cpp{cairo_path_data_t}s, where @cpp{num_data} indicates the length of
+that array.
 
-One way to approach this function from Racket is to describe the
-arguments in their rawest form, using plain @racket[ptr_t] for the
-second argument to @racket[wgetnstr]:
+Individual elements of the array are defined by a @cpp{union}:
 
-@racketblock[
-(define-curses wgetnstr (WINDOW_t* ptr_t int_t
-                                   . -> . int_t))
+@verbatim[#:indent 2]{
+union _cairo_path_data_t {
+    struct {
+        cairo_path_data_type_t type;
+        int length;
+    } header;
+    struct {
+        double x, y;
+    } point;
+};
+}
+
+That is, each element is ether a header or a point. A header is followed
+by @cpp{length}-1 points. The @cpp{cairo_path_data_type_t} with a header
+is an integer that indicates whether encodes a move-to, line-to, etc.,
+operation.
+
+For the Racket version of these types, it will be helpful to pull out
+@racket[path_header_t] and @racket[path_point_t] into their own
+definitions before combining them with @racket[union_t]. We'll also use
+@racket[(array_t cairo_path_data_t *)], which is equivalent to
+@racket[cairo_path_data_t*] but hints that the pointer refers to an
+array.
+
+@ffi2-examples[
+ #:no-prompt
+ (define-ffi2-enum cairo_path_data_type_t int_t
+   move-to
+   line-to
+   curve-to
+   close-path)
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type path_header_t
+   (struct_t
+    [type   cairo_path_data_type_t]
+    [length int_t]))
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type path_point_t
+   (struct_t
+    [x double_t]
+    [y double_t]))
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type cairo_path_data_t
+   (union_t
+    [header path_header_t]
+    [point  path_point_t]))
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type cairo_status_t int_t)
+ (eval:alts #,(hspace 1) (void))
+ (define-ffi2-type cairo_path_t
+   (struct_t
+    [status cairo_status_t]
+    [data   (array_t cairo_path_data_t *)]
+    [num_data int_t]))
+ (eval:alts #,(hspace 1) (void))
+ (define-cairo cairo_path_destroy (cairo_path_t* . -> . void_t)
+   #:wrap (deallocator))
+ (define-cairo cairo_copy_path (cairo_t* . -> . cairo_path_t*)
+   #:wrap (allocator cairo_path_destroy))
+ ]
+
+Let's create a fresh context, add path elements in it, and get the
+accumulated path before it is used by @racket[cairo_stroke]:
+
+@ffi2-examples[
+ #:no-prompt
+ (define-values (bt cr) (make))
+ (cairo_move_to cr 50.0 50.0)
+ (cairo_line_to cr 206.0 206.0)
+ (cairo_move_to cr 50.0 206.0)
+ (cairo_line_to cr 115.0 115.0)
+ (define a-path (cairo_copy_path cr))
+ (cairo_stroke cr)
+ (cairo_destroy cr)
+ ]
+
+The path should be value (status @racket[0]) and have 8 components:
+
+@ffi2-examples[
+ (cairo_path_t-status a-path)
+ (cairo_path_t-num_data a-path)
+ (define data (cairo_path_t-data a-path))
+ data
 ]
 
-To call this raw version of @racket[wgetnstr], allocate memory, zero
-it, and pass the size minus one (to leave room a nul
-terminator) to @racket[wgetnstr]:
+To access an individual element of the @racket[data] array, the
+definition of @racket[cairo_path_data_t] also defined
+@racket[cairo_path_data_t*-ref], which takes a pointer to a
+@racket[cairo_path_data_t] array and returns a particular element of the
+array. Since @racket[cairo_path_data_t] values are represented on the
+Racket side by a pointer, we get a @racket[cairo_path_data_t*] back---in
+other words, a kind of pointer arithmetic on the array pointer.
 
-@racketblock[
-(define SIZE 256)
-(define buffer (ffi2-malloc #:manual SIZE))
-(ffi2-memset buffer 0 SIZE)
-
-(void (wgetnstr win buffer (sub1 SIZE)))
+@ffi2-examples[
+(cairo_path_data_t*-ref data 0)
 ]
 
-When @racket[wgetnstr] returns, it has written bytes to
-@racket[buffer]. At that point, we can use @racket[cast] to convert the
-value from a raw pointer to a string:
+A @racket[cairo_path_data_t] can be either the @racket[header] case or
+the @racket[point] case. Defining @racket[cairo_path_data_t] as a @racket[union_t]
+type gave us @racket[cairo_path_data_t-header] and @racket[cairo_path_data_t-point]
+to recast the racket representation as either of those. We know that that first
+element of @racket[data] must be the @racket[header] case.
 
-@racketblock[
-(ffi2-cast buffer #:from ptr_t #:to string_t)
+@ffi2-examples[
+(define head1 (cairo_path_data_t-header (cairo_path_data_t*-ref data 0)))
+(path_header_t-type head1)
+(path_header_t-length head1)
 ]
 
-Conversion via the @racket[string_t] type causes the data referenced
-by the original pointer to be copied (and UTF-8 decoded), so the
-memory referenced by @racket[buffer] is no longer needed. Since the
-buffer was allocated in @racket[#:manual] mode, use @racket[ffi2-free]
-later to release the allocated memory:
+A @racket['move-to] command has a single point, so we know that the
+second element of @racket[data] is the @racket[point] case.
 
-@racketblock[
-(ffi2-free buffer)
+@ffi2-examples[
+(define pt1 (cairo_path_data_t-point (cairo_path_data_t*-ref data 1)))
+(path_point_t-x pt1)
+(path_point_t-y pt1)
 ]
 
+Next is @racket['line-to], and so on:
+
+@ffi2-examples[
+ (define head2 (cairo_path_data_t-header (cairo_path_data_t*-ref data 2)))
+ (path_header_t-type head2)
+ (define pt2 (cairo_path_data_t-point (cairo_path_data_t*-ref data 3)))
+ (path_point_t-x pt2)
+ (path_point_t-y pt2)
+]
+
+Now that we're done with this experiment, let's be good citizens by
+cleaning up, although finalization will clean up after us if it must.
+
+@ffi2-examples[
+(cairo_path_destroy a-path)
+]
+
+Operations like @racket[cairo_path_data_t*-ref] and field accessors like
+@racket[cairo_path_data_t-header] (or, more generally, accessors that
+access compound types within other compound types) ultimately perform a
+kind of pointer arithmetic. In case you ever need to take control of
+pointer arithmetic yourself, @racketmodname[ffi2] provides
+@racket[ffi2-add].
+
+@; --------------------------------------------------
+
+@section{More Type Conversion}
+
+The Cairo path example illustrates how to traverse a complex structure,
+but users of a set of Cairo bindings likely will not want to deal with
+all of that complexity. Let's define a new type that converts the C
+representation on demand by wrapping it as a sequence that's compatible
+with @racket[for].
+
+To make a sequence, we need a new Racket structure type that implements
+@racket[prop:sequence]. We'll define @racket[auto_cairo_path_t] as a type
+tat wraps a pointer as a @racket[cairo-path] instance.
+
+@ffi2-examples[
+ #:no-prompt
+ #:hidden
+ ;; top-level needs this first?
+ (struct cairo-path (ptr)
+   #:property prop:sequence
+   (lambda (p) (in-cairo-path p)))
+]
+
+@ffi2-examples[
+ #:no-prompt
+ (define-ffi2-type auto_cairo_path_t cairo_path_t*
+   #:predicate (lambda (v) (cairo-path? v))
+   #:c->racket (lambda (p) (cairo-path p))
+   #:racket->c (lambda (rkt) (cairo-path-ptr rkt)))
+ (eval:alts #,(hspace 1) (void))
+ (eval:alts
+  (struct cairo-path (ptr)
+    #:property prop:sequence
+    (lambda (p) (in-cairo-path p)))
+  (void))
+]
+
+The reference to @racket[in-cairo-path] is the doorway to the tricky
+parts, which iterate through Cairo path pointers:
+
+@ffi2-examples[
+ #:no-prompt
+ (define (in-cairo-path path)
+  (define pp (cairo-path-ptr path))
+  (code:comment "Read the path struct fields")
+  (define path-struct (cairo-path-ptr path))
+  (define array-ptr   (cairo_path_t-data path-struct))
+  (define len         (cairo_path_t-num_data path-struct))
+  (make-do-sequence
+    (lambda ()
+      (values
+        (code:comment "pos->element: extract one path command at a given position")
+        (lambda (pos)
+          (define header-elem (cairo_path_data_t*-ref array-ptr pos))
+          (define header (cairo_path_data_t-header header-elem))
+          (define type   (path_header_t-type header))
+          (define count  (sub1 (path_header_t-length header)))
+          (define points
+            (for/list ([i (in-range count)])
+              (define pt-elem (cairo_path_data_t*-ref array-ptr (+ pos 1 i)))
+              (define pt (cairo_path_data_t-point pt-elem))
+              (list (path_point_t-x pt)
+                    (path_point_t-y pt))))
+          (cons type points))
+        (code:comment "next-pos: advance past this element's header + data")
+        (lambda (pos)
+          (define header-elem (cairo_path_data_t*-ref array-ptr pos))
+          (define header (cairo_path_data_t-header header-elem))
+          (+ pos (path_header_t-length header)))
+        (code:comment "initial position")
+        0
+        (code:comment "continue?")
+        (lambda (pos) (< pos len))
+        (code:comment "no other guards needed")
+        #f
+        #f))))
+]
+
+Let's redefine @racket[cairo_copy_path] and @racket[cairo_path_destroy]
+and try the earlier example again.
+
+@ffi2-examples[
+ #:no-prompt
+ (define-cairo cairo_path_destroy (auto_cairo_path_t . -> . void_t)
+   #:wrap (deallocator))
+ (define-cairo cairo_copy_path (cairo_t* . -> . auto_cairo_path_t)
+   #:wrap (allocator cairo_path_destroy))
+ (eval:alts #,(hspace 1) (void))
+ (define-values (bt cr) (make))
+ (cairo_move_to cr 50.0 50.0)
+ (cairo_line_to cr 206.0 206.0)
+ (cairo_move_to cr 50.0 206.0)
+ (cairo_line_to cr 115.0 115.0)
+ (define auto-path (cairo_copy_path cr))
+ (cairo_stroke cr)
+ (cairo_destroy cr)
+]
+
+@ffi2-examples[
+ (for ([elem auto-path])
+   (writeln elem))
+ (cairo_path_destroy auto-path)   
+]
+ 
 @; --------------------------------------------------
 
 @section{Pointers and GC-Managed Allocation}
@@ -466,61 +1138,6 @@ copied for UTF-8 encoding or decoding). Constructors like
 
 @; --------------------------------------------------
 
-@section{Reliable Release of Resources}
-
-Using GC-managed memory saves you from manual @racket[ffi2-free]s for
-plain memory blocks, but C libraries often allocate resources and
-require a matching call to a function that releases the resources. For
-example, @filepath{libcurses} supports windows on the screen that are
-created with @racket[newwin] and released with @racket[delwin]:
-
-@verbatim[#:indent 2]{
-WINDOW *newwin(int lines, int ncols, int y, int x);
-int delwin(WINDOW *win);
-}
-
-In a sufficiently complex program, ensuring that every @racket[newwin]
-is paired with @racket[delwin] can be challenging, especially if the
-functions are wrapped by otherwise safe functions that are provided
-from a library. A library that is intended to be safe for use in a
-sandbox, say, must protect against resource leaks within the Racket
-process as a whole when a sandboxed program misbehaves or is
-terminated.
-
-The @racketmodname[ffi/unsafe/alloc] library provides functions to
-connect resource-allocating functions and resource-releasing
-functions. The library then arranges for finalization to release a resource if
-it becomes inaccessible (according to the GC) before it is explicitly
-released. At the same time, the library handles tricky atomicity
-requirements to ensure that the finalization is properly registered
-and never run multiple times.
-
-Using @racketmodname[ffi/unsafe/alloc], the @racket[newwin] and
-@racket[delwin] functions can be defined with @racket[allocator]
-and @racket[deallocator] wrappers, respectively:
-
-@racketblock[
-(require ffi/unsafe/alloc)
-
-(define-curses delwin (WINDOW_t* . -> . (status_t 'delwin))
-  #:wrap (deallocator))
-
-(define-curses newwin (int_t int_t int_t int_t -> WINDOW_t*)
-  #:wrap (allocator delwin))
-]
-
-A @racket[deallocator] wrapper makes a function cancel any existing
-finalizer for the function's argument.  An @racket[allocator] wrapper
-refers to the deallocator, so that the deallocator can be run if
-necessary by a finalizer.
-
-If a resource is scarce or visible to end users, then @tech[#:doc
-ref-doc]{custodian} management is more appropriate than mere
-finalization as implemented by @racket[allocator]. See the
-@racketmodname[ffi/unsafe/custodian] library.
-
-@; --------------------------------------------------
-
 @section{Threads and Places}
 
 Although older versions of @filepath{libcurses} are not thread-safe,
@@ -592,3 +1209,6 @@ argument with @racket[#:gcable-immobile]:
              #:in-original
              #:collect-safe))
 ]
+
+
+@close-eval[ffi2-eval]
