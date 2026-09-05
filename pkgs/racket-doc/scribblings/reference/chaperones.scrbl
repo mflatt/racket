@@ -849,6 +849,12 @@ a @racket[orig-proc] is originally applied:
        @racket[orig-proc] can be @racket[struct-info] only if
        @racket[struct-type] or some other @racket[orig-proc] is supplied.}
 
+ @item{A metatype accessor from @racket[make-struct-metatype] can be
+      supplied as @racket[orig-proc]. The corresponding
+      @racket[redirect-proc] must accept two arguments, @racket[_self]
+      and its structure type @racket[_struct:t]; it must return a
+      chaperone of @racket[_struct:t].}
+
  @item{Any accessor or mutator @racket[orig-proc] that is an
        @tech{impersonator} must be specifically a @tech{chaperone}.}
 

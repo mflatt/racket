@@ -353,3 +353,11 @@
             (if (eqv? i (vector-ref mutables j))
                 (loop (fx1+ i))
                 (jloop j)))]))])))
+
+(define (prefab-key+count->init-count* key+size)
+  (let ([key (car key+size)])
+    (cond
+     [(symbol? key) (cdr key+size)]
+     [else
+      (- (cdr key+size)
+         (prefab-key-count-explicit-fields key))])))
