@@ -42,6 +42,7 @@
          known-struct-constructor known-struct-constructor? known-struct-constructor-type-id
          known-struct-predicate known-struct-predicate? known-struct-predicate-type-id
          known-struct-predicate-authentic? known-struct-predicate-sealed?
+         known-struct-type-maker known-struct-type-maker? known-struct-type-maker-base-rtd known-struct-type-maker-field-count
          known-field-accessor known-field-accessor? known-field-accessor-type-id known-field-accessor-authentic?
          known-field-accessor-pos known-field-accessor-known-immutable?
          known-field-mutator known-field-mutator? known-field-mutator-type-id known-field-mutator-authentic?
@@ -50,6 +51,7 @@
          known-struct-predicate/need-imports known-struct-predicate/need-imports? known-struct-predicate/need-imports-needed
          known-field-accessor/need-imports known-field-accessor/need-imports? known-field-accessor/need-imports-needed
          known-field-mutator/need-imports known-field-mutator/need-imports? known-field-mutator/need-imports-needed
+         known-struct-type-maker/need-imports known-struct-type-maker/need-imports? known-struct-type-maker/need-imports-needed
          known-struct-type-property/immediate-guard known-struct-type-property/immediate-guard?
          a-known-constant
          a-known-consistent)
@@ -154,6 +156,9 @@
 (struct known-struct-predicate/need-imports (needed) #:prefab #:omit-define-syntaxes #:super struct:known-struct-predicate)
 (struct known-field-accessor/need-imports (needed) #:prefab #:omit-define-syntaxes #:super struct:known-field-accessor)
 (struct known-field-mutator/need-imports (needed) #:prefab #:omit-define-syntaxes #:super struct:known-field-mutator)
+
+(struct known-struct-type-maker (base-rtd field-count) #:prefab #:omit-define-syntaxes #:super struct:known-procedure)
+(struct known-struct-type-maker/need-imports (needed) #:prefab #:omit-define-syntaxes #:super struct:known-struct-type-maker)
 
 (struct known-struct-type-property/immediate-guard () #:prefab #:omit-define-syntaxes)
 

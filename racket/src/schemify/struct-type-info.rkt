@@ -11,9 +11,13 @@
          struct-type-info-rest-properties-list-pos
          make-struct-type-info
          pure-properties-list
-         add-struct-type-property-known)
+         add-struct-type-property-known
+         NUMBER-OF-BASE-RTD-FIELDS
+         ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)
 
-(struct struct-type-info (name parent
+(struct struct-type-info (name is-type-type?
+                               base-rtd ; #f, symbol, or (cons <known> <import>)
+                               parent
                                immediate-field-count
                                field-count
                                pure-constructor?
@@ -26,99 +30,130 @@
   #:authentic)
 (define struct-type-info-rest-properties-list-pos 0)
 
+(define NUMBER-OF-BASE-RTD-FIELDS 9)
+(define ARGUMENT-COUNT-BEFORE-TYPE-FIELDS 6) ; number of `rest` arguments that are for `make-struct-type`
+
 ;; Parse `make-struct-type` forms, returning a `struct-type-info`
 ;; if the parse succeed:
 (define (make-struct-type-info v prim-knowns knowns imports mutated)
   (match (unwrap-let v)
-    [`(make-struct-type (quote ,name) ,parent ,fields 0 #f . ,rest)
-     ;; Note: auto-field count must be zero, because a non-zero count involves
-     ;; an arity-reduced procedure
-     (let ([u-name (unwrap name)]
-           [u-parent (let ([u-parent (unwrap parent)])
-                       (or (extract-struct-typed-from-checked u-parent)
-                           u-parent))])
-       (and (symbol? u-name)
-            (or (not u-parent)
-                (known-struct-type?
-                 (find-known u-parent prim-knowns knowns imports mutated)))
-            (exact-nonnegative-integer? fields)
-            ((length rest) . <= . 6)
-            (let ([prefab-imms
-                   ;; The inspector argument needs to be missing or duplicable,
-                   ;; and if it's not known to produce a value other than 'prefab,
-                   ;; the list of immutables must be duplicable:
-                   (match rest
-                     [`() 'non-prefab]
-                     [`(,_) 'non-prefab]
-                     [`(,_ #f . ,_) 'non-prefab]
-                     [`(,_ (current-inspector) . ,_) 'non-prefab]
-                     [`(,_ 'current . ,_) 'non-prefab]
-                     [`(,_ 'prefab ,_ ',immutables . ,_) immutables]
-                     [`(,_ 'prefab ,_) '()]
-                     [`(,_ 'prefab) '()]
-                     [`,_ #f])]
-                  [parent-sti (and u-parent (find-known u-parent prim-knowns knowns imports mutated))])
-              (define (includes-property? name)
-                (and (pair? rest)
-                     (match (car rest)
-                       [`(list (cons ,props ,vals) ...)
-                        (for/or ([prop (in-list props)])
-                          (eq? (unwrap prop) name))]
-                       [`,_ #f])))
-              (define (handle-proc-spec proc-spec imms)
-                (cond
-                  [(not proc-spec) imms]
-                  [(exact-nonnegative-integer? proc-spec) (cons proc-spec imms)]
-                  [(lambda? proc-spec) imms]
-                  [else
-                   (let ([proc-spec (unwrap proc-spec)])
-                     (and
-                      (symbol? proc-spec)
-                      (let ([k (find-known proc-spec prim-knowns knowns imports mutated)])
-                        (cond
-                          [(not k) #f]
-                          [(known-literal? k)
-                           (let ([v (known-literal-value k)])
-                             (and (or (not v) (exact-nonnegative-integer? v))
-                                  (handle-proc-spec v imms)))]
-                          [(known-procedure? k) imms]
-                          [else #f]))))]))
-              (define constructor-name-expr (and ((length rest) . > . 5)
-                                                 (list-ref rest 5)))
-              (define non-prefab-imms
-                (and (eq? prefab-imms 'non-prefab)
-                     (match rest
-                       [`() '()]
-                       [`(,_) '()]
-                       [`(,_ ,_) '()]
-                       [`(,_ ,_ ,proc-spec)
-                        (handle-proc-spec proc-spec '())]
-                       [`(,_ ,_ ,proc-spec ',immutables . ,_)
-                        (handle-proc-spec proc-spec immutables)]
-                       [`,_ #f])))
-              (and (if (eq? prefab-imms 'non-prefab)
-                       non-prefab-imms
-                       prefab-imms)
-                   (struct-type-info name
-                                     parent
-                                     fields
-                                     (+ fields (if u-parent
-                                                   (known-struct-type-field-count parent-sti)
-                                                   0))
-                                     ;; no guard & no prop:chaperone-unsafe-undefined => pure constructor
-                                     (and (or (not u-parent)
-                                              (known-struct-type-pure-constructor? parent-sti))
-                                          (or ((length rest) . < . 5)
-                                              (not (unwrap (list-ref rest 4))))
-                                          (not (includes-property? 'prop:chaperone-unsafe-undefined)))
-                                     (includes-property? 'prop:authentic)
-                                     (includes-property? 'prop:sealed)
-                                     (if (eq? prefab-imms 'non-prefab)
-                                         #f
-                                         prefab-imms)
-                                     non-prefab-imms
-                                     constructor-name-expr
-                                     rest)))))]
+    [`(,rator (quote ,name) ,parent ,fields 0 #f . ,rest)
+     (define mst? (eq? (unwrap rator) 'make-struct-type))
+     (define-values (maker maker-im) (if mst?
+                                         (values #f #f)
+                                         (find-known+import (unwrap rator) prim-knowns knowns imports mutated)))
+     (cond
+       [(or mst?
+            (known-struct-type-maker? maker))
+        ;; Note: auto-field count must be zero, because a non-zero count involves
+        ;; an arity-reduced procedure
+        (let ([u-name (unwrap name)]
+              [u-parent (let ([u-parent (unwrap parent)])
+                          (or (extract-struct-typed-from-checked u-parent)
+                              u-parent))])
+          (and (symbol? u-name)
+               (or (not u-parent)
+                   (known-struct-type?
+                    (find-known u-parent prim-knowns knowns imports mutated)))
+               (exact-nonnegative-integer? fields)
+               (if maker
+                   ((length rest) . = . (+ ARGUMENT-COUNT-BEFORE-TYPE-FIELDS (known-struct-type-maker-field-count maker)))
+                   ((length rest) . <= . ARGUMENT-COUNT-BEFORE-TYPE-FIELDS))
+               (let ([prefab-imms
+                      ;; The inspector argument needs to be missing or duplicable,
+                      ;; and if it's not known to produce a value other than 'prefab,
+                      ;; the list of immutables must be duplicable:
+                      (match rest
+                        [`() 'non-prefab]
+                        [`(,_) 'non-prefab]
+                        [`(,_ #f . ,_) 'non-prefab]
+                        [`(,_ (current-inspector) . ,_) 'non-prefab]
+                        [`(,_ 'current . ,_) 'non-prefab]
+                        [`(,_ 'prefab ,_ ',immutables . ,_) immutables]
+                        [`(,_ 'prefab ,_) '()]
+                        [`(,_ 'prefab) '()]
+                        [`,_ #f])]
+                     [parent-sti (and u-parent (find-known u-parent prim-knowns knowns imports mutated))])
+                 (define (includes-property? name)
+                   (and (pair? rest)
+                        (match (car rest)
+                          [`(list (cons ,props ,vals) ...)
+                           (for/or ([prop (in-list props)])
+                             (eq? (unwrap prop) name))]
+                          [`,_ #f])))
+                 (define (handle-proc-spec proc-spec imms)
+                   (cond
+                     [(not proc-spec) imms]
+                     [(exact-nonnegative-integer? proc-spec) (cons proc-spec imms)]
+                     [(lambda? proc-spec) imms]
+                     [else
+                      (let ([proc-spec (unwrap proc-spec)])
+                        (and
+                         (symbol? proc-spec)
+                         (let ([k (find-known proc-spec prim-knowns knowns imports mutated)])
+                           (cond
+                             [(not k) #f]
+                             [(known-literal? k)
+                              (let ([v (known-literal-value k)])
+                                (and (or (not v) (exact-nonnegative-integer? v))
+                                     (handle-proc-spec v imms)))]
+                             [(known-procedure? k) imms]
+                             [else #f]))))]))
+                 (define constructor-name-expr (and ((length rest) . > . 5)
+                                                    (list-ref rest 5)))
+                 (define non-prefab-imms
+                   (and (eq? prefab-imms 'non-prefab)
+                        (match rest
+                          [`() '()]
+                          [`(,_) '()]
+                          [`(,_ ,_) '()]
+                          [`(,_ ,_ ,proc-spec)
+                           (handle-proc-spec proc-spec '())]
+                          [`(,_ ,_ ,proc-spec ',immutables . ,_)
+                           (handle-proc-spec proc-spec immutables)]
+                          [`,_ #f])))
+                 (and (if (eq? prefab-imms 'non-prefab)
+                          non-prefab-imms
+                          prefab-imms)
+                      (or (not u-parent) parent-sti)
+                      (struct-type-info name
+                                        #f
+                                        (and maker (cons maker maker-im))
+                                        parent
+                                        fields
+                                        (+ fields (if u-parent
+                                                      (known-struct-type-field-count parent-sti)
+                                                      0))
+                                        ;; no guard & no prop:chaperone-unsafe-undefined => pure constructor
+                                        (and (or (not u-parent)
+                                                 (known-struct-type-pure-constructor? parent-sti))
+                                             (or ((length rest) . < . 5)
+                                                 (not (unwrap (list-ref rest 4))))
+                                             (not (includes-property? 'prop:chaperone-unsafe-undefined)))
+                                        (includes-property? 'prop:authentic)
+                                        (includes-property? 'prop:sealed)
+                                        (if (eq? prefab-imms 'non-prefab)
+                                            #f
+                                            prefab-imms)
+                                        non-prefab-imms
+                                        constructor-name-expr
+                                        rest)))))]
+       [else #f])]
+    [`(make-struct-type-type (quote ,name) ,fields)
+     (and (exact-nonnegative-integer? fields)
+          (struct-type-info name
+                            #t
+                            '|#%base-rtd|
+                            '|#%base-rtd| ; parent
+                            fields
+                            (+ fields NUMBER-OF-BASE-RTD-FIELDS)
+                            #t ; pure constructor
+                            #t ; authentic
+                            #f ; sealed
+                            #f ; not prefab
+                            (for/list ([i (in-range fields)]) #t) ; all immutable
+                            #f
+                            null))]
     [`,_ #f]))
 
 ;; Check the degree to which `e` has the shape of a property list,

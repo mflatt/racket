@@ -131,6 +131,49 @@
                                                                     (struct-type-info-sealed? info))))
             info)]
           [else (maybe-immediate-values)])]
+       [`((,struct:st ,maker ,st? ,st-refs ...)
+          (let-values (((,struct: ,make ,? ,-ref) (make-struct-type-type ,_ ,n)))
+            (values ,struct:2
+                    ,make2
+                    ,?2
+                    ,make-accs ...)))
+        (cond
+          [(and (exact-nonnegative-integer? n)
+                (wrap-eq? struct: struct:2)
+                (wrap-eq? make make2)
+                (wrap-eq? ? ?2)
+                (= (length make-accs) n))
+           (define type (string->uninterned-symbol (symbol->string (unwrap maker))))
+           (define authentic? #t)
+           (define sealed? #f)
+           (values
+            (let* ([knowns (hash-set knowns
+                                     (unwrap struct:st)
+                                     (known-struct-type type
+                                                        (+ NUMBER-OF-BASE-RTD-FIELDS n)
+                                                        #t ; pure-constructor?
+                                                        sealed?))]
+                   [knowns (hash-set knowns
+                                     (unwrap st?)
+                                     (known-struct-predicate 2 type struct:st authentic? sealed?))]
+                   [knowns (hash-set knowns (unwrap maker)
+                                     (known-struct-type-maker (arithmetic-shift 1 (+ 11 (unwrap n)))
+                                                              struct:st
+                                                              (unwrap n)))]
+                   [knowns (for/fold ([knowns knowns]) ([make-acc (in-list make-accs)]
+                                                        [st-ref (in-list st-refs)])
+                             (match make-acc
+                               [`(make-struct-field-accessor ,ref ,pos . ,_)
+                                (if (and (eq? ref -ref)
+                                         (exact-integer? pos)
+                                         (<= 0 pos (sub1 n)))
+                                    (hash-set knowns (unwrap st-ref)
+                                              (known-field-accessor 2 type struct:st #t (+ NUMBER-OF-BASE-RTD-FIELDS pos) #t))
+                                    knowns)]
+                               [`,_ knowns]))])
+              knowns)
+            #f)]
+          [else (nothing)])]
        [`((,prop:s ,s? ,s-ref) (make-struct-type-property ,_ . ,rest))
         (values
          (add-struct-type-property-known prop:s s-ref s?

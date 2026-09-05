@@ -14,14 +14,15 @@
          struct-convert-local)
 
 (define (struct-convert form prim-knowns knowns imports exports mutated
-                        schemify target no-prompt? top?)
+                        schemify inline-type-id target no-prompt? top?)
   (match form
     [`(define-values (,struct:s ,make-s ,s? ,acc/muts ...)
-        (let-values (((,struct: ,make ,?1 ,-ref ,-set!) ,mk))
+        (let-values (((,struct: ,make ,?1 ,-ref . ,maybe-set!) ,mk))
           (values ,struct:2
                   ,make2
                   ,?2
                   ,make-acc/muts ...)))
+     (define -set! (and (pair? maybe-set!) (car maybe-set!)))
      ;; Convert a `make-struct-type` binding into a 
      ;; set of bindings that Chez's cp0 recognizes,
      ;; and push the struct-specific extra work into
@@ -36,6 +37,9 @@
                             [`',sym (symbol? sym)]
                             [`,_ (or (not contract) (string? contract))]))
                         (match (unwrap-let make-acc/mut)
+                          [`(make-struct-field-accessor ,ref-id ,pos)
+                           (and (wrap-eq? ref-id -ref)
+                                (exact-nonnegative-integer? pos))]
                           [`(make-struct-field-accessor ,ref-id ,pos ',field-name)
                            (and (wrap-eq? ref-id -ref)
                                 (symbol? field-name)
@@ -70,6 +74,10 @@
                       (make-struct-type-info mk prim-knowns knowns imports mutated)))
      (cond
        [(and sti
+             ;; make use `-set!` is present if not `make-struct-type-type`:
+             (match mk
+               [`(make-struct-type-type . ,_) (null? maybe-set!)]
+               [`,_ (and (pair? maybe-set!) (null? (cdr maybe-set!)))])
              ;; make sure all accessor/mutator positions are in range:
              (for/and ([make-acc/mut (in-list make-acc/muts)])
                (match (unwrap-let make-acc/mut)
@@ -83,6 +91,9 @@
              (or no-prompt?
                  (null? (struct-type-info-rest sti))
                  (not (set!ed-mutated-state? (hash-ref mutated (unwrap struct:s) #f)))))
+        (define make-type-type? (match mk
+                                  [`(make-struct-type-type . ,_) #t]
+                                  [`,_ #f]))
         (define can-impersonate? (not (struct-type-info-authentic? sti)))
         (define generate-check? (or can-impersonate?
                                     (not (aim? target 'system))))
@@ -106,62 +117,95 @@
                                                           ,(struct-type-info-immediate-field-count sti)
                                                           0
                                                           ,(schemify (struct-type-info-parent sti) knowns)
-                                                          ,@(schemify-body schemify knowns (struct-type-info-rest sti)))))
+                                                          ,@(schemify-body schemify knowns
+                                                                           (let ([rest (struct-type-info-rest sti)])
+                                                                             (let loop ([rest rest]
+                                                                                        [n ARGUMENT-COUNT-BEFORE-TYPE-FIELDS])
+                                                                               (cond
+                                                                                 [(null? rest) null]
+                                                                                 [(zero? n) null]
+                                                                                 [else (cons (car rest)
+                                                                                             (loop (cdr rest) (sub1 n)))])))))))
                  null)
-           (define ,struct:s (make-record-type-descriptor ',(struct-type-info-name sti)
-                                                          ,(schemify (struct-type-info-parent sti) knowns)
-                                                          ,(if (not (struct-type-info-prefab-immutables sti))
-                                                               (if (and top?
-                                                                        (aim? target 'system))
-                                                                   `(#%nongenerative-uid ,(struct-type-info-name sti))
-                                                                   #f)
-                                                               `(structure-type-lookup-prefab-uid
-                                                                 ',(struct-type-info-name sti)
-                                                                 ,(schemify (struct-type-info-parent sti) knowns)
-                                                                 ,(struct-type-info-immediate-field-count sti)
-                                                                 0 #f
-                                                                 ',(struct-type-info-prefab-immutables sti)))
-                                                          ,(struct-type-info-sealed? sti)
-                                                          #f
-                                                          '(,(struct-type-info-immediate-field-count sti)
-                                                            .
-                                                            ,(let* ([n (struct-type-info-immediate-field-count sti)]
-                                                                    [mask (sub1 (arithmetic-shift 1 n))])
-                                                               (cond
-                                                                 [(struct-type-info-non-prefab-immutables sti)
-                                                                  =>
-                                                                  (lambda (immutables)
-                                                                    (let loop ([imms immutables] [mask mask])
-                                                                      (cond
-                                                                        [(null? imms) mask]
-                                                                        [else
-                                                                         (let ([m (bitwise-not (arithmetic-shift 1 (car imms)))])
-                                                                           (loop (cdr imms) (bitwise-and mask m)))])))]
-                                                                 [else
-                                                                  mask])))))
+           (define ,struct:s (,@(if (struct-type-info-base-rtd sti)
+                                    (list '|#%make-record-type-descriptor|
+                                          (let ([base-rtd (struct-type-info-base-rtd sti)])                                            
+                                            (if (symbol? base-rtd)
+                                                (schemify base-rtd knowns)
+                                                (schemify (inline-type-id (car base-rtd) (cdr base-rtd)) knowns))))
+                                    '(make-record-type-descriptor))
+                              ',(struct-type-info-name sti)
+                              ,(schemify (struct-type-info-parent sti) knowns)
+                              ,(if (not (struct-type-info-prefab-immutables sti))
+                                   (if (and top?
+                                            (aim? target 'system))
+                                       `(#%nongenerative-uid ,(struct-type-info-name sti))
+                                       #f)
+                                   `(structure-type-lookup-prefab-uid
+                                     ',(struct-type-info-name sti)
+                                     ,(schemify (struct-type-info-parent sti) knowns)
+                                     ,(struct-type-info-immediate-field-count sti)
+                                     0 #f
+                                     ',(struct-type-info-prefab-immutables sti)))
+                              ,(struct-type-info-sealed? sti)
+                              #f
+                              ,(if (struct-type-info-is-type-type? sti)
+                                   ;; no anonymous fields for an rtd
+                                   `(quote ,(for/vector ([i (in-range (struct-type-info-immediate-field-count sti))])
+                                              `(immutable field)))
+                                   ;; normal record type: use anonymous fields with mutability mask
+                                   `(quote
+                                     (,(struct-type-info-immediate-field-count sti)
+                                      .
+                                      ,(let* ([n (struct-type-info-immediate-field-count sti)]
+                                              [mask (sub1 (arithmetic-shift 1 n))])
+                                         (cond
+                                           [(struct-type-info-non-prefab-immutables sti)
+                                            =>
+                                            (lambda (immutables)
+                                              (let loop ([imms immutables] [mask mask])
+                                                (cond
+                                                  [(null? imms) mask]
+                                                  [else
+                                                   (let ([m (bitwise-not (arithmetic-shift 1 (car imms)))])
+                                                     (loop (cdr imms) (bitwise-and mask m)))])))]
+                                           [else
+                                            mask])))))
+                              ,@(if (struct-type-info-base-rtd sti)
+                                    (cons '(quote make-struct-type)
+                                          (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
+                                                                     null
+                                                                     (list-tail (struct-type-info-rest sti)
+                                                                                ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)))])
+                                            (schemify e knowns)))
+                                    null)))
            ,@(if finish!-id
                  `((define ,(deterministic-gensym "effect") (,finish!-id ,struct:s)))
                  null)
-           (define ,make-s ,(let ([ctr `(record-constructor
-                                         (make-record-constructor-descriptor ,struct:s #f #f))])
-                              (define ctr-expr
-                                (if (struct-type-info-pure-constructor? sti)
-                                    ctr
-                                    `(struct-type-constructor-add-guards ,ctr ,struct:s ',(struct-type-info-name sti))))
-                              (define name-expr (struct-type-info-constructor-name-expr sti))
-                              (define c
-                                (match name-expr
-                                  [`#f
-                                   (wrap-property-set ctr-expr 'inferred-name (struct-type-info-name sti))]
-                                  [`',sym
-                                   (if (symbol? sym)
-                                       (wrap-property-set ctr-expr 'inferred-name sym)
-                                       `(procedure-rename ,ctr-expr ,name-expr))]
-                                  [`,_
-                                   `(procedure-rename ,ctr-expr ,name-expr)]))
-                              (if system-opaque?
-                                  c
-                                  `(#%struct-constructor ,c ,(arithmetic-shift 1 (struct-type-info-field-count sti))))))
+           (define ,make-s ,(if make-type-type?
+                                `(|#%make-struct-type-type| ,struct:s
+                                                            ',(struct-type-info-name sti)
+                                                            ,(struct-type-info-immediate-field-count sti))
+                                (let ([ctr `(record-constructor
+                                             (make-record-constructor-descriptor ,struct:s #f #f))])
+                                  (define ctr-expr
+                                    (if (struct-type-info-pure-constructor? sti)
+                                        ctr
+                                        `(struct-type-constructor-add-guards ,ctr ,struct:s ',(struct-type-info-name sti))))
+                                  (define name-expr (struct-type-info-constructor-name-expr sti))
+                                  (define c
+                                    (match name-expr
+                                      [`#f
+                                       (wrap-property-set ctr-expr 'inferred-name (struct-type-info-name sti))]
+                                      [`',sym
+                                       (if (symbol? sym)
+                                           (wrap-property-set ctr-expr 'inferred-name sym)
+                                           `(procedure-rename ,ctr-expr ,name-expr))]
+                                      [`,_
+                                       `(procedure-rename ,ctr-expr ,name-expr)]))
+                                  (if system-opaque?
+                                      c
+                                      `(#%struct-constructor ,c ,(arithmetic-shift 1 (struct-type-info-field-count sti)))))))
            (define ,raw-s? ,(let ([p (name-procedure
                                       (build-name "" (struct-type-info-name sti) "" '|| "?")
                                       `(record-predicate ,struct:s))])
@@ -255,6 +299,8 @@
                                  `(#%struct-field-mutator ,p ,struct:s ,pos)))))
                      raw-def))
                (match (unwrap-let make-acc/mut)
+                 [`(make-struct-field-accessor ,_ ,pos)
+                  (build-accessor pos 'field #f 'racket)]
                  [`(make-struct-field-accessor ,_ ,pos ',field-name)
                   (build-accessor pos field-name #f 'racket)]
                  [`(make-struct-field-accessor ,_ ,pos ',field/proc-name ,contract)
@@ -273,7 +319,7 @@
 
 (define (struct-convert-local form #:letrec? [letrec? #f]
                               prim-knowns knowns imports mutated simples
-                              schemify
+                              schemify inline-type-id
                               #:unsafe-mode? unsafe-mode?
                               #:target target)
   (match form
@@ -282,7 +328,7 @@
      (define new-seq
        (struct-convert defn
                        prim-knowns knowns imports #f mutated
-                       schemify target #t #f))
+                       schemify inline-type-id target #t #f))
      (and new-seq
           (match new-seq
             [`(begin . ,new-seq)

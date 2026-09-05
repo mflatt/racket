@@ -2837,6 +2837,167 @@
          0
          s
          'needed))))))
+(define finish_2984
+  (make-struct-type-install-properties
+   '(known-struct-type-maker)
+   2
+   0
+   (if (struct-type? struct:known-procedure)
+     struct:known-procedure
+     (check-struct-type 'struct struct:known-procedure))
+   null
+   'prefab
+   #f
+   '(0 1)
+   #f
+   'known-struct-type-maker))
+(define struct:known-struct-type-maker
+  (make-record-type-descriptor
+   'known-struct-type-maker
+   (if (struct-type? struct:known-procedure)
+     struct:known-procedure
+     (check-struct-type 'struct struct:known-procedure))
+   (structure-type-lookup-prefab-uid
+    'known-struct-type-maker
+    (if (struct-type? struct:known-procedure)
+      struct:known-procedure
+      (check-struct-type 'struct struct:known-procedure))
+    2
+    0
+    #f
+    '(0 1))
+   #f
+   #f
+   '(2 . 3)))
+(define effect_2428 (finish_2984 struct:known-struct-type-maker))
+(define known-struct-type-maker
+  (|#%name|
+   known-struct-type-maker
+   (record-constructor
+    (make-record-constructor-descriptor
+     struct:known-struct-type-maker
+     #f
+     #f))))
+(define known-struct-type-maker?_2195
+  (|#%name|
+   known-struct-type-maker?
+   (record-predicate struct:known-struct-type-maker)))
+(define known-struct-type-maker?
+  (|#%name|
+   known-struct-type-maker?
+   (lambda (v)
+     (if (known-struct-type-maker?_2195 v)
+       #t
+       ($value
+        (if (impersonator? v)
+          (known-struct-type-maker?_2195 (impersonator-val v))
+          #f))))))
+(define known-struct-type-maker-base-rtd_2623
+  (|#%name|
+   known-struct-type-maker-base-rtd
+   (record-accessor struct:known-struct-type-maker 0)))
+(define known-struct-type-maker-base-rtd
+  (|#%name|
+   known-struct-type-maker-base-rtd
+   (lambda (s)
+     (if (known-struct-type-maker?_2195 s)
+       (known-struct-type-maker-base-rtd_2623 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-maker-base-rtd_2623
+         struct:known-struct-type-maker
+         0
+         s
+         'base-rtd))))))
+(define known-struct-type-maker-field-count_2792
+  (|#%name|
+   known-struct-type-maker-field-count
+   (record-accessor struct:known-struct-type-maker 1)))
+(define known-struct-type-maker-field-count
+  (|#%name|
+   known-struct-type-maker-field-count
+   (lambda (s)
+     (if (known-struct-type-maker?_2195 s)
+       (known-struct-type-maker-field-count_2792 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-maker-field-count_2792
+         struct:known-struct-type-maker
+         1
+         s
+         'field-count))))))
+(define finish_3037
+  (make-struct-type-install-properties
+   '(known-struct-type-maker/need-imports)
+   1
+   0
+   (if (struct-type? struct:known-struct-type-maker)
+     struct:known-struct-type-maker
+     (check-struct-type 'struct struct:known-struct-type-maker))
+   null
+   'prefab
+   #f
+   '(0)
+   #f
+   'known-struct-type-maker/need-imports))
+(define struct:known-struct-type-maker/need-imports
+  (make-record-type-descriptor
+   'known-struct-type-maker/need-imports
+   (if (struct-type? struct:known-struct-type-maker)
+     struct:known-struct-type-maker
+     (check-struct-type 'struct struct:known-struct-type-maker))
+   (structure-type-lookup-prefab-uid
+    'known-struct-type-maker/need-imports
+    (if (struct-type? struct:known-struct-type-maker)
+      struct:known-struct-type-maker
+      (check-struct-type 'struct struct:known-struct-type-maker))
+    1
+    0
+    #f
+    '(0))
+   #f
+   #f
+   '(1 . 1)))
+(define effect_2631 (finish_3037 struct:known-struct-type-maker/need-imports))
+(define known-struct-type-maker/need-imports
+  (|#%name|
+   known-struct-type-maker/need-imports
+   (record-constructor
+    (make-record-constructor-descriptor
+     struct:known-struct-type-maker/need-imports
+     #f
+     #f))))
+(define known-struct-type-maker/need-imports?_2783
+  (|#%name|
+   known-struct-type-maker/need-imports?
+   (record-predicate struct:known-struct-type-maker/need-imports)))
+(define known-struct-type-maker/need-imports?
+  (|#%name|
+   known-struct-type-maker/need-imports?
+   (lambda (v)
+     (if (known-struct-type-maker/need-imports?_2783 v)
+       #t
+       ($value
+        (if (impersonator? v)
+          (known-struct-type-maker/need-imports?_2783 (impersonator-val v))
+          #f))))))
+(define known-struct-type-maker/need-imports-needed_1964
+  (|#%name|
+   known-struct-type-maker/need-imports-needed
+   (record-accessor struct:known-struct-type-maker/need-imports 0)))
+(define known-struct-type-maker/need-imports-needed
+  (|#%name|
+   known-struct-type-maker/need-imports-needed
+   (lambda (s)
+     (if (known-struct-type-maker/need-imports?_2783 s)
+       (known-struct-type-maker/need-imports-needed_1964 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-maker/need-imports-needed_1964
+         struct:known-struct-type-maker/need-imports
+         0
+         s
+         'needed))))))
 (define finish_2492
   (make-struct-type-install-properties
    '(known-struct-type-property/immediate-guard)

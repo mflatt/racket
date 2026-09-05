@@ -517,7 +517,7 @@
                                `[,formals ,@(schemify-body (maybe-unsafe v body) 'tail)]))
              explicit-unnamed?)]
            [`(define-values (,struct:s ,make-s ,s? ,acc/muts ...)
-               (let-values (((,struct: ,make ,?1 ,-ref ,-set!) ,mk))
+               (let-values (((,struct: ,make ,?1 ,-ref . ,_) ,mk))
                  (values ,struct:2
                          ,make2
                          ,?2
@@ -526,6 +526,7 @@
             (define new-seq
               (struct-convert v prim-knowns knowns imports exports mutated
                               (lambda (v knowns) (schemify/knowns knowns inline-fuel 'fresh unsafe-mode? v))
+                              (lambda (k im) (inline-type-id k im add-import! mutated imports))
                               target no-prompt? #t))
             (or new-seq
                 (match v
@@ -609,6 +610,7 @@
             (or (and (not (or (aim? target 'interp) (aim? target 'cify)))
                      (struct-convert-local v prim-knowns knowns imports mutated simples
                                            (lambda (v knowns) (schemify/knowns knowns inline-fuel 'fresh unsafe-mode? v))
+                                           (lambda (k im) (inline-type-id k im add-import! mutated imports))
                                            #:unsafe-mode? unsafe-mode?
                                            #:target target))
                 (unnest-let
@@ -651,6 +653,7 @@
             (cond
               [(struct-convert-local v #:letrec? #t prim-knowns knowns imports mutated simples
                                      (lambda (v knowns) (schemify/knowns knowns inline-fuel 'fresh unsafe-mode? v))
+                                     (lambda (k im) (inline-type-id k im add-import! mutated imports))
                                      #:unsafe-mode? unsafe-mode?
                                      #:target target)
                => (lambda (form) form)]

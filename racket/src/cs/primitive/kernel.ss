@@ -582,6 +582,7 @@
   [make-struct-field-accessor (known-procedure/single-valued 60)]
   [make-struct-field-mutator (known-procedure/single-valued 60)]
   [make-struct-type (known-procedure 4080)]
+  [make-struct-type-type (known-procedure 4)]
   [make-struct-type-property (known-procedure 254)]
   [make-thread-cell (known-procedure/allocates 6)]
   [make-thread-group (known-procedure/no-prompt 3)]
