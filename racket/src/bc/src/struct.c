@@ -100,6 +100,7 @@ static Scheme_Object *check_cpointer_property_value_ok(int argc, Scheme_Object *
 static Scheme_Object *check_checked_proc_property_value_ok(int argc, Scheme_Object *argv[]);
 
 static Scheme_Object *make_struct_type(int argc, Scheme_Object *argv[]);
+static Scheme_Object *make_struct_type_type(int argc, Scheme_Object *argv[]);
 
 static Scheme_Object *make_struct_field_accessor(int argc, Scheme_Object *argv[]);
 static Scheme_Object *make_struct_field_mutator(int argc, Scheme_Object *argv[]);
@@ -112,6 +113,7 @@ static Scheme_Object *handle_evt_p(int argc, Scheme_Object *argv[]);
 
 static Scheme_Object *struct_p(int argc, Scheme_Object *argv[]);
 static Scheme_Object *struct_type_p(int argc, Scheme_Object *argv[]);
+static Scheme_Object *struct_type_type_p(int argc, Scheme_Object *argv[]);
 static Scheme_Object *proc_struct_type_p(int argc, Scheme_Object *argv[]);
 
 static Scheme_Object *struct_info(int argc, Scheme_Object *argv[]);
@@ -480,6 +482,13 @@ scheme_init_struct (Scheme_Startup_Env *env)
                              scheme_make_struct_type_proc,
                              env);
 
+  scheme_addto_prim_instance("make-struct-type-type",
+                             scheme_make_prim_w_arity2(make_struct_type_type,
+                                                       "make-struct-type-type",
+                                                       3, 3,
+                                                       4, 4),
+                             env);
+
   REGISTER_SO(scheme_make_struct_type_property_proc);
   scheme_make_struct_type_property_proc = scheme_make_prim_w_arity2(make_struct_type_property,
                                                                     "make-struct-type-property",
@@ -560,6 +569,12 @@ scheme_init_struct (Scheme_Startup_Env *env)
                                                        1, 1, 1);
   scheme_addto_prim_instance("struct-type?", scheme_struct_type_p_proc, env);
 
+  scheme_addto_prim_instance("struct-type-type?",
+                             scheme_make_folding_prim(struct_type_type_p,
+                                                      "struct-type-type?",
+                                                      1, 1, 1),
+                             env);
+    
   scheme_addto_prim_instance("struct-type-property?",
 			     scheme_make_folding_prim(struct_type_property_p,
                                                       "struct-type-property?",
@@ -2847,6 +2862,14 @@ static Scheme_Object *
 struct_type_p(int argc, Scheme_Object *argv[])
 {
   return (SCHEME_CHAPERONE_STRUCT_TYPEP(argv[0])
+          ? scheme_true : scheme_false);
+}
+
+static Scheme_Object *
+struct_type_type_p(int argc, Scheme_Object *argv[])
+{
+  return ((SCHEME_STRUCT_TYPEP(argv[0])
+           && ((Scheme_Struct_Type *)arg[0])->more_flags & STRUCT_TYPE_FLAG_META)
           ? scheme_true : scheme_false);
 }
 
