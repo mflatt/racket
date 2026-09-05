@@ -524,6 +524,9 @@
 (define (|#%struct-field-mutator| p rtd pos)
   (make-wrapper-procedure p 4 (cons pos rtd)))
 
+(define |#%make-record-type-descriptor| #%$make-record-type-descriptor)
+(define |#%base-rtd| #!base-rtd)
+
 (define (struct-constructor-procedure? v)
   (let ([v (strip-impersonator v)])
     (and (wrapper-procedure? v)
@@ -653,71 +656,130 @@
     [(name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard)
      (make-struct-type name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard #f)]
     [(name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name)
-     (let* ([finish! (check-make-struct-type-arguments 'make-struct-type name parent-rtd init-count auto-count
-                                                       props insp proc-spec immutables guard constructor-name #f)]
-            [prefab-uid (and (eq? insp 'prefab)
-                             (structure-type-lookup-prefab-uid name parent-rtd init-count auto-count auto-val immutables))]
-            [parent-rtd* (strip-impersonator parent-rtd)]
-            [parent-fi (if parent-rtd*
-                           (struct-type-field-info parent-rtd*)
-                           empty-field-info)]
-            [rtd (make-record-type-descriptor name
-                                              parent-rtd*
-                                              prefab-uid
-                                              (#%ormap (lambda (p) (eq? prop:sealed (car p))) props)
-                                              #f
-                                              (cons
-                                               (+ init-count auto-count)
-                                               (let ([mask (sub1 (general-arithmetic-shift 1 (+ init-count auto-count)))])
-                                                 (if (eq? insp 'prefab)
-                                                     mask
-                                                     (let loop ([imms (if (exact-nonnegative-integer? proc-spec)
-                                                                          (cons proc-spec immutables)
-                                                                          immutables)]
-                                                                [mask mask])
-                                                       (cond
-                                                         [(null? imms) mask]
-                                                         [else
-                                                          (let ([m (bitwise-not (arithmetic-shift 1 (car imms)))])
-                                                            (loop (cdr imms) (bitwise-and mask m)))]))))))]
-            [parent-auto*-count (get-field-info-auto*-count parent-fi)]
-            [parent-init*-count (get-field-info-init*-count parent-fi)]
-            [parent-total*-count (get-field-info-total*-count parent-fi)]
-            [init*-count (+ init-count parent-init*-count)]
-            [auto*-count (+ auto-count parent-auto*-count)]
-            [auto-field-adder (and (positive? auto*-count)
-                                   (let ([pfa (get-field-info-auto-adder parent-fi)])
-                                     (lambda (args)
-                                       (args-insert args init-count auto-count auto-val pfa))))]
-            [constructor-name (or constructor-name
-                                  (string->symbol (string-append "make-" (symbol->string name))))])
-       (when (or parent-rtd* auto-field-adder)
-         (let ([field-info (make-field-info init*-count auto*-count auto-field-adder)])
-           (putprop (record-type-uid rtd) 'field-info field-info)))
-       (finish! rtd)
-       (let ([ctr (struct-type-constructor-add-guards
-                   (let ([c (record-constructor rtd)])
-                     (procedure-rename
-                      (if (zero? auto*-count)
-                          c
-                          (procedure-reduce-arity
-                           (lambda args
-                             (apply c (reverse (auto-field-adder (reverse args)))))
-                           init*-count))
-                      constructor-name))
-                   rtd
-                   constructor-name)]
-             [pred (procedure-rename
-                    (lambda (v)
-                      (or (record? v rtd)
-                          (and (impersonator? v)
-                               (record? (impersonator-val v) rtd))))
-                    (string->symbol (string-append (symbol->string name) "?")))])
-         (values rtd
-                 (|#%struct-constructor| ctr (procedure-arity-mask ctr))
-                 (|#%struct-predicate| pred)
-                 (make-position-based-accessor rtd parent-total*-count (+ init-count auto-count))
-                 (make-position-based-mutator rtd parent-total*-count (+ init-count auto-count)))))]))
+     (do-make-struct-type #!base-rtd
+                          name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
+                          '())]))
+
+(define (do-make-struct-type base-rtd
+                             name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
+                             more)
+  (let* ([finish! (check-make-struct-type-arguments 'make-struct-type name parent-rtd init-count auto-count
+                                                    props insp proc-spec immutables guard constructor-name #f)]
+         [prefab-uid (and (eq? insp 'prefab)
+                          (structure-type-lookup-prefab-uid name parent-rtd init-count auto-count auto-val immutables))]
+         [parent-rtd* (strip-impersonator parent-rtd)]
+         [parent-fi (if parent-rtd*
+                        (struct-type-field-info parent-rtd*)
+                        empty-field-info)]
+         [rtd (#%apply #%$make-record-type-descriptor
+                       base-rtd
+                       name
+                       parent-rtd*
+                       prefab-uid
+                       (#%ormap (lambda (p) (eq? prop:sealed (car p))) props)
+                       #f
+                       (cons
+                        (+ init-count auto-count)
+                        (let ([mask (sub1 (general-arithmetic-shift 1 (+ init-count auto-count)))])
+                          (if (eq? insp 'prefab)
+                              mask
+                              (let loop ([imms (if (exact-nonnegative-integer? proc-spec)
+                                                   (cons proc-spec immutables)
+                                                   immutables)]
+                                         [mask mask])
+                                (cond
+                                  [(null? imms) mask]
+                                  [else
+                                   (let ([m (bitwise-not (arithmetic-shift 1 (car imms)))])
+                                     (loop (cdr imms) (bitwise-and mask m)))])))))
+                       'make-struct-type
+                       more)]
+         [parent-auto*-count (get-field-info-auto*-count parent-fi)]
+         [parent-init*-count (get-field-info-init*-count parent-fi)]
+         [parent-total*-count (get-field-info-total*-count parent-fi)]
+         [init*-count (+ init-count parent-init*-count)]
+         [auto*-count (+ auto-count parent-auto*-count)]
+         [auto-field-adder (and (positive? auto*-count)
+                                (let ([pfa (get-field-info-auto-adder parent-fi)])
+                                  (lambda (args)
+                                    (args-insert args init-count auto-count auto-val pfa))))]
+         [constructor-name (or constructor-name
+                               (string->symbol (string-append "make-" (symbol->string name))))])
+    (when (or parent-rtd* auto-field-adder)
+      (let ([field-info (make-field-info init*-count auto*-count auto-field-adder)])
+        (putprop (record-type-uid rtd) 'field-info field-info)))
+    (finish! rtd)
+    (let ([ctr (struct-type-constructor-add-guards
+                (let ([c (record-constructor rtd)])
+                  (procedure-rename
+                   (if (zero? auto*-count)
+                       c
+                       (procedure-reduce-arity
+                        (lambda args
+                          (apply c (reverse (auto-field-adder (reverse args)))))
+                        init*-count))
+                   constructor-name))
+                rtd
+                constructor-name)]
+          [pred (procedure-rename
+                 (lambda (v)
+                   (or (record? v rtd)
+                       (and (impersonator? v)
+                            (record? (impersonator-val v) rtd))))
+                 (string->symbol (string-append (symbol->string name) "?")))])
+      (values rtd
+              (|#%struct-constructor| ctr (procedure-arity-mask ctr))
+              (|#%struct-predicate| pred)
+              (make-position-based-accessor rtd parent-total*-count (+ init-count auto-count))
+              (make-position-based-mutator rtd parent-total*-count (+ init-count auto-count))))))
+
+(define NUMBER-OF-BASE-RTD-FIELDS 9)
+
+(define/who (make-struct-type-type name rtd-field-count)
+  (unless (symbol? name) (raise-argument-error who "symbol?" name))
+  (unless (exact-nonnegative-integer? rtd-field-count)
+    (raise-argument-error who "exact-nonnegative-integer?" rtd-field-count))
+  (let* ([rtd (make-record-type-descriptor
+               name
+               #!base-rtd
+               #f
+               #f ; sealed?
+               #t ; opaque?
+               (list->vector
+                (let loop ([rtd-field-count rtd-field-count])
+                  (if (zero? rtd-field-count)
+                      '()
+                      (cons `(immutable field)
+                            (loop (- rtd-field-count 1)))))))]
+         [pred (procedure-rename
+                (lambda (v)
+                  (or (record? v rtd)
+                      (and (impersonator? v)
+                           (record? (impersonator-val v) rtd))))
+                (string->symbol (string-append (symbol->string name) "?")))])
+    (values
+     rtd
+     (|#%make-struct-type-type| rtd name rtd-field-count)
+     (|#%struct-predicate| pred)
+     (make-position-based-accessor rtd NUMBER-OF-BASE-RTD-FIELDS rtd-field-count))))
+
+(define (|#%make-struct-type-type| rtd rtd-name rtd-field-count)
+  (struct-property-set! prop:authentic rtd #t)  
+  (lambda (name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name . args)
+    (define (make-who) (string->symbol (string-append "make-" (#%symbol->string rtd-name) "-struct-type")))
+    (unless (= (length args) rtd-field-count)
+      (raise-arguments-error (make-who)
+                             "extra argument count does not match expected count"
+                             "expected" rtd-field-count
+                             "given" (length args)))
+    (when parent-rtd
+      (unless (eq? rtd (#%$record-type-descriptor parent-rtd))
+        (raise-arguments-error (make-who)
+                               "parent structure type does not instantiate the same meta-type"
+                               "given" parent-rtd)))
+    (do-make-struct-type rtd
+                         name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
+                         args)))
 
 ;; Field count (init + auto) not including parent fields
 (define (record-type-field-count rtd)
@@ -1229,7 +1291,8 @@
 (define (unsafe-sealed-struct? v r)
   (#3%$sealed-record? v r))
 (define (unsafe-struct*-type s)
-  (#%$record-type-descriptor s))
+  (and (#3%$record? s)
+       (#%$record-type-descriptor s)))
 
 ;; internal use only, so doesn't need to have 'unsafe-struct as it's name, etc.:
 (define unsafe-struct #%$record)

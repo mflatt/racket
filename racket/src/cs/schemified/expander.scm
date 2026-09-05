@@ -24056,7 +24056,7 @@
   (lambda (s_0)
     (let ((built-in-s_0 (string->symbol (format ".~s" s_0))))
       (begin (hash-set! built-in-symbols built-in-s_0 #t) built-in-s_0))))
-(define effect_2181
+(define effect_2483
   (begin
     (void
      (begin
@@ -24124,7 +24124,7 @@
              get-thread-id
              threaded?
              make-record-type-descriptor
-             make-record-type-descriptor*
+             |#%make-record-type-descriptor|
              make-record-constructor-descriptor
              record-constructor
              record-accessor
@@ -24138,6 +24138,8 @@
              |#%nongenerative-uid|
              |#%struct-ref-error|
              |#%struct-set!-error|
+             |#%make-struct-type-type|
+             |#%base-rtd|
              unsafe-struct?
              unsafe-sealed-struct?
              unsafe-struct

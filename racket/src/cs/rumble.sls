@@ -247,11 +247,15 @@
           struct-type-property-accessor-procedure?
           struct-type-property-predicate-procedure?
           make-struct-type
+          make-struct-type-type
+          |#%make-struct-type-type|           ; not exported to Racket
+          |#%make-record-type-descriptor|     ; not exported to Racket
           make-struct-type-install-properties ; not exported to Racket
           structure-type-lookup-prefab-uid    ; not exported to Racket
           make-struct-field-accessor
           make-struct-field-mutator
           struct-type-constructor-add-guards ; not exported to Racket
+          |#%base-rtd| ; not exported to Racket
           |#%struct-constructor| ; not exported to Racket
           |#%struct-predicate| ; not exported to Racket
           |#%struct-field-accessor| ; not exported to Racket
