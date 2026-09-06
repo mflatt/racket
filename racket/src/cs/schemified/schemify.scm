@@ -14399,8 +14399,9 @@
            prim-knowns_0
            imports_0
            exports_0
-           serializable?_0
-           added-exports_0)
+           added-exports_0
+           mutated_0
+           serializable?_0)
     (if (known-procedure/can-inline? k_0)
       (let ((expr_0 (known-procedure/can-inline-expr k_0)))
         (let ((needed_0
@@ -14410,6 +14411,7 @@
                 imports_0
                 exports_0
                 added-exports_0
+                mutated_0
                 '()
                 hash2610)))
           (if (not needed_0)
@@ -14438,6 +14440,7 @@
                 imports_0
                 exports_0
                 added-exports_0
+                mutated_0
                 '()
                 hash2610)))
           (if needed_0
@@ -14459,6 +14462,7 @@
                   imports_0
                   exports_0
                   added-exports_0
+                  mutated_0
                   '()
                   hash2610)))
             (if needed_0
@@ -14484,6 +14488,7 @@
                     imports_0
                     exports_0
                     added-exports_0
+                    mutated_0
                     '()
                     hash2610)))
               (if needed_0
@@ -14512,6 +14517,7 @@
                       imports_0
                       exports_0
                       added-exports_0
+                      mutated_0
                       '()
                       hash2610)))
                 (if needed_0
@@ -14537,6 +14543,7 @@
                         imports_0
                         exports_0
                         added-exports_0
+                        mutated_0
                         '()
                         hash2610)))
                   (if needed_0
@@ -14557,6 +14564,7 @@
            imports_0
            exports_0
            added-exports_0
+           mutated_0
            env_0
            needed_0)
     (if needed_0
@@ -14581,6 +14589,7 @@
               imports_0
               exports_0
               added-exports_0
+              mutated_0
               (add-args env_0 args_0)
               needed_0)))
           (if (if (eq? 'case-lambda hd_0)
@@ -14686,6 +14695,7 @@
                                               imports_0
                                               exports_0
                                               added-exports_0
+                                              mutated_0
                                               (add-args env_0 args_0)
                                               needed_1)))
                                         (values needed_2))))
@@ -14709,6 +14719,7 @@
                  imports_0
                  exports_0
                  added-exports_0
+                 mutated_0
                  env_0
                  needed_0)
                 (if (if (eq? 'letrec-values hd_0) #t #f)
@@ -14718,6 +14729,7 @@
                    imports_0
                    exports_0
                    added-exports_0
+                   mutated_0
                    env_0
                    needed_0)
                   (if (if (eq? 'if hd_0)
@@ -14763,6 +14775,7 @@
                         imports_0
                         exports_0
                         added-exports_0
+                        mutated_0
                         env_0
                         (needed-imports
                          thn_0
@@ -14770,6 +14783,7 @@
                          imports_0
                          exports_0
                          added-exports_0
+                         mutated_0
                          env_0
                          (needed-imports
                           els_0
@@ -14777,6 +14791,7 @@
                           imports_0
                           exports_0
                           added-exports_0
+                          mutated_0
                           env_0
                           needed_0)))))
                     (if (if (eq? 'with-continuation-mark hd_0)
@@ -14824,6 +14839,7 @@
                           imports_0
                           exports_0
                           added-exports_0
+                          mutated_0
                           env_0
                           (needed-imports
                            val_0
@@ -14831,6 +14847,7 @@
                            imports_0
                            exports_0
                            added-exports_0
+                           mutated_0
                            env_0
                            (needed-imports
                             body_0
@@ -14838,6 +14855,7 @@
                             imports_0
                             exports_0
                             added-exports_0
+                            mutated_0
                             env_0
                             needed_0)))))
                       (if (if (eq? 'begin hd_0)
@@ -14852,6 +14870,7 @@
                            imports_0
                            exports_0
                            added-exports_0
+                           mutated_0
                            env_0
                            needed_0))
                         (if (if (eq? 'begin0 hd_0)
@@ -14866,6 +14885,7 @@
                              imports_0
                              exports_0
                              added-exports_0
+                             mutated_0
                              env_0
                              needed_0))
                           (if (if (eq? 'begin-unsafe hd_0)
@@ -14881,6 +14901,7 @@
                                imports_0
                                exports_0
                                added-exports_0
+                               mutated_0
                                env_0
                                needed_0))
                             (if (if (eq? 'set! hd_0)
@@ -14917,6 +14938,7 @@
                                       imports_0
                                       exports_0
                                       added-exports_0
+                                      mutated_0
                                       env_0
                                       (needed-imports
                                        rhs_0
@@ -14924,6 +14946,7 @@
                                        imports_0
                                        exports_0
                                        added-exports_0
+                                       mutated_0
                                        env_0
                                        needed_0))))))
                               (if (if (eq? '|#%variable-reference| hd_0) #t #f)
@@ -14962,6 +14985,7 @@
                                        imports_0
                                        exports_0
                                        added-exports_0
+                                       mutated_0
                                        env_0
                                        needed_0))
                                     (let ((u-v_0 (unwrap v_0)))
@@ -15019,69 +15043,75 @@
                                                        (cons
                                                         (cadr cond-val_2)
                                                         #f))
-                                                      (let ((int-id_0
-                                                             (deterministic-gensym
-                                                              u-v_0)))
-                                                        (let ((ext-id_0
-                                                               (letrec*
-                                                                ((loop_0
-                                                                  (|#%name|
-                                                                   loop
-                                                                   (lambda (i_0)
-                                                                     (let ((sym_0
-                                                                            (if (eqv?
-                                                                                 i_0
-                                                                                 0)
-                                                                              u-v_0
-                                                                              (let ((app_0
-                                                                                     (symbol->string
-                                                                                      u-v_0)))
-                                                                                (string-append
-                                                                                 app_0
-                                                                                 (number->string
-                                                                                  i_0))))))
-                                                                       (if (let ((or-part_0
-                                                                                  (hash-ref
-                                                                                   exports_0
-                                                                                   sym_0
-                                                                                   #f)))
-                                                                             (if or-part_0
-                                                                               or-part_0
-                                                                               (hash-ref
-                                                                                added-exports_0
-                                                                                sym_0
-                                                                                #f)))
-                                                                         (loop_0
-                                                                          (add1
-                                                                           i_0))
-                                                                         sym_0))))))
-                                                                (loop_0 0))))
-                                                          (begin
-                                                            (hash-set!
-                                                             added-exports_0
-                                                             u-v_0
-                                                             (list
-                                                              int-id_0
-                                                              ext-id_0))
-                                                            (hash-set!
-                                                             added-exports_0
-                                                             kw2822
-                                                             (let ((app_0
-                                                                    (list
-                                                                     u-v_0
-                                                                     ext-id_0)))
+                                                      (if (simple-mutated-state?
+                                                           (hash-ref
+                                                            mutated_0
+                                                            u-v_0
+                                                            #f))
+                                                        (let ((int-id_0
+                                                               (deterministic-gensym
+                                                                u-v_0)))
+                                                          (let ((ext-id_0
+                                                                 (letrec*
+                                                                  ((loop_0
+                                                                    (|#%name|
+                                                                     loop
+                                                                     (lambda (i_0)
+                                                                       (let ((sym_0
+                                                                              (if (eqv?
+                                                                                   i_0
+                                                                                   0)
+                                                                                u-v_0
+                                                                                (let ((app_0
+                                                                                       (symbol->string
+                                                                                        u-v_0)))
+                                                                                  (string-append
+                                                                                   app_0
+                                                                                   (number->string
+                                                                                    i_0))))))
+                                                                         (if (let ((or-part_0
+                                                                                    (hash-ref
+                                                                                     exports_0
+                                                                                     sym_0
+                                                                                     #f)))
+                                                                               (if or-part_0
+                                                                                 or-part_0
+                                                                                 (hash-ref
+                                                                                  added-exports_0
+                                                                                  sym_0
+                                                                                  #f)))
+                                                                           (loop_0
+                                                                            (add1
+                                                                             i_0))
+                                                                           sym_0))))))
+                                                                  (loop_0 0))))
+                                                            (begin
+                                                              (hash-set!
+                                                               added-exports_0
+                                                               u-v_0
+                                                               (list
+                                                                int-id_0
+                                                                ext-id_0))
+                                                              (hash-set!
+                                                               added-exports_0
+                                                               kw2822
+                                                               (let ((app_0
+                                                                      (list
+                                                                       u-v_0
+                                                                       ext-id_0)))
+                                                                 (cons
+                                                                  app_0
+                                                                  (hash-ref
+                                                                   added-exports_0
+                                                                   kw2822
+                                                                   null))))
+                                                              (hash-set
+                                                               needed_0
+                                                               u-v_0
                                                                (cons
-                                                                app_0
-                                                                (hash-ref
-                                                                 added-exports_0
-                                                                 kw2822
-                                                                 null))))
-                                                            (hash-set
-                                                             needed_0
-                                                             u-v_0
-                                                             (cons
-                                                              ext-id_0
-                                                              #f))))))))))))
+                                                                ext-id_0
+                                                                #f)))))
+                                                        #f))))))))
                                         needed_0)))))))))))))))))
       #f)))
 (define body-needed-imports
@@ -15090,6 +15120,7 @@
            imports_0
            exports_0
            added-exports_0
+           mutated_0
            env_0
            needed_0)
     (letrec*
@@ -15109,6 +15140,7 @@
                                  imports_0
                                  exports_0
                                  added-exports_0
+                                 mutated_0
                                  env_0
                                  needed_1)))
                            (values needed_2))))
@@ -15121,6 +15153,7 @@
            imports_0
            exports_0
            added-exports_0
+           mutated_0
            env_0
            needed_0)
     (if (let ((p_0 (unwrap v_0)))
@@ -15295,6 +15328,7 @@
             imports_0
             exports_0
             added-exports_0
+            mutated_0
             new-env_0
             (letrec*
              ((for-loop_0
@@ -15312,6 +15346,7 @@
                                        imports_0
                                        exports_0
                                        added-exports_0
+                                       mutated_0
                                        new-env_0
                                        needed_1)))
                                  (values needed_2))))
@@ -27302,8 +27337,9 @@
                                                                                                prim-knowns_0
                                                                                                imports_0
                                                                                                exports_1
-                                                                                               serializable?-box_0
-                                                                                               added-exports_0)))
+                                                                                               added-exports_0
+                                                                                               mutated_0
+                                                                                               serializable?-box_0)))
                                                                                          (if (not
                                                                                               (set!ed-mutated-state?
                                                                                                (hash-ref

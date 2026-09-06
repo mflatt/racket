@@ -772,11 +772,6 @@
                              "extra argument count does not match expected count"
                              "expected" rtd-field-count
                              "given" (length args)))
-    (when parent-rtd
-      (unless (eq? rtd (#%$record-type-descriptor parent-rtd))
-        (raise-arguments-error (make-who)
-                               "parent structure type does not instantiate the same meta-type"
-                               "given" parent-rtd)))
     (do-make-struct-type rtd
                          name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
                          args)))
