@@ -139,22 +139,54 @@
                          serializable?-box datum-intern? allow-set!-undefined? add-import! target
                          unsafe-mode? enforce-constant? allow-inline? no-prompt? #t
                          compiler-query))
+       ;; Convert internal to external identifiers for known-value info;
+       ;; this step might add exports, so we need an outer loop to recur
+       ; to handle additions
+       (define added-exports (make-hasheq))
+       (define external-knowns
+         (let loop ([knowns (hasheq)] [ex-ids ex-ids])
+           (define external-knowns
+             (for/fold ([knowns knowns]) ([ex-id (in-list ex-ids)])
+               (define id (ex-int-id ex-id))
+               (define v (known-inline->export-known (hash-ref defn-info id #f)
+                                                     prim-knowns imports exports
+                                                     serializable?-box
+                                                     added-exports))
+               (cond
+                 [(not (set!ed-mutated-state? (hash-ref mutated id #f)))
+                  (define ext-id (ex-ext-id ex-id))
+                  (hash-set knowns ext-id (or v a-known-constant))]
+                 [else knowns])))
+           (define added-ids (hash-ref added-exports '#:added null))
+           (cond
+             [(null? added-ids) external-knowns]
+             [else
+              (hash-remove! added-exports '#:added)
+              (loop external-knowns added-ids)])))
+       (define added-export-ids (hash-values added-exports))
+       (define added-export-body
+         (for/list ([(id ex-id) (in-hash added-exports)])
+           `(variable-set!/define ,(ex-int-id ex-id) ,id ',(variable-constance id defn-info mutated))))
        (define all-grps (append grps (reverse new-grps)))
+       (define all-ex-ids (append added-export-ids ex-ids))
        (values
         ;; Build `lambda` with schemified body:
         `(lambda (instance-variable-reference
                   ,@(for*/list ([grp (in-list all-grps)]
                                 [im (in-list (import-group-imports grp))])
                       (import-id im))
+                  ,@(for/list ([ex-id (in-list added-export-ids)])
+                      (ex-int-id ex-id))
                   ,@(for/list ([ex-id (in-list ex-ids)])
                       (export-id (hash-ref exports (ex-int-id ex-id)))))
-           ,@new-body)
+           ,@new-body
+           ,@added-export-body)
         ;; Imports (external names), possibly extended via inlining:
         (for/list ([grp (in-list all-grps)])
           (for/list ([im (in-list (import-group-imports grp))])
             (import-ext-id im)))
         ;; Exports (external names, but paired with source name if it's different):
-        (for/list ([ex-id (in-list ex-ids)])
+        (for/list ([ex-id (in-list all-ex-ids)])
           (define sym (ex-ext-id ex-id))
           (define int-sym (ex-int-id ex-id))
           (define src-sym (hash-ref src-syms int-sym sym)) ; external name unless 'source-name
@@ -183,17 +215,8 @@
                           [else
                            ;; Otherwise, accept any value:
                            #t]))))))
-        ;; Convert internal to external identifiers for known-value info
-        (for/fold ([knowns (hasheq)]) ([ex-id (in-list ex-ids)])
-          (define id (ex-int-id ex-id))
-          (define v (known-inline->export-known (hash-ref defn-info id #f)
-                                                prim-knowns imports exports
-                                                serializable?-box))
-          (cond
-            [(not (set!ed-mutated-state? (hash-ref mutated id #f)))
-             (define ext-id (ex-ext-id ex-id))
-             (hash-set knowns ext-id (or v a-known-constant))]
-            [else knowns])))])))
+        ;; Known-value info for use by importing linklets
+        external-knowns)])))
 
 ;; ----------------------------------------
 
@@ -458,7 +481,7 @@
   (define ex-id (id-to-variable int-id exports extra-variables))
   `(variable-set!/define ,ex-id ,id ',(variable-constance int-id knowns mutated)))
 
-;; returns a list equilanet to a sequence of `variable-set!/define` forms
+;; returns a list equivalent to a sequence of `variable-set!/define` forms
 (define (make-set-consistent-variables ids exports knowns mutated extra-variables)
   (cond
     [(null? ids) null]
