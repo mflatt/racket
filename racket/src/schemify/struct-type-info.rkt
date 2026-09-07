@@ -12,7 +12,7 @@
          make-struct-type-info
          pure-properties-list
          add-struct-type-property-known
-         NUMBER-OF-BASE-RTD-FIELDS
+         NUMBER-OF-RACKET-BASE-RTD-FIELDS
          ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)
 
 (struct struct-type-info (name is-type-type?
@@ -31,6 +31,7 @@
 (define struct-type-info-rest-properties-list-pos 0)
 
 (define NUMBER-OF-BASE-RTD-FIELDS 9)
+(define NUMBER-OF-RACKET-BASE-RTD-FIELDS (+ NUMBER-OF-BASE-RTD-FIELDS 4))
 (define ARGUMENT-COUNT-BEFORE-TYPE-FIELDS 6) ; number of `rest` arguments that are for `make-struct-type`
 
 ;; Parse `make-struct-type` forms, returning a `struct-type-info`
@@ -143,10 +144,10 @@
      (and (exact-nonnegative-integer? fields)
           (struct-type-info name
                             #t
-                            '|#%base-rtd|
+                            '|#%racket-base-rtd|
                             '|#%base-rtd| ; parent
                             fields
-                            (+ fields NUMBER-OF-BASE-RTD-FIELDS)
+                            (+ fields NUMBER-OF-RACKET-BASE-RTD-FIELDS)
                             #t ; pure constructor
                             #t ; authentic
                             #f ; sealed

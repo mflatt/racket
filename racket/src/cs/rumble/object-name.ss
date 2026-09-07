@@ -67,12 +67,7 @@
 (define (struct-object-name v)
   (let ([rtd (record-rtd v)])
     (and
-     ;; Having an entry in `rtd-props` is a sign that this structure
-     ;; type was created with `make-struct-type`, or it could be a
-     ;; prefab structure type
-     (with-global-lock*
-      (or (hashtable-contains? rtd-props rtd)
-          (getprop (record-type-uid rtd) 'prefab-key+count #f)))
+     (racket-rtd? rtd)
      (object-name (record-rtd v)))))
 
 ;; Since a procedure name is the one way we have to attach static

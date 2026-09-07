@@ -127,13 +127,13 @@
                                                                                  [else (cons (car rest)
                                                                                              (loop (cdr rest) (sub1 n)))])))))))
                  null)
-           (define ,struct:s (,@(if (struct-type-info-base-rtd sti)
-                                    (list '|#%make-record-type-descriptor|
-                                          (let ([base-rtd (struct-type-info-base-rtd sti)])                                            
-                                            (if (symbol? base-rtd)
-                                                (schemify base-rtd knowns)
-                                                (schemify (inline-type-id (car base-rtd) (cdr base-rtd)) knowns))))
-                                    '(make-record-type-descriptor))
+           (define ,struct:s (|#%make-record-type-descriptor|
+                              ,(if (struct-type-info-base-rtd sti)
+                                   (let ([base-rtd (struct-type-info-base-rtd sti)])                                            
+                                     (if (symbol? base-rtd)
+                                         (schemify base-rtd knowns)
+                                         (schemify (inline-type-id (car base-rtd) (cdr base-rtd)) knowns)))
+                                   '|#%racket-base-rtd|)
                               ',(struct-type-info-name sti)
                               ,(schemify (struct-type-info-parent sti) knowns)
                               ,(if (not (struct-type-info-prefab-immutables sti))
@@ -171,13 +171,19 @@
                                                      (loop (cdr imms) (bitwise-and mask m)))])))]
                                            [else
                                             mask])))))
+                              (quote make-struct-type)
+                              ,@(if (not (symbol? (struct-type-info-base-rtd sti)))
+                                    (list '#f
+                                          '#f
+                                          (if (struct-type-info-prefab-immutables sti) '|#%prefab-properties| '(quote ()))
+                                          (if (struct-type-info-prefab-immutables sti) '(quote prefab) '#f))
+                                    null)
                               ,@(if (struct-type-info-base-rtd sti)
-                                    (cons '(quote make-struct-type)
-                                          (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
-                                                                     null
-                                                                     (list-tail (struct-type-info-rest sti)
-                                                                                ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)))])
-                                            (schemify e knowns)))
+                                    (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
+                                                               null
+                                                               (list-tail (struct-type-info-rest sti)
+                                                                          ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)))])
+                                      (schemify e knowns))
                                     null)))
            ,@(if finish!-id
                  `((define ,(deterministic-gensym "effect") (,finish!-id ,struct:s)))

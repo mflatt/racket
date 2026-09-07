@@ -205,15 +205,18 @@
   (|#%name|
    reverse
    (lambda (l_0)
-     (letrec*
-      ((loop_0
-        (|#%name|
-         loop
-         (lambda (a_0 l_1)
-           (if (null? l_1)
-             a_0
-             (let ((app_0 (cons (car l_1) a_0))) (loop_0 app_0 (cdr l_1))))))))
-      (loop_0 null l_0)))))
+     (begin
+       (if (list? l_0) (void) (raise-argument-error 'reverse "list?" l_0))
+       (letrec*
+        ((loop_0
+          (|#%name|
+           loop
+           (lambda (a_0 l_1)
+             (if (null? l_1)
+               a_0
+               (let ((app_0 (cons (car l_1) a_0)))
+                 (loop_0 app_0 (cdr l_1))))))))
+        (loop_0 null l_0))))))
 (define raise-argument-error$1
   (|#%name|
    raise-argument-error
@@ -287,21 +290,70 @@
     prop:stream
     (vector
      (lambda (v_0)
-       (let ((cont?_0 (|#%app| range-ref v_0 2)))
-         (if cont?_0 (not (|#%app| cont?_0 (|#%app| range-ref v_0 0))) #f)))
-     (lambda (v_0) (|#%app| range-ref v_0 0))
+       (let ((cont?_0
+              (|#%app|
+               (check-not-unsafe-undefined range-ref 'range-ref)
+               v_0
+               2)))
+         (if cont?_0
+           (not
+            (|#%app|
+             cont?_0
+             (|#%app|
+              (check-not-unsafe-undefined range-ref 'range-ref)
+              v_0
+              0)))
+           #f)))
      (lambda (v_0)
-       (let ((app_0
-              (let ((app_0 (|#%app| range-ref v_0 1)))
-                (|#%app| app_0 (|#%app| range-ref v_0 0)))))
-         (let ((app_1 (|#%app| range-ref v_0 1)))
-           (make-range app_0 app_1 (|#%app| range-ref v_0 2)))))))
+       (|#%app| (check-not-unsafe-undefined range-ref 'range-ref) v_0 0))
+     (lambda (v_0)
+       (let ((app_0 make-range))
+         (let ((app_1
+                (let ((app_1
+                       (|#%app|
+                        (check-not-unsafe-undefined range-ref 'range-ref)
+                        v_0
+                        1)))
+                  (|#%app|
+                   app_1
+                   (|#%app|
+                    (check-not-unsafe-undefined range-ref 'range-ref)
+                    v_0
+                    0)))))
+           (let ((app_2
+                  (|#%app|
+                   (check-not-unsafe-undefined range-ref 'range-ref)
+                   v_0
+                   1)))
+             (|#%app|
+              app_0
+              app_1
+              app_2
+              (|#%app|
+               (check-not-unsafe-undefined range-ref 'range-ref)
+               v_0
+               2))))))))
    (cons
     prop:gen-sequence
     (lambda (v_0)
-      (let ((app_0 (|#%app| range-ref v_0 1)))
-        (let ((app_1 (|#%app| range-ref v_0 0)))
-          (values values #f app_0 app_1 (|#%app| range-ref v_0 2) #f #f))))))))
+      (let ((app_0
+             (|#%app|
+              (check-not-unsafe-undefined range-ref 'range-ref)
+              v_0
+              1)))
+        (let ((app_1
+               (|#%app|
+                (check-not-unsafe-undefined range-ref 'range-ref)
+                v_0
+                0)))
+          (values
+           values
+           #f
+           app_0
+           app_1
+           (|#%app| (check-not-unsafe-undefined range-ref 'range-ref) v_0 2)
+           #f
+           #f))))))))
 (define check-range$1
   (|#%name|
    check-range
@@ -335,13 +387,42 @@
    (cons
     prop:stream
     (vector
-     (lambda (v_0) (not (pair? (|#%app| list-stream-ref v_0 0))))
-     (lambda (v_0) (car (|#%app| list-stream-ref v_0 0)))
-     (lambda (v_0) (make-list-stream (cdr (|#%app| list-stream-ref v_0 0))))))
+     (lambda (v_0)
+       (not
+        (pair?
+         (|#%app|
+          (check-not-unsafe-undefined list-stream-ref 'list-stream-ref)
+          v_0
+          0))))
+     (lambda (v_0)
+       (car
+        (|#%app|
+         (check-not-unsafe-undefined list-stream-ref 'list-stream-ref)
+         v_0
+         0)))
+     (lambda (v_0)
+       (let ((app_0 make-list-stream))
+         (|#%app|
+          app_0
+          (cdr
+           (|#%app|
+            (check-not-unsafe-undefined list-stream-ref 'list-stream-ref)
+            v_0
+            0)))))))
    (cons
     prop:gen-sequence
     (lambda (v_0)
-      (values car cdr values (|#%app| list-stream-ref v_0 0) pair? #f #f))))))
+      (values
+       car
+       cdr
+       values
+       (|#%app|
+        (check-not-unsafe-undefined list-stream-ref 'list-stream-ref)
+        v_0
+        0)
+       pair?
+       #f
+       #f))))))
 (define check-list
   (lambda (l_0)
     (if (list? l_0) (void) (raise-argument-error$1 'in-list "list?" l_0))))
@@ -450,79 +531,122 @@
    (cons
     prop:stream
     (vector
-     (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 0)))
-     (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 1)))
-     (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 2))))))))
+     (lambda (v_0)
+       (|#%app|
+        (|#%app|
+         (check-not-unsafe-undefined do-stream-ref 'do-stream-ref)
+         v_0
+         0)))
+     (lambda (v_0)
+       (|#%app|
+        (|#%app|
+         (check-not-unsafe-undefined do-stream-ref 'do-stream-ref)
+         v_0
+         1)))
+     (lambda (v_0)
+       (|#%app|
+        (|#%app|
+         (check-not-unsafe-undefined do-stream-ref 'do-stream-ref)
+         v_0
+         2))))))))
 (define empty-stream (make-do-stream (lambda () #t) void void))
-(define map_2353
+(define map_2352
   (|#%name|
    map
    (case-lambda
     ((f_0 l_0)
-     (letrec*
-      ((loop_0
-        (|#%name|
-         loop
-         (lambda (l_1)
-           (if (null? l_1)
-             null
-             (let ((r_0 (cdr l_1)))
-               (let ((app_0 (|#%app| f_0 (car l_1))))
-                 (cons app_0 (loop_0 r_0)))))))))
-      (loop_0 l_0)))
-    ((f_0 l1_0 l2_0)
-     (letrec*
-      ((loop_0
-        (|#%name|
-         loop
-         (lambda (l1_1 l2_1)
-           (if (null? l1_1)
-             null
-             (let ((r1_0 (cdr l1_1)))
-               (let ((r2_0 (cdr l2_1)))
-                 (let ((r1_1 r1_0))
-                   (let ((app_0
-                          (let ((app_0 (car l1_1)))
-                            (|#%app| f_0 app_0 (car l2_1)))))
-                     (cons app_0 (loop_0 r1_1 r2_0)))))))))))
-      (loop_0 l1_0 l2_0)))
-    ((f_0 l_0 . args_0) (gen-map f_0 (cons l_0 args_0))))))
-(define ormap_2207
-  (|#%name|
-   ormap
-   (case-lambda
-    ((f_0 l_0)
-     (if (null? l_0)
-       #f
+     (if (if (procedure? f_0)
+           (if (procedure-arity-includes? f_0 1) (list? l_0) #f)
+           #f)
        (letrec*
         ((loop_0
           (|#%name|
            loop
            (lambda (l_1)
-             (if (null? (cdr l_1))
-               (|#%app| f_0 (car l_1))
+             (if (null? l_1)
+               null
                (let ((r_0 (cdr l_1)))
-                 (let ((or-part_0 (|#%app| f_0 (car l_1))))
-                   (if or-part_0 or-part_0 (loop_0 r_0)))))))))
-        (loop_0 l_0))))
+                 (let ((app_0 (|#%app| f_0 (car l_1))))
+                   (cons app_0 (loop_0 r_0)))))))))
+        (loop_0 l_0))
+       (gen-map f_0 (list l_0))))
     ((f_0 l1_0 l2_0)
-     (if (null? l1_0)
-       #f
+     (if (if (procedure? f_0)
+           (if (procedure-arity-includes? f_0 2)
+             (if (list? l1_0)
+               (if (list? l2_0)
+                 (let ((app_0 (length l1_0))) (= app_0 (length l2_0)))
+                 #f)
+               #f)
+             #f)
+           #f)
        (letrec*
         ((loop_0
           (|#%name|
            loop
            (lambda (l1_1 l2_1)
-             (if (null? (cdr l1_1))
-               (let ((app_0 (car l1_1))) (|#%app| f_0 app_0 (car l2_1)))
+             (if (null? l1_1)
+               null
                (let ((r1_0 (cdr l1_1)))
                  (let ((r2_0 (cdr l2_1)))
                    (let ((r1_1 r1_0))
-                     (let ((or-part_0
+                     (let ((app_0
                             (let ((app_0 (car l1_1)))
                               (|#%app| f_0 app_0 (car l2_1)))))
-                       (if or-part_0 or-part_0 (loop_0 r1_1 r2_0)))))))))))
-        (loop_0 l1_0 l2_0))))
+                       (cons app_0 (loop_0 r1_1 r2_0)))))))))))
+        (loop_0 l1_0 l2_0))
+       (gen-map f_0 (list l1_0 l2_0))))
+    ((f_0 l_0 . args_0) (gen-map f_0 (cons l_0 args_0))))))
+(define ormap_2075
+  (|#%name|
+   ormap
+   (case-lambda
+    ((f_0 l_0)
+     (if (if (procedure? f_0)
+           (if (procedure-arity-includes? f_0 1) (list? l_0) #f)
+           #f)
+       (if (null? l_0)
+         #f
+         (letrec*
+          ((loop_0
+            (|#%name|
+             loop
+             (lambda (l_1)
+               (if (null? (cdr l_1))
+                 (|#%app| f_0 (car l_1))
+                 (let ((r_0 (cdr l_1)))
+                   (let ((or-part_0 (|#%app| f_0 (car l_1))))
+                     (if or-part_0 or-part_0 (loop_0 r_0)))))))))
+          (loop_0 l_0)))
+       (gen-ormap f_0 (list l_0))))
+    ((f_0 l1_0 l2_0)
+     (if (if (procedure? f_0)
+           (if (procedure-arity-includes? f_0 2)
+             (if (list? l1_0)
+               (if (list? l2_0)
+                 (let ((app_0 (length l1_0))) (= app_0 (length l2_0)))
+                 #f)
+               #f)
+             #f)
+           #f)
+       (if (null? l1_0)
+         #f
+         (letrec*
+          ((loop_0
+            (|#%name|
+             loop
+             (lambda (l1_1 l2_1)
+               (if (null? (cdr l1_1))
+                 (let ((app_0 (car l1_1))) (|#%app| f_0 app_0 (car l2_1)))
+                 (let ((r1_0 (cdr l1_1)))
+                   (let ((r2_0 (cdr l2_1)))
+                     (let ((r1_1 r1_0))
+                       (let ((or-part_0
+                              (let ((app_0 (car l1_1)))
+                                (|#%app| f_0 app_0 (car l2_1)))))
+                         (if or-part_0 or-part_0 (loop_0 r1_1 r2_0)))))))))))
+          (loop_0 l1_0 l2_0)))
+       (gen-ormap f_0 (list l1_0 l2_0))))
     ((f_0 l_0 . args_0) (gen-ormap f_0 (cons l_0 args_0))))))
 (define check-args
   (lambda (who_0 f_0 ls_0)
@@ -562,7 +686,8 @@
         (void)
         (call-with-values
          (lambda () (procedure-keywords f_0))
-         (lambda (required-keywords_0 optional-keywords_0)
+         (case-lambda
+          ((required-keywords_0 optional-keywords_0)
            (let ((app_0
                   (if (pair? required-keywords_0)
                     (string-append
@@ -660,11 +785,12 @@
                                                  w_0)))))
                                         (cons app_5 (loop_0 (cdr ls_1)))))))))
                                (loop_0 ls_0)))))
-                           null)))))))))))))))
+                           null))))))))))
+          (args (raise-binding-result-arity-error 2 args))))))))
 (define gen-map
   (lambda (f_0 ls_0)
     (begin
-      #t
+      (check-args 'map f_0 ls_0)
       (letrec*
        ((loop_0
          (|#%name|
@@ -672,14 +798,14 @@
           (lambda (ls_1)
             (if (null? (car ls_1))
               null
-              (let ((next-ls_0 (map_2353 cdr ls_1)))
-                (let ((app_0 (apply f_0 (map_2353 car ls_1))))
+              (let ((next-ls_0 (map_2352 cdr ls_1)))
+                (let ((app_0 (apply f_0 (map_2352 car ls_1))))
                   (cons app_0 (loop_0 next-ls_0)))))))))
        (loop_0 ls_0)))))
 (define gen-ormap
   (lambda (f_0 ls_0)
     (begin
-      #t
+      (check-args 'ormap f_0 ls_0)
       (letrec*
        ((loop_0
          (|#%name|
@@ -688,9 +814,9 @@
             (if (null? (car ls_1))
               #f
               (if (null? (cdar ls_1))
-                (apply f_0 (map_2353 car ls_1))
-                (let ((next-ls_0 (map_2353 cdr ls_1)))
-                  (let ((or-part_0 (apply f_0 (map_2353 car ls_1))))
+                (apply f_0 (map_2352 car ls_1))
+                (let ((next-ls_0 (map_2352 cdr ls_1)))
+                  (let ((or-part_0 (apply f_0 (map_2352 car ls_1))))
                     (if or-part_0 or-part_0 (loop_0 next-ls_0))))))))))
        (loop_0 ls_0)))))
 (define print-value-columns
@@ -712,19 +838,18 @@
 (define chytes-length$1
   (|#%name|
    chytes-length
-   (lambda (s_0)
-     (if (bytes? s_0) (unsafe-bytes-length s_0) (string-length s_0)))))
+   (lambda (s_0) (if (bytes? s_0) (bytes-length s_0) (string-length s_0)))))
 (define chytes-ref$1
   (|#%name|
    chytes-ref
    (lambda (s_0 i_0)
      (if (bytes? s_0)
-       (unsafe-bytes-ref s_0 i_0)
+       (bytes-ref s_0 i_0)
        (char->integer (string-ref s_0 i_0))))))
 (define chytes-ref/char
   (lambda (s_0 i_0)
     (if (bytes? s_0)
-      (integer->char (unsafe-bytes-ref s_0 i_0))
+      (integer->char (bytes-ref s_0 i_0))
       (string-ref s_0 i_0))))
 (define chytes-limit (lambda (s_0) (if (bytes? s_0) 255 1114111)))
 (define empty-range null)
@@ -747,23 +872,25 @@
      (loop_0 r_0 0))))
 (define range-in?
   (lambda (r_0 v_0)
-    (letrec*
-     ((for-loop_0
-       (|#%name|
-        for-loop
-        (lambda (result_0 lst_0)
-          (if (pair? lst_0)
-            (let ((p_0 (unsafe-car lst_0)))
-              (let ((rest_0 (unsafe-cdr lst_0)))
-                (let ((result_1
-                       (let ((result_1
-                              (if (>= v_0 (car p_0)) (<= v_0 (cdr p_0)) #f)))
-                         (values result_1))))
-                  (if (if (not (let ((x_0 (list p_0))) result_1)) #t #f)
-                    (for-loop_0 result_1 rest_0)
-                    result_1))))
-            result_0)))))
-     (for-loop_0 #f r_0))))
+    (begin
+      (check-list r_0)
+      (letrec*
+       ((for-loop_0
+         (|#%name|
+          for-loop
+          (lambda (result_0 lst_0)
+            (if (pair? lst_0)
+              (let ((p_0 (unsafe-car lst_0)))
+                (let ((rest_0 (unsafe-cdr lst_0)))
+                  (let ((result_1
+                         (let ((result_1
+                                (if (>= v_0 (car p_0)) (<= v_0 (cdr p_0)) #f)))
+                           (values result_1))))
+                    (if (if (not (let ((x_0 (list p_0))) result_1)) #t #f)
+                      (for-loop_0 result_1 rest_0)
+                      result_1))))
+              result_0)))))
+       (for-loop_0 #f r_0)))))
 (define range-add
   (lambda (r_0 v_0)
     (if (not v_0)
@@ -827,37 +954,48 @@
         or-part_0
         (let ((rng_0 (make-bytes 256 0)))
           (begin
-            (letrec*
-             ((for-loop_0
-               (|#%name|
-                for-loop
-                (lambda (lst_0)
-                  (if (pair? lst_0)
-                    (let ((p_0 (unsafe-car lst_0)))
-                      (let ((rest_0 (unsafe-cdr lst_0)))
-                        (call-with-values
-                         (lambda ()
-                           (let ((start_0 (car p_0)))
-                             (let ((end_0 (add1 (cdr p_0))))
-                               (let ((start_1 start_0))
-                                 (letrec*
-                                  ((for-loop_1
-                                    (|#%name|
-                                     for-loop
-                                     (lambda (pos_0)
-                                       (if (< pos_0 end_0)
-                                         (begin
-                                           (unsafe-bytes-set! rng_0 pos_0 1)
-                                           (for-loop_1 (+ pos_0 1)))
-                                         (values))))))
-                                  (for-loop_1 start_1))))))
-                         (lambda () (for-loop_0 rest_0)))))
-                    (values))))))
-             (for-loop_0 range_0))
+            (begin
+              (check-list range_0)
+              (letrec*
+               ((for-loop_0
+                 (|#%name|
+                  for-loop
+                  (lambda (lst_0)
+                    (if (pair? lst_0)
+                      (let ((p_0 (unsafe-car lst_0)))
+                        (let ((rest_0 (unsafe-cdr lst_0)))
+                          (call-with-values
+                           (lambda ()
+                             (let ((start_0 (car p_0)))
+                               (let ((end_0 (add1 (cdr p_0))))
+                                 (let ((start_1 start_0))
+                                   (begin
+                                     (check-range-generic
+                                      'in-range
+                                      start_1
+                                      end_0
+                                      1)
+                                     (letrec*
+                                      ((for-loop_1
+                                        (|#%name|
+                                         for-loop
+                                         (lambda (pos_0)
+                                           (if (< pos_0 end_0)
+                                             (begin
+                                               (bytes-set! rng_0 pos_0 1)
+                                               (for-loop_1 (+ pos_0 1)))
+                                             (values))))))
+                                      (for-loop_1 start_1)))))))
+                           (case-lambda
+                            (() (for-loop_0 rest_0))
+                            (args
+                             (raise-binding-result-arity-error 0 args))))))
+                      (values))))))
+               (for-loop_0 range_0)))
             (void)
             (hash-set! (unsafe-place-local-ref cell.1) range_0 rng_0)
             rng_0))))))
-(define rng-in? (lambda (rng_0 v_0) (eq? 1 (unsafe-bytes-ref rng_0 v_0))))
+(define rng-in? (lambda (rng_0 v_0) (eq? 1 (bytes-ref rng_0 v_0))))
 (define rx:never 'never)
 (define rx:empty 'empty)
 (define rx:any 'any)
@@ -881,13 +1019,19 @@
    #f
    'rx:alts))
 (define struct:rx:alts
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:alts
    #f
    (|#%nongenerative-uid| rx:alts)
    #f
    #f
-   '(2 . 0)))
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2414 (finish_2124 struct:rx:alts))
 (define rx:alts1.1
   (|#%name|
@@ -912,13 +1056,19 @@
    #f
    'rx:sequence))
 (define struct:rx:sequence
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:sequence
    #f
    (|#%nongenerative-uid| rx:sequence)
    #f
    #f
-   '(2 . 0)))
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2459 (finish_3074 struct:rx:sequence))
 (define rx:sequence2.1
   (|#%name|
@@ -946,13 +1096,19 @@
    #f
    'rx:group))
 (define struct:rx:group
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:group
    #f
    (|#%nongenerative-uid| rx:group)
    #f
    #f
-   '(2 . 0)))
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_1819 (finish_2409 struct:rx:group))
 (define rx:group3.1
   (|#%name|
@@ -976,13 +1132,19 @@
    #f
    'rx:repeat))
 (define struct:rx:repeat
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:repeat
    #f
    (|#%nongenerative-uid| rx:repeat)
    #f
    #f
-   '(4 . 0)))
+   '(4 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2312 (finish_2710 struct:rx:repeat))
 (define rx:repeat4.1
   (|#%name|
@@ -1011,13 +1173,19 @@
    #f
    'rx:maybe))
 (define struct:rx:maybe
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:maybe
    #f
    (|#%nongenerative-uid| rx:maybe)
    #f
    #f
-   '(2 . 0)))
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2202 (finish_2057 struct:rx:maybe))
 (define rx:maybe5.1
   (|#%name|
@@ -1041,13 +1209,19 @@
    #f
    'rx:conditional))
 (define struct:rx:conditional
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:conditional
    #f
    (|#%nongenerative-uid| rx:conditional)
    #f
    #f
-   '(6 . 0)))
+   '(6 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2905 (finish_2914 struct:rx:conditional))
 (define rx:conditional6.1
   (|#%name|
@@ -1083,13 +1257,19 @@
    #f
    'rx:lookahead))
 (define struct:rx:lookahead
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:lookahead
    #f
    (|#%nongenerative-uid| rx:lookahead)
    #f
    #f
-   '(4 . 0)))
+   '(4 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2486 (finish_2954 struct:rx:lookahead))
 (define rx:lookahead7.1
   (|#%name|
@@ -1119,13 +1299,19 @@
    #f
    'rx:lookbehind))
 (define struct:rx:lookbehind
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:lookbehind
    #f
    (|#%nongenerative-uid| rx:lookbehind)
    #f
    #f
-   '(6 . 12)))
+   '(6 . 12)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2468 (finish_1844 struct:rx:lookbehind))
 (define rx:lookbehind8.1
   (|#%name|
@@ -1163,13 +1349,19 @@
    #f
    'rx:cut))
 (define struct:rx:cut
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:cut
    #f
    (|#%nongenerative-uid| rx:cut)
    #f
    #f
-   '(4 . 0)))
+   '(4 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2158 (finish_1951 struct:rx:cut))
 (define rx:cut9.1
   (|#%name|
@@ -1196,13 +1388,19 @@
    #f
    'rx:reference))
 (define struct:rx:reference
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:reference
    #f
    (|#%nongenerative-uid| rx:reference)
    #f
    #f
-   '(2 . 0)))
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2306 (finish_2358 struct:rx:reference))
 (define rx:reference10.1
   (|#%name|
@@ -1230,13 +1428,19 @@
    #f
    'rx:range))
 (define struct:rx:range
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:range
    #f
    (|#%nongenerative-uid| rx:range)
    #f
    #f
-   '(1 . 0)))
+   '(1 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2071 (finish_2696 struct:rx:range))
 (define rx:range11.1
   (|#%name|
@@ -1259,13 +1463,19 @@
    #f
    'rx:unicode-categories))
 (define struct:rx:unicode-categories
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'rx:unicode-categories
    #f
    (|#%nongenerative-uid| rx:unicode-categories)
    #f
    #f
-   '(2 . 0)))
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2341 (finish_2757 struct:rx:unicode-categories))
 (define rx:unicode-categories12.1
   (|#%name|
@@ -1322,7 +1532,7 @@
             (car merged-l_0)
             (rx:sequence2.1
              merged-l_0
-             (ormap_2207 needs-backtrack? merged-l_0))))))))
+             (ormap_2075 needs-backtrack? merged-l_0))))))))
 (define merge-adjacent
   (lambda (l_0)
     (letrec*
@@ -1366,32 +1576,8 @@
                               0
                               (reverse$1
                                (let ((lst_0 (reverse$1 accum_0)))
-                                 (letrec*
-                                  ((for-loop_0
-                                    (|#%name|
-                                     for-loop
-                                     (lambda (fold-var_0 lst_1)
-                                       (if (pair? lst_1)
-                                         (let ((a_0 (unsafe-car lst_1)))
-                                           (let ((rest_0 (unsafe-cdr lst_1)))
-                                             (let ((fold-var_1
-                                                    (let ((fold-var_1
-                                                           (cons
-                                                            (if (byte? a_0)
-                                                              (bytes a_0)
-                                                              a_0)
-                                                            fold-var_0)))
-                                                      (values fold-var_1))))
-                                               (for-loop_0
-                                                fold-var_1
-                                                rest_0))))
-                                         fold-var_0)))))
-                                  (for-loop_0 null lst_0)))))
-                             (if (eq? mode_0 'char)
-                               (apply-string-append
-                                0
-                                (reverse$1
-                                 (let ((lst_0 (reverse$1 accum_0)))
+                                 (begin
+                                   (check-list lst_0)
                                    (letrec*
                                     ((for-loop_0
                                       (|#%name|
@@ -1403,11 +1589,8 @@
                                                (let ((fold-var_1
                                                       (let ((fold-var_1
                                                              (cons
-                                                              (if (integer?
-                                                                   a_0)
-                                                                (string
-                                                                 (integer->char
-                                                                  a_0))
+                                                              (if (byte? a_0)
+                                                                (bytes a_0)
                                                                 a_0)
                                                               fold-var_0)))
                                                         (values fold-var_1))))
@@ -1415,7 +1598,40 @@
                                                   fold-var_1
                                                   rest_0))))
                                            fold-var_0)))))
-                                    (for-loop_0 null lst_0)))))
+                                    (for-loop_0 null lst_0))))))
+                             (if (eq? mode_0 'char)
+                               (apply-string-append
+                                0
+                                (reverse$1
+                                 (let ((lst_0 (reverse$1 accum_0)))
+                                   (begin
+                                     (check-list lst_0)
+                                     (letrec*
+                                      ((for-loop_0
+                                        (|#%name|
+                                         for-loop
+                                         (lambda (fold-var_0 lst_1)
+                                           (if (pair? lst_1)
+                                             (let ((a_0 (unsafe-car lst_1)))
+                                               (let ((rest_0
+                                                      (unsafe-cdr lst_1)))
+                                                 (let ((fold-var_1
+                                                        (let ((fold-var_1
+                                                               (cons
+                                                                (if (integer?
+                                                                     a_0)
+                                                                  (string
+                                                                   (integer->char
+                                                                    a_0))
+                                                                  a_0)
+                                                                fold-var_0)))
+                                                          (values
+                                                           fold-var_1))))
+                                                   (for-loop_0
+                                                    fold-var_1
+                                                    rest_0))))
+                                             fold-var_0)))))
+                                      (for-loop_0 null lst_0))))))
                                (error "internal error")))))
                       (cons app_0 (loop_0 #f null l_1)))))
                 (if mode_0
@@ -1440,7 +1656,8 @@
         rx1_0
         (if (if (rx:range? rx1_0) (rx:range? rx2_0) #f)
           (rx-range
-           (range-union (rx:range-range rx1_0) (rx:range-range rx2_0))
+           (let ((app_0 (rx:range-range rx1_0)))
+             (range-union app_0 (rx:range-range rx2_0)))
            limit-c_0)
           (if (if (rx:range? rx1_0)
                 (if (rx:alts? rx2_0) (rx:range? (rx:alts-rx_2530 rx2_0)) #f)
@@ -1481,13 +1698,19 @@
    #f
    'parse-config))
 (define struct:parse-config
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'parse-config
    #f
    (|#%nongenerative-uid| parse-config)
    #f
    #f
-   '(7 . 0)))
+   '(7 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2622 (finish_2184 struct:parse-config))
 (define parse-config1.1
   (|#%name|
@@ -1533,26 +1756,36 @@
 (define config-case-sensitive
   (lambda (config_0 cs?_0)
     (if (parse-config? config_0)
-      (parse-config1.1
-       (parse-config-who config_0)
-       (parse-config-px? config_0)
-       cs?_0
-       (parse-config-multi-line? config_0)
-       (parse-config-group-number-box config_0)
-       (parse-config-references?-box config_0)
-       (parse-config-error-handler? config_0))
+      (let ((app_0 (parse-config-who config_0)))
+        (let ((app_1 (parse-config-px? config_0)))
+          (let ((app_2 (parse-config-multi-line? config_0)))
+            (let ((app_3 (parse-config-group-number-box config_0)))
+              (let ((app_4 (parse-config-references?-box config_0)))
+                (parse-config1.1
+                 app_0
+                 app_1
+                 cs?_0
+                 app_2
+                 app_3
+                 app_4
+                 (parse-config-error-handler? config_0)))))))
       (raise-argument-error 'struct-copy "parse-config?" config_0))))
 (define config-multi-line
   (lambda (config_0 mm?_0)
     (if (parse-config? config_0)
-      (parse-config1.1
-       (parse-config-who config_0)
-       (parse-config-px? config_0)
-       (parse-config-case-sensitive? config_0)
-       mm?_0
-       (parse-config-group-number-box config_0)
-       (parse-config-references?-box config_0)
-       (parse-config-error-handler? config_0))
+      (let ((app_0 (parse-config-who config_0)))
+        (let ((app_1 (parse-config-px? config_0)))
+          (let ((app_2 (parse-config-case-sensitive? config_0)))
+            (let ((app_3 (parse-config-group-number-box config_0)))
+              (let ((app_4 (parse-config-references?-box config_0)))
+                (parse-config1.1
+                 app_0
+                 app_1
+                 app_2
+                 mm?_0
+                 app_3
+                 app_4
+                 (parse-config-error-handler? config_0)))))))
       (raise-argument-error 'struct-copy "parse-config?" config_0))))
 (define config-group-number
   (lambda (config_0) (unbox (parse-config-group-number-box config_0))))
@@ -1678,27 +1911,29 @@
                          (range:s)
                          (if (unsafe-fx< index_0 11)
                            (let ((range_0
-                                  (letrec*
-                                   ((for-loop_0
-                                     (|#%name|
-                                      for-loop
-                                      (lambda (range_0 pos_1)
-                                        (if (unsafe-fx< pos_1 128)
-                                          (let ((range_1
-                                                 (let ((range_1
-                                                        (if (char-graphic?
-                                                             (integer->char
-                                                              pos_1))
-                                                          (range-add
-                                                           range_0
-                                                           pos_1)
-                                                          range_0)))
-                                                   (values range_1))))
-                                            (for-loop_0
-                                             range_1
-                                             (unsafe-fx+ pos_1 1)))
-                                          range_0)))))
-                                   (for-loop_0 null 0))))
+                                  (begin
+                                    (check-range-generic 'in-range 0 128 1)
+                                    (letrec*
+                                     ((for-loop_0
+                                       (|#%name|
+                                        for-loop
+                                        (lambda (range_0 pos_1)
+                                          (if (unsafe-fx< pos_1 128)
+                                            (let ((range_1
+                                                   (let ((range_1
+                                                          (if (char-graphic?
+                                                               (integer->char
+                                                                pos_1))
+                                                            (range-add
+                                                             range_0
+                                                             pos_1)
+                                                            range_0)))
+                                                     (values range_1))))
+                                              (for-loop_0
+                                               range_1
+                                               (unsafe-fx+ pos_1 1)))
+                                            range_0)))))
+                                     (for-loop_0 null 0)))))
                              (if (equal? class_0 #vu8(112 114 105 110 116))
                                (range-add (range-add range_0 32) 9)
                                range_0))
@@ -1706,7 +1941,7 @@
                              (range-union null (list (cons 0 31)))
                              (range-union null (list (cons 0 127)))))))))))
             (if range_0
-              (values #t range_0 (+ pos_0 3 (unsafe-bytes-length class_0)))
+              (values #t range_0 (+ pos_0 3 (bytes-length class_0)))
               (values #f #f #f))))
         (values #f #f #f)))))
 (define xor (lambda (a_0 b_0) (if a_0 (if b_0 #f a_0) b_0)))
@@ -1727,7 +1962,8 @@
                (if (eqv? tmp_1 '#\x5e)
                  (values #t (+ pos_0 2))
                  (values #f (add1 pos_0))))))
-         (lambda (cat-negated?_0 next-pos_0)
+         (case-lambda
+          ((cat-negated?_0 next-pos_0)
            (call-with-values
             (lambda ()
               (letrec*
@@ -1751,7 +1987,8 @@
                                  (cons (chytes-ref$1 s_0 pos_1) accum_0)))
                             (loop_0 app_0 (add1 pos_1))))))))))
                (loop_0 null next-pos_0)))
-            (lambda (l_0 pos2_0)
+            (case-lambda
+             ((l_0 pos2_0)
               (let ((categories_0
                      (let ((tmp_1 (list->bytes l_0)))
                        (let ((index_0
@@ -1767,7 +2004,7 @@
                                             (list
                                              app_0
                                              (list->string
-                                              (map_2353 integer->char l_0))))))
+                                              (map_2352 integer->char l_0))))))
                                      (let ((fmt_1 fmt_0))
                                        (apply regexp-error fmt_1 args_0))))
                                  (if (unsafe-fx< index_0 2)
@@ -1833,7 +2070,9 @@
                    (rx:unicode-categories12.1
                     categories_0
                     (not (xor prop-negated?_0 cat-negated?_0)))
-                   pos2_0)))))))
+                   pos2_0))))
+             (args (raise-binding-result-arity-error 2 args)))))
+          (args (raise-binding-result-arity-error 2 args))))
         (let ((fmt_0 "expected `{` after `\\~a`"))
           (let ((args_0 (list (integer->char p-c_0))))
             (let ((fmt_1 fmt_0)) (apply regexp-error fmt_1 args_0))))))))
@@ -1860,18 +2099,20 @@
     (if (parse-config-case-sensitive? config_0)
       (range-union range_0 (list (cons from-c_0 to-c_0)))
       (let ((end_0 (add1 to-c_0)))
-        (letrec*
-         ((for-loop_0
-           (|#%name|
-            for-loop
-            (lambda (range_1 pos_0)
-              (if (< pos_0 end_0)
-                (let ((range_2
-                       (let ((range_2 (range-add* range_1 pos_0 config_0)))
-                         (values range_2))))
-                  (for-loop_0 range_2 (+ pos_0 1)))
-                range_1)))))
-         (for-loop_0 range_0 from-c_0))))))
+        (begin
+          (check-range-generic 'in-range from-c_0 end_0 1)
+          (letrec*
+           ((for-loop_0
+             (|#%name|
+              for-loop
+              (lambda (range_1 pos_0)
+                (if (< pos_0 end_0)
+                  (let ((range_2
+                         (let ((range_2 (range-add* range_1 pos_0 config_0)))
+                           (values range_2))))
+                    (for-loop_0 range_2 (+ pos_0 1)))
+                  range_1)))))
+           (for-loop_0 range_0 from-c_0)))))))
 (define parse-range/not
   (lambda (s_0 pos_0 config_0)
     (let ((tmp_0
@@ -1887,8 +2128,10 @@
         (if (eqv? tmp_0 '#\x5e)
           (call-with-values
            (lambda () (parse-range s_0 (add1 pos_0) config_0))
-           (lambda (range_0 pos2_0)
-             (values (range-invert range_0 (chytes-limit s_0)) pos2_0)))
+           (case-lambda
+            ((range_0 pos2_0)
+             (values (range-invert range_0 (chytes-limit s_0)) pos2_0))
+            (args (raise-binding-result-arity-error 2 args))))
           (parse-range s_0 pos_0 config_0))))))
 (define parse-range
   (lambda (s_0 pos_0 config_0)
@@ -1990,7 +2233,8 @@
                             "misplaced hyphen within square brackets in pattern")
                            (call-with-values
                             (lambda () (parse-class s6_0 pos2_0 config8_0))
-                            (lambda (success?_0 range1_0 pos3_0)
+                            (case-lambda
+                             ((success?_0 range1_0 pos3_0)
                               (begin
                                 (if success?_0
                                   (void)
@@ -2013,7 +2257,9 @@
                                      range2_0
                                      s6_0
                                      temp39_0
-                                     config8_0)))))))
+                                     config8_0)))))
+                             (args
+                              (raise-binding-result-arity-error 3 args)))))
                          (let ((temp44_0 (add1 pos2_0)))
                            (parse-range-rest/span.1
                             must-span-from2_0
@@ -2040,7 +2286,8 @@
                           #f)
                       (parse-posix-char-class s6_0 (add1 pos7_0))
                       (values #f #f #f)))
-                  (lambda (success?_0 range1_0 pos2_0)
+                  (case-lambda
+                   ((success?_0 range1_0 pos2_0)
                     (if success?_0
                       (let ((range2_0
                              (range-union
@@ -2061,7 +2308,8 @@
                          range5_0
                          s6_0
                          temp62_0
-                         config8_0)))))
+                         config8_0))))
+                   (args (raise-binding-result-arity-error 3 args))))
                  (let ((temp66_0 (chytes-ref$1 s6_0 pos7_0)))
                    (let ((temp69_0 (add1 pos7_0)))
                      (let ((temp66_1 temp66_0))
@@ -2120,7 +2368,8 @@
      (let ((config_0 (make-parse-config.1 #f px?1_0 'regexp)))
        (call-with-values
         (lambda () (parse-regexp.1 unsafe-undefined p3_0 0 config_0))
-        (lambda (rx_0 pos_0)
+        (case-lambda
+         ((rx_0 pos_0)
           (let ((tmp_0
                  (if (= pos_0 (chytes-length$1 p3_0))
                    'eos
@@ -2131,7 +2380,8 @@
                 (values
                  rx_0
                  app_0
-                 (unbox (parse-config-references?-box config_0))))))))))))
+                 (unbox (parse-config-references?-box config_0)))))))
+         (args (raise-binding-result-arity-error 2 args))))))))
 (define parse-regexp.1
   (|#%name|
    parse-regexp
@@ -2145,7 +2395,8 @@
               parse-regexp5_0)))
        (call-with-values
         (lambda () (parse-pces s7_0 pos8_0 config9_0))
-        (lambda (rxs_0 pos2_0)
+        (case-lambda
+         ((rxs_0 pos2_0)
           (let ((tmp_0
                  (if (= pos2_0 (chytes-length$1 s7_0))
                    'eos
@@ -2154,12 +2405,15 @@
               (call-with-values
                (lambda ()
                  (|#%app| parse-regexp_0 s7_0 (add1 pos2_0) config9_0))
-               (lambda (rx_0 pos3_0)
+               (case-lambda
+                ((rx_0 pos3_0)
                  (values
                   (let ((app_0 (rx-sequence rxs_0)))
                     (rx-alts app_0 rx_0 (chytes-limit s7_0)))
-                  pos3_0)))
-              (values (rx-sequence rxs_0) pos2_0)))))))))
+                  pos3_0))
+                (args (raise-binding-result-arity-error 2 args))))
+              (values (rx-sequence rxs_0) pos2_0))))
+         (args (raise-binding-result-arity-error 2 args))))))))
 (define parse-regexp/maybe-empty
   (lambda (s_0 pos_0 config_0)
     (let ((tmp_0
@@ -2175,7 +2429,8 @@
       (values null pos_0)
       (call-with-values
        (lambda () (parse-pce s_0 pos_0 config_0))
-       (lambda (rx_0 pos2_0)
+       (case-lambda
+        ((rx_0 pos2_0)
          (let ((tmp_0
                 (if (= pos2_0 (chytes-length$1 s_0))
                   'eos
@@ -2186,13 +2441,16 @@
                (values (list rx_0) pos2_0)
                (call-with-values
                 (lambda () (parse-pces s_0 pos2_0 config_0))
-                (lambda (rxs_0 pos3_0)
-                  (values (cons rx_0 rxs_0) pos3_0)))))))))))
+                (case-lambda
+                 ((rxs_0 pos3_0) (values (cons rx_0 rxs_0) pos3_0))
+                 (args (raise-binding-result-arity-error 2 args))))))))
+        (args (raise-binding-result-arity-error 2 args)))))))
 (define parse-pce
   (lambda (s_0 pos_0 config_0)
     (call-with-values
      (lambda () (parse-atom s_0 pos_0 config_0))
-     (lambda (rx_0 pos2_0)
+     (case-lambda
+      ((rx_0 pos2_0)
        (let ((tmp_0
               (if (= pos2_0 (chytes-length$1 s_0))
                 'eos
@@ -2200,23 +2458,30 @@
          (if (eqv? tmp_0 '#\x2a)
            (call-with-values
             (lambda () (parse-non-greedy s_0 (add1 pos2_0) config_0))
-            (lambda (non-greedy?_0 pos3_0)
-              (values (rx:repeat4.1 rx_0 0 +inf.0 non-greedy?_0) pos3_0)))
+            (case-lambda
+             ((non-greedy?_0 pos3_0)
+              (values (rx:repeat4.1 rx_0 0 +inf.0 non-greedy?_0) pos3_0))
+             (args (raise-binding-result-arity-error 2 args))))
            (if (eqv? tmp_0 '#\x2b)
              (call-with-values
               (lambda () (parse-non-greedy s_0 (add1 pos2_0) config_0))
-              (lambda (non-greedy?_0 pos3_0)
-                (values (rx:repeat4.1 rx_0 1 +inf.0 non-greedy?_0) pos3_0)))
+              (case-lambda
+               ((non-greedy?_0 pos3_0)
+                (values (rx:repeat4.1 rx_0 1 +inf.0 non-greedy?_0) pos3_0))
+               (args (raise-binding-result-arity-error 2 args))))
              (if (eqv? tmp_0 '#\x3f)
                (call-with-values
                 (lambda () (parse-non-greedy s_0 (add1 pos2_0) config_0))
-                (lambda (non-greedy?_0 pos3_0)
-                  (values (rx:maybe5.1 rx_0 non-greedy?_0) pos3_0)))
+                (case-lambda
+                 ((non-greedy?_0 pos3_0)
+                  (values (rx:maybe5.1 rx_0 non-greedy?_0) pos3_0))
+                 (args (raise-binding-result-arity-error 2 args))))
                (if (eqv? tmp_0 '#\x7b)
                  (if (parse-config-px? config_0)
                    (call-with-values
                     (lambda () (parse-integer 0 s_0 (add1 pos2_0) config_0))
-                    (lambda (n1_0 pos3_0)
+                    (case-lambda
+                     ((n1_0 pos3_0)
                       (let ((tmp_1
                              (if (= pos3_0 (chytes-length$1 s_0))
                                'eos
@@ -2225,7 +2490,8 @@
                           (call-with-values
                            (lambda ()
                              (parse-integer 0 s_0 (add1 pos3_0) config_0))
-                           (lambda (n2_0 pos4_0)
+                           (case-lambda
+                            ((n2_0 pos4_0)
                              (let ((tmp_2
                                     (if (= pos4_0 (chytes-length$1 s_0))
                                       'eos
@@ -2241,34 +2507,45 @@
                                        s_0
                                        (add1 pos4_0)
                                        config_0))
-                                    (lambda (non-greedy?_0 pos5_0)
+                                    (case-lambda
+                                     ((non-greedy?_0 pos5_0)
                                       (values
                                        (rx:repeat4.1
                                         rx_0
                                         n1_0
                                         n2*_0
                                         non-greedy?_0)
-                                       pos5_0))))
+                                       pos5_0))
+                                     (args
+                                      (raise-binding-result-arity-error
+                                       2
+                                       args)))))
                                  (parse-error
                                   s_0
                                   pos3_0
                                   config_0
-                                  "expected digit or `}` to end repetition specification started with `{`")))))
+                                  "expected digit or `}` to end repetition specification started with `{`"))))
+                            (args (raise-binding-result-arity-error 2 args))))
                           (if (eqv? tmp_1 '#\x7d)
                             (call-with-values
                              (lambda ()
                                (parse-non-greedy s_0 (add1 pos3_0) config_0))
-                             (lambda (non-greedy?_0 pos4_0)
+                             (case-lambda
+                              ((non-greedy?_0 pos4_0)
                                (values
                                 (rx:repeat4.1 rx_0 n1_0 n1_0 non-greedy?_0)
-                                pos4_0)))
+                                pos4_0))
+                              (args
+                               (raise-binding-result-arity-error 2 args))))
                             (parse-error
                              s_0
                              pos3_0
                              config_0
-                             "expected digit, `,`, or `}' for repetition specification started with `{`"))))))
+                             "expected digit, `,`, or `}' for repetition specification started with `{`")))))
+                     (args (raise-binding-result-arity-error 2 args))))
                    (values rx_0 pos2_0))
-                 (values rx_0 pos2_0))))))))))
+                 (values rx_0 pos2_0)))))))
+      (args (raise-binding-result-arity-error 2 args))))))
 (define parse-non-greedy
   (lambda (s_0 pos_0 config_0)
     (let ((tmp_0
@@ -2307,8 +2584,10 @@
           (if (eqv? tmp_0 '#\x5b)
             (call-with-values
              (lambda () (parse-range/not s_0 (add1 pos_0) config_0))
-             (lambda (range_0 pos2_0)
-               (values (rx-range range_0 (chytes-limit s_0)) pos2_0)))
+             (case-lambda
+              ((range_0 pos2_0)
+               (values (rx-range range_0 (chytes-limit s_0)) pos2_0))
+              (args (raise-binding-result-arity-error 2 args))))
             (if (eqv? tmp_0 '#\x2e)
               (let ((rx_0
                      (if (parse-config-multi-line? config_0)
@@ -2319,13 +2598,17 @@
                        'any)))
                 (values rx_0 (add1 pos_0)))
               (if (eqv? tmp_0 '#\x5e)
-                (values
-                 (if (parse-config-multi-line? config_0) 'line-start 'start)
-                 (add1 pos_0))
+                (let ((app_0
+                       (if (parse-config-multi-line? config_0)
+                         'line-start
+                         'start)))
+                  (values app_0 (add1 pos_0)))
                 (if (eqv? tmp_0 '#\x24)
-                  (values
-                   (if (parse-config-multi-line? config_0) 'line-end 'end)
-                   (add1 pos_0))
+                  (let ((app_0
+                         (if (parse-config-multi-line? config_0)
+                           'line-end
+                           'end)))
+                    (values app_0 (add1 pos_0)))
                   (parse-literal s_0 pos_0 config_0))))))))))
 (define parse-parenthesized-atom
   (lambda (s_0 pos_0 config_0)
@@ -2357,7 +2640,8 @@
                     (call-with-values
                      (lambda ()
                        (parse-regexp/maybe-empty s_0 (add1 pos2_0) config_0))
-                     (lambda (rx_0 pos3_0)
+                     (case-lambda
+                      ((rx_0 pos3_0)
                        (let ((post-num-groups_0
                               (unbox
                                (parse-config-group-number-box config_0))))
@@ -2371,7 +2655,8 @@
                                    (needs-backtrack? rx_0)))))
                            (values
                             app_0
-                            (check-close-paren s_0 pos3_0 config_0)))))))
+                            (check-close-paren s_0 pos3_0 config_0)))))
+                      (args (raise-binding-result-arity-error 2 args)))))
                   (if (eqv? tmp_1 '#\x28)
                     (parse-conditional s_0 (add1 pos2_0) config_0)
                     (if (if (eqv? tmp_1 '#\x69)
@@ -2385,7 +2670,8 @@
                                 (eqv? tmp_1 '#\x3a)))))
                       (call-with-values
                        (lambda () (parse-mode s_0 pos2_0 config_0))
-                       (lambda (config2_0 pos3_0)
+                       (case-lambda
+                        ((config2_0 pos3_0)
                          (let ((tmp_2
                                 (if (= pos3_0 (chytes-length$1 s_0))
                                   'eos
@@ -2397,17 +2683,21 @@
                                  s_0
                                  (add1 pos3_0)
                                  config2_0))
-                              (lambda (rx_0 pos4_0)
+                              (case-lambda
+                               ((rx_0 pos4_0)
                                 (values
                                  rx_0
-                                 (check-close-paren s_0 pos4_0 config2_0))))
+                                 (check-close-paren s_0 pos4_0 config2_0)))
+                               (args
+                                (raise-binding-result-arity-error 2 args))))
                              (parse-error
                               s_0
                               pos3_0
                               config2_0
                               (string-append
                                "expected `:` or another mode after `(?` and a mode sequence;\n"
-                               " a mode is `i`, `-i`, `m`, `-m`, `s`, or `-s`"))))))
+                               " a mode is `i`, `-i`, `m`, `-m`, `s`, or `-s`")))))
+                        (args (raise-binding-result-arity-error 2 args))))
                       (parse-look s_0 pos2_0 config_0)))))))
           (let ((group-number_0
                  (unbox (parse-config-group-number-box config_0))))
@@ -2417,11 +2707,11 @@
                 s_0
                 pos_0
                 (config-group-number+1 config_0)))
-             (lambda (rx_0 pos2_0)
+             (case-lambda
+              ((rx_0 pos2_0)
                (let ((app_0 (rx:group3.1 rx_0 group-number_0)))
-                 (values
-                  app_0
-                  (check-close-paren s_0 pos2_0 config_0)))))))))))
+                 (values app_0 (check-close-paren s_0 pos2_0 config_0))))
+              (args (raise-binding-result-arity-error 2 args))))))))))
 (define parse-look
   (lambda (s_0 pos2_0 config_0)
     (let ((pre-num-groups_0 (unbox (parse-config-group-number-box config_0))))
@@ -2436,26 +2726,30 @@
           (if (eqv? tmp_0 '#\x3d)
             (call-with-values
              (lambda () (parse-regexp/maybe-empty s_0 (add1 pos2_0) config_0))
-             (lambda (rx_0 pos3_0)
+             (case-lambda
+              ((rx_0 pos3_0)
                (let ((app_0
                       (rx:lookahead7.1
                        rx_0
                        #t
                        pre-num-groups_0
                        (span-num-groups_0))))
-                 (values app_0 (check-close-paren s_0 pos3_0 config_0)))))
+                 (values app_0 (check-close-paren s_0 pos3_0 config_0))))
+              (args (raise-binding-result-arity-error 2 args))))
             (if (eqv? tmp_0 '#\x21)
               (call-with-values
                (lambda ()
                  (parse-regexp/maybe-empty s_0 (add1 pos2_0) config_0))
-               (lambda (rx_0 pos3_0)
+               (case-lambda
+                ((rx_0 pos3_0)
                  (let ((app_0
                         (rx:lookahead7.1
                          rx_0
                          #f
                          pre-num-groups_0
                          (span-num-groups_0))))
-                   (values app_0 (check-close-paren s_0 pos3_0 config_0)))))
+                   (values app_0 (check-close-paren s_0 pos3_0 config_0))))
+                (args (raise-binding-result-arity-error 2 args))))
               (if (eqv? tmp_0 '#\x3c)
                 (let ((pos2+_0 (add1 pos2_0)))
                   (let ((tmp_1
@@ -2475,7 +2769,8 @@
                             s_0
                             (add1 pos2+_0)
                             config_0))
-                         (lambda (rx_0 pos3_0)
+                         (case-lambda
+                          ((rx_0 pos3_0)
                            (let ((app_0
                                   (rx:lookbehind8.1
                                    rx_0
@@ -2486,7 +2781,8 @@
                                    (span-num-groups_0))))
                              (values
                               app_0
-                              (check-close-paren s_0 pos3_0 config_0)))))
+                              (check-close-paren s_0 pos3_0 config_0))))
+                          (args (raise-binding-result-arity-error 2 args))))
                         (if (eqv? tmp_1 '#\x21)
                           (call-with-values
                            (lambda ()
@@ -2494,7 +2790,8 @@
                               s_0
                               (add1 pos2+_0)
                               config_0))
-                           (lambda (rx_0 pos3_0)
+                           (case-lambda
+                            ((rx_0 pos3_0)
                              (let ((app_0
                                     (rx:lookbehind8.1
                                      rx_0
@@ -2505,7 +2802,8 @@
                                      (span-num-groups_0))))
                                (values
                                 app_0
-                                (check-close-paren s_0 pos3_0 config_0)))))
+                                (check-close-paren s_0 pos3_0 config_0))))
+                            (args (raise-binding-result-arity-error 2 args))))
                           (parse-error
                            s_0
                            pos2+_0
@@ -2522,14 +2820,16 @@
            (unbox (parse-config-group-number-box config_0))))
       (call-with-values
        (lambda () (parse-test s_0 pos_0 config_0))
-       (lambda (tst_0 pos2_0)
+       (case-lambda
+        ((tst_0 pos2_0)
          (let ((tst-span-num-groups_0
                 (-
                  (unbox (parse-config-group-number-box config_0))
                  tst-pre-num-groups_0)))
            (call-with-values
             (lambda () (parse-pces s_0 pos2_0 config_0))
-            (lambda (pces_0 pos3_0)
+            (case-lambda
+             ((pces_0 pos3_0)
               (let ((tmp_0
                      (if (= pos3_0 (chytes-length$1 s_0))
                        'eos
@@ -2551,7 +2851,8 @@
                            (if (eqv? tmp_1 '#\x29)
                              (values null (add1 pos3_0))
                              (parse-pces s_0 (add1 pos3_0) config_0)))))
-                     (lambda (pces2_0 pos4_0)
+                     (case-lambda
+                      ((pces2_0 pos4_0)
                        (let ((tmp_1
                               (if (= pos4_0 (chytes-length$1 s_0))
                                 'eos
@@ -2576,7 +2877,8 @@
                               s_0
                               pos4_0
                               config_0
-                              "expected `)` to close `(?(...)...` after second branch"))))))
+                              "expected `)` to close `(?(...)...` after second branch")))))
+                      (args (raise-binding-result-arity-error 2 args))))
                     (if (eqv? tmp_0 '#\x29)
                       (let ((app_0
                              (rx-conditional
@@ -2586,7 +2888,9 @@
                               tst-pre-num-groups_0
                               tst-span-num-groups_0)))
                         (values app_0 (add1 pos3_0)))
-                      (void)))))))))))))
+                      (void))))))
+             (args (raise-binding-result-arity-error 2 args))))))
+        (args (raise-binding-result-arity-error 2 args)))))))
 (define parse-test
   (lambda (s_0 pos_0 config_0)
     (let ((tmp_0
@@ -2607,7 +2911,8 @@
                 (set-box! (parse-config-references?-box config_0) #t)
                 (call-with-values
                  (lambda () (parse-integer 0 s_0 pos_0 config_0))
-                 (lambda (n_0 pos3_0)
+                 (case-lambda
+                  ((n_0 pos3_0)
                    (begin
                      (if (if (< pos3_0 (chytes-length$1 s_0))
                            (= (chytes-ref$1 s_0 pos3_0) 41)
@@ -2619,7 +2924,8 @@
                         config_0
                         "expected `)` after `(?(` followed by digits"))
                      (let ((app_0 (rx:reference10.1 n_0 #f)))
-                       (values app_0 (add1 pos3_0)))))))
+                       (values app_0 (add1 pos3_0)))))
+                  (args (raise-binding-result-arity-error 2 args)))))
               (parse-error
                s_0
                pos_0
@@ -2677,10 +2983,12 @@
             (set-box! (parse-config-references?-box config_0) #t)
             (call-with-values
              (lambda () (parse-integer 0 s_0 pos2_0 config_0))
-             (lambda (n_0 pos3_0)
+             (case-lambda
+              ((n_0 pos3_0)
                (values
                 (rx:reference10.1 n_0 (parse-config-case-sensitive? config_0))
-                pos3_0))))
+                pos3_0))
+              (args (raise-binding-result-arity-error 2 args)))))
           (if (if (parse-config-px? config_0)
                 (let ((or-part_0 (if (>= c2_0 97) (<= c2_0 122) #f)))
                   (if or-part_0 or-part_0 (if (>= c2_0 65) (<= c2_0 90) #f)))
@@ -2696,7 +3004,8 @@
                       (values 'not-word-boundary (add1 pos2_0))
                       (call-with-values
                        (lambda () (parse-class s_0 pos2_0 config_0))
-                       (lambda (success?_0 range_0 pos3_0)
+                       (case-lambda
+                        ((success?_0 range_0 pos3_0)
                          (if success?_0
                            (values
                             (rx-range range_0 (chytes-limit s_0))
@@ -2705,7 +3014,8 @@
                             s_0
                             pos2_0
                             config_0
-                            "illegal alphabetic escape")))))))))
+                            "illegal alphabetic escape")))
+                        (args (raise-binding-result-arity-error 3 args)))))))))
             (values c2_0 (add1 pos2_0))))))))
 (define parse-mode
   (lambda (s_0 pos_0 config_0)
@@ -2798,7 +3108,7 @@
                                  (if or-part_1 or-part_1 (rx:range? rx_1)))))
                          (values 1 1 0)
                          (if (bytes? rx_1)
-                           (let ((len_0 (unsafe-bytes-length rx_1)))
+                           (let ((len_0 (bytes-length rx_1)))
                              (values len_0 len_0 0))
                            (if (let ((or-part_0 (eq? rx_1 'empty)))
                                  (if or-part_0
@@ -2822,82 +3132,112 @@
                                    (call-with-values
                                     (lambda ()
                                       (validate_0 (rx:alts-rx_2530 rx_1)))
-                                    (lambda (min1_0 max1_0 lb1_0)
+                                    (case-lambda
+                                     ((min1_0 max1_0 lb1_0)
                                       (call-with-values
                                        (lambda ()
                                          (validate_0 (rx:alts-rx_2917 rx_1)))
-                                       (lambda (min2_0 max2_0 lb2_0)
+                                       (case-lambda
+                                        ((min2_0 max2_0 lb2_0)
                                          (let ((app_0 (min min1_0 min2_0)))
                                            (let ((app_1 (max max1_0 max2_0)))
                                              (values
                                               app_0
                                               app_1
-                                              (max lb1_0 lb2_0))))))))
+                                              (max lb1_0 lb2_0)))))
+                                        (args
+                                         (raise-binding-result-arity-error
+                                          3
+                                          args)))))
+                                     (args
+                                      (raise-binding-result-arity-error
+                                       3
+                                       args))))
                                    (if (rx:sequence? rx_1)
                                      (let ((lst_0 (rx:sequence-rxs rx_1)))
-                                       (letrec*
-                                        ((for-loop_0
-                                          (|#%name|
-                                           for-loop
-                                           (lambda (min-len_0
-                                                    max-len_0
-                                                    max-lb_0
-                                                    lst_1)
-                                             (if (pair? lst_1)
-                                               (let ((rx_2 (unsafe-car lst_1)))
-                                                 (let ((rest_0
-                                                        (unsafe-cdr lst_1)))
-                                                   (call-with-values
-                                                    (lambda ()
-                                                      (call-with-values
-                                                       (lambda ()
-                                                         (call-with-values
-                                                          (lambda ()
-                                                            (validate_0 rx_2))
-                                                          (lambda (min1_0
-                                                                   max1_0
-                                                                   lb1_0)
-                                                            (let ((app_0
-                                                                   (+
-                                                                    min-len_0
-                                                                    min1_0)))
-                                                              (let ((app_1
+                                       (begin
+                                         (check-list lst_0)
+                                         (letrec*
+                                          ((for-loop_0
+                                            (|#%name|
+                                             for-loop
+                                             (lambda (min-len_0
+                                                      max-len_0
+                                                      max-lb_0
+                                                      lst_1)
+                                               (if (pair? lst_1)
+                                                 (let ((rx_2
+                                                        (unsafe-car lst_1)))
+                                                   (let ((rest_0
+                                                          (unsafe-cdr lst_1)))
+                                                     (call-with-values
+                                                      (lambda ()
+                                                        (call-with-values
+                                                         (lambda ()
+                                                           (call-with-values
+                                                            (lambda ()
+                                                              (validate_0
+                                                               rx_2))
+                                                            (case-lambda
+                                                             ((min1_0
+                                                               max1_0
+                                                               lb1_0)
+                                                              (let ((app_0
                                                                      (+
-                                                                      max-len_0
-                                                                      max1_0)))
-                                                                (values
-                                                                 app_0
-                                                                 app_1
-                                                                 (max
-                                                                  max-lb_0
-                                                                  (-
-                                                                   lb1_0
-                                                                   min-len_0))))))))
-                                                       (lambda (min-len_1
-                                                                max-len_1
-                                                                max-lb_1)
-                                                         (values
-                                                          min-len_1
-                                                          max-len_1
-                                                          max-lb_1))))
-                                                    (lambda (min-len_1
-                                                             max-len_1
-                                                             max-lb_1)
-                                                      (for-loop_0
-                                                       min-len_1
-                                                       max-len_1
-                                                       max-lb_1
-                                                       rest_0)))))
-                                               (values
-                                                min-len_0
-                                                max-len_0
-                                                max-lb_0))))))
-                                        (for-loop_0 0 0 0 lst_0)))
+                                                                      min-len_0
+                                                                      min1_0)))
+                                                                (let ((app_1
+                                                                       (+
+                                                                        max-len_0
+                                                                        max1_0)))
+                                                                  (values
+                                                                   app_0
+                                                                   app_1
+                                                                   (max
+                                                                    max-lb_0
+                                                                    (-
+                                                                     lb1_0
+                                                                     min-len_0))))))
+                                                             (args
+                                                              (raise-binding-result-arity-error
+                                                               3
+                                                               args)))))
+                                                         (case-lambda
+                                                          ((min-len_1
+                                                            max-len_1
+                                                            max-lb_1)
+                                                           (values
+                                                            min-len_1
+                                                            max-len_1
+                                                            max-lb_1))
+                                                          (args
+                                                           (raise-binding-result-arity-error
+                                                            3
+                                                            args)))))
+                                                      (case-lambda
+                                                       ((min-len_1
+                                                         max-len_1
+                                                         max-lb_1)
+                                                        (for-loop_0
+                                                         min-len_1
+                                                         max-len_1
+                                                         max-lb_1
+                                                         rest_0))
+                                                       (args
+                                                        (raise-binding-result-arity-error
+                                                         3
+                                                         args))))))
+                                                 (values
+                                                  min-len_0
+                                                  max-len_0
+                                                  max-lb_0))))))
+                                          (for-loop_0 0 0 0 lst_0))))
                                      (if (rx:group? rx_1)
                                        (call-with-values
                                         (lambda ()
                                           (validate_0 (rx:group-rx rx_1)))
-                                        (lambda (min1_0 max1_0 lb1_0)
+                                        (case-lambda
+                                         ((min1_0 max1_0 lb1_0)
                                           (begin
                                             (set! group-sizes_0
                                               (let ((app_0 group-sizes_0))
@@ -2905,7 +3245,11 @@
                                                  app_0
                                                  (rx:group-number rx_1)
                                                  min1_0)))
-                                            (values min1_0 max1_0 lb1_0))))
+                                            (values min1_0 max1_0 lb1_0)))
+                                         (args
+                                          (raise-binding-result-arity-error
+                                           3
+                                           args))))
                                        (if (rx:repeat? rx_1)
                                          (let ((old-depends-sizes_0
                                                 depends-sizes_0))
@@ -2915,7 +3259,8 @@
                                               (lambda ()
                                                 (validate_0
                                                  (rx:repeat-rx rx_1)))
-                                              (lambda (min1_0 max1_0 lb1_0)
+                                              (case-lambda
+                                               ((min1_0 max1_0 lb1_0)
                                                 (begin
                                                   (if (zero? min1_0)
                                                     (might-be-empty-error_0)
@@ -2939,33 +3284,43 @@
                                                      (*
                                                       max1_0
                                                       (rx:repeat-max rx_1))
-                                                     lb1_0)))))))
+                                                     lb1_0))))
+                                               (args
+                                                (raise-binding-result-arity-error
+                                                 3
+                                                 args))))))
                                          (if (rx:maybe? rx_1)
                                            (call-with-values
                                             (lambda ()
                                               (validate_0 (rx:maybe-rx rx_1)))
-                                            (lambda (min1_0 max1_0 lb1_0)
-                                              (values 0 max1_0 lb1_0)))
+                                            (case-lambda
+                                             ((min1_0 max1_0 lb1_0)
+                                              (values 0 max1_0 lb1_0))
+                                             (args
+                                              (raise-binding-result-arity-error
+                                               3
+                                               args))))
                                            (if (rx:conditional? rx_1)
                                              (call-with-values
                                               (lambda ()
                                                 (validate_0
                                                  (rx:conditional-tst rx_1)))
-                                              (lambda (min0_0 max0_0 lb0_0)
+                                              (case-lambda
+                                               ((min0_0 max0_0 lb0_0)
                                                 (call-with-values
                                                  (lambda ()
                                                    (validate_0
                                                     (rx:conditional-rx_2590
                                                      rx_1)))
-                                                 (lambda (min1_0 max1_0 lb1_0)
+                                                 (case-lambda
+                                                  ((min1_0 max1_0 lb1_0)
                                                    (call-with-values
                                                     (lambda ()
                                                       (validate_0
                                                        (rx:conditional-rx_3084
                                                         rx_1)))
-                                                    (lambda (min2_0
-                                                             max2_0
-                                                             lb2_0)
+                                                    (case-lambda
+                                                     ((min2_0 max2_0 lb2_0)
                                                       (let ((app_0
                                                              (min
                                                               min1_0
@@ -2980,20 +3335,38 @@
                                                            (max
                                                             lb0_0
                                                             lb1_0
-                                                            lb2_0))))))))))
+                                                            lb2_0)))))
+                                                     (args
+                                                      (raise-binding-result-arity-error
+                                                       3
+                                                       args)))))
+                                                  (args
+                                                   (raise-binding-result-arity-error
+                                                    3
+                                                    args)))))
+                                               (args
+                                                (raise-binding-result-arity-error
+                                                 3
+                                                 args))))
                                              (if (rx:lookahead? rx_1)
                                                (call-with-values
                                                 (lambda ()
                                                   (validate_0
                                                    (rx:lookahead-rx rx_1)))
-                                                (lambda (min1_0 max1_0 lb1_0)
-                                                  (values 0 0 lb1_0)))
+                                                (case-lambda
+                                                 ((min1_0 max1_0 lb1_0)
+                                                  (values 0 0 lb1_0))
+                                                 (args
+                                                  (raise-binding-result-arity-error
+                                                   3
+                                                   args))))
                                                (if (rx:lookbehind? rx_1)
                                                  (call-with-values
                                                   (lambda ()
                                                     (validate_0
                                                      (rx:lookbehind-rx rx_1)))
-                                                  (lambda (min1_0 max1_0 lb1_0)
+                                                  (case-lambda
+                                                   ((min1_0 max1_0 lb1_0)
                                                     (begin
                                                       (if (= +inf.0 max1_0)
                                                         (regexp-error
@@ -3008,7 +3381,11 @@
                                                       (values
                                                        0
                                                        0
-                                                       (max max1_0 lb1_0)))))
+                                                       (max max1_0 lb1_0))))
+                                                   (args
+                                                    (raise-binding-result-arity-error
+                                                     3
+                                                     args))))
                                                  (if (rx:cut? rx_1)
                                                    (validate_0
                                                     (rx:cut-rx rx_1))
@@ -3059,44 +3436,50 @@
                                                           "internal error: ~s"
                                                           rx_1)))))))))))))))))))))))
                 (validate_0 rx_0)))
-             (lambda (min-len_0 max-len_0 max-lookbehind_0)
+             (case-lambda
+              ((min-len_0 max-len_0 max-lookbehind_0)
                (begin
                  (let ((ht_0 must-sizes_0))
-                   (letrec*
-                    ((for-loop_0
-                      (|#%name|
-                       for-loop
-                       (lambda (i_0)
-                         (if i_0
-                           (let ((n_0 (hash-iterate-key ht_0 i_0)))
-                             (begin
-                               (if (positive? (hash-ref group-sizes_0 n_0 0))
-                                 (void)
-                                 (might-be-empty-error_0))
-                               (for-loop_0 (hash-iterate-next ht_0 i_0))))
-                           (values))))))
-                    (for-loop_0 (hash-iterate-first ht_0))))
+                   (begin
+                     (check-in-hash-keys ht_0)
+                     (letrec*
+                      ((for-loop_0
+                        (|#%name|
+                         for-loop
+                         (lambda (i_0)
+                           (if i_0
+                             (let ((n_0 (hash-iterate-key ht_0 i_0)))
+                               (begin
+                                 (if (positive? (hash-ref group-sizes_0 n_0 0))
+                                   (void)
+                                   (might-be-empty-error_0))
+                                 (for-loop_0 (hash-iterate-next ht_0 i_0))))
+                             (values))))))
+                      (for-loop_0 (hash-iterate-first ht_0)))))
                  (void)
-                 max-lookbehind_0)))))))))
+                 max-lookbehind_0))
+              (args (raise-binding-result-arity-error 3 args))))))))))
 (define merge-depends-sizes
   (lambda (ht1_0 ht2_0)
     (if (zero? (hash-count ht1_0))
       ht2_0
       (if (let ((app_0 (hash-count ht2_0))) (< app_0 (hash-count ht1_0)))
         (merge-depends-sizes ht2_0 ht1_0)
-        (letrec*
-         ((for-loop_0
-           (|#%name|
-            for-loop
-            (lambda (ht2_1 i_0)
-              (if i_0
-                (let ((k_0 (hash-iterate-key ht1_0 i_0)))
-                  (let ((ht2_2
-                         (let ((ht2_2 (hash-set ht2_1 k_0 #t)))
-                           (values ht2_2))))
-                    (for-loop_0 ht2_2 (hash-iterate-next ht1_0 i_0))))
-                ht2_1)))))
-         (for-loop_0 ht2_0 (hash-iterate-first ht1_0)))))))
+        (begin
+          (check-in-hash-keys ht1_0)
+          (letrec*
+           ((for-loop_0
+             (|#%name|
+              for-loop
+              (lambda (ht2_1 i_0)
+                (if i_0
+                  (let ((k_0 (hash-iterate-key ht1_0 i_0)))
+                    (let ((ht2_2
+                           (let ((ht2_2 (hash-set ht2_1 k_0 #t)))
+                             (values ht2_2))))
+                      (for-loop_0 ht2_2 (hash-iterate-next ht1_0 i_0))))
+                  ht2_1)))))
+           (for-loop_0 ht2_0 (hash-iterate-first ht1_0))))))))
 (define convert
   (lambda (rx_0)
     (if (eq? rx_0 'any)
@@ -3119,26 +3502,28 @@
                   (let ((new-rxs_0
                          (reverse$1
                           (let ((lst_0 (rx:sequence-rxs rx_0)))
-                            (letrec*
-                             ((for-loop_0
-                               (|#%name|
-                                for-loop
-                                (lambda (fold-var_0 lst_1)
-                                  (if (pair? lst_1)
-                                    (let ((rx_1 (unsafe-car lst_1)))
-                                      (let ((rest_0 (unsafe-cdr lst_1)))
-                                        (let ((fold-var_1
-                                               (let ((fold-var_1
-                                                      (cons
-                                                       (convert rx_1)
-                                                       fold-var_0)))
-                                                 (values fold-var_1))))
-                                          (for-loop_0 fold-var_1 rest_0))))
-                                    fold-var_0)))))
-                             (for-loop_0 null lst_0))))))
+                            (begin
+                              (check-list lst_0)
+                              (letrec*
+                               ((for-loop_0
+                                 (|#%name|
+                                  for-loop
+                                  (lambda (fold-var_0 lst_1)
+                                    (if (pair? lst_1)
+                                      (let ((rx_1 (unsafe-car lst_1)))
+                                        (let ((rest_0 (unsafe-cdr lst_1)))
+                                          (let ((fold-var_1
+                                                 (let ((fold-var_1
+                                                        (cons
+                                                         (convert rx_1)
+                                                         fold-var_0)))
+                                                   (values fold-var_1))))
+                                            (for-loop_0 fold-var_1 rest_0))))
+                                      fold-var_0)))))
+                               (for-loop_0 null lst_0)))))))
                     (if (rx:sequence? rx_0)
                       (let ((needs-backtrack?2_0
-                             (ormap_2207 needs-backtrack? new-rxs_0)))
+                             (ormap_2075 needs-backtrack? new-rxs_0)))
                         (rx:sequence2.1 new-rxs_0 needs-backtrack?2_0))
                       (raise-argument-error 'struct-copy "rx:sequence?" rx_0)))
                   (if (rx:group? rx_0)
@@ -3149,11 +3534,13 @@
                     (if (rx:repeat? rx_0)
                       (if (rx:repeat? rx_0)
                         (let ((rx4_0 (convert (rx:repeat-rx rx_0))))
-                          (rx:repeat4.1
-                           rx4_0
-                           (rx:repeat-min rx_0)
-                           (rx:repeat-max rx_0)
-                           (rx:repeat-non-greedy? rx_0)))
+                          (let ((app_0 (rx:repeat-min rx_0)))
+                            (let ((app_1 (rx:repeat-max rx_0)))
+                              (rx:repeat4.1
+                               rx4_0
+                               app_0
+                               app_1
+                               (rx:repeat-non-greedy? rx_0)))))
                         (raise-argument-error 'struct-copy "rx:repeat?" rx_0))
                       (if (rx:maybe? rx_0)
                         (if (rx:maybe? rx_0)
@@ -3175,13 +3562,15 @@
                                              or-part_0
                                              (needs-backtrack? new-rx2_0)))))
                                     (let ((tst6_1 tst6_0))
-                                      (rx:conditional6.1
-                                       tst6_1
-                                       new-rx1_0
-                                       new-rx2_0
-                                       (rx:conditional-n-start rx_0)
-                                       (rx:conditional-num-n rx_0)
-                                       needs-backtrack?9_0))))
+                                      (let ((app_0
+                                             (rx:conditional-n-start rx_0)))
+                                        (rx:conditional6.1
+                                         tst6_1
+                                         new-rx1_0
+                                         new-rx2_0
+                                         app_0
+                                         (rx:conditional-num-n rx_0)
+                                         needs-backtrack?9_0)))))
                                 (raise-argument-error
                                  'struct-copy
                                  "rx:conditional?"
@@ -3189,11 +3578,13 @@
                           (if (rx:lookahead? rx_0)
                             (if (rx:lookahead? rx_0)
                               (let ((rx10_0 (convert (rx:lookahead-rx rx_0))))
-                                (rx:lookahead7.1
-                                 rx10_0
-                                 (rx:lookahead-match? rx_0)
-                                 (rx:lookahead-n-start rx_0)
-                                 (rx:lookahead-num-n rx_0)))
+                                (let ((app_0 (rx:lookahead-match? rx_0)))
+                                  (let ((app_1 (rx:lookahead-n-start rx_0)))
+                                    (rx:lookahead7.1
+                                     rx10_0
+                                     app_0
+                                     app_1
+                                     (rx:lookahead-num-n rx_0)))))
                               (raise-argument-error
                                'struct-copy
                                "rx:lookahead?"
@@ -3202,17 +3593,19 @@
                               (if (rx:lookbehind? rx_0)
                                 (let ((rx11_0
                                        (convert (rx:lookbehind-rx rx_0))))
-                                  (let ((app_0 (rx:lookbehind-lb-min rx_0)))
-                                    (let ((app_1 (rx:lookbehind-lb-max rx_0)))
+                                  (let ((app_0 (rx:lookbehind-match? rx_0)))
+                                    (let ((app_1 (rx:lookbehind-lb-min rx_0)))
                                       (let ((app_2
-                                             (rx:lookbehind-n-start rx_0)))
-                                        (rx:lookbehind8.1
-                                         rx11_0
-                                         (rx:lookbehind-match? rx_0)
-                                         app_0
-                                         app_1
-                                         app_2
-                                         (rx:lookbehind-num-n rx_0))))))
+                                             (rx:lookbehind-lb-max rx_0)))
+                                        (let ((app_3
+                                               (rx:lookbehind-n-start rx_0)))
+                                          (rx:lookbehind8.1
+                                           rx11_0
+                                           app_0
+                                           app_1
+                                           app_2
+                                           app_3
+                                           (rx:lookbehind-num-n rx_0)))))))
                                 (raise-argument-error
                                  'struct-copy
                                  "rx:lookbehind?"
@@ -3222,11 +3615,12 @@
                                   (if (rx:cut? rx_0)
                                     (let ((needs-backtrack?13_0
                                            (needs-backtrack? rx_0)))
-                                      (rx:cut9.1
-                                       new-rx_0
-                                       (rx:cut-n-start rx_0)
-                                       (rx:cut-num-n rx_0)
-                                       needs-backtrack?13_0))
+                                      (let ((app_0 (rx:cut-n-start rx_0)))
+                                        (rx:cut9.1
+                                         new-rx_0
+                                         app_0
+                                         (rx:cut-num-n rx_0)
+                                         needs-backtrack?13_0)))
                                     (raise-argument-error
                                      'struct-copy
                                      "rx:cut?"
@@ -3279,10 +3673,10 @@
   (lambda (start-str_0 end-str_0)
     (if (equal? start-str_0 end-str_0)
       start-str_0
-      (if (= 1 (unsafe-bytes-length start-str_0))
+      (if (= 1 (bytes-length start-str_0))
         (rx-range
-         (let ((from-c_0 (unsafe-bytes-ref start-str_0 0)))
-           (let ((to-c_0 (unsafe-bytes-ref end-str_0 0)))
+         (let ((from-c_0 (bytes-ref start-str_0 0)))
+           (let ((to-c_0 (bytes-ref end-str_0 0)))
              (let ((from-c_1 from-c_0))
                (range-union null (list (cons from-c_1 to-c_0))))))
          255)
@@ -3292,15 +3686,15 @@
                   (|#%name|
                    loop
                    (lambda (i_0)
-                     (if (let ((app_0 (unsafe-bytes-ref start-str_0 i_0)))
-                           (= app_0 (unsafe-bytes-ref end-str_0 i_0)))
+                     (if (let ((app_0 (bytes-ref start-str_0 i_0)))
+                           (= app_0 (bytes-ref end-str_0 i_0)))
                        (loop_0 (add1 i_0))
                        i_0)))))
                 (loop_0 0))))
           (let ((common-str_0
                  (if (zero? common_0) #vu8() (subbytes start-str_0 0 common_0))))
-            (let ((n_0 (unsafe-bytes-ref start-str_0 common_0)))
-              (let ((m_0 (unsafe-bytes-ref end-str_0 common_0)))
+            (let ((n_0 (bytes-ref start-str_0 common_0)))
+              (let ((m_0 (bytes-ref end-str_0 common_0)))
                 (let ((p_0
                        (if (zero-tail? start-str_0 (add1 common_0))
                          n_0
@@ -3310,8 +3704,7 @@
                            m_0
                            (sub1 m_0))))
                     (let ((tail-len_0
-                           (sub1
-                            (- (unsafe-bytes-length start-str_0) common_0))))
+                           (sub1 (- (bytes-length start-str_0) common_0))))
                       (let ((n-to-p_0
                              (rx-sequence
                               (list
@@ -3343,27 +3736,34 @@
                                       (cons
                                        app_0
                                        (reverse$1
-                                        (letrec*
-                                         ((for-loop_0
-                                           (|#%name|
-                                            for-loop
-                                            (lambda (fold-var_0 pos_0)
-                                              (if (< pos_0 tail-len_0)
-                                                (let ((fold-var_1
-                                                       (cons 'any fold-var_0)))
-                                                  (let ((fold-var_2
-                                                         (values fold-var_1)))
-                                                    (for-loop_0
-                                                     fold-var_2
-                                                     (+ pos_0 1))))
-                                                fold-var_0)))))
-                                         (for-loop_0 null 0)))))))))
+                                        (begin
+                                          (check-range-generic
+                                           'in-range
+                                           0
+                                           tail-len_0
+                                           1)
+                                          (letrec*
+                                           ((for-loop_0
+                                             (|#%name|
+                                              for-loop
+                                              (lambda (fold-var_0 pos_0)
+                                                (if (< pos_0 tail-len_0)
+                                                  (let ((fold-var_1
+                                                         (cons
+                                                          'any
+                                                          fold-var_0)))
+                                                    (let ((fold-var_2
+                                                           (values
+                                                            fold-var_1)))
+                                                      (for-loop_0
+                                                       fold-var_2
+                                                       (+ pos_0 1))))
+                                                  fold-var_0)))))
+                                           (for-loop_0 null 0))))))))))
                             (rx-sequence
                              (let ((app_0
-                                    (if (=
-                                         1
-                                         (unsafe-bytes-length common-str_0))
-                                      (unsafe-bytes-ref common-str_0 0)
+                                    (if (= 1 (bytes-length common-str_0))
+                                      (bytes-ref common-str_0 0)
                                       common-str_0)))
                                (list
                                 app_0
@@ -3376,8 +3776,18 @@
 (define zero-tail?
   (lambda (bstr_0 i_0)
     (call-with-values
-     (lambda () (unsafe-normalise-inputs unsafe-bytes-length bstr_0 i_0 #f 1))
-     (lambda (v*_0 start*_0 stop*_0 step*_0)
+     (lambda ()
+       (normalise-inputs
+        'in-bytes
+        "byte string"
+        (lambda (x_0) (bytes? x_0))
+        (lambda (x_0) (unsafe-bytes-length x_0))
+        bstr_0
+        i_0
+        #f
+        1))
+     (case-lambda
+      ((v*_0 start*_0 stop*_0 step*_0)
        (letrec*
         ((for-loop_0
           (|#%name|
@@ -3391,7 +3801,8 @@
                      (for-loop_0 result_1 (unsafe-fx+ idx_0 1))
                      result_1)))
                result_0)))))
-        (for-loop_0 #t start*_0))))))
+        (for-loop_0 #t start*_0)))
+      (args (raise-binding-result-arity-error 4 args))))))
 (define anchored?
   (lambda (rx_0)
     (if (eq? rx_0 'start)
@@ -3432,7 +3843,8 @@
       bstr_0
       (if (not bstr_0)
         (compile-range-sequence seq_0)
-        (if (>= (unsafe-bytes-length bstr_0) (quotient (length seq_0) 2))
+        (if (let ((app_0 (bytes-length bstr_0)))
+              (>= app_0 (quotient (length seq_0) 2)))
           bstr_0
           (compile-range-sequence seq_0))))))
 (define something-expensive?
@@ -3444,24 +3856,26 @@
         (something-expensive? (rx:maybe-rx rx_0))
         (if (rx:sequence? rx_0)
           (let ((lst_0 (rx:sequence-rxs rx_0)))
-            (letrec*
-             ((for-loop_0
-               (|#%name|
-                for-loop
-                (lambda (result_0 lst_1)
-                  (if (pair? lst_1)
-                    (let ((rx_1 (unsafe-car lst_1)))
-                      (let ((rest_0 (unsafe-cdr lst_1)))
-                        (let ((result_1
-                               (let ((result_1 (something-expensive? rx_1)))
-                                 (values result_1))))
-                          (if (if (not (let ((x_0 (list rx_1))) result_1))
-                                #t
-                                #f)
-                            (for-loop_0 result_1 rest_0)
-                            result_1))))
-                    result_0)))))
-             (for-loop_0 #f lst_0)))
+            (begin
+              (check-list lst_0)
+              (letrec*
+               ((for-loop_0
+                 (|#%name|
+                  for-loop
+                  (lambda (result_0 lst_1)
+                    (if (pair? lst_1)
+                      (let ((rx_1 (unsafe-car lst_1)))
+                        (let ((rest_0 (unsafe-cdr lst_1)))
+                          (let ((result_1
+                                 (let ((result_1 (something-expensive? rx_1)))
+                                   (values result_1))))
+                            (if (if (not (let ((x_0 (list rx_1))) result_1))
+                                  #t
+                                  #f)
+                              (for-loop_0 result_1 rest_0)
+                              result_1))))
+                      result_0)))))
+               (for-loop_0 #f lst_0))))
           (if (rx:conditional? rx_0)
             (let ((or-part_0
                    (something-expensive? (rx:conditional-rx_2590 rx_0))))
@@ -3485,30 +3899,35 @@
         (bytes rx_0)
         (if (rx:sequence? rx_0)
           (let ((lst_0 (rx:sequence-rxs rx_0)))
-            (letrec*
-             ((for-loop_0
-               (|#%name|
-                for-loop
-                (lambda (bstr_0 lst_1)
-                  (if (pair? lst_1)
-                    (let ((rx_1 (unsafe-car lst_1)))
-                      (let ((rest_0 (unsafe-cdr lst_1)))
-                        (let ((bstr_1
-                               (let ((bstr_1
-                                      (let ((bstr1_0 (must-string rx_1)))
-                                        (if (not bstr_0)
-                                          bstr1_0
-                                          (if (not bstr1_0)
-                                            bstr_0
-                                            (if (>
-                                                 (unsafe-bytes-length bstr_0)
-                                                 (unsafe-bytes-length bstr1_0))
+            (begin
+              (check-list lst_0)
+              (letrec*
+               ((for-loop_0
+                 (|#%name|
+                  for-loop
+                  (lambda (bstr_0 lst_1)
+                    (if (pair? lst_1)
+                      (let ((rx_1 (unsafe-car lst_1)))
+                        (let ((rest_0 (unsafe-cdr lst_1)))
+                          (let ((bstr_1
+                                 (let ((bstr_1
+                                        (let ((bstr1_0 (must-string rx_1)))
+                                          (if (not bstr_0)
+                                            bstr1_0
+                                            (if (not bstr1_0)
                                               bstr_0
-                                              bstr1_0))))))
-                                 (values bstr_1))))
-                          (for-loop_0 bstr_1 rest_0))))
-                    bstr_0)))))
-             (for-loop_0 #f lst_0)))
+                                              (if (let ((app_0
+                                                         (bytes-length
+                                                          bstr_0)))
+                                                    (>
+                                                     app_0
+                                                     (bytes-length bstr1_0)))
+                                                bstr_0
+                                                bstr1_0))))))
+                                   (values bstr_1))))
+                            (for-loop_0 bstr_1 rest_0))))
+                      bstr_0)))))
+               (for-loop_0 #f lst_0))))
           (if (rx:repeat? rx_0)
             (if (positive? (rx:repeat-min rx_0))
               (must-string (rx:repeat-rx rx_0))
@@ -3581,25 +4000,27 @@
 (define compile-range-sequence
   (lambda (seq_0)
     (reverse$1
-     (letrec*
-      ((for-loop_0
-        (|#%name|
-         for-loop
-         (lambda (fold-var_0 lst_0)
-           (if (pair? lst_0)
-             (let ((r_0 (unsafe-car lst_0)))
-               (let ((rest_0 (unsafe-cdr lst_0)))
-                 (let ((fold-var_1
-                        (let ((fold-var_1
-                               (cons
-                                (if (exact-integer? r_0)
-                                  (compile-range (range-add null r_0))
-                                  (compile-range r_0))
-                                fold-var_0)))
-                          (values fold-var_1))))
-                   (for-loop_0 fold-var_1 rest_0))))
-             fold-var_0)))))
-      (for-loop_0 null seq_0)))))
+     (begin
+       (check-list seq_0)
+       (letrec*
+        ((for-loop_0
+          (|#%name|
+           for-loop
+           (lambda (fold-var_0 lst_0)
+             (if (pair? lst_0)
+               (let ((r_0 (unsafe-car lst_0)))
+                 (let ((rest_0 (unsafe-cdr lst_0)))
+                   (let ((fold-var_1
+                          (let ((fold-var_1
+                                 (cons
+                                  (if (exact-integer? r_0)
+                                    (compile-range (range-add null r_0))
+                                    (compile-range r_0))
+                                  fold-var_0)))
+                            (values fold-var_1))))
+                     (for-loop_0 fold-var_1 rest_0))))
+               fold-var_0)))))
+        (for-loop_0 null seq_0))))))
 (define get-start-range
   (lambda (rx_0)
     (let ((r_0 (start-range rx_0))) (if r_0 (compile-range r_0) #f))))
@@ -3608,7 +4029,7 @@
     (if (integer? rx_0)
       (range-add null rx_0)
       (if (bytes? rx_0)
-        (range-add null (unsafe-bytes-ref rx_0 0))
+        (range-add null (bytes-ref rx_0 0))
         (if (rx:sequence? rx_0)
           (letrec*
            ((loop_0
@@ -3683,13 +4104,19 @@
    #f
    'lazy-bytes))
 (define struct:lazy-bytes
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'lazy-bytes
    #f
    (|#%nongenerative-uid| lazy-bytes)
    #f
    #f
-   '(13 . 3075)))
+   '(13 . 3075)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
 (define effect_2741 (finish_3069 struct:lazy-bytes))
 (define lazy-bytes1.1
   (|#%name|
@@ -3744,7 +4171,7 @@
            out_0
            max-lookbehind_0
            max-peek_0)
-    (let ((len_0 (unsafe-bytes-length prefix_0)))
+    (let ((len_0 (bytes-length prefix_0)))
       (lazy-bytes1.1
        prefix_0
        len_0
@@ -3770,7 +4197,7 @@
 (define lazy-bytes-ref
   (lambda (s_0 pos_0)
     (let ((app_0 (lazy-bytes-bstr s_0)))
-      (unsafe-bytes-ref app_0 (- pos_0 (lazy-bytes-discarded-count s_0))))))
+      (bytes-ref app_0 (- pos_0 (lazy-bytes-discarded-count s_0))))))
 (define lazy-bytes-advance!
   (lambda (s_0 given-pos_0 force?_0)
     (begin
@@ -3806,12 +4233,7 @@
                           (begin
                             (if (= amt_0 copy-end_0)
                               (void)
-                              (unsafe-bytes-copy!
-                               bstr_0
-                               0
-                               bstr_0
-                               amt_0
-                               copy-end_0))
+                              (bytes-copy! bstr_0 0 bstr_0 amt_0 copy-end_0))
                             (set-lazy-bytes-discarded-count!
                              s_0
                              (+ amt_0 discarded-count_0))))))))
@@ -3825,25 +4247,27 @@
           (let ((bstr_0 (lazy-bytes-bstr s_0)))
             (if (lazy-bytes-failed? s_0)
               #f
-              (if (< len_0 (unsafe-bytes-length bstr_0))
+              (if (< len_0 (bytes-length bstr_0))
                 (let ((n_0
                        (let ((app_0
-                              (let ((app_0
-                                     (- len_0 (lazy-bytes-prefix-len s_0))))
-                                (+
-                                 app_0
-                                 (lazy-bytes-skip-amt s_0)
-                                 discarded-count_0))))
-                         (let ((app_1 (lazy-bytes-progress-evt s_0)))
-                           (|#%app|
-                            (if (lazy-bytes-immediate-only? s_0)
-                              peek-bytes-avail!*
-                              peek-bytes-avail!)
-                            bstr_0
-                            app_0
-                            app_1
-                            (lazy-bytes-in s_0)
-                            len_0)))))
+                              (if (lazy-bytes-immediate-only? s_0)
+                                peek-bytes-avail!*
+                                peek-bytes-avail!)))
+                         (let ((app_1
+                                (let ((app_1
+                                       (- len_0 (lazy-bytes-prefix-len s_0))))
+                                  (+
+                                   app_1
+                                   (lazy-bytes-skip-amt s_0)
+                                   discarded-count_0))))
+                           (let ((app_2 (lazy-bytes-progress-evt s_0)))
+                             (|#%app|
+                              app_0
+                              bstr_0
+                              app_1
+                              app_2
+                              (lazy-bytes-in s_0)
+                              len_0))))))
                   (if (eof-object? n_0)
                     #f
                     (if (not (fixnum? n_0))
@@ -3871,9 +4295,7 @@
                       (let ((bstr2_0
                              (make-bytes
                               (let ((sz_0
-                                     (max
-                                      32
-                                      (* 2 (unsafe-bytes-length bstr_0)))))
+                                     (max 32 (* 2 (bytes-length bstr_0)))))
                                 (if max-peek_0
                                   (min
                                    sz_0
@@ -3882,7 +4304,7 @@
                                     discarded-count_0))
                                   sz_0)))))
                         (begin
-                          (unsafe-bytes-copy! bstr2_0 0 bstr_0 0 len_0)
+                          (bytes-copy! bstr2_0 0 bstr_0 0 len_0)
                           (set-lazy-bytes-bstr! s_0 bstr2_0)
                           (get-more-bytes! s_0)))))))))))
       #f)))
@@ -3981,7 +4403,7 @@
   (lambda (b_0 next-m_0)
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
       (if (if (bytes? s_0)
-            (if (< pos_0 limit_0) (= b_0 (unsafe-bytes-ref s_0 pos_0)) #f)
+            (if (< pos_0 limit_0) (= b_0 (bytes-ref s_0 pos_0)) #f)
             (if (lazy-bytes-before-end? s_0 pos_0 limit_0)
               (= b_0 (lazy-bytes-ref s_0 pos_0))
               #f))
@@ -3999,7 +4421,7 @@
   (lambda (b_0)
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
       (if (if (bytes? s_0)
-            (if (< pos_0 limit_0) (= b_0 (unsafe-bytes-ref s_0 pos_0)) #f)
+            (if (< pos_0 limit_0) (= b_0 (bytes-ref s_0 pos_0)) #f)
             (if (lazy-bytes-before-end? s_0 pos_0 limit_0)
               (= b_0 (lazy-bytes-ref s_0 pos_0))
               #f))
@@ -4019,7 +4441,7 @@
                   (if (let ((or-part_0 (> pos3_0 limit_1)))
                         (if or-part_0
                           or-part_0
-                          (not (= b_0 (unsafe-bytes-ref s_0 pos_1)))))
+                          (not (= b_0 (bytes-ref s_0 pos_1)))))
                     (values pos_1 n_0 1)
                     (loop_0 pos3_0 (add1 n_0))))))))
            (loop_0 pos_0 0)))
@@ -4048,22 +4470,30 @@
             (if (<= (+ pos_0 len_0) limit_0)
               (call-with-values
                (lambda ()
-                 (unsafe-normalise-inputs
-                  unsafe-bytes-length
+                 (normalise-inputs
+                  'in-bytes
+                  "byte string"
+                  (lambda (x_0) (bytes? x_0))
+                  (lambda (x_0) (unsafe-bytes-length x_0))
                   bstr_0
                   0
                   len_0
                   1))
-               (lambda (v*_0 start*_0 stop*_0 step*_0)
+               (case-lambda
+                ((v*_0 start*_0 stop*_0 step*_0)
                  (call-with-values
                   (lambda ()
-                    (unsafe-normalise-inputs
-                     unsafe-bytes-length
+                    (normalise-inputs
+                     'in-bytes
+                     "byte string"
+                     (lambda (x_0) (bytes? x_0))
+                     (lambda (x_0) (unsafe-bytes-length x_0))
                      s_0
                      pos_0
                      (+ pos_0 len_0)
                      1))
-                  (lambda (v*_1 start*_1 stop*_1 step*_1)
+                  (case-lambda
+                   ((v*_1 start*_1 stop*_1 step*_1)
                     (let ((v*_2 v*_0)
                           (start*_2 start*_0)
                           (stop*_2 stop*_0)
@@ -4097,53 +4527,67 @@
                                          (unsafe-fx+ idx_1 1))
                                         result_1)))))
                               result_0)))))
-                       (for-loop_0 #t start*_2 start*_1)))))))
+                       (for-loop_0 #t start*_2 start*_1))))
+                   (args (raise-binding-result-arity-error 4 args)))))
+                (args (raise-binding-result-arity-error 4 args))))
               #f)
             (call-with-values
              (lambda ()
-               (unsafe-normalise-inputs unsafe-bytes-length bstr_0 0 len_0 1))
-             (lambda (v*_0 start*_0 stop*_0 step*_0)
+               (normalise-inputs
+                'in-bytes
+                "byte string"
+                (lambda (x_0) (bytes? x_0))
+                (lambda (x_0) (unsafe-bytes-length x_0))
+                bstr_0
+                0
+                len_0
+                1))
+             (case-lambda
+              ((v*_0 start*_0 stop*_0 step*_0)
                (let ((start_1 pos_0))
                  (let ((v*_1 v*_0)
                        (start*_1 start*_0)
                        (stop*_1 stop*_0)
                        (step*_1 step*_0))
-                   (letrec*
-                    ((for-loop_0
-                      (|#%name|
-                       for-loop
-                       (lambda (result_0 idx_0 pos_1)
-                         (if (if (unsafe-fx< idx_0 stop*_1) #t #f)
-                           (let ((c1_0 (unsafe-bytes-ref v*_1 idx_0)))
-                             (let ((result_1
-                                    (let ((result_1
-                                           (if (lazy-bytes-before-end?
-                                                s_0
-                                                pos_1
-                                                limit_0)
-                                             (let ((c2_0
-                                                    (lazy-bytes-ref
-                                                     s_0
-                                                     pos_1)))
-                                               (= c1_0 c2_0))
-                                             #f)))
-                                      (values result_1))))
-                               (if (if (not
-                                        (let ((x_0 (list c1_0)))
-                                          (not result_1)))
-                                     (if (not
-                                          (let ((x_0 (list pos_1)))
+                   (begin
+                     (check-naturals start_1)
+                     (letrec*
+                      ((for-loop_0
+                        (|#%name|
+                         for-loop
+                         (lambda (result_0 idx_0 pos_1)
+                           (if (if (unsafe-fx< idx_0 stop*_1) #t #f)
+                             (let ((c1_0 (unsafe-bytes-ref v*_1 idx_0)))
+                               (let ((result_1
+                                      (let ((result_1
+                                             (if (lazy-bytes-before-end?
+                                                  s_0
+                                                  pos_1
+                                                  limit_0)
+                                               (let ((c2_0
+                                                      (lazy-bytes-ref
+                                                       s_0
+                                                       pos_1)))
+                                                 (= c1_0 c2_0))
+                                               #f)))
+                                        (values result_1))))
+                                 (if (if (not
+                                          (let ((x_0 (list c1_0)))
                                             (not result_1)))
-                                       #t
+                                       (if (not
+                                            (let ((x_0 (list pos_1)))
+                                              (not result_1)))
+                                         #t
+                                         #f)
                                        #f)
-                                     #f)
-                                 (for-loop_0
-                                  result_1
-                                  (unsafe-fx+ idx_0 1)
-                                  (+ pos_1 1))
-                                 result_1)))
-                           result_0)))))
-                    (for-loop_0 #t start*_1 start_1)))))))
+                                   (for-loop_0
+                                    result_1
+                                    (unsafe-fx+ idx_0 1)
+                                    (+ pos_1 1))
+                                   result_1)))
+                             result_0)))))
+                      (for-loop_0 #t start*_1 start_1))))))
+              (args (raise-binding-result-arity-error 4 args)))))
         (|#%app|
          next-m_0
          s_0
@@ -4161,22 +4605,30 @@
             (if (<= (+ pos_0 len_0) limit_0)
               (call-with-values
                (lambda ()
-                 (unsafe-normalise-inputs
-                  unsafe-bytes-length
+                 (normalise-inputs
+                  'in-bytes
+                  "byte string"
+                  (lambda (x_0) (bytes? x_0))
+                  (lambda (x_0) (unsafe-bytes-length x_0))
                   bstr_0
                   0
                   len_0
                   1))
-               (lambda (v*_0 start*_0 stop*_0 step*_0)
+               (case-lambda
+                ((v*_0 start*_0 stop*_0 step*_0)
                  (call-with-values
                   (lambda ()
-                    (unsafe-normalise-inputs
-                     unsafe-bytes-length
+                    (normalise-inputs
+                     'in-bytes
+                     "byte string"
+                     (lambda (x_0) (bytes? x_0))
+                     (lambda (x_0) (unsafe-bytes-length x_0))
                      s_0
                      pos_0
                      (+ pos_0 len_0)
                      1))
-                  (lambda (v*_1 start*_1 stop*_1 step*_1)
+                  (case-lambda
+                   ((v*_1 start*_1 stop*_1 step*_1)
                     (let ((v*_2 v*_0)
                           (start*_2 start*_0)
                           (stop*_2 stop*_0)
@@ -4210,58 +4662,72 @@
                                          (unsafe-fx+ idx_1 1))
                                         result_1)))))
                               result_0)))))
-                       (for-loop_0 #t start*_2 start*_1)))))))
+                       (for-loop_0 #t start*_2 start*_1))))
+                   (args (raise-binding-result-arity-error 4 args)))))
+                (args (raise-binding-result-arity-error 4 args))))
               #f)
             (call-with-values
              (lambda ()
-               (unsafe-normalise-inputs unsafe-bytes-length bstr_0 0 len_0 1))
-             (lambda (v*_0 start*_0 stop*_0 step*_0)
+               (normalise-inputs
+                'in-bytes
+                "byte string"
+                (lambda (x_0) (bytes? x_0))
+                (lambda (x_0) (unsafe-bytes-length x_0))
+                bstr_0
+                0
+                len_0
+                1))
+             (case-lambda
+              ((v*_0 start*_0 stop*_0 step*_0)
                (let ((start_1 pos_0))
                  (let ((v*_1 v*_0)
                        (start*_1 start*_0)
                        (stop*_1 stop*_0)
                        (step*_1 step*_0))
-                   (letrec*
-                    ((for-loop_0
-                      (|#%name|
-                       for-loop
-                       (lambda (result_0 idx_0 pos_1)
-                         (if (if (unsafe-fx< idx_0 stop*_1) #t #f)
-                           (let ((c1_0 (unsafe-bytes-ref v*_1 idx_0)))
-                             (let ((result_1
-                                    (let ((result_1
-                                           (if (lazy-bytes-before-end?
-                                                s_0
-                                                pos_1
-                                                limit_0)
-                                             (let ((c2_0
-                                                    (lazy-bytes-ref
-                                                     s_0
-                                                     pos_1)))
-                                               (= c1_0 c2_0))
-                                             #f)))
-                                      (values result_1))))
-                               (if (if (not
-                                        (let ((x_0 (list c1_0)))
-                                          (not result_1)))
-                                     (if (not
-                                          (let ((x_0 (list pos_1)))
+                   (begin
+                     (check-naturals start_1)
+                     (letrec*
+                      ((for-loop_0
+                        (|#%name|
+                         for-loop
+                         (lambda (result_0 idx_0 pos_1)
+                           (if (if (unsafe-fx< idx_0 stop*_1) #t #f)
+                             (let ((c1_0 (unsafe-bytes-ref v*_1 idx_0)))
+                               (let ((result_1
+                                      (let ((result_1
+                                             (if (lazy-bytes-before-end?
+                                                  s_0
+                                                  pos_1
+                                                  limit_0)
+                                               (let ((c2_0
+                                                      (lazy-bytes-ref
+                                                       s_0
+                                                       pos_1)))
+                                                 (= c1_0 c2_0))
+                                               #f)))
+                                        (values result_1))))
+                                 (if (if (not
+                                          (let ((x_0 (list c1_0)))
                                             (not result_1)))
-                                       #t
+                                       (if (not
+                                            (let ((x_0 (list pos_1)))
+                                              (not result_1)))
+                                         #t
+                                         #f)
                                        #f)
-                                     #f)
-                                 (for-loop_0
-                                  result_1
-                                  (unsafe-fx+ idx_0 1)
-                                  (+ pos_1 1))
-                                 result_1)))
-                           result_0)))))
-                    (for-loop_0 #t start*_1 start_1)))))))
+                                   (for-loop_0
+                                    result_1
+                                    (unsafe-fx+ idx_0 1)
+                                    (+ pos_1 1))
+                                   result_1)))
+                             result_0)))))
+                      (for-loop_0 #t start*_1 start_1))))))
+              (args (raise-binding-result-arity-error 4 args)))))
         (+ pos_0 len_0)
         #f))))
 (define bytes-matcher*
   (lambda (bstr_0 max_0)
-    (let ((len_0 (unsafe-bytes-length bstr_0)))
+    (let ((len_0 (bytes-length bstr_0)))
       (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0)
         (if (bytes? s_0)
           (let ((limit_1
@@ -4278,22 +4744,30 @@
                             (not
                              (call-with-values
                               (lambda ()
-                                (unsafe-normalise-inputs
-                                 unsafe-bytes-length
+                                (normalise-inputs
+                                 'in-bytes
+                                 "byte string"
+                                 (lambda (x_0) (bytes? x_0))
+                                 (lambda (x_0) (unsafe-bytes-length x_0))
                                  bstr_0
                                  0
                                  len_0
                                  1))
-                              (lambda (v*_0 start*_0 stop*_0 step*_0)
+                              (case-lambda
+                               ((v*_0 start*_0 stop*_0 step*_0)
                                 (call-with-values
                                  (lambda ()
-                                   (unsafe-normalise-inputs
-                                    unsafe-bytes-length
+                                   (normalise-inputs
+                                    'in-bytes
+                                    "byte string"
+                                    (lambda (x_0) (bytes? x_0))
+                                    (lambda (x_0) (unsafe-bytes-length x_0))
                                     s_0
                                     pos_1
                                     (+ pos_1 len_0)
                                     1))
-                                 (lambda (v*_1 start*_1 stop*_1 step*_1)
+                                 (case-lambda
+                                  ((v*_1 start*_1 stop*_1 step*_1)
                                    (let ((v*_2 v*_0)
                                          (start*_2 start*_0)
                                          (stop*_2 stop*_0)
@@ -4343,10 +4817,13 @@
                                                         (unsafe-fx+ idx_1 1))
                                                        result_1)))))
                                              result_0)))))
-                                      (for-loop_0
-                                       #t
-                                       start*_2
-                                       start*_1))))))))))
+                                      (for-loop_0 #t start*_2 start*_1))))
+                                  (args
+                                   (raise-binding-result-arity-error
+                                    4
+                                    args)))))
+                               (args
+                                (raise-binding-result-arity-error 4 args)))))))
                       (values pos_1 n_0 len_0)
                       (loop_0 pos3_0 (add1 n_0))))))))
              (loop_0 pos_0 0)))
@@ -4368,67 +4845,78 @@
                               (not
                                (call-with-values
                                 (lambda ()
-                                  (unsafe-normalise-inputs
-                                   unsafe-bytes-length
+                                  (normalise-inputs
+                                   'in-bytes
+                                   "byte string"
+                                   (lambda (x_0) (bytes? x_0))
+                                   (lambda (x_0) (unsafe-bytes-length x_0))
                                    bstr_0
                                    0
                                    len_0
                                    1))
-                                (lambda (v*_0 start*_0 stop*_0 step*_0)
+                                (case-lambda
+                                 ((v*_0 start*_0 stop*_0 step*_0)
                                   (let ((start_1 pos_1))
                                     (let ((v*_1 v*_0)
                                           (start*_1 start*_0)
                                           (stop*_1 stop*_0)
                                           (step*_1 step*_0))
-                                      (letrec*
-                                       ((for-loop_0
-                                         (|#%name|
-                                          for-loop
-                                          (lambda (result_0 idx_0 pos_2)
-                                            (if (if (unsafe-fx< idx_0 stop*_1)
-                                                  #t
-                                                  #f)
-                                              (let ((c1_0
-                                                     (unsafe-bytes-ref
-                                                      v*_1
-                                                      idx_0)))
-                                                (let ((result_1
-                                                       (let ((result_1
-                                                              (if (lazy-bytes-before-end?
-                                                                   s_0
-                                                                   pos_2
-                                                                   limit_1)
-                                                                (let ((c2_0
-                                                                       (lazy-bytes-ref
-                                                                        s_0
-                                                                        pos_2)))
-                                                                  (=
-                                                                   c1_0
-                                                                   c2_0))
-                                                                #f)))
-                                                         (values result_1))))
-                                                  (if (if (not
-                                                           (let ((x_0
-                                                                  (list c1_0)))
-                                                             (not result_1)))
-                                                        (if (not
+                                      (begin
+                                        (check-naturals start_1)
+                                        (letrec*
+                                         ((for-loop_0
+                                           (|#%name|
+                                            for-loop
+                                            (lambda (result_0 idx_0 pos_2)
+                                              (if (if (unsafe-fx<
+                                                       idx_0
+                                                       stop*_1)
+                                                    #t
+                                                    #f)
+                                                (let ((c1_0
+                                                       (unsafe-bytes-ref
+                                                        v*_1
+                                                        idx_0)))
+                                                  (let ((result_1
+                                                         (let ((result_1
+                                                                (if (lazy-bytes-before-end?
+                                                                     s_0
+                                                                     pos_2
+                                                                     limit_1)
+                                                                  (let ((c2_0
+                                                                         (lazy-bytes-ref
+                                                                          s_0
+                                                                          pos_2)))
+                                                                    (=
+                                                                     c1_0
+                                                                     c2_0))
+                                                                  #f)))
+                                                           (values result_1))))
+                                                    (if (if (not
                                                              (let ((x_0
                                                                     (list
-                                                                     pos_2)))
+                                                                     c1_0)))
                                                                (not result_1)))
-                                                          #t
+                                                          (if (not
+                                                               (let ((x_0
+                                                                      (list
+                                                                       pos_2)))
+                                                                 (not
+                                                                  result_1)))
+                                                            #t
+                                                            #f)
                                                           #f)
-                                                        #f)
-                                                    (for-loop_0
-                                                     result_1
-                                                     (unsafe-fx+ idx_0 1)
-                                                     (+ pos_2 1))
-                                                    result_1)))
-                                              result_0)))))
-                                       (for-loop_0
-                                        #t
-                                        start*_1
-                                        start_1)))))))))))
+                                                      (for-loop_0
+                                                       result_1
+                                                       (unsafe-fx+ idx_0 1)
+                                                       (+ pos_2 1))
+                                                      result_1)))
+                                                result_0)))))
+                                         (for-loop_0 #t start*_1 start_1))))))
+                                 (args
+                                  (raise-binding-result-arity-error
+                                   4
+                                   args)))))))))
                     (values pos_1 n_0 len_0)
                     (let ((app_0 (+ pos_1 len_0)))
                       (loop_0 app_0 (add1 n_0))))))))
@@ -4501,12 +4989,11 @@
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
       (if (if (bytes? s_0)
             (if (< pos_0 limit_0)
-              (let ((v_0 (unsafe-bytes-ref s_0 pos_0)))
-                (eq? 1 (unsafe-bytes-ref rng_0 v_0)))
+              (let ((v_0 (bytes-ref s_0 pos_0))) (eq? 1 (bytes-ref rng_0 v_0)))
               #f)
             (if (lazy-bytes-before-end? s_0 pos_0 limit_0)
               (let ((v_0 (lazy-bytes-ref s_0 pos_0)))
-                (eq? 1 (unsafe-bytes-ref rng_0 v_0)))
+                (eq? 1 (bytes-ref rng_0 v_0)))
               #f))
         (|#%app|
          next-m_0
@@ -4523,12 +5010,11 @@
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
       (if (if (bytes? s_0)
             (if (< pos_0 limit_0)
-              (let ((v_0 (unsafe-bytes-ref s_0 pos_0)))
-                (eq? 1 (unsafe-bytes-ref rng_0 v_0)))
+              (let ((v_0 (bytes-ref s_0 pos_0))) (eq? 1 (bytes-ref rng_0 v_0)))
               #f)
             (if (lazy-bytes-before-end? s_0 pos_0 limit_0)
               (let ((v_0 (lazy-bytes-ref s_0 pos_0)))
-                (eq? 1 (unsafe-bytes-ref rng_0 v_0)))
+                (eq? 1 (bytes-ref rng_0 v_0)))
               #f))
         (add1 pos_0)
         #f))))
@@ -4547,8 +5033,8 @@
                         (if or-part_0
                           or-part_0
                           (not
-                           (let ((v_0 (unsafe-bytes-ref s_0 pos_1)))
-                             (eq? 1 (unsafe-bytes-ref rng_0 v_0))))))
+                           (let ((v_0 (bytes-ref s_0 pos_1)))
+                             (eq? 1 (bytes-ref rng_0 v_0))))))
                     (values pos_1 n_0 1)
                     (loop_0 pos3_0 (add1 n_0))))))))
            (loop_0 pos_0 0)))
@@ -4568,7 +5054,7 @@
                             or-part_1
                             (not
                              (let ((v_0 (lazy-bytes-ref s_0 pos_1)))
-                               (eq? 1 (unsafe-bytes-ref rng_0 v_0))))))))
+                               (eq? 1 (bytes-ref rng_0 v_0))))))))
                   (values pos_1 n_0 1)
                   (let ((app_0 (+ pos_1 1))) (loop_0 app_0 (add1 n_0))))))))
            (loop_0 pos_0 0)))))))
@@ -4593,7 +5079,7 @@
             (if or-part_0
               or-part_0
               (if (bytes? s_0)
-                (= 10 (unsafe-bytes-ref s_0 (sub1 pos_0)))
+                (= 10 (bytes-ref s_0 (sub1 pos_0)))
                 (if (lazy-bytes-before-end? s_0 (sub1 pos_0) limit_0)
                   (= 10 (lazy-bytes-ref s_0 (sub1 pos_0)))
                   #f))))
@@ -4604,7 +5090,7 @@
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
       (if (if (bytes? s_0)
             (let ((or-part_0 (= pos_0 end_0)))
-              (if or-part_0 or-part_0 (= 10 (unsafe-bytes-ref s_0 pos_0))))
+              (if or-part_0 or-part_0 (= 10 (bytes-ref s_0 pos_0))))
             (let ((or-part_0 (not (lazy-bytes-before-end? s_0 pos_0 end_0))))
               (if or-part_0 or-part_0 (= 10 (lazy-bytes-ref s_0 pos_0)))))
         (|#%app| next-m_0 s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
@@ -4630,7 +5116,7 @@
                 or-part_0
                 (not
                  (if (bytes? s_0)
-                   (word-byte? (unsafe-bytes-ref s_0 (sub1 pos_0)))
+                   (word-byte? (bytes-ref s_0 (sub1 pos_0)))
                    (if (lazy-bytes-before-end? s_0 (sub1 pos_0) end_0)
                      (word-byte? (lazy-bytes-ref s_0 (sub1 pos_0)))
                      #f)))))))
@@ -4645,7 +5131,7 @@
             (not
              (word-byte?
               (if (bytes? s_0)
-                (unsafe-bytes-ref s_0 pos_0)
+                (bytes-ref s_0 pos_0)
                 (lazy-bytes-ref s_0 pos_0)))))))))))
 (define word-byte?
   (lambda (c_0)
@@ -4813,7 +5299,8 @@
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
       (call-with-values
        (lambda () (|#%app| r-m*_0 s_0 pos_0 start_0 limit_0 end_0 state_0))
-       (lambda (pos2_0 n_0 back-amt_0)
+       (case-lambda
+        ((pos2_0 n_0 back-amt_0)
          (letrec*
           ((bloop_0
             (|#%name|
@@ -4867,7 +5354,8 @@
                            (group-revert_0)
                            (let ((app_0 (- pos_1 back-amt_0)))
                              (bloop_0 app_0 (sub1 n_1)))))))))))))
-          (bloop_0 pos2_0 n_0)))))))
+          (bloop_0 pos2_0 n_0)))
+        (args (raise-binding-result-arity-error 3 args)))))))
 (define lazy-repeat-matcher
   (lambda (r-m_0 min_0 max_0 next-m_0)
     (lambda (s_0 pos_0 start_0 limit_0 end_0 state_0 stack_0)
@@ -5011,22 +5499,30 @@
                        (call-with-values
                         (lambda ()
                           (let ((app_0 (car p_0)))
-                            (unsafe-normalise-inputs
-                             unsafe-bytes-length
+                            (normalise-inputs
+                             'in-bytes
+                             "byte string"
+                             (lambda (x_0) (bytes? x_0))
+                             (lambda (x_0) (unsafe-bytes-length x_0))
                              s_0
                              app_0
                              (cdr p_0)
                              1)))
-                        (lambda (v*_0 start*_0 stop*_0 step*_0)
+                        (case-lambda
+                         ((v*_0 start*_0 stop*_0 step*_0)
                           (call-with-values
                            (lambda ()
-                             (unsafe-normalise-inputs
-                              unsafe-bytes-length
+                             (normalise-inputs
+                              'in-bytes
+                              "byte string"
+                              (lambda (x_0) (bytes? x_0))
+                              (lambda (x_0) (unsafe-bytes-length x_0))
                               s_0
                               pos_0
                               (+ pos_0 len_0)
                               1))
-                           (lambda (v*_1 start*_1 stop*_1 step*_1)
+                           (case-lambda
+                            ((v*_1 start*_1 stop*_1 step*_1)
                              (let ((v*_2 v*_0)
                                    (start*_2 start*_0)
                                    (stop*_2 stop*_0)
@@ -5065,51 +5561,56 @@
                                                   (unsafe-fx+ idx_1 1))
                                                  result_1)))))
                                        result_0)))))
-                                (for-loop_0 #t start*_2 start*_1)))))))
+                                (for-loop_0 #t start*_2 start*_1))))
+                            (args (raise-binding-result-arity-error 4 args)))))
+                         (args (raise-binding-result-arity-error 4 args))))
                        #f)
                      (let ((start_1 (car p_0)))
                        (let ((end_1 (cdr p_0)))
                          (let ((start_2 start_1))
-                           (letrec*
-                            ((for-loop_0
-                              (|#%name|
-                               for-loop
-                               (lambda (result_0 pos_1 pos_2)
-                                 (if (if (< pos_1 end_1) #t #f)
-                                   (let ((result_1
-                                          (let ((result_1
-                                                 (if (lazy-bytes-before-end?
-                                                      s_0
-                                                      pos_2
-                                                      limit_0)
-                                                   (let ((c1_0
-                                                          (lazy-bytes-ref
-                                                           s_0
-                                                           pos_1)))
-                                                     (let ((c2_0
+                           (begin
+                             (check-range-generic 'in-range start_2 end_1 1)
+                             (check-naturals pos_0)
+                             (letrec*
+                              ((for-loop_0
+                                (|#%name|
+                                 for-loop
+                                 (lambda (result_0 pos_1 pos_2)
+                                   (if (if (< pos_1 end_1) #t #f)
+                                     (let ((result_1
+                                            (let ((result_1
+                                                   (if (lazy-bytes-before-end?
+                                                        s_0
+                                                        pos_2
+                                                        limit_0)
+                                                     (let ((c1_0
                                                             (lazy-bytes-ref
                                                              s_0
-                                                             pos_2)))
-                                                       (= c1_0 c2_0)))
-                                                   #f)))
-                                            (values result_1))))
-                                     (if (if (not
-                                              (let ((x_0 (list pos_1)))
-                                                (not result_1)))
-                                           (if (not
-                                                (let ((x_0 (list pos_2)))
+                                                             pos_1)))
+                                                       (let ((c2_0
+                                                              (lazy-bytes-ref
+                                                               s_0
+                                                               pos_2)))
+                                                         (= c1_0 c2_0)))
+                                                     #f)))
+                                              (values result_1))))
+                                       (if (if (not
+                                                (let ((x_0 (list pos_1)))
                                                   (not result_1)))
-                                             #t
+                                             (if (not
+                                                  (let ((x_0 (list pos_2)))
+                                                    (not result_1)))
+                                               #t
+                                               #f)
                                              #f)
-                                           #f)
-                                       (let ((app_0 (+ pos_1 1)))
-                                         (for-loop_0
-                                          result_1
-                                          app_0
-                                          (+ pos_2 1)))
-                                       result_1))
-                                   result_0)))))
-                            (for-loop_0 #t start_2 pos_0))))))))
+                                         (let ((app_0 (+ pos_1 1)))
+                                           (for-loop_0
+                                            result_1
+                                            app_0
+                                            (+ pos_2 1)))
+                                         result_1))
+                                     result_0)))))
+                              (for-loop_0 #t start_2 pos_0)))))))))
               (if matches?_0
                 (|#%app|
                  next-m_0
@@ -5134,22 +5635,30 @@
                        (call-with-values
                         (lambda ()
                           (let ((app_0 (car p_0)))
-                            (unsafe-normalise-inputs
-                             unsafe-bytes-length
+                            (normalise-inputs
+                             'in-bytes
+                             "byte string"
+                             (lambda (x_0) (bytes? x_0))
+                             (lambda (x_0) (unsafe-bytes-length x_0))
                              s_0
                              app_0
                              (cdr p_0)
                              1)))
-                        (lambda (v*_0 start*_0 stop*_0 step*_0)
+                        (case-lambda
+                         ((v*_0 start*_0 stop*_0 step*_0)
                           (call-with-values
                            (lambda ()
-                             (unsafe-normalise-inputs
-                              unsafe-bytes-length
+                             (normalise-inputs
+                              'in-bytes
+                              "byte string"
+                              (lambda (x_0) (bytes? x_0))
+                              (lambda (x_0) (unsafe-bytes-length x_0))
                               s_0
                               pos_0
                               (+ pos_0 len_0)
                               1))
-                           (lambda (v*_1 start*_1 stop*_1 step*_1)
+                           (case-lambda
+                            ((v*_1 start*_1 stop*_1 step*_1)
                              (let ((v*_2 v*_0)
                                    (start*_2 start*_0)
                                    (stop*_2 stop*_0)
@@ -5194,57 +5703,62 @@
                                                   (unsafe-fx+ idx_1 1))
                                                  result_1)))))
                                        result_0)))))
-                                (for-loop_0 #t start*_2 start*_1)))))))
+                                (for-loop_0 #t start*_2 start*_1))))
+                            (args (raise-binding-result-arity-error 4 args)))))
+                         (args (raise-binding-result-arity-error 4 args))))
                        #f)
                      (let ((start_1 (car p_0)))
                        (let ((end_1 (cdr p_0)))
                          (let ((start_2 start_1))
-                           (letrec*
-                            ((for-loop_0
-                              (|#%name|
-                               for-loop
-                               (lambda (result_0 pos_1 pos_2)
-                                 (if (if (< pos_1 end_1) #t #f)
-                                   (let ((result_1
-                                          (let ((result_1
-                                                 (if (lazy-bytes-before-end?
-                                                      s_0
-                                                      pos_2
-                                                      limit_0)
-                                                   (let ((c1_0
-                                                          (lazy-bytes-ref
-                                                           s_0
-                                                           pos_1)))
-                                                     (let ((c2_0
+                           (begin
+                             (check-range-generic 'in-range start_2 end_1 1)
+                             (check-naturals pos_0)
+                             (letrec*
+                              ((for-loop_0
+                                (|#%name|
+                                 for-loop
+                                 (lambda (result_0 pos_1 pos_2)
+                                   (if (if (< pos_1 end_1) #t #f)
+                                     (let ((result_1
+                                            (let ((result_1
+                                                   (if (lazy-bytes-before-end?
+                                                        s_0
+                                                        pos_2
+                                                        limit_0)
+                                                     (let ((c1_0
                                                             (lazy-bytes-ref
                                                              s_0
-                                                             pos_2)))
-                                                       (let ((app_0
-                                                              (chyte-to-lower
-                                                               c1_0)))
-                                                         (=
-                                                          app_0
-                                                          (chyte-to-lower
-                                                           c2_0)))))
-                                                   #f)))
-                                            (values result_1))))
-                                     (if (if (not
-                                              (let ((x_0 (list pos_1)))
-                                                (not result_1)))
-                                           (if (not
-                                                (let ((x_0 (list pos_2)))
+                                                             pos_1)))
+                                                       (let ((c2_0
+                                                              (lazy-bytes-ref
+                                                               s_0
+                                                               pos_2)))
+                                                         (let ((app_0
+                                                                (chyte-to-lower
+                                                                 c1_0)))
+                                                           (=
+                                                            app_0
+                                                            (chyte-to-lower
+                                                             c2_0)))))
+                                                     #f)))
+                                              (values result_1))))
+                                       (if (if (not
+                                                (let ((x_0 (list pos_1)))
                                                   (not result_1)))
-                                             #t
+                                             (if (not
+                                                  (let ((x_0 (list pos_2)))
+                                                    (not result_1)))
+                                               #t
+                                               #f)
                                              #f)
-                                           #f)
-                                       (let ((app_0 (+ pos_1 1)))
-                                         (for-loop_0
-                                          result_1
-                                          app_0
-                                          (+ pos_2 1)))
-                                       result_1))
-                                   result_0)))))
-                            (for-loop_0 #t start_2 pos_0))))))))
+                                         (let ((app_0 (+ pos_1 1)))
+                                           (for-loop_0
+                                            result_1
+                                            app_0
+                                            (+ pos_2 1)))
+                                         result_1))
+                                     result_0)))))
+                              (for-loop_0 #t start_2 pos_0)))))))))
               (if matches?_0
                 (|#%app|
                  next-m_0
@@ -5454,7 +5968,7 @@
           (lambda (pos_1 accum_0)
             (let ((b_0
                    (if (bytes? s_0)
-                     (if (< pos_1 limit_0) (unsafe-bytes-ref s_0 pos_1) #f)
+                     (if (< pos_1 limit_0) (bytes-ref s_0 pos_1) #f)
                      (if (lazy-bytes-before-end? s_0 pos_1 limit_0)
                        (lazy-bytes-ref s_0 pos_1)
                        #f))))
@@ -5466,25 +5980,30 @@
                          match?_0
                          (let ((c-cat_0 (char-general-category c_0)))
                            (if (list? cats_0)
-                             (letrec*
-                              ((for-loop_0
-                                (|#%name|
-                                 for-loop
-                                 (lambda (result_0 lst_0)
-                                   (if (pair? lst_0)
-                                     (let ((cat_0 (unsafe-car lst_0)))
-                                       (let ((rest_0 (unsafe-cdr lst_0)))
-                                         (let ((result_1 (eq? cat_0 c-cat_0)))
-                                           (let ((result_2 (values result_1)))
-                                             (if (if (not
-                                                      (let ((x_0 (list cat_0)))
-                                                        result_2))
-                                                   #t
-                                                   #f)
-                                               (for-loop_0 result_2 rest_0)
-                                               result_2)))))
-                                     result_0)))))
-                              (for-loop_0 #f cats_0))
+                             (begin
+                               (check-list cats_0)
+                               (letrec*
+                                ((for-loop_0
+                                  (|#%name|
+                                   for-loop
+                                   (lambda (result_0 lst_0)
+                                     (if (pair? lst_0)
+                                       (let ((cat_0 (unsafe-car lst_0)))
+                                         (let ((rest_0 (unsafe-cdr lst_0)))
+                                           (let ((result_1
+                                                  (eq? cat_0 c-cat_0)))
+                                             (let ((result_2
+                                                    (values result_1)))
+                                               (if (if (not
+                                                        (let ((x_0
+                                                               (list cat_0)))
+                                                          result_2))
+                                                     #t
+                                                     #f)
+                                                 (for-loop_0 result_2 rest_0)
+                                                 result_2)))))
+                                       result_0)))))
+                                (for-loop_0 #f cats_0)))
                              (eq? cats_0 c-cat_0))))
                       (|#%app|
                        next-m_0
@@ -5511,7 +6030,7 @@
           (lambda (pos_1 accum_0 end-pos_0 state_1)
             (let ((b_0
                    (if (bytes? s_0)
-                     (if (< pos_1 limit_0) (unsafe-bytes-ref s_0 pos_1) #f)
+                     (if (< pos_1 limit_0) (bytes-ref s_0 pos_1) #f)
                      (if (lazy-bytes-before-end? s_0 pos_1 limit_0)
                        (lazy-bytes-ref s_0 pos_1)
                        #f))))
@@ -5536,7 +6055,8 @@
                     (if (char? c_0)
                       (call-with-values
                        (lambda () (char-grapheme-step c_0 state_1))
-                       (lambda (ended?_0 new-state_0)
+                       (case-lambda
+                        ((ended?_0 new-state_0)
                          (if ended?_0
                            (|#%app|
                             next-m_0
@@ -5548,7 +6068,8 @@
                             state_1
                             stack_0)
                            (let ((app_0 (add1 pos_1)))
-                             (loop_0 app_0 null (add1 pos_1) new-state_0)))))
+                             (loop_0 app_0 null (add1 pos_1) new-state_0))))
+                        (args (raise-binding-result-arity-error 2 args))))
                       (if (eq? c_0 'fail)
                         (stop_0)
                         (let ((app_0 (add1 pos_1)))
@@ -5572,7 +6093,7 @@
                (byte-tail-matcher rx_1)
                (byte-matcher rx_1 next-m_0))
              (if (bytes? rx_1)
-               (let ((len_0 (unsafe-bytes-length rx_1)))
+               (let ((len_0 (bytes-length rx_1)))
                  (if (eq? next-m_0 done-m)
                    (bytes-tail-matcher rx_1 len_0)
                    (bytes-matcher rx_1 len_0 next-m_0)))
@@ -5731,11 +6252,14 @@
                                              (let ((n_0
                                                     (rx:group-number rx_1)))
                                                (let ((m_0
-                                                      (compile_0
-                                                       (rx:group-rx rx_1)
-                                                       (group-set-matcher
-                                                        n_0
-                                                        next-m_0))))
+                                                      (let ((app_0
+                                                             (rx:group-rx
+                                                              rx_1)))
+                                                        (compile_0
+                                                         app_0
+                                                         (group-set-matcher
+                                                          n_0
+                                                          next-m_0)))))
                                                  (group-push-matcher n_0 m_0)))
                                              (if (rx:reference? rx_1)
                                                (let ((n_0
@@ -5791,64 +6315,72 @@
                                                                   (compile_0
                                                                    tst_0
                                                                    done-m)))
-                                                             (conditional/look-matcher
-                                                              app_0
-                                                              m1_0
-                                                              m2_0
-                                                              (rx:conditional-n-start
-                                                               rx_1)
-                                                              (rx:conditional-num-n
-                                                               rx_1)))))))
+                                                             (let ((app_1
+                                                                    (rx:conditional-n-start
+                                                                     rx_1)))
+                                                               (conditional/look-matcher
+                                                                app_0
+                                                                m1_0
+                                                                m2_0
+                                                                app_1
+                                                                (rx:conditional-num-n
+                                                                 rx_1))))))))
                                                    (if (rx:lookahead? rx_1)
                                                      (let ((app_0
-                                                            (compile_0
-                                                             (rx:lookahead-rx
-                                                              rx_1)
-                                                             done-m)))
+                                                            (rx:lookahead-match?
+                                                             rx_1)))
                                                        (let ((app_1
-                                                              (rx:lookahead-n-start
-                                                               rx_1)))
-                                                         (lookahead-matcher
-                                                          (rx:lookahead-match?
-                                                           rx_1)
-                                                          app_0
-                                                          app_1
-                                                          (rx:lookahead-num-n
-                                                           rx_1)
-                                                          next-m_0)))
+                                                              (compile_0
+                                                               (rx:lookahead-rx
+                                                                rx_1)
+                                                               done-m)))
+                                                         (let ((app_2
+                                                                (rx:lookahead-n-start
+                                                                 rx_1)))
+                                                           (lookahead-matcher
+                                                            app_0
+                                                            app_1
+                                                            app_2
+                                                            (rx:lookahead-num-n
+                                                             rx_1)
+                                                            next-m_0))))
                                                      (if (rx:lookbehind? rx_1)
                                                        (let ((app_0
-                                                              (rx:lookbehind-lb-min
+                                                              (rx:lookbehind-match?
                                                                rx_1)))
                                                          (let ((app_1
-                                                                (rx:lookbehind-lb-max
+                                                                (rx:lookbehind-lb-min
                                                                  rx_1)))
                                                            (let ((app_2
-                                                                  (compile_0
-                                                                   (rx:lookbehind-rx
-                                                                    rx_1)
-                                                                   limit-m)))
+                                                                  (rx:lookbehind-lb-max
+                                                                   rx_1)))
                                                              (let ((app_3
-                                                                    (rx:lookbehind-n-start
-                                                                     rx_1)))
-                                                               (lookbehind-matcher
-                                                                (rx:lookbehind-match?
-                                                                 rx_1)
-                                                                app_0
-                                                                app_1
-                                                                app_2
-                                                                app_3
-                                                                (rx:lookbehind-num-n
-                                                                 rx_1)
-                                                                next-m_0)))))
+                                                                    (compile_0
+                                                                     (rx:lookbehind-rx
+                                                                      rx_1)
+                                                                     limit-m)))
+                                                               (let ((app_4
+                                                                      (rx:lookbehind-n-start
+                                                                       rx_1)))
+                                                                 (lookbehind-matcher
+                                                                  app_0
+                                                                  app_1
+                                                                  app_2
+                                                                  app_3
+                                                                  app_4
+                                                                  (rx:lookbehind-num-n
+                                                                   rx_1)
+                                                                  next-m_0))))))
                                                        (if (rx:unicode-categories?
                                                             rx_1)
-                                                         (unicode-categories-matcher
-                                                          (rx:unicode-categories-symlist
-                                                           rx_1)
-                                                          (rx:unicode-categories-match?
-                                                           rx_1)
-                                                          next-m_0)
+                                                         (let ((app_0
+                                                                (rx:unicode-categories-symlist
+                                                                 rx_1)))
+                                                           (unicode-categories-matcher
+                                                            app_0
+                                                            (rx:unicode-categories-match?
+                                                             rx_1)
+                                                            next-m_0))
                                                          (if (eq?
                                                               rx_1
                                                               'unicode-grapheme)
@@ -5870,7 +6402,7 @@
           (if (rx:range? rx_0)
             (range-matcher* (compile-range (rx:range-range rx_0)) max_0)
             #f))))))
-(define finish_1953
+(define finish_2446
   (make-struct-type-install-properties
    '(regexp)
    10
@@ -5882,8 +6414,9 @@
      prop:equal+hash
      (list
       (lambda (a_0 b_0 eql?_0)
-        (if (eq? (rx:regexp-px? a_0) (rx:regexp-px? b_0))
-          (equal? (rx:regexp-source a_0) (rx:regexp-source b_0))
+        (if (let ((app_0 (rx:regexp-px? a_0))) (eq? app_0 (rx:regexp-px? b_0)))
+          (let ((app_0 (rx:regexp-source a_0)))
+            (equal? app_0 (rx:regexp-source b_0)))
           #f))
       (lambda (a_0 hc_0) (|#%app| hc_0 (rx:regexp-source a_0)))
       (lambda (a_0 hc_0) (|#%app| hc_0 (rx:regexp-source a_0)))))
@@ -5900,14 +6433,20 @@
    #f
    'rx:regexp))
 (define struct:rx:regexp
-  (make-record-type-descriptor
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
    'regexp
    #f
    (|#%nongenerative-uid| regexp)
    #f
    #f
-   '(10 . 0)))
-(define effect_2726 (finish_1953 struct:rx:regexp))
+   '(10 . 0)
+   'make-struct-type
+   #f
+   #f
+   '()
+   #f))
+(define effect_2726 (finish_2446 struct:rx:regexp))
 (define rx:regexp1.1
   (|#%name|
    rx:regexp
@@ -5944,7 +6483,8 @@
                 (string->immutable-string orig-p_0))))
          (call-with-values
           (lambda () (parse.1 px?_0 p_0))
-          (lambda (raw-rx_0 num-groups_0 references?_0)
+          (case-lambda
+           ((raw-rx_0 num-groups_0 references?_0)
             (let ((rx_0 (if as-bytes?_0 raw-rx_0 (convert raw-rx_0))))
               (let ((max-lookbehind_0 (validate rx_0 num-groups_0)))
                 (let ((matcher_0 (1/compile rx_0)))
@@ -5960,7 +6500,8 @@
                        max-lookbehind_0
                        app_0
                        app_1
-                       (get-start-range rx_0)))))))))))
+                       (get-start-range rx_0))))))))
+           (args (raise-binding-result-arity-error 3 args))))))
      regexp-error-tag
      (lambda (str_0)
        (if handler_0
@@ -6024,11 +6565,10 @@
                 (if (>= pos+skip_0 end_0)
                   eof
                   (let ((len_0
-                         (min
-                          (unsafe-bytes-length dest-bstr_0)
-                          (- end_0 pos+skip_0))))
+                         (let ((app_0 (bytes-length dest-bstr_0)))
+                           (min app_0 (- end_0 pos+skip_0)))))
                     (begin
-                      (unsafe-bytes-copy!
+                      (bytes-copy!
                        dest-bstr_0
                        0
                        bstr_0
@@ -6062,12 +6602,11 @@
                     (if (>= bstr-pos+skip_0 bstr-end_0)
                       eof
                       (let ((len_0
-                             (min
-                              (unsafe-bytes-length dest-bstr_0)
-                              (- bstr-end_0 bstr-pos+skip_0))))
+                             (let ((app_0 (bytes-length dest-bstr_0)))
+                               (min app_0 (- bstr-end_0 bstr-pos+skip_0)))))
                         (begin
                           (let ((app_0 bstr_0))
-                            (unsafe-bytes-copy!
+                            (bytes-copy!
                              dest-bstr_0
                              0
                              app_0
@@ -6090,33 +6629,26 @@
                               (+ pos_0 len_0)))))
                       (begin
                         (set! pos_0 (+ len_0 pos_0))
-                        (let ((new-len_0 (unsafe-bytes-length new-bstr_0)))
+                        (let ((new-len_0 (bytes-length new-bstr_0)))
                           (begin
                             (if (<
-                                 (let ((app_0 (unsafe-bytes-length bstr_0)))
+                                 (let ((app_0 (bytes-length bstr_0)))
                                    (- app_0 bstr-end_0))
                                  new-len_0)
                               (let ((bstr2_0
                                      (make-bytes
                                       (let ((app_0
-                                             (*
-                                              (unsafe-bytes-length bstr_0)
-                                              2)))
+                                             (* (bytes-length bstr_0) 2)))
                                         (max
                                          app_0
                                          (+ bstr-end_0 new-len_0))))))
                                 (begin
                                   (let ((app_0 bstr_0))
-                                    (unsafe-bytes-copy!
-                                     bstr2_0
-                                     0
-                                     app_0
-                                     0
-                                     bstr-end_0))
+                                    (bytes-copy! bstr2_0 0 app_0 0 bstr-end_0))
                                   (set! bstr_0 bstr2_0)))
                               (void))
                             (let ((app_0 bstr_0))
-                              (unsafe-bytes-copy! app_0 bstr-end_0 new-bstr_0))
+                              (bytes-copy! app_0 bstr-end_0 new-bstr_0))
                             (set! bstr-end_0 (+ bstr-end_0 new-len_0))
                             (if (< bstr-end_0 target-pos_0)
                               (decode-more!_0 target-pos_0)
@@ -6150,8 +6682,12 @@
             app_0
             (reverse$1
              (call-with-values
-              (lambda () (values state5_0 (unsafe-vector-length state5_0)))
-              (lambda (vec_0 len_0)
+              (lambda ()
+                (begin
+                  (check-vector state5_0)
+                  (values state5_0 (unsafe-vector-length state5_0))))
+              (case-lambda
+               ((vec_0 len_0)
                 (letrec*
                  ((for-loop_0
                    (|#%name|
@@ -6173,7 +6709,8 @@
                                    (values fold-var_1))))
                             (for-loop_0 fold-var_1 (unsafe-fx+ 1 pos_0))))
                         fold-var_0)))))
-                 (for-loop_0 null 0))))))))))))
+                 (for-loop_0 null 0)))
+               (args (raise-binding-result-arity-error 2 args))))))))))))
 (define byte-positions->bytess.1
   (|#%name|
    byte-positions->bytess
@@ -6186,8 +6723,12 @@
         (if state12_0
           (reverse$1
            (call-with-values
-            (lambda () (values state12_0 (unsafe-vector-length state12_0)))
-            (lambda (vec_0 len_0)
+            (lambda ()
+              (begin
+                (check-vector state12_0)
+                (values state12_0 (unsafe-vector-length state12_0))))
+            (case-lambda
+             ((vec_0 len_0)
               (letrec*
                ((for-loop_0
                  (|#%name|
@@ -6209,7 +6750,8 @@
                                  (values fold-var_1))))
                           (for-loop_0 fold-var_1 (unsafe-fx+ 1 pos_0))))
                       fold-var_0)))))
-               (for-loop_0 null 0)))))
+               (for-loop_0 null 0)))
+             (args (raise-binding-result-arity-error 2 args)))))
           null))))))
 (define byte-positions->string-positions.1
   (|#%name|
@@ -6249,8 +6791,12 @@
           (if state23_0
             (reverse$1
              (call-with-values
-              (lambda () (values state23_0 (unsafe-vector-length state23_0)))
-              (lambda (vec_0 len_0)
+              (lambda ()
+                (begin
+                  (check-vector state23_0)
+                  (values state23_0 (unsafe-vector-length state23_0))))
+              (case-lambda
+               ((vec_0 len_0)
                 (letrec*
                  ((for-loop_0
                    (|#%name|
@@ -6272,7 +6818,8 @@
                                    (values fold-var_1))))
                             (for-loop_0 fold-var_1 (unsafe-fx+ 1 pos_0))))
                         fold-var_0)))))
-                 (for-loop_0 null 0)))))
+                 (for-loop_0 null 0)))
+               (args (raise-binding-result-arity-error 2 args)))))
             null)))))))
 (define byte-positions->strings.1
   (|#%name|
@@ -6290,8 +6837,12 @@
         (if state30_0
           (reverse$1
            (call-with-values
-            (lambda () (values state30_0 (unsafe-vector-length state30_0)))
-            (lambda (vec_0 len_0)
+            (lambda ()
+              (begin
+                (check-vector state30_0)
+                (values state30_0 (unsafe-vector-length state30_0))))
+            (case-lambda
+             ((vec_0 len_0)
               (letrec*
                ((for-loop_0
                  (|#%name|
@@ -6314,7 +6865,8 @@
                                  (values fold-var_1))))
                           (for-loop_0 fold-var_1 (unsafe-fx+ 1 pos_0))))
                       fold-var_0)))))
-               (for-loop_0 null 0)))))
+               (for-loop_0 null 0)))
+             (args (raise-binding-result-arity-error 2 args)))))
           null))))))
 (define byte-index->string-index
   (lambda (str_0 start-pos_0 pos_0)
@@ -6423,17 +6975,21 @@
       (if (not (bytes? in_0))
         #t
         (if (bytes? must-string_0)
-          (if (= 1 (unsafe-bytes-length must-string_0))
-            (let ((mc_0 (unsafe-bytes-ref must-string_0 0)))
+          (if (= 1 (bytes-length must-string_0))
+            (let ((mc_0 (bytes-ref must-string_0 0)))
               (call-with-values
                (lambda ()
-                 (unsafe-normalise-inputs
-                  unsafe-bytes-length
+                 (normalise-inputs
+                  'in-bytes
+                  "byte string"
+                  (lambda (x_0) (bytes? x_0))
+                  (lambda (x_0) (unsafe-bytes-length x_0))
                   in_0
                   pos_0
                   end-pos_0
                   1))
-               (lambda (v*_0 start*_0 stop*_0 step*_0)
+               (case-lambda
+                ((v*_0 start*_0 stop*_0 step*_0)
                  (letrec*
                   ((for-loop_0
                     (|#%name|
@@ -6450,158 +7006,172 @@
                                (for-loop_0 result_1 (unsafe-fx+ idx_0 1))
                                result_1)))
                          result_0)))))
-                  (for-loop_0 #f start*_0)))))
-            (let ((mc1_0 (unsafe-bytes-ref must-string_0 0)))
-              (let ((end_0
-                     (- end-pos_0 (sub1 (unsafe-bytes-length must-string_0)))))
-                (letrec*
-                 ((for-loop_0
-                   (|#%name|
-                    for-loop
-                    (lambda (result_0 pos_1)
-                      (if (< pos_1 end_0)
-                        (let ((result_1
-                               (let ((result_1
-                                      (if (=
-                                           mc1_0
-                                           (unsafe-bytes-ref in_0 pos_1))
-                                        (call-with-values
-                                         (lambda ()
-                                           (unsafe-normalise-inputs
-                                            unsafe-bytes-length
-                                            in_0
-                                            (add1 pos_1)
-                                            #f
-                                            1))
-                                         (lambda (v*_0
-                                                  start*_0
-                                                  stop*_0
-                                                  step*_0)
-                                           (call-with-values
-                                            (lambda ()
-                                              (unsafe-normalise-inputs
-                                               unsafe-bytes-length
-                                               must-string_0
-                                               1
-                                               #f
-                                               1))
-                                            (lambda (v*_1
-                                                     start*_1
-                                                     stop*_1
-                                                     step*_1)
-                                              (let ((v*_2 v*_0)
-                                                    (start*_2 start*_0)
-                                                    (stop*_2 stop*_0)
-                                                    (step*_2 step*_0))
-                                                (letrec*
-                                                 ((for-loop_1
-                                                   (|#%name|
-                                                    for-loop
-                                                    (lambda (result_1
-                                                             idx_0
-                                                             idx_1)
-                                                      (if (if (unsafe-fx<
+                  (for-loop_0 #f start*_0)))
+                (args (raise-binding-result-arity-error 4 args)))))
+            (let ((mc1_0 (bytes-ref must-string_0 0)))
+              (let ((end_0 (- end-pos_0 (sub1 (bytes-length must-string_0)))))
+                (begin
+                  (check-range-generic 'in-range pos_0 end_0 1)
+                  (letrec*
+                   ((for-loop_0
+                     (|#%name|
+                      for-loop
+                      (lambda (result_0 pos_1)
+                        (if (< pos_1 end_0)
+                          (let ((result_1
+                                 (let ((result_1
+                                        (if (= mc1_0 (bytes-ref in_0 pos_1))
+                                          (call-with-values
+                                           (lambda ()
+                                             (normalise-inputs
+                                              'in-bytes
+                                              "byte string"
+                                              (lambda (x_0) (bytes? x_0))
+                                              (lambda (x_0)
+                                                (unsafe-bytes-length x_0))
+                                              in_0
+                                              (add1 pos_1)
+                                              #f
+                                              1))
+                                           (case-lambda
+                                            ((v*_0 start*_0 stop*_0 step*_0)
+                                             (call-with-values
+                                              (lambda ()
+                                                (normalise-inputs
+                                                 'in-bytes
+                                                 "byte string"
+                                                 (lambda (x_0) (bytes? x_0))
+                                                 (lambda (x_0)
+                                                   (unsafe-bytes-length x_0))
+                                                 must-string_0
+                                                 1
+                                                 #f
+                                                 1))
+                                              (case-lambda
+                                               ((v*_1 start*_1 stop*_1 step*_1)
+                                                (let ((v*_2 v*_0)
+                                                      (start*_2 start*_0)
+                                                      (stop*_2 stop*_0)
+                                                      (step*_2 step*_0))
+                                                  (letrec*
+                                                   ((for-loop_1
+                                                     (|#%name|
+                                                      for-loop
+                                                      (lambda (result_1
                                                                idx_0
-                                                               stop*_2)
-                                                            (unsafe-fx<
-                                                             idx_1
-                                                             stop*_1)
-                                                            #f)
-                                                        (let ((c_0
-                                                               (unsafe-bytes-ref
-                                                                v*_2
-                                                                idx_0)))
-                                                          (let ((mc_0
+                                                               idx_1)
+                                                        (if (if (unsafe-fx<
+                                                                 idx_0
+                                                                 stop*_2)
+                                                              (unsafe-fx<
+                                                               idx_1
+                                                               stop*_1)
+                                                              #f)
+                                                          (let ((c_0
                                                                  (unsafe-bytes-ref
-                                                                  v*_1
-                                                                  idx_1)))
-                                                            (let ((c_1 c_0))
-                                                              (let ((result_2
-                                                                     (let ((result_2
-                                                                            (=
-                                                                             c_1
-                                                                             mc_0)))
-                                                                       (values
-                                                                        result_2))))
-                                                                (if (if (not
-                                                                         (let ((x_0
-                                                                                (list
-                                                                                 c_1)))
-                                                                           (not
-                                                                            result_2)))
-                                                                      (if (not
+                                                                  v*_2
+                                                                  idx_0)))
+                                                            (let ((mc_0
+                                                                   (unsafe-bytes-ref
+                                                                    v*_1
+                                                                    idx_1)))
+                                                              (let ((c_1 c_0))
+                                                                (let ((result_2
+                                                                       (let ((result_2
+                                                                              (=
+                                                                               c_1
+                                                                               mc_0)))
+                                                                         (values
+                                                                          result_2))))
+                                                                  (if (if (not
                                                                            (let ((x_0
                                                                                   (list
-                                                                                   mc_0)))
+                                                                                   c_1)))
                                                                              (not
                                                                               result_2)))
-                                                                        #t
+                                                                        (if (not
+                                                                             (let ((x_0
+                                                                                    (list
+                                                                                     mc_0)))
+                                                                               (not
+                                                                                result_2)))
+                                                                          #t
+                                                                          #f)
                                                                         #f)
-                                                                      #f)
-                                                                  (for-loop_1
-                                                                   result_2
-                                                                   (unsafe-fx+
-                                                                    idx_0
-                                                                    1)
-                                                                   (unsafe-fx+
-                                                                    idx_1
-                                                                    1))
-                                                                  result_2)))))
-                                                        result_1)))))
-                                                 (for-loop_1
-                                                  #t
-                                                  start*_2
-                                                  start*_1)))))))
-                                        #f)))
-                                 (values result_1))))
-                          (if (if (not (let ((x_0 (list pos_1))) result_1))
-                                #t
-                                #f)
-                            (for-loop_0 result_1 (+ pos_1 1))
-                            result_1))
-                        result_0)))))
-                 (for-loop_0 #f pos_0)))))
+                                                                    (for-loop_1
+                                                                     result_2
+                                                                     (unsafe-fx+
+                                                                      idx_0
+                                                                      1)
+                                                                     (unsafe-fx+
+                                                                      idx_1
+                                                                      1))
+                                                                    result_2)))))
+                                                          result_1)))))
+                                                   (for-loop_1
+                                                    #t
+                                                    start*_2
+                                                    start*_1))))
+                                               (args
+                                                (raise-binding-result-arity-error
+                                                 4
+                                                 args)))))
+                                            (args
+                                             (raise-binding-result-arity-error
+                                              4
+                                              args))))
+                                          #f)))
+                                   (values result_1))))
+                            (if (if (not (let ((x_0 (list pos_1))) result_1))
+                                  #t
+                                  #f)
+                              (for-loop_0 result_1 (+ pos_1 1))
+                              result_1))
+                          result_0)))))
+                   (for-loop_0 #f pos_0))))))
           (let ((end_0 (- end-pos_0 (sub1 (length must-string_0)))))
-            (letrec*
-             ((for-loop_0
-               (|#%name|
-                for-loop
-                (lambda (result_0 pos_1)
-                  (if (< pos_1 end_0)
-                    (let ((result_1
-                           (let ((result_1
-                                  (letrec*
-                                   ((loop_0
-                                     (|#%name|
-                                      loop
-                                      (lambda (i_0 l_0)
-                                        (if (null? l_0)
-                                          #t
-                                          (let ((e_0 (car l_0)))
-                                            (if (let ((v_0
-                                                       (unsafe-bytes-ref
-                                                        in_0
-                                                        i_0)))
-                                                  (eq?
-                                                   1
-                                                   (unsafe-bytes-ref e_0 v_0)))
-                                              (let ((app_0 (add1 i_0)))
-                                                (loop_0 app_0 (cdr l_0)))
-                                              #f)))))))
-                                   (loop_0 pos_1 must-string_0))))
-                             (values result_1))))
-                      (if (if (not (let ((x_0 (list pos_1))) result_1)) #t #f)
-                        (for-loop_0 result_1 (+ pos_1 1))
-                        result_1))
-                    result_0)))))
-             (for-loop_0 #f pos_0))))))))
+            (begin
+              (check-range-generic 'in-range pos_0 end_0 1)
+              (letrec*
+               ((for-loop_0
+                 (|#%name|
+                  for-loop
+                  (lambda (result_0 pos_1)
+                    (if (< pos_1 end_0)
+                      (let ((result_1
+                             (let ((result_1
+                                    (letrec*
+                                     ((loop_0
+                                       (|#%name|
+                                        loop
+                                        (lambda (i_0 l_0)
+                                          (if (null? l_0)
+                                            #t
+                                            (let ((e_0 (car l_0)))
+                                              (if (let ((v_0
+                                                         (bytes-ref in_0 i_0)))
+                                                    (eq?
+                                                     1
+                                                     (bytes-ref e_0 v_0)))
+                                                (let ((app_0 (add1 i_0)))
+                                                  (loop_0 app_0 (cdr l_0)))
+                                                #f)))))))
+                                     (loop_0 pos_1 must-string_0))))
+                               (values result_1))))
+                        (if (if (not (let ((x_0 (list pos_1))) result_1))
+                              #t
+                              #f)
+                          (for-loop_0 result_1 (+ pos_1 1))
+                          result_1))
+                      result_0)))))
+               (for-loop_0 #f pos_0)))))))))
 (define check-start-range
   (lambda (start-range_0 in_0 pos_0 end-pos_0)
     (let ((v_0
            (if (bytes? in_0)
-             (unsafe-bytes-ref in_0 pos_0)
+             (bytes-ref in_0 pos_0)
              (lazy-bytes-ref in_0 pos_0))))
-      (eq? 1 (unsafe-bytes-ref start-range_0 v_0)))))
+      (eq? 1 (bytes-ref start-range_0 v_0)))))
 (define FAST-STRING-LEN 64)
 (define fast-drive-regexp-match?/bytes
   (lambda (rx_0 in_0 start-pos_0 end-pos_0)
@@ -6616,9 +7186,11 @@
           in_0
           start-pos_0
           start-pos_0
-          (if end-pos_0 end-pos_0 (unsafe-bytes-length in_0))
+          (if end-pos_0 end-pos_0 (bytes-length in_0))
           state_0))
-       (lambda (ms-pos_0 me-pos_0) (if ms-pos_0 #t #f))))))
+       (case-lambda
+        ((ms-pos_0 me-pos_0) (if ms-pos_0 #t #f))
+        (args (raise-binding-result-arity-error 2 args)))))))
 (define fast-drive-regexp-match?/string
   (lambda (rx_0 in-str_0 start-offset_0 end-offset_0)
     (let ((state_0
@@ -6632,9 +7204,10 @@
               start-offset_0
               (if end-offset_0 end-offset_0 (string-length in-str_0)))))
         (call-with-values
-         (lambda ()
-           (search-match rx_0 in_0 0 0 (unsafe-bytes-length in_0) state_0))
-         (lambda (ms-pos_0 me-pos_0) (if ms-pos_0 #t #f)))))))
+         (lambda () (search-match rx_0 in_0 0 0 (bytes-length in_0) state_0))
+         (case-lambda
+          ((ms-pos_0 me-pos_0) (if ms-pos_0 #t #f))
+          (args (raise-binding-result-arity-error 2 args))))))))
 (define fast-drive-regexp-match-positions/bytes
   (lambda (rx_0 in_0 start-pos_0 end-pos_0)
     (let ((state_0
@@ -6647,15 +7220,17 @@
           in_0
           start-pos_0
           start-pos_0
-          (if end-pos_0 end-pos_0 (unsafe-bytes-length in_0))
+          (if end-pos_0 end-pos_0 (bytes-length in_0))
           state_0))
-       (lambda (ms-pos_0 me-pos_0)
+       (case-lambda
+        ((ms-pos_0 me-pos_0)
          (if ms-pos_0
            (if state_0
              (let ((app_0 (cons ms-pos_0 me-pos_0)))
                (cons app_0 (vector->list state_0)))
              (list (cons ms-pos_0 me-pos_0)))
-           #f))))))
+           #f))
+        (args (raise-binding-result-arity-error 2 args)))))))
 (define fast-drive-regexp-match-positions/string
   (lambda (rx_0 in-str_0 start-offset_0 end-offset_0)
     (let ((in_0
@@ -6668,9 +7243,9 @@
              (let ((n_0 (rx:regexp-num-groups rx_0)))
                (if (positive? n_0) (make-vector n_0 #f) #f))))
         (call-with-values
-         (lambda ()
-           (search-match rx_0 in_0 0 0 (unsafe-bytes-length in_0) state_0))
-         (lambda (ms-pos_0 me-pos_0)
+         (lambda () (search-match rx_0 in_0 0 0 (bytes-length in_0) state_0))
+         (case-lambda
+          ((ms-pos_0 me-pos_0)
            (let ((string-offset_0
                   (|#%name|
                    string-offset
@@ -6688,8 +7263,11 @@
                     (reverse$1
                      (call-with-values
                       (lambda ()
-                        (values state_0 (unsafe-vector-length state_0)))
-                      (lambda (vec_0 len_0)
+                        (begin
+                          (check-vector state_0)
+                          (values state_0 (unsafe-vector-length state_0))))
+                      (case-lambda
+                       ((vec_0 len_0)
                         (letrec*
                          ((for-loop_0
                            (|#%name|
@@ -6715,9 +7293,11 @@
                                      fold-var_1
                                      (unsafe-fx+ 1 pos_0))))
                                 fold-var_0)))))
-                         (for-loop_0 null 0)))))
+                         (for-loop_0 null 0)))
+                       (args (raise-binding-result-arity-error 2 args)))))
                     null)))
-               #f))))))))
+               #f)))
+          (args (raise-binding-result-arity-error 2 args))))))))
 (define fast-drive-regexp-match/bytes
   (lambda (rx_0 in_0 start-pos_0 end-pos_0)
     (let ((state_0
@@ -6730,9 +7310,10 @@
           in_0
           start-pos_0
           start-pos_0
-          (if end-pos_0 end-pos_0 (unsafe-bytes-length in_0))
+          (if end-pos_0 end-pos_0 (bytes-length in_0))
           state_0))
-       (lambda (ms-pos_0 me-pos_0)
+       (case-lambda
+        ((ms-pos_0 me-pos_0)
          (if ms-pos_0
            (let ((app_0 (subbytes in_0 ms-pos_0 me-pos_0)))
              (cons
@@ -6740,8 +7321,12 @@
               (if state_0
                 (reverse$1
                  (call-with-values
-                  (lambda () (values state_0 (unsafe-vector-length state_0)))
-                  (lambda (vec_0 len_0)
+                  (lambda ()
+                    (begin
+                      (check-vector state_0)
+                      (values state_0 (unsafe-vector-length state_0))))
+                  (case-lambda
+                   ((vec_0 len_0)
                     (letrec*
                      ((for-loop_0
                        (|#%name|
@@ -6763,9 +7348,11 @@
                                        (values fold-var_1))))
                                 (for-loop_0 fold-var_1 (unsafe-fx+ 1 pos_0))))
                             fold-var_0)))))
-                     (for-loop_0 null 0)))))
+                     (for-loop_0 null 0)))
+                   (args (raise-binding-result-arity-error 2 args)))))
                 null)))
-           #f))))))
+           #f))
+        (args (raise-binding-result-arity-error 2 args)))))))
 (define fast-drive-regexp-match/string
   (lambda (rx_0 in-str_0 start-offset_0 end-offset_0)
     (let ((in_0
@@ -6778,9 +7365,9 @@
              (let ((n_0 (rx:regexp-num-groups rx_0)))
                (if (positive? n_0) (make-vector n_0 #f) #f))))
         (call-with-values
-         (lambda ()
-           (search-match rx_0 in_0 0 0 (unsafe-bytes-length in_0) state_0))
-         (lambda (ms-pos_0 me-pos_0)
+         (lambda () (search-match rx_0 in_0 0 0 (bytes-length in_0) state_0))
+         (case-lambda
+          ((ms-pos_0 me-pos_0)
            (if ms-pos_0
              (let ((app_0 (bytes->string/utf-8 in_0 '#\x3f ms-pos_0 me-pos_0)))
                (cons
@@ -6788,8 +7375,12 @@
                 (if state_0
                   (reverse$1
                    (call-with-values
-                    (lambda () (values state_0 (unsafe-vector-length state_0)))
-                    (lambda (vec_0 len_0)
+                    (lambda ()
+                      (begin
+                        (check-vector state_0)
+                        (values state_0 (unsafe-vector-length state_0))))
+                    (case-lambda
+                     ((vec_0 len_0)
                       (letrec*
                        ((for-loop_0
                          (|#%name|
@@ -6814,9 +7405,11 @@
                                    fold-var_1
                                    (unsafe-fx+ 1 pos_0))))
                               fold-var_0)))))
-                       (for-loop_0 null 0)))))
+                       (for-loop_0 null 0)))
+                     (args (raise-binding-result-arity-error 2 args)))))
                   null)))
-             #f)))))))
+             #f))
+          (args (raise-binding-result-arity-error 2 args))))))))
 (define drive-regexp-match.1
   (|#%name|
    drive-regexp-match
@@ -6910,7 +7503,7 @@
                            start-offset_0)
                           orig-end-offset23_0)
                         (if (bytes? in_0)
-                          (unsafe-bytes-length in_0)
+                          (bytes-length in_0)
                           (if (string? in_0) (string-length in_0) 'eof)))))
                  (begin
                    (if (let ((or-part_0 (not out24_0)))
@@ -6965,7 +7558,8 @@
                                  start-offset_0
                                  end-offset_0
                                  state_0))
-                              (lambda (ms-pos_0 me-pos_0)
+                              (case-lambda
+                               ((ms-pos_0 me-pos_0)
                                 (begin
                                   (if out24_0
                                     (write-bytes
@@ -7008,7 +7602,9 @@
                                                end-bytes-count9_0
                                                in_0
                                                me-pos_0))
-                                            (void)))))))))
+                                            (void))))))))
+                               (args
+                                (raise-binding-result-arity-error 2 args))))
                              (if (if (string? in_0)
                                    (if (not out24_0)
                                      (if (equal? #vu8() prefix25_0)
@@ -7029,8 +7625,7 @@
                                            in_0
                                            start-offset_0
                                            search-offset_0))))
-                                   (let ((end-pos_0
-                                          (unsafe-bytes-length bstr-in_0)))
+                                   (let ((end-pos_0 (bytes-length bstr-in_0)))
                                      (call-with-values
                                       (lambda ()
                                         (search-match
@@ -7040,7 +7635,8 @@
                                          0
                                          end-pos_0
                                          state_0))
-                                      (lambda (ms-pos_0 me-pos_0)
+                                      (case-lambda
+                                       ((ms-pos_0 me-pos_0)
                                         (begin
                                           (if out24_0
                                             (begin
@@ -7115,9 +7711,12 @@
                                                        end-bytes-count9_0
                                                        bstr-in_0
                                                        me-pos_0))
-                                                    (void))))))))))))
-                               (let ((prefix-len_0
-                                      (unsafe-bytes-length prefix25_0)))
+                                                    (void))))))))
+                                       (args
+                                        (raise-binding-result-arity-error
+                                         2
+                                         args)))))))
+                               (let ((prefix-len_0 (bytes-length prefix25_0)))
                                  (let ((search-pos_0
                                         (if (= start-offset_0 search-offset_0)
                                           prefix-len_0
@@ -7184,7 +7783,7 @@
                                                           (skip-amt_1
                                                            skip-amt_0))
                                                       (let ((len_0
-                                                             (unsafe-bytes-length
+                                                             (bytes-length
                                                               prefix25_0)))
                                                         (lazy-bytes1.1
                                                          prefix25_0
@@ -7225,7 +7824,8 @@
                                                    end-pos_0
                                                    state_0)
                                                   (values #f #f)))
-                                              (lambda (ms-pos_0 me-pos_0)
+                                              (case-lambda
+                                               ((ms-pos_0 me-pos_0)
                                                 (let ((write/consume-skipped_0
                                                        (|#%name|
                                                         write/consume-skipped
@@ -7392,12 +7992,16 @@
                                                                       me-pos_0
                                                                       delta_0)))))
                                                               (void))))))
-                                                    (write/consume-skipped_0))))))))))))))))))))))))))))
+                                                    (write/consume-skipped_0))))
+                                               (args
+                                                (raise-binding-result-arity-error
+                                                 2
+                                                 args)))))))))))))))))))))))))))
 (define check-range
   (lambda (who_0 what_0 in_0 pos_0 start-pos_0)
     (let ((len_0
            (if (bytes? in_0)
-             (unsafe-bytes-length in_0)
+             (bytes-length in_0)
              (if (string? in_0) (string-length in_0) +inf.0))))
       (begin
         (if (>= pos_0 start-pos_0)
@@ -7419,7 +8023,7 @@
 (define chytes-ref
   (lambda (s_0 pos_0)
     (if (bytes? s_0)
-      (unsafe-bytes-ref s_0 pos_0)
+      (bytes-ref s_0 pos_0)
       (char->integer (string-ref s_0 pos_0)))))
 (define subchytes
   (let ((subchytes_0
@@ -7427,7 +8031,7 @@
           subchytes
           (lambda (s2_0 a3_0 b1_0)
             (if (bytes? s2_0)
-              (subbytes s2_0 a3_0 (if b1_0 b1_0 (unsafe-bytes-length s2_0)))
+              (subbytes s2_0 a3_0 (if b1_0 b1_0 (bytes-length s2_0)))
               (substring s2_0 a3_0 (if b1_0 b1_0 (string-length s2_0))))))))
     (case-lambda
      ((s_0 a_0) (subchytes_0 s_0 a_0 #f))
@@ -7445,8 +8049,7 @@
 (define chytes?
   (lambda (ex_0 v_0) (if (bytes? ex_0) (bytes? v_0) (string? v_0))))
 (define chytes-length
-  (lambda (s_0)
-    (if (bytes? s_0) (unsafe-bytes-length s_0) (string-length s_0))))
+  (lambda (s_0) (if (bytes? s_0) (bytes-length s_0) (string-length s_0))))
 (define 1/regexp-replace
   (let ((regexp-replace_0
          (|#%name|
@@ -7633,30 +8236,32 @@
              (apply
               insert_0
               (reverse$1
-               (letrec*
-                ((for-loop_0
-                  (|#%name|
-                   for-loop
-                   (lambda (fold-var_0 lst_0)
-                     (if (pair? lst_0)
-                       (let ((pos_0 (unsafe-car lst_0)))
-                         (let ((rest_0 (unsafe-cdr lst_0)))
-                           (let ((fold-var_1
-                                  (let ((fold-var_1
-                                         (cons
-                                          (if pos_0
-                                            (let ((app_0 (car pos_0)))
-                                              (subchytes*
-                                               in_0
-                                               app_0
-                                               (cdr pos_0)
-                                               prefix_0))
-                                            #f)
-                                          fold-var_0)))
-                                    (values fold-var_1))))
-                             (for-loop_0 fold-var_1 rest_0))))
-                       fold-var_0)))))
-                (for-loop_0 null poss_0))))))
+               (begin
+                 (check-list poss_0)
+                 (letrec*
+                  ((for-loop_0
+                    (|#%name|
+                     for-loop
+                     (lambda (fold-var_0 lst_0)
+                       (if (pair? lst_0)
+                         (let ((pos_0 (unsafe-car lst_0)))
+                           (let ((rest_0 (unsafe-cdr lst_0)))
+                             (let ((fold-var_1
+                                    (let ((fold-var_1
+                                           (cons
+                                            (if pos_0
+                                              (let ((app_0 (car pos_0)))
+                                                (subchytes*
+                                                 in_0
+                                                 app_0
+                                                 (cdr pos_0)
+                                                 prefix_0))
+                                              #f)
+                                            fold-var_0)))
+                                      (values fold-var_1))))
+                               (for-loop_0 fold-var_1 rest_0))))
+                         fold-var_0)))))
+                  (for-loop_0 null poss_0)))))))
         (begin
           (if (chytes? in_0 a_0)
             (void)
@@ -7747,7 +8352,7 @@
 (define subchytes*
   (lambda (in_0 start_0 end_0 prefix_0)
     (if (< start_0 0)
-      (let ((len_0 (unsafe-bytes-length prefix_0)))
+      (let ((len_0 (bytes-length prefix_0)))
         (if (string? in_0)
           (letrec*
            ((loop_0
@@ -7766,7 +8371,7 @@
                      (|#%name|
                       bloop
                       (lambda (index_1)
-                        (let ((b_0 (unsafe-bytes-ref prefix_0 index_1)))
+                        (let ((b_0 (bytes-ref prefix_0 index_1)))
                           (if (let ((or-part_0 (not (bitwise-bit-set? b_0 7))))
                                 (if or-part_0
                                   or-part_0
@@ -7779,11 +8384,12 @@
                    (bloop_0 (sub1 index_0))))))))
            (loop_0 len_0 start_0 len_0 end_0))
           (let ((pre-part_0
-                 (let ((app_0 (+ (unsafe-bytes-length prefix_0) start_0)))
+                 (let ((app_0 (+ (bytes-length prefix_0) start_0)))
                    (subbytes
                     prefix_0
                     app_0
-                    (+ (unsafe-bytes-length prefix_0) (min 0 end_0))))))
+                    (let ((app_1 (bytes-length prefix_0)))
+                      (+ app_1 (min 0 end_0)))))))
             (if (> end_0 0)
               (bytes-append pre-part_0 (subbytes in_0 0 end_0))
               pre-part_0))))
@@ -7880,7 +8486,7 @@
     (if (1/byte-regexp? rx_0)
       (if (bytes? in_0)
         (if (exact-nonnegative-integer? start-pos_0)
-          (if (let ((len_0 (unsafe-bytes-length in_0)))
+          (if (let ((len_0 (bytes-length in_0)))
                 (if (<= start-pos_0 len_0)
                   (let ((or-part_0 (not end-pos_0)))
                     (if or-part_0

@@ -8,6 +8,7 @@
                                                     v)
                                              v)))
 
+;; stored specially in an rtd in the `procedure` slot
 (define-values (prop:procedure procedure-struct? procedure-struct-ref)
   (make-struct-type-property 'procedure (lambda (v info)
                                           ;; We don't have to check whether `v` is valid here,
@@ -24,17 +25,18 @@
 (define-values (prop:incomplete-arity incomplete-arity? incomplete-arity-ref)
   (make-struct-type-property 'incomplete-arity))
 
-;; Integer value is a field position to access a mask
+;; Integer value is a field position to access a mask;
+;; stored specially in an rtd in the `arity` slot
 (define-values (prop:procedure-arity procedure-arity-prop? procedure-arity-ref)
   (make-struct-type-property 'procedure-arity))
 
 (define (procedure? v)
   (or (#%procedure? v)
-      (and (record? v)
-           (#%$app/no-inline struct-procedure? v))))
-
-(define (struct-procedure? v)
-  (not (eq? (struct-property-ref prop:procedure (record-rtd v) none) none)))
+      (and (#%$record? v)
+           (let ([rtd (record-rtd v)])
+             (and (racket-rtd? rtd)
+                  (racket-rtd-procedure rtd)
+                  #t)))))
 
 (define/who (procedure-specialize proc)
   (check who procedure? proc)
@@ -114,11 +116,11 @@
           p))]
    [(record? f)
     (let* ([rtd (record-rtd f)]
-           [v (struct-property-ref prop:procedure rtd none)])
+           [v (struct-procedure-property-ref rtd none)])
       (cond
         [(eq? v none) (fail-k orig-f)]
         [(fixnum? v)
-         (let ([a (struct-property-ref prop:procedure-arity rtd #f)])
+         (let ([a (struct-procedure-arity-property-ref rtd #f)])
            (cond
              [(and a n-args (not (bitwise-bit-set? (unsafe-struct*-ref f a) n-args)))
               (wrong-arity-wrapper orig-f)]
@@ -139,7 +141,7 @@
         [(eq? v 'struct-impersonate-apply)
          (do-extract-procedure (impersonator-next f) self-f orig-f n-args success-k fail-k)]
         [else
-         (let ([a (struct-property-ref prop:procedure-arity rtd #f)])
+         (let ([a (struct-procedure-arity-property-ref rtd #f)])
            (cond
              [(and a n-args (not (bitwise-bit-set? (unsafe-struct*-ref f a) n-args)))
               (wrong-arity-wrapper orig-f)]
@@ -180,7 +182,7 @@
      [(position-based-mutator? f)
       (position-based-mutator-name f)]
      [else
-      (let* ([v (struct-property-ref prop:procedure (record-rtd f) #f)])
+      (let* ([v (struct-procedure-property-ref (record-rtd f) #f)])
         (cond
          [(fixnum? v)
           (let ([v (unsafe-struct-ref f v)])
@@ -220,7 +222,7 @@
        [(position-based-mutator? f)
         default-realm]
        [else
-        (let* ([v (struct-property-ref prop:procedure (record-rtd f) #f)])
+        (let* ([v (struct-procedure-property-ref (record-rtd f) #f)])
           (cond
             [(fixnum? v)
              (let ([v (unsafe-struct-ref f v)])
@@ -275,11 +277,11 @@
                  (struct-property-ref prop:incomplete-arity rtd #f))
             0]
            [else
-            (let* ([a (struct-property-ref prop:procedure-arity rtd #f)])
+            (let* ([a (struct-procedure-arity-property-ref rtd #f)])
               (cond
                [a (bitwise-arithmetic-shift-right (unsafe-struct*-ref f a) shift)]
                [else
-                (let ([v (struct-property-ref prop:procedure rtd #f)])
+                (let ([v (struct-procedure-property-ref rtd #f)])
                   (cond
                    [(fixnum? v)
                     (proc-arity-mask (unsafe-struct-ref f v) shift 0)]
@@ -299,12 +301,12 @@
       (cond
        [(struct-property-ref prop:incomplete-arity rtd #f)
         #t]
-       [(struct-property-ref prop:procedure-arity rtd #f)
+       [(struct-procedure-arity-property-ref rtd #f)
         ;; Anything with `prop:procedure-arity` has to have `prop:incomplete-arity`
         ;; if the procedure's arity is not complete
         #f]
        [else
-        (let ([v (struct-property-ref prop:procedure rtd #f)])
+        (let ([v (struct-procedure-property-ref rtd #f)])
           (cond
            [(fixnum? v)
             (procedure-incomplete-arity? (unsafe-struct-ref f v))]
@@ -328,7 +330,7 @@
       #f]
      [else
       (let* ([rtd (record-rtd f)]
-             [v (struct-property-ref prop:procedure rtd #f)])
+             [v (struct-procedure-property-ref rtd #f)])
         (cond
          [(fixnum? v)
           (let ([v (unsafe-struct-ref f v)])
@@ -383,7 +385,7 @@
     (procedure-result-arity (strip-impersonator p))]
    [(record? p)
     (let* ([rtd (record-rtd p)]
-           [v (struct-property-ref prop:procedure rtd none)])
+           [v (struct-procedure-property-ref rtd none)])
       (cond
        [(eq? v none) #f]
        [(fixnum? v)
@@ -414,7 +416,8 @@
 
 ;; ----------------------------------------
 
-(define-record method-procedure (proc))
+(define-racket-record-type method-procedure
+  [fields (immutable proc)])
 
 (define (method-wrapper-vector? vec)
   (fx= 4 (#%vector-length vec)))
@@ -455,7 +458,7 @@
         (procedure-is-method-by-name? f))]
    [(record? f)
     (or (method-arity-error? f)
-        (let ([v (struct-property-ref prop:procedure (record-rtd f) #f)])
+        (let ([v (struct-procedure-property-ref (record-rtd f) #f)])
           (cond
            [(fixnum? v)
             (procedure-is-method? (unsafe-struct-ref f v))]
@@ -521,7 +524,7 @@
      [(method-arity-error? f) #f]
      [(reduced-arity-procedure? f) #f]
      [else
-      (let ([v (struct-property-ref prop:procedure (record-rtd f) #f)])
+      (let ([v (struct-procedure-property-ref (record-rtd f) #f)])
         (cond
          [(fixnum? v)
           (arity-string-maker (unsafe-struct-ref f v))]
@@ -532,7 +535,11 @@
 
 ;; ----------------------------------------
 
-(define-record reduced-arity-procedure (proc mask name realm))
+(define-racket-record-type reduced-arity-procedure
+  [fields (immutable proc)
+          (immutable mask)
+          (immutable name)
+          (immutable realm)])
 
 (define/who procedure-reduce-arity
   (case-lambda
@@ -609,7 +616,10 @@
 
 ;; ----------------------------------------
 
-(define-record named-procedure (proc name realm))
+(define-racket-record-type named-procedure
+  [fields (immutable proc)
+          (immutable name)
+          (immutable realm)])
 
 (define/who procedure-rename
   (case-lambda
@@ -703,11 +713,17 @@
 
 ;; ----------------------------------------
 
-(define-record procedure-impersonator impersonator (wrapper arity-mask))
-(define-record procedure-chaperone chaperone (wrapper arity-mask))
+(define-racket-record-type procedure-impersonator impersonator
+  [fields (immutable wrapper)
+          (immutable arity-mask)])
+(define-racket-record-type procedure-chaperone chaperone
+  [fields (immutable wrapper)
+          (immutable arity-mask)])
 
-(define-record procedure*-impersonator procedure-impersonator ())
-(define-record procedure*-chaperone procedure-chaperone ())
+(define-racket-record-type procedure*-impersonator procedure-impersonator
+  [fields])
+(define-racket-record-type procedure*-chaperone procedure-chaperone
+  [fields])
 
 (define-values (impersonator-prop:application-mark application-mark? application-mark-ref)
   (make-impersonator-property 'application-mark))
@@ -895,7 +911,7 @@
           ;; `i` from `self-p`, not from `p`, so that any interpositions
           ;; on that access are performed.
           (let ([v (and (record? p)
-                        (struct-property-ref prop:procedure (record-rtd p) #f))])
+                        (struct-procedure-property-ref (record-rtd p) #f))])
             (cond
              [(integer? v)
               (apply (unsafe-struct-ref self-p v) args)]
@@ -904,11 +920,11 @@
                        args)]))]))])))
 
 (define (set-procedure-impersonator-hash!)
-  (struct-set-equal+hash! (record-type-descriptor procedure-chaperone)
+  (struct-set-equal+hash! rtd:procedure-chaperone
                           #f
                           (lambda (c hash-code)
                             (hash-code (impersonator-next c))))
-  (struct-set-equal+hash! (record-type-descriptor procedure-impersonator)
+  (struct-set-equal+hash! rtd:procedure-impersonator
                           #f
                           (lambda (i hash-code)
                             (hash-code (impersonator-next i)))))
@@ -971,8 +987,10 @@
 
 ;; ----------------------------------------
 
-(define-record unsafe-procedure-impersonator impersonator (replace-proc))
-(define-record unsafe-procedure-chaperone chaperone (replace-proc))
+(define-racket-record-type unsafe-procedure-impersonator impersonator
+  [fields (immutable replace-proc)])
+(define-racket-record-type unsafe-procedure-chaperone chaperone
+  [fields (immutable replace-proc)])
 
 (define/who (unsafe-impersonate-procedure proc replace-proc . props)
   (do-unsafe-impersonate-procedure who make-unsafe-procedure-impersonator
@@ -1065,7 +1083,7 @@
 
 (define (set-primitive-applicables!)
   (struct-property-set! prop:procedure
-                        (record-type-descriptor position-based-accessor)
+                        rtd:position-based-accessor
                         (lambda (pba s p)
                           (let ([rtd (position-based-accessor-rtd pba)])
                             (cond
@@ -1099,7 +1117,7 @@
                                  (error who "bad access"))]))))
 
   (struct-property-set! prop:procedure
-                        (record-type-descriptor position-based-mutator)
+                        rtd:position-based-mutator
                         (lambda (pbm s p v)
                           (let ([rtd (position-based-mutator-rtd pbm)])
                             (cond
@@ -1140,24 +1158,24 @@
                                  (error who "bad assignment"))]))))
 
   (struct-property-set! prop:procedure
-                        (record-type-descriptor named-procedure)
+                        rtd:named-procedure
                         0)
   (struct-property-set! prop:object-name
-                        (record-type-descriptor named-procedure)
+                        rtd:named-procedure
                         1)
 
   (struct-property-set! prop:procedure
-                        (record-type-descriptor reduced-arity-procedure)
+                        rtd:reduced-arity-procedure
                         0)
   (struct-property-set! prop:procedure-arity
-                        (record-type-descriptor reduced-arity-procedure)
+                        rtd:reduced-arity-procedure
                         1)
 
   (struct-property-set! prop:procedure
-                        (record-type-descriptor method-procedure)
+                        rtd:method-procedure
                         0)
   (struct-property-set! prop:method-arity-error
-                        (record-type-descriptor method-procedure)
+                        rtd:method-procedure
                         #t)
 
   (let ([register-procedure-impersonator-struct-type!
@@ -1169,26 +1187,26 @@
            (lambda (rtd struct?)
              (register-procedure-impersonator-struct-type! rtd struct?)
              (struct-property-set! prop:procedure-arity rtd 4))])
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure-chaperone) #f)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure-impersonator) #f)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure*-chaperone) #f)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure*-impersonator) #f)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure-struct-chaperone) #t)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure-struct-impersonator) #t)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure~-struct-chaperone) #t)
-      (register-procedure-impersonator-struct-type! (record-type-descriptor procedure~-struct-impersonator) #t))
-    (register-procedure-impersonator-struct-type! (record-type-descriptor procedure-struct-undefined-chaperone) #t)
-    (register-procedure-impersonator-struct-type! (record-type-descriptor procedure~-struct-undefined-chaperone) #t))
+      (register-procedure-impersonator-struct-type! rtd:procedure-chaperone #f)
+      (register-procedure-impersonator-struct-type! rtd:procedure-impersonator #f)
+      (register-procedure-impersonator-struct-type! rtd:procedure*-chaperone #f)
+      (register-procedure-impersonator-struct-type! rtd:procedure*-impersonator #f)
+      (register-procedure-impersonator-struct-type! rtd:procedure-struct-chaperone #t)
+      (register-procedure-impersonator-struct-type! rtd:procedure-struct-impersonator #t)
+      (register-procedure-impersonator-struct-type! rtd:procedure~-struct-chaperone #t)
+      (register-procedure-impersonator-struct-type! rtd:procedure~-struct-impersonator #t))
+    (register-procedure-impersonator-struct-type! rtd:procedure-struct-undefined-chaperone #t)
+    (register-procedure-impersonator-struct-type! rtd:procedure~-struct-undefined-chaperone #t))
 
   (let ([register-procedure-incomplete-arity!
          (lambda (rtd)
            (struct-property-set! prop:incomplete-arity rtd #t))])
-    (register-procedure-incomplete-arity! (record-type-descriptor procedure~-struct-chaperone))
-    (register-procedure-incomplete-arity! (record-type-descriptor procedure~-struct-impersonator))
-    (register-procedure-incomplete-arity! (record-type-descriptor procedure~-struct-undefined-chaperone)))
+    (register-procedure-incomplete-arity! rtd:procedure~-struct-chaperone)
+    (register-procedure-incomplete-arity! rtd:procedure~-struct-impersonator)
+    (register-procedure-incomplete-arity! rtd:procedure~-struct-undefined-chaperone))
 
   (let ([register-unsafe-procedure-impersonator-struct-type!
          (lambda (rtd)
            (struct-property-set! prop:procedure rtd 'unsafe))])
-    (register-unsafe-procedure-impersonator-struct-type! (record-type-descriptor unsafe-procedure-chaperone))
-    (register-unsafe-procedure-impersonator-struct-type! (record-type-descriptor unsafe-procedure-impersonator))))
+    (register-unsafe-procedure-impersonator-struct-type! rtd:unsafe-procedure-chaperone)
+    (register-unsafe-procedure-impersonator-struct-type! rtd:unsafe-procedure-impersonator)))

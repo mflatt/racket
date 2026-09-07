@@ -150,7 +150,7 @@
             (let* ([knowns (hash-set knowns
                                      (unwrap struct:st)
                                      (known-struct-type type
-                                                        (+ NUMBER-OF-BASE-RTD-FIELDS n)
+                                                        (+ NUMBER-OF-RACKET-BASE-RTD-FIELDS n)
                                                         #t ; pure-constructor?
                                                         sealed?))]
                    [knowns (hash-set knowns
@@ -168,7 +168,7 @@
                                          (exact-integer? pos)
                                          (<= 0 pos (sub1 n)))
                                     (hash-set knowns (unwrap st-ref)
-                                              (known-field-accessor 2 type struct:st #t (+ NUMBER-OF-BASE-RTD-FIELDS pos) #t))
+                                              (known-field-accessor 2 type struct:st #t (+ NUMBER-OF-RACKET-BASE-RTD-FIELDS pos) #t))
                                     knowns)]
                                [`,_ knowns]))])
               knowns)

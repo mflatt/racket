@@ -256,6 +256,8 @@
           make-struct-field-mutator
           struct-type-constructor-add-guards ; not exported to Racket
           |#%base-rtd| ; not exported to Racket
+          |#%racket-base-rtd| ; not exported to Racket
+          |#%prefab-properties| ; not exported to Racket
           |#%struct-constructor| ; not exported to Racket
           |#%struct-predicate| ; not exported to Racket
           |#%struct-field-accessor| ; not exported to Racket
@@ -899,6 +901,7 @@
   (include "rumble/constant.ss")
   (include "rumble/hash-code.ss")
   (include "rumble/symbol.ss")
+  (include "rumble/racket-struct.ss")
   (include "rumble/struct.ss")
   (include "rumble/prefab.ss")
   (include "rumble/impersonator.ss")
