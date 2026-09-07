@@ -144,8 +144,8 @@
      (and (exact-nonnegative-integer? fields)
           (struct-type-info name
                             #t
-                            '|#%racket-base-rtd|
-                            '|#%base-rtd| ; parent
+                            '|#%base-rtd|
+                            '|#%racket-base-rtd| ; parent
                             fields
                             (+ fields NUMBER-OF-RACKET-BASE-RTD-FIELDS)
                             #t ; pure constructor

@@ -25,7 +25,6 @@
   [|#%make-struct-type-type| (known-constant)]
   [|#%base-rtd| (known-constant)]
   [|#%racket-base-rtd| (known-constant)]
-  [|#%prefab-properties| (known-constant)]
   [make-record-constructor-descriptor (known-constant)]
   [record-constructor (known-constant)]
   [record-predicate (known-constant)]

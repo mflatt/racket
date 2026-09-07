@@ -892,7 +892,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2414 (finish_2124 struct:rx:alts))
 (define rx:alts1.1
@@ -929,7 +929,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2459 (finish_3074 struct:rx:sequence))
 (define rx:sequence2.1
@@ -969,7 +969,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1819 (finish_2409 struct:rx:group))
 (define rx:group3.1
@@ -1005,7 +1005,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2312 (finish_2710 struct:rx:repeat))
 (define rx:repeat4.1
@@ -1046,7 +1046,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2202 (finish_2057 struct:rx:maybe))
 (define rx:maybe5.1
@@ -1082,7 +1082,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2905 (finish_2914 struct:rx:conditional))
 (define rx:conditional6.1
@@ -1130,7 +1130,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2486 (finish_2954 struct:rx:lookahead))
 (define rx:lookahead7.1
@@ -1172,7 +1172,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2468 (finish_1844 struct:rx:lookbehind))
 (define rx:lookbehind8.1
@@ -1222,7 +1222,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2158 (finish_1951 struct:rx:cut))
 (define rx:cut9.1
@@ -1261,7 +1261,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2306 (finish_2358 struct:rx:reference))
 (define rx:reference10.1
@@ -1301,7 +1301,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2071 (finish_2696 struct:rx:range))
 (define rx:range11.1
@@ -1336,7 +1336,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2341 (finish_2757 struct:rx:unicode-categories))
 (define rx:unicode-categories12.1
@@ -1564,7 +1564,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2622 (finish_2184 struct:parse-config))
 (define parse-config1.1
@@ -3772,7 +3772,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2741 (finish_3069 struct:lazy-bytes))
 (define lazy-bytes1.1
@@ -5995,7 +5995,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2726 (finish_1953 struct:rx:regexp))
 (define rx:regexp1.1

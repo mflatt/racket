@@ -4110,7 +4110,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2980 (finish_2457 struct:region))
 (define region1.1
@@ -4342,7 +4342,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2500 (finish_2114 struct:stat))
 (define stat2.1
@@ -5615,7 +5615,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2507 (finish_2792 struct:weak-intern-table))
 (define weak-intern-table1.1
@@ -5653,7 +5653,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2522 (finish_2969 struct:table))
 (define table2.1
@@ -5868,7 +5868,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2442 (finish_2266 struct:resolved-module-path))
 (define resolved-module-path1.1
@@ -6129,7 +6129,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2892 (finish_2670 struct:module-path-index))
 (define module-path-index2.1
@@ -6755,7 +6755,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2268 (finish_2890 struct:promise))
 (define promise1.1
@@ -6866,7 +6866,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2707 (finish_1890 struct:serialize-state))
 (define serialize-state1.1
@@ -7349,7 +7349,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2588 (finish_2102 struct:preserved-property-value))
 (define preserved-property-value1.1
@@ -7551,7 +7551,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2176 (finish_2619 struct:modified-content))
 (define modified-content1.1
@@ -7836,7 +7836,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2447 (finish_2398 struct:syntax))
 (define syntax2.1
@@ -8188,7 +8188,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2710 (finish_2442 struct:syntax-state))
 (define syntax-state17.1
@@ -8315,7 +8315,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2734 (finish_2247 struct:full-binding))
 (define full-binding1.1
@@ -8638,7 +8638,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2481 (finish_2458 struct:full-module-binding))
 (define full-module-binding45.1
@@ -8744,7 +8744,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2891 (finish_2620 struct:simple-module-binding))
 (define simple-module-binding46.1
@@ -9020,7 +9020,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2690 (finish_2061 struct:like-ambiguous-binding))
 (define like-ambiguous-binding1.1
@@ -9067,7 +9067,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2950 (finish_2494 struct:table-with-bulk-bindings))
 (define table-with-bulk-bindings1.1
@@ -9132,7 +9132,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2253 (finish_2866 struct:bulk-binding-at))
 (define bulk-binding-at2.1
@@ -9175,7 +9175,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2841 (finish_2732 struct:bulk-binding-class))
 (define bulk-binding-class3.1
@@ -10494,7 +10494,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2114 (finish_2185 struct:fallback))
 (define fallback1.1
@@ -10616,7 +10616,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2728 (finish_2822 struct:entry))
 (define entry1.1
@@ -10681,7 +10681,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2358 (finish_2410 struct:shifted-entry))
 (define shifted-entry2.1
@@ -10921,7 +10921,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2269 (finish_2872 struct:scope))
 (define scope1.1
@@ -10989,7 +10989,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2498 (finish_3100 struct:interned-scope))
 (define interned-scope2.1
@@ -11131,7 +11131,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1895 (finish_2795 struct:multi-scope))
 (define multi-scope3.1
@@ -11224,7 +11224,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2683 (finish_1951 struct:representative-scope))
 (define representative-scope4.1
@@ -11318,7 +11318,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2854 (finish_3292 struct:shifted-multi-scope))
 (define shifted-multi-scope5.1
@@ -11404,7 +11404,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2315 (finish_3013 struct:shifted-to-label-phase))
 (define shifted-to-label-phase6.1
@@ -12306,7 +12306,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2326 (finish_2814 struct:propagation))
 (define propagation12.1
@@ -13567,7 +13567,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3011 (finish_2041 struct:full-local-binding))
 (define full-local-binding1.1
@@ -13697,7 +13697,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2525 (finish_2476 struct:id-rename-transformer))
 (define id-rename-transformer1.1
@@ -13958,7 +13958,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_3061 (finish_2455 struct:non-source-shift))
 (define non-source-shift11.1
@@ -14508,7 +14508,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2629 (finish_3200 struct:provided))
 (define provided1.1
@@ -14738,7 +14738,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2834 (finish_2524 struct:bulk-binding))
 (define bulk-binding12.1
@@ -14869,7 +14869,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2392 (finish_2579 struct:bulk-provide))
 (define bulk-provide13.1
@@ -14943,7 +14943,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2403 (finish_2603 struct:bulk-binding-registry))
 (define bulk-binding-registry14.1
@@ -15021,7 +15021,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2124 (finish_2813 struct:root-expand-context/outer))
 (define root-expand-context/outer1.1
@@ -15076,7 +15076,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2880 (finish_2837 struct:root-expand-context/inner))
 (define root-expand-context/inner2.1
@@ -15588,7 +15588,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2565 (finish_2938 struct:module-registry))
 (define module-registry1.1
@@ -15738,7 +15738,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3128 (finish_2563 struct:namespace))
 (define namespace1.1
@@ -15821,7 +15821,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2319 (finish_2741 struct:definitions))
 (define definitions2.1
@@ -16372,7 +16372,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2582 (finish_2245 struct:syntax-binding-set))
 (define syntax-binding-set1.1
@@ -16433,7 +16433,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2584 (finish_2672 struct:bind))
 (define bind2.1
@@ -17004,7 +17004,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2097 (finish_2922 struct:module-use))
 (define module-use1.1
@@ -17076,7 +17076,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2071 (finish_2362 struct:portal-syntax))
 (define portal-syntax1.1
@@ -17137,7 +17137,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2640 (finish_2696 struct:module))
 (define module1.1
@@ -17222,7 +17222,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2508 (finish_2550 struct:module-linklet-info))
 (define module-linklet-info2.1
@@ -17398,7 +17398,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2382 (finish_2793 struct:module-instance))
 (define module-instance48.1
@@ -19530,7 +19530,7 @@
             'make-struct-type
             #f
             #f
-            '()
+            #f
             #f)))
       (let ((effect916 (finish915 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
@@ -19626,7 +19626,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2625 (finish_2125 struct:local-variable))
 (define local-variable1.1
@@ -19691,7 +19691,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2077 (finish_2414 struct:core-form))
 (define core-form7.1
@@ -19977,7 +19977,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2851 (finish_2652 struct:expand-context/outer))
 (define expand-context/outer1.1
@@ -20055,7 +20055,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3326 (finish_2648 struct:expand-context/inner))
 (define expand-context/inner2.1
@@ -21774,7 +21774,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2620 (finish_2958 struct:compile-context))
 (define compile-context1.1
@@ -24268,7 +24268,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2611 (finish_2322 struct:mpi-intern-table))
 (define mpi-intern-table1.1
@@ -24552,7 +24552,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2626 (finish_2005 struct:module-path-index-table))
 (define module-path-index-table1.1
@@ -28443,7 +28443,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3056 (finish_2891 struct:parsed))
 (define parsed1.1
@@ -28477,7 +28477,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2596 (finish_2783 struct:parsed-id))
 (define parsed-id2.1
@@ -28514,7 +28514,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2448 (finish_2627 struct:parsed-primitive-id))
 (define parsed-primitive-id3.1
@@ -28550,7 +28550,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2581 (finish_2584 struct:parsed-top-id))
 (define parsed-top-id4.1
@@ -28584,7 +28584,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2349 (finish_2495 struct:parsed-lambda))
 (define parsed-lambda5.1
@@ -28622,7 +28622,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2437 (finish_2679 struct:parsed-case-lambda))
 (define parsed-case-lambda6.1
@@ -28660,7 +28660,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2862 (finish_2548 struct:parsed-app))
 (define parsed-app7.1
@@ -28698,7 +28698,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2506 (finish_2663 struct:parsed-if))
 (define parsed-if8.1
@@ -28737,7 +28737,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2747 (finish_3030 struct:parsed-set!))
 (define parsed-set!9.1
@@ -28775,7 +28775,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2564 (finish_2301 struct:parsed-with-continuation-mark))
 (define parsed-with-continuation-mark10.1
@@ -28826,7 +28826,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3025 (finish_2388 |struct:parsed-#%variable-reference|))
 (define |parsed-#%variable-reference11.1|
@@ -28869,7 +28869,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2189 (finish_2060 struct:parsed-begin))
 (define parsed-begin12.1
@@ -28905,7 +28905,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2190 (finish_2062 struct:parsed-begin0))
 (define parsed-begin013.1
@@ -28941,7 +28941,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2174 (finish_2790 struct:parsed-quote))
 (define parsed-quote14.1
@@ -28977,7 +28977,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3320 (finish_2149 struct:parsed-quote-syntax))
 (define parsed-quote-syntax15.1
@@ -29017,7 +29017,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2571 (finish_2709 struct:parsed-foreign-inline))
 (define parsed-foreign-inline16.1
@@ -29061,7 +29061,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2494 (finish_2373 struct:parsed-let_-values))
 (define parsed-let_-values17.1
@@ -29107,7 +29107,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2429 (finish_2586 struct:parsed-let-values))
 (define parsed-let-values18.1
@@ -29141,7 +29141,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2573 (finish_2434 struct:parsed-letrec-values))
 (define parsed-letrec-values19.1
@@ -29177,7 +29177,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2826 (finish_2907 struct:parsed-define-values))
 (define parsed-define-values20.1
@@ -29225,7 +29225,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2530 (finish_3035 struct:parsed-define-syntaxes))
 (define parsed-define-syntaxes21.1
@@ -29273,7 +29273,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2361 (finish_2438 struct:parsed-begin-for-syntax))
 (define parsed-begin-for-syntax22.1
@@ -29316,7 +29316,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2603 (finish_2594 |struct:parsed-#%declare|))
 (define |parsed-#%declare23.1|
@@ -29350,7 +29350,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2194 (finish_2834 struct:parsed-require))
 (define parsed-require24.1
@@ -29388,7 +29388,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2515 (finish_2226 |struct:parsed-#%module-begin|))
 (define |parsed-#%module-begin25.1|
@@ -29439,7 +29439,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2433 (finish_2959 struct:parsed-module))
 (define parsed-module26.1
@@ -29515,7 +29515,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2594 (finish_2842 struct:parsed-bundle))
 (define parsed-bundle27.1
@@ -29697,7 +29697,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3171 (finish_3291 struct:requires+provides))
 (define requires+provides1.1
@@ -29795,7 +29795,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2757 (finish_2532 struct:required))
 (define required2.1
@@ -29835,7 +29835,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3099 (finish_2664 struct:bulk-required))
 (define bulk-required3.1
@@ -31833,7 +31833,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2893 (finish_2697 struct:adjust-only))
 (define adjust-only1.1
@@ -31890,7 +31890,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2600 (finish_2542 struct:adjust-prefix))
 (define adjust-prefix2.1
@@ -31949,7 +31949,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2205 (finish_2348 struct:adjust-all-except))
 (define adjust-all-except3.1
@@ -32027,7 +32027,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3082 (finish_2750 struct:adjust-rename))
 (define adjust-rename4.1
@@ -35192,7 +35192,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2572 (finish_3098 struct:compiled-in-memory))
 (define compiled-in-memory1.1
@@ -35570,7 +35570,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2738 (finish_2248 struct:correlated-linklet))
 (define correlated-linklet1.1
@@ -35655,7 +35655,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2370 (finish_2389 struct:faslable-correlated))
 (define faslable-correlated2.1
@@ -35826,7 +35826,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2374 (finish_2803 struct:faslable-correlated-linklet))
 (define faslable-correlated-linklet3.1
@@ -36351,7 +36351,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2692 (finish_2902 struct:linklet-directory))
 (define linklet-directory1.1
@@ -36420,7 +36420,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2464 (finish_2824 struct:linklet-bundle))
 (define linklet-bundle2.1
@@ -36637,7 +36637,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2465 (finish_2892 struct:namespace-scopes))
 (define namespace-scopes1.1
@@ -36773,7 +36773,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2822 (finish_2887 struct:syntax-literals))
 (define syntax-literals1.1
@@ -36885,7 +36885,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2459 (finish_2543 struct:header))
 (define header2.1
@@ -37090,7 +37090,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2838 (finish_2560 struct:variable-use))
 (define variable-use3.1
@@ -37910,7 +37910,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2316 (finish_2356 struct:module-use*))
 (define module-use*1.1
@@ -39142,7 +39142,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2792 (finish_2980 struct:link-info))
 (define link-info1.1
@@ -41157,7 +41157,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2998 (finish_2519 struct:known-defined/delay))
 (define known-defined/delay2.1
@@ -41220,7 +41220,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2476 (finish_2590 struct:known-property))
 (define known-property3.1
@@ -41270,7 +41270,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2945 (finish_2139 struct:known-property-of-function))
 (define known-property-of-function4.1
@@ -41336,7 +41336,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2741 (finish_2740 struct:known-function))
 (define known-function5.1
@@ -41416,7 +41416,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2265 (finish_2071 struct:known-function-of-satisfying))
 (define known-function-of-satisfying6.1
@@ -41499,7 +41499,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2144 (finish_2577 struct:known-predicate))
 (define known-predicate7.1
@@ -41558,7 +41558,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_1976 (finish_2468 struct:known-satisfies))
 (define known-satisfies8.1
@@ -41619,7 +41619,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2534 (finish_2604 struct:known-struct-op))
 (define known-struct-op9.1
@@ -44699,7 +44699,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3023 (finish_2981 struct:protected-core))
 (define protected-core1.1
@@ -46103,7 +46103,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2595 (finish_2479 struct:instance-data))
 (define instance-data9.1
@@ -48582,7 +48582,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1973 (finish_2360 struct:recompiled))
 (define recompiled1.1
@@ -50315,7 +50315,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1545 (finish_2589 struct:lift-context))
 (define lift-context1.1
@@ -50355,7 +50355,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1767 (finish_2698 struct:lifted-bind))
 (define lifted-bind2.1
@@ -50596,7 +50596,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2649 (finish_3138 struct:module-lift-context))
 (define module-lift-context15.1
@@ -50683,7 +50683,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3057 (finish_2859 struct:require-lift-context))
 (define require-lift-context16.1
@@ -50762,7 +50762,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3069 (finish_2755 struct:to-module-lift-context))
 (define to-module-lift-context20.1
@@ -50836,7 +50836,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2568 (finish_2433 struct:already-expanded))
 (define already-expanded1.1
@@ -50917,7 +50917,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2849 (finish_2095 struct:liberal-define-context))
 (define make-liberal-define-context
@@ -51048,7 +51048,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2371 (finish_2318 struct:reference-record))
 (define reference-record1.1
@@ -51213,7 +51213,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2270 (finish_2886 struct:expanded+parsed))
 (define expanded+parsed1.1
@@ -51251,7 +51251,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2353 (finish_2856 struct:semi-parsed-define-values))
 (define semi-parsed-define-values2.1
@@ -51306,7 +51306,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2814 (finish_2970 struct:semi-parsed-begin-for-syntax))
 (define semi-parsed-begin-for-syntax3.1
@@ -53162,7 +53162,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2979 (finish_2794 struct:internal-definition-context))
 (define internal-definition-context1.1
@@ -53330,7 +53330,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2352 (finish_2692 struct:env-mixin))
 (define env-mixin2.1
@@ -58452,7 +58452,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2583 (finish_2305 struct:lifted-parsed-begin))
 (define lifted-parsed-begin11.1
@@ -60757,7 +60757,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2776 (finish_3090 struct:shadow-directory))
 (define shadow-directory1.1
@@ -61858,7 +61858,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2490 (finish_2405 struct:read-config/outer))
 (define read-config/outer1.1
@@ -61910,7 +61910,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2436 (finish_2733 struct:read-config/inner))
 (define read-config/inner2.1
@@ -62079,7 +62079,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2073 (finish_2658 struct:read-config-state))
 (define read-config-state3.1
@@ -62612,7 +62612,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3106 (finish_2605 struct:special-comment))
 (define 1/make-special-comment
@@ -62648,7 +62648,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2167 (finish_2508 struct:readtable))
 (define readtable1.1
@@ -63006,7 +63006,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2677 (finish_2954 struct:special))
 (define special1.1
@@ -63553,7 +63553,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2784 (finish_2485 struct:accum-string))
 (define accum-string1.1
@@ -63674,7 +63674,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2185 (finish_2880 struct:indentation))
 (define indentation1.1
@@ -64659,7 +64659,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2177 (finish_2818 struct:parse-state))
 (define parse-state6.1
@@ -64705,7 +64705,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2477 (finish_2141 struct:rect-prefix))
 (define rect-prefix7.1
@@ -64745,7 +64745,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2366 (finish_3094 struct:polar-prefix))
 (define polar-prefix8.1
@@ -64869,7 +64869,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2131 (finish_3231 struct:lazy-expt))
 (define lazy-expt9.1
@@ -64908,7 +64908,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3104 (finish_2687 struct:lazy-rational))
 (define lazy-rational10.1
@@ -74030,7 +74030,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2423 (finish_2681 struct:serialized-syntax))
 (define serialized-syntax1.1

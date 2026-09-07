@@ -2124,7 +2124,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2537 (finish_2045 struct:known-constant))
 (define known-constant
@@ -2180,7 +2180,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2382 (finish_2081 struct:known-consistent))
 (define known-consistent
@@ -2236,7 +2236,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2570 (finish_2443 struct:known-authentic))
 (define known-authentic
@@ -2292,7 +2292,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2542 (finish_2536 struct:known-copy))
 (define known-copy
@@ -2356,7 +2356,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2788 (finish_2861 struct:known-literal))
 (define known-literal
@@ -2427,7 +2427,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2697 (finish_2091 struct:known-foreign-inline))
 (define known-foreign-inline
@@ -2502,7 +2502,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2479 (finish_1929 struct:known-ctype))
 (define known-ctype
@@ -2566,7 +2566,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2677 (finish_2897 struct:known-procedure))
 (define known-procedure
@@ -2639,7 +2639,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2532 (finish_2542 struct:known-procedure/single-valued))
 (define known-procedure/single-valued
@@ -2700,7 +2700,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_1771 (finish_2099 struct:known-procedure/no-prompt))
 (define known-procedure/no-prompt
@@ -2761,7 +2761,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2793 (finish_2719 struct:known-procedure/no-prompt/multi))
 (define known-procedure/no-prompt/multi
@@ -2822,7 +2822,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2754 (finish_2412 struct:known-procedure/no-prompt-up-to))
 (define known-procedure/no-prompt-up-to
@@ -2900,7 +2900,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2517 (finish_2574 struct:known-procedure/no-return))
 (define known-procedure/no-return
@@ -2961,7 +2961,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2451 (finish_2190 struct:known-procedure/parameter))
 (define known-procedure/parameter
@@ -3022,7 +3022,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2308 (finish_2550 struct:known-procedure/can-inline))
 (define known-procedure/can-inline
@@ -3100,7 +3100,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2618
   (finish_1976 struct:known-procedure/can-inline/need-imports))
@@ -3179,7 +3179,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2478 (finish_1734 struct:known-procedure/folding))
 (define known-procedure/folding
@@ -3240,7 +3240,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2518 (finish_2008 struct:known-procedure/folding/limited))
 (define known-procedure/folding/limited
@@ -3318,7 +3318,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2467 (finish_2826 struct:known-procedure/succeeds))
 (define known-procedure/succeeds
@@ -3379,7 +3379,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_1957 (finish_2544 struct:known-procedure/then-pure))
 (define known-procedure/then-pure
@@ -3440,7 +3440,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2700
   (finish_2400 struct:known-procedure/then-pure/folding-unsafe))
@@ -3519,7 +3519,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2336 (finish_2051 struct:known-procedure/allocates))
 (define known-procedure/allocates
@@ -3580,7 +3580,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_3058 (finish_2724 struct:known-procedure/pure))
 (define known-procedure/pure
@@ -3638,7 +3638,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2264 (finish_2466 struct:known-procedure/pure/folding))
 (define known-procedure/pure/folding
@@ -3699,7 +3699,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_1752 (finish_3128 struct:known-procedure/has-unsafe))
 (define known-procedure/has-unsafe
@@ -3777,7 +3777,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2489 (finish_2439 struct:known-procedure/has-unsafe/folding))
 (define known-procedure/has-unsafe/folding
@@ -3838,7 +3838,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2512
   (finish_2602 struct:known-procedure/has-unsafe/folding/limited))
@@ -3918,7 +3918,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2667 (finish_2844 struct:known-struct-type))
 (define known-struct-type
@@ -4042,7 +4042,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_1913 (finish_2453 struct:known-constructor))
 (define known-constructor
@@ -4115,7 +4115,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2144 (finish_2917 struct:known-predicate))
 (define known-predicate
@@ -4186,7 +4186,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2905 (finish_2548 struct:known-accessor))
 (define known-accessor
@@ -4257,7 +4257,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2521 (finish_2552 struct:known-mutator))
 (define known-mutator
@@ -4328,7 +4328,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_3238 (finish_2184 struct:known-struct-constructor))
 (define known-struct-constructor
@@ -4406,7 +4406,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2384 (finish_2304 struct:known-struct-predicate))
 (define known-struct-predicate
@@ -4515,7 +4515,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2259 (finish_3014 struct:known-field-accessor))
 (define known-field-accessor
@@ -4641,7 +4641,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2603 (finish_2908 struct:known-field-mutator))
 (define known-field-mutator
@@ -4750,7 +4750,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2146 (finish_2543 struct:known-struct-constructor/need-imports))
 (define known-struct-constructor/need-imports
@@ -4828,7 +4828,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_3156 (finish_2626 struct:known-struct-predicate/need-imports))
 (define known-struct-predicate/need-imports
@@ -4906,7 +4906,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2513 (finish_2444 struct:known-field-accessor/need-imports))
 (define known-field-accessor/need-imports
@@ -4984,7 +4984,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2273 (finish_2153 struct:known-field-mutator/need-imports))
 (define known-field-mutator/need-imports
@@ -5062,7 +5062,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2428 (finish_2984 struct:known-struct-type-maker))
 (define known-struct-type-maker
@@ -5157,7 +5157,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2631 (finish_3037 struct:known-struct-type-maker/need-imports))
 (define known-struct-type-maker/need-imports
@@ -5229,7 +5229,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2294
   (finish_2492 struct:known-struct-type-property/immediate-guard))
@@ -5297,7 +5297,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2192 (finish_2868 struct:import))
 (define import1.1
@@ -5336,7 +5336,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2739 (finish_2201 struct:import-group))
 (define import-group2.1
@@ -5541,7 +5541,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2782 (finish_2670 struct:export))
 (define export1.1
@@ -5577,7 +5577,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2157 (finish_2581 struct:export-like))
 (define export-like2.1
@@ -5633,7 +5633,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2833 (finish_2648 struct:too-early))
 (define too-early1.1
@@ -9171,7 +9171,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2037 (finish_3000 struct:struct-type-info))
 (define struct-type-info1.1
@@ -10492,8 +10492,8 @@
                  (struct-type-info1.1
                   name_0
                   #t
-                  '|#%racket-base-rtd|
                   '|#%base-rtd|
+                  '|#%racket-base-rtd|
                   fields_0
                   app_0
                   #t
@@ -21429,10 +21429,7 @@
                                                                (list
                                                                 #f
                                                                 #f
-                                                                (if (struct-type-info-prefab-immutables
-                                                                     sti_0)
-                                                                  '|#%prefab-properties|
-                                                                  ''())
+                                                                #f
                                                                 (if (struct-type-info-prefab-immutables
                                                                      sti_0)
                                                                   ''prefab
@@ -35733,7 +35730,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2443 (finish_2608 struct:convert-mode))
 (define convert-mode1.1
@@ -43919,7 +43916,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2898 (finish_2489 struct:to-unfasl))
 (define to-unfasl1.1
@@ -44133,7 +44130,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2334 (finish_2254 struct:stack-info))
 (define stack-info4.1
@@ -44348,7 +44345,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2125 (finish_2657 struct:indirect))
 (define indirect1.1
@@ -44385,7 +44382,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2970 (finish_2990 struct:boxed))
 (define boxed2.1
@@ -44419,7 +44416,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2937 (finish_2131 struct:boxed/check))
 (define boxed/check3.1

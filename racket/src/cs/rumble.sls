@@ -257,7 +257,6 @@
           struct-type-constructor-add-guards ; not exported to Racket
           |#%base-rtd| ; not exported to Racket
           |#%racket-base-rtd| ; not exported to Racket
-          |#%prefab-properties| ; not exported to Racket
           |#%struct-constructor| ; not exported to Racket
           |#%struct-predicate| ; not exported to Racket
           |#%struct-field-accessor| ; not exported to Racket

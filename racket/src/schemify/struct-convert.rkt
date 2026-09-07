@@ -174,9 +174,9 @@
                               (quote make-struct-type)
                               ,@(if (struct-type-info-is-type-type? sti)
                                     null
-                                    (list '#f
-                                          '#f
-                                          (if (struct-type-info-prefab-immutables sti) '|#%prefab-properties| '(quote ()))
+                                    (list '#f ; procedure
+                                          '#f ; arity
+                                          '#f ; reserved
                                           (if (struct-type-info-prefab-immutables sti) '(quote prefab) '#f)))
                               ,@(if (struct-type-info-base-rtd sti)
                                     (for/list ([e (in-list (if (null? (struct-type-info-rest sti))

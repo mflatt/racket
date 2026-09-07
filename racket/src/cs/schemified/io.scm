@@ -2510,7 +2510,7 @@
    'make-struct-type
    #f
    #f
-   |#%prefab-properties|
+   #f
    'prefab))
 (define effect_2951 (finish_1970 struct:sandman))
 (define sandman1.1
@@ -3328,7 +3328,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2626 (finish_3115 struct:m+s))
 (define m+s1.1
@@ -3613,7 +3613,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2505 (finish_2882 struct:exts))
 (define exts1.1
@@ -3912,7 +3912,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2337 (finish_2338 struct:core-port))
 (define create-core-port
@@ -3973,7 +3973,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2309 (finish_2057 struct:core-port-methods.1))
 (define core-port-methods1.1
@@ -4109,7 +4109,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2682 (finish_2711 struct:direct))
 (define direct2.1
@@ -4151,7 +4151,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3131 (finish_2554 struct:location))
 (define location3.1
@@ -4213,7 +4213,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2400 (finish_2359 struct:lock))
 (define lock1.1
@@ -4495,7 +4495,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2528 (finish_2218 struct:core-input-port))
 (define create-core-input-port
@@ -4545,7 +4545,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2085 (finish_2853 struct:core-input-port-methods.1))
 (define core-input-port-methods6.1
@@ -4819,7 +4819,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2808 (finish_3032 struct:core-output-port))
 (define create-core-output-port
@@ -4883,7 +4883,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2050 (finish_2648 struct:core-output-port-methods.1))
 (define core-output-port-methods6.1
@@ -5079,7 +5079,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2493 (finish_2564 struct:write-evt))
 (define write-evt7.1
@@ -5145,7 +5145,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2751 (finish_2110 struct:utf-8-state))
 (define utf-8-state1.1
@@ -6319,7 +6319,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2594 (finish_2075 struct:commit-manager))
 (define commit-manager1.1
@@ -6363,7 +6363,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2646 (finish_2247 struct:commit-request))
 (define commit-request2.1
@@ -6415,7 +6415,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2529 (finish_2621 struct:commit-response))
 (define commit-response3.1
@@ -6771,7 +6771,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2802 (finish_3101 struct:commit-input-port))
 (define create-commit-input-port
@@ -6821,7 +6821,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3199 (finish_2483 struct:commit-input-port-methods.1))
 (define commit-input-port-methods5.1
@@ -7004,7 +7004,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2578 (finish_2316 struct:peek-via-read-input-port))
 (define create-peek-via-read-input-port
@@ -7083,7 +7083,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2499 (finish_2372 struct:peek-via-read-input-port-methods.1))
 (define peek-via-read-input-port-methods10.1
@@ -8631,7 +8631,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1979 (finish_2841 struct:fd-input-port))
 (define create-fd-input-port
@@ -8693,7 +8693,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2420 (finish_2012 struct:fd-input-port-methods.1))
 (define fd-input-port-methods7.1
@@ -9084,7 +9084,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2896 (finish_3078 struct:fd-output-port))
 (define create-fd-output-port
@@ -9172,7 +9172,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1955 (finish_2810 struct:fd-output-port-methods.1))
 (define fd-output-port-methods27.1
@@ -9946,7 +9946,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2660 (finish_2545 struct:fd-evt))
 (define fd-evt47.1
@@ -10076,7 +10076,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2170 (finish_2402 struct:rktio-fd-flushed-evt))
 (define rktio-fd-flushed-evt48.1
@@ -10445,7 +10445,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2490 (finish_2339 struct:progress-evt))
 (define progress-evt1.1
@@ -11357,7 +11357,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3021 (finish_2207 struct:pipe-data))
 (define create-pipe-data
@@ -11464,7 +11464,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2537 (finish_2129 struct:pipe-data-methods.1))
 (define pipe-data-methods10.1
@@ -11594,7 +11594,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2318 (finish_3163 struct:pipe-input-port))
 (define create-pipe-input-port
@@ -11632,7 +11632,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2335 (finish_2415 struct:pipe-input-port-methods.1))
 (define pipe-input-port-methods15.1
@@ -12005,7 +12005,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2635 (finish_2124 struct:pipe-output-port))
 (define create-pipe-output-port
@@ -12045,7 +12045,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3193 (finish_2185 struct:pipe-output-port-methods.1))
 (define pipe-output-port-methods20.1
@@ -12633,7 +12633,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2599 (finish_2435 struct:pipe-write-poller))
 (define pipe-write-poller27.1
@@ -12739,7 +12739,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2907 (finish_2170 struct:pipe-read-poller))
 (define pipe-read-poller28.1
@@ -15958,7 +15958,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2402 (finish_2760 struct:utf-8-converter))
 (define utf-8-converter1.1
@@ -16782,7 +16782,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2496 (finish_2770 struct:bytes-converter))
 (define bytes-converter1.1
@@ -17603,7 +17603,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2561 (finish_1919 struct:cache))
 (define cache1.1
@@ -17978,7 +17978,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2995 (finish_2782 struct:path))
 (define path1.1
@@ -19167,7 +19167,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2847 (finish_2932 struct:bytes-input-port))
 (define create-bytes-input-port
@@ -19221,7 +19221,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2130 (finish_2871 struct:bytes-input-port-methods.1))
 (define bytes-input-port-methods4.1
@@ -19487,7 +19487,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2052 (finish_2411 struct:bytes-output-port))
 (define create-bytes-output-port
@@ -19545,7 +19545,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2430 (finish_2698 struct:bytes-output-port-methods.1))
 (define bytes-output-port-methods8.1
@@ -20013,7 +20013,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3019 (finish_2069 struct:max-output-port))
 (define create-max-output-port
@@ -20059,7 +20059,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2933 (finish_2618 struct:max-output-port-methods.1))
 (define max-output-port-methods1.1
@@ -20983,7 +20983,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2267 (finish_2460 struct:nowhere-output-port))
 (define create-nowhere-output-port
@@ -21019,7 +21019,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2301 (finish_2952 struct:nowhere-output-port-methods.1))
 (define nowhere-output-port-methods1.1
@@ -21274,7 +21274,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2645 (finish_2175 struct:as-constructor))
 (define as-constructor1.1
@@ -24273,7 +24273,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2521 (finish_3672 struct:starting-point))
 (define starting-point7.1
@@ -26133,7 +26133,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2369 (finish_2262 struct:security-guard))
 (define security-guard1.1
@@ -31468,7 +31468,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2329 (finish_2186 struct:environment-variables))
 (define environment-variables1.1
@@ -33189,7 +33189,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2687 (finish_1890 struct:logger))
 (define logger1.1
@@ -33630,7 +33630,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2998 (finish_2164 struct:queue))
 (define queue1.1
@@ -33669,7 +33669,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2547 (finish_2845 struct:node))
 (define node2.1
@@ -33738,7 +33738,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2969 (finish_2335 struct:log-receiver))
 (define log-receiver1.1
@@ -33852,7 +33852,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2324 (finish_2386 struct:queue-log-receiver))
 (define queue-log-receiver2.1
@@ -33991,7 +33991,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2591 (finish_2083 struct:stdio-log-receiver))
 (define stdio-log-receiver3.1
@@ -34136,7 +34136,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2288 (finish_2544 struct:syslog-log-receiver))
 (define syslog-log-receiver4.1
@@ -35110,7 +35110,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_3368 (finish_2790 struct:fs-change-evt))
 (define fs-change-evt1.1
@@ -35659,7 +35659,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2289 (finish_3020 struct:subprocess))
 (define make-subprocess
@@ -36688,7 +36688,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2486 (finish_2010 struct:tcp-input-port))
 (define create-tcp-input-port
@@ -36728,7 +36728,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2506 (finish_2584 struct:tcp-input-port-methods.1))
 (define tcp-input-port-methods1.1
@@ -36888,7 +36888,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2179 (finish_2476 struct:tcp-output-port))
 (define create-tcp-output-port
@@ -36930,7 +36930,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2820 (finish_2811 struct:tcp-output-port-methods.1))
 (define tcp-output-port-methods9.1
@@ -37132,7 +37132,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_1868 (finish_2561 struct:rktio-evt))
 (define rktio-evt1.1
@@ -37332,7 +37332,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2319 (finish_3124 struct:connect-progress))
 (define connect-progress1.1
@@ -37759,7 +37759,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2347 (finish_2775 struct:tcp-listener))
 (define tcp-listener1.1
@@ -38245,7 +38245,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2608 (finish_1939 struct:accept-evt))
 (define accept-evt6.1
@@ -38369,7 +38369,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2743 (finish_2442 struct:udp))
 (define udp1.1
@@ -39719,7 +39719,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2114 (finish_2690 struct:udp-sending-evt))
 (define udp-sending-evt66.1
@@ -39757,7 +39757,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2524 (finish_2617 struct:udp-sending-ready-evt))
 (define udp-sending-ready-evt67.1
@@ -40160,7 +40160,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2638 (finish_2327 struct:udp-receiving-evt))
 (define udp-receiving-evt43.1
@@ -40198,7 +40198,7 @@
    'make-struct-type
    #f
    #f
-   '()
+   #f
    #f))
 (define effect_2865 (finish_2856 struct:udp-receiving-ready-evt))
 (define udp-receiving-ready-evt44.1

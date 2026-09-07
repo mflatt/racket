@@ -144,13 +144,12 @@
 (define (struct-type-property-accessor-procedure-can-impersonate? v)
   (cdr (eq-hashtable-ref property-accessors v #f)))
 
+;; Putting (most) properties on a structure type's uid
+;; is important when a uid is provided statically. In that
+;; case, the indirection through a symbol property list
+;; prevents an attempt to fasl properties.
 (define (struct-property-ref prop rtd default)
-  (if (racket-rtd? rtd)
-      (let ([a (assq prop (racket-rtd-props rtd))])
-        (if a
-            (cdr a)
-            default))
-      default))
+  (getprop (record-type-uid rtd) prop default))
 
 (define (struct-procedure-property-ref rtd default)
   (if (racket-rtd? rtd)
@@ -169,17 +168,15 @@
     [(eq? prop prop:procedure-arity)
      (set-racket-rtd-arity! rtd val)]
     [else
-     (let* ([props
-             (let loop ([props (racket-rtd-props rtd)])
-               (cond
-                 [(null? props) '()]
-                 [(eq? (caar props) prop) (cdr props)]
-                 [else
-                  (let ([new-r (loop (cdr props))])
-                    (if (eq? new-r (cdr props))
-                        props
-                        (cons (car props) new-r)))]))])
-     (set-racket-rtd-props! rtd (cons (cons prop val) props)))]))
+     (putprop (record-type-uid rtd) prop val)]))
+
+(define (stuct-property-copy! to-rtd from-rtd)
+  (let ([to-uid (record-type-uid to-rtd)])
+    (let loop ([props (property-list (record-type-uid from-rtd))])
+      (unless (null? props)
+        (unless (getprop to-uid (car props) #f)
+          (putprop to-uid (car props) (cadr props)))
+        (loop (cddr props))))))
 
 ;; Must be consistent with `procedure-rename` in "procedure.ss",
 ;; but needed before that one is defined:
@@ -303,12 +300,9 @@
                                   immutables)])
          ;; Copy parent properties for this type:
          (when parent-rtd*
-           (set-racket-rtd-props! rtd (append (racket-rtd-props rtd) (racket-rtd-props parent-rtd*)))
+           (stuct-property-copy! rtd parent-rtd*)
            (set-racket-rtd-procedure! rtd (racket-rtd-procedure parent-rtd*))
            (set-racket-rtd-arity! rtd (racket-rtd-arity parent-rtd*)))
-         ;; Set default comparison
-         (unless (struct-property-ref prop:equal+hash rtd #f)
-           (struct-set-default-equal+hash! rtd))
 
          ;; Finish checking and install new property values:
          (let ([props-ht
@@ -408,10 +402,10 @@
                                           "expected arity" expected-count))))))
          
          ;; Record inspector
-         (unless (and system? insp)
-           (inspector-set! rtd (if (eq? insp 'current)
-                                   (current-inspector)
-                                   insp)))
+         (inspector-set! rtd (cond
+                               [(and system? insp) none]
+                               [(eq? insp 'current) (current-inspector)]
+                               [else insp]))
 
          ;; Register guard
          (register-guards! rtd parent-rtd guard 'at-start)))]))
@@ -545,7 +539,10 @@
 (define (|#%struct-field-mutator| p rtd pos)
   (make-wrapper-procedure p 4 (cons pos rtd)))
 
-(define |#%make-record-type-descriptor| #%$make-record-type-descriptor)
+(define-syntax (|#%make-record-type-descriptor| stx)
+  (syntax-case stx ()
+    [(_ arg ...) #'(#%$make-record-type-descriptor arg ...)]
+    [_ #'#%$make-record-type-descriptor]))
 (define |#%base-rtd| #!base-rtd)
 
 (define (struct-constructor-procedure? v)
@@ -716,7 +713,7 @@
                        'make-struct-type
                        #f  ; procedure
                        #f  ; arity
-                       (if (eq? insp 'prefab) |#%prefab-properties| '())
+                       #f  ; reserved
                        (if (eq? insp 'prefab) 'prefab #f)
                        more)]
          [parent-auto*-count (get-field-info-auto*-count parent-fi)]
@@ -872,7 +869,7 @@
                                                   'make-prefab-struct-type
                                                   #f   ; procedure
                                                   #f   ; arity
-                                                  |#%prefab-properties|
+                                                  #f   ; reserved
                                                   'prefab)] ; insp
              [mutables (prefab-key-mutables prefab-key total-count)])
         (with-global-lock
@@ -1379,6 +1376,12 @@
                                ;; property is attached to a structure type
                                (cons (car val) (cdr val)))))
 
+(define (struct-equal+hash-property-ref rtd default-v)
+  (or (struct-property-ref prop:equal+hash rtd #f)
+      (and (not (eq? (inspector-ref rtd) none))
+           default-equal+hash)
+      default-v))
+
 (define (equal+hash-equal-proc eq+hash)
   (car eq+hash))
 
@@ -1481,12 +1484,6 @@
 
 (define default-equal+hash
   (list default-struct-equal? default-struct-hash default-struct-hash))
-(define |#%prefab-properties| (list
-                               (cons prop:equal+hash default-equal+hash)))
-
-(define struct-set-default-equal+hash!
-  (lambda (rtd)
-    (struct-property-set! prop:equal+hash rtd default-equal+hash)))
 
 (define struct->vector
   (case-lambda
@@ -1585,7 +1582,7 @@
                                                                      'struct
                                                                      #f   ; procedure
                                                                      #f   ; arity
-                                                                     struct-properties
+                                                                     #f   ; reserved
                                                                      #f)) ; insp
                  (define unsafe-make-name (record-constructor (make-record-constructor-descriptor struct:name #f #f)))
                  (define name
@@ -1621,7 +1618,3 @@
          #'(begin
              (struct name . rest)
              (define make-name name)))])))
-
-(define struct-properties
-  (list
-   (cons prop:equal+hash default-equal+hash)))

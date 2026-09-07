@@ -8,12 +8,12 @@
   (make-record-type-descriptor
    'struct
    #!base-rtd
-   #f ; parent
+   #f ; '#{struct icw1nrrg1rjuf16733snprjoz-0}
    #f ; sealed?
    #t ; opaque?
    '#((mutable procedure)
       (mutable arity)
-      (mutable props)
+      (mutable reserved)
       (mutable insp))))
 
 (define (racket-rtd? rtd)
@@ -21,12 +21,10 @@
 
 (define racket-rtd-procedure (record-accessor |#%racket-base-rtd| 0))
 (define racket-rtd-arity (record-accessor |#%racket-base-rtd| 1))
-(define racket-rtd-props (record-accessor |#%racket-base-rtd| 2))
 (define racket-rtd-insp (record-accessor |#%racket-base-rtd| 3))
 
 (define set-racket-rtd-procedure! (record-mutator |#%racket-base-rtd| 0))
 (define set-racket-rtd-arity! (record-mutator |#%racket-base-rtd| 1))
-(define set-racket-rtd-props! (record-mutator |#%racket-base-rtd| 2))
 (define set-racket-rtd-insp! (record-mutator |#%racket-base-rtd| 3))
 
 (define-syntax (define-racket-record-type stx)
@@ -93,10 +91,10 @@
                 '#((kind field-name)
                    ...)
                 'define-racket-record-type
-                #f    ; procedure
-                #f    ; arity
-                '()   ; props
-                none))  ; insp
+                #f     ; procedure
+                #f     ; arity
+                #f     ; reserved
+                none)) ; insp
              (define rcd:name (make-record-constructor-descriptor rtd:name
                                                                   #,(if (datum parent)
                                                                         (mk "rcd:" #'parent)
