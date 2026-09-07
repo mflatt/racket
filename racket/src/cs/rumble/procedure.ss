@@ -9,7 +9,7 @@
                                              v)))
 
 ;; stored specially in an rtd in the `procedure` slot
-(define-values (prop:procedure procedure-struct? procedure-struct-ref)
+(define-values (prop:procedure procedure-struct?/useless procedure-struct-ref/useless)
   (make-struct-type-property 'procedure (lambda (v info)
                                           ;; We don't have to check whether `v` is valid here,
                                           ;; because `make-struct-type` handles `prop:procedure`
@@ -27,7 +27,7 @@
 
 ;; Integer value is a field position to access a mask;
 ;; stored specially in an rtd in the `arity` slot
-(define-values (prop:procedure-arity procedure-arity-prop? procedure-arity-ref)
+(define-values (prop:procedure-arity procedure-arity-prop?/useless procedure-arity-ref/useless)
   (make-struct-type-property 'procedure-arity))
 
 (define (procedure? v)
@@ -94,81 +94,80 @@
         (#3%$app/no-inline slow-extract-procedure tmp n-args))))
 
 (define (slow-extract-procedure f n-args)
-  (do-extract-procedure f f f n-args #f not-a-procedure))
+  (do-extract-procedure f f n-args))
 
 ;; Returns a host-Scheme procedure, but first checks arity so that
 ;; checking and reporting use the right top-level function, and
 ;; the returned procedure may just report a not-a-procedure error
-(define (do-extract-procedure f self-f orig-f n-args success-k fail-k)
-  (cond
-   [(#%procedure? f)
-    (if (or (not n-args)
-            (chez:procedure-arity-includes? f n-args))
-        (if success-k
-            (success-k f)
-            f)
-        (wrong-arity-wrapper orig-f))]
-   [(continuation? f)
-    (let ([p (lambda args
-               (apply-continuation f args))])
-      (if success-k
-          (success-k p)
-          p))]
-   [(record? f)
-    (let* ([rtd (record-rtd f)]
-           [v (struct-procedure-property-ref rtd none)])
-      (cond
-        [(eq? v none) (fail-k orig-f)]
-        [(fixnum? v)
-         (let ([a (struct-procedure-arity-property-ref rtd #f)])
-           (cond
-             [(and a n-args (not (bitwise-bit-set? (unsafe-struct*-ref f a) n-args)))
-              (wrong-arity-wrapper orig-f)]
-             [else
-              (let ([new-f (unsafe-struct-ref self-f v)])
-                (do-extract-procedure new-f new-f orig-f n-args success-k wrong-arity-wrapper))]))]
-        [(eq? v 'unsafe)
-         (let ([new-f (if (chaperone? f)
-                          (unsafe-procedure-chaperone-replace-proc f)
-                          (unsafe-procedure-impersonator-replace-proc f))])
-           (do-extract-procedure
-            new-f
-            new-f
-            orig-f
-            n-args
-            success-k
-            wrong-arity-wrapper))]
-        [(eq? v 'struct-impersonate-apply)
-         (do-extract-procedure (impersonator-next f) self-f orig-f n-args success-k fail-k)]
-        [else
-         (let ([a (struct-procedure-arity-property-ref rtd #f)])
-           (cond
-             [(and a n-args (not (bitwise-bit-set? (unsafe-struct*-ref f a) n-args)))
-              (wrong-arity-wrapper orig-f)]
-             [(eq? v 'impersonate-apply)
-              (let ([proc (lambda args
-                            (impersonate-apply/parameter f self-f #t args))])
-                (if success-k
-                    (success-k proc)
-                    proc))]
-             [else
-              (do-extract-procedure
-               v
-               v
-               orig-f
-               (and n-args (fx+ n-args 1))
-               (lambda (v)
-                 (let ([proc (case-lambda
-                              [() (v self-f)]
-                              [(a) (v self-f a)]
-                              [(a b) (v self-f a b)]
-                              [(a b c) (v self-f a b c)]
-                              [args (chez:apply v self-f args)])])
+(define (do-extract-procedure f orig-f n-args)
+  (let loop ([f f] [self-f orig-f] [n-args n-args] [success-k #f] [fail-k not-a-procedure])
+    (cond
+      [(#%procedure? f)
+       (if (or (not n-args)
+               (chez:procedure-arity-includes? f n-args))
+           (if success-k
+               (success-k f)
+               f)
+           (wrong-arity-wrapper orig-f))]   
+      [(#%$record? f)
+       (let* ([rtd (record-rtd f)]
+              [v (struct-procedure-property-ref rtd none)])
+         (cond
+           [(eq? v none) (fail-k orig-f)]
+           [(fixnum? v)
+            (let ([a (struct-procedure-arity-property-ref rtd #f)])
+              (cond
+                [(and a n-args (not (bitwise-bit-set? (unsafe-struct*-ref f a) n-args)))
+                 (wrong-arity-wrapper orig-f)]
+                [else
+                 (let ([new-f (unsafe-struct-ref self-f v)])
+                   (loop new-f new-f n-args success-k wrong-arity-wrapper))]))]
+           [(eq? v 'unsafe)
+            (let ([new-f (if (chaperone? f)
+                             (unsafe-procedure-chaperone-replace-proc f)
+                             (unsafe-procedure-impersonator-replace-proc f))])
+              (loop
+               new-f
+               new-f
+               n-args
+               success-k
+               wrong-arity-wrapper))]
+           [(eq? v 'struct-impersonate-apply)
+            (loop (impersonator-next f) self-f n-args success-k fail-k)]
+           [(eq? v 'cont)
+            (let ([p (lambda args
+                       (apply-continuation f args))])
+              (if success-k
+                  (success-k p)
+                  p))]
+           [else
+            (let ([a (struct-procedure-arity-property-ref rtd #f)])
+              (cond
+                [(and a n-args (not (bitwise-bit-set? (unsafe-struct*-ref f a) n-args)))
+                 (wrong-arity-wrapper orig-f)]
+                [(eq? v 'impersonate-apply)
+                 (let ([proc (lambda args
+                               (impersonate-apply/parameter f self-f #t args))])
                    (if success-k
                        (success-k proc)
-                       proc)))
-               wrong-arity-wrapper)]))]))]
-   [else (fail-k orig-f)]))
+                       proc))]
+                [else
+                 (loop
+                  v
+                  v
+                  (and n-args (fx+ n-args 1))
+                  (lambda (v)
+                    (let ([proc (case-lambda
+                                 [() (v self-f)]
+                                 [(a) (v self-f a)]
+                                 [(a b) (v self-f a b)]
+                                 [(a b c) (v self-f a b c)]
+                                 [args (chez:apply v self-f args)])])
+                      (if success-k
+                          (success-k proc)
+                          proc)))
+                  wrong-arity-wrapper)]))]))]
+      [else (fail-k orig-f)])))
 
 (define (extract-procedure-name f)
   (cond
@@ -287,6 +286,8 @@
                     (proc-arity-mask (unsafe-struct-ref f v) shift 0)]
                    [(eq? v 'unsafe)
                     (proc-arity-mask (impersonator-next f) shift 0)]
+                   [(eq? v 'cont)
+                    -1]
                    [else
                     (proc-arity-mask v (add1 shift) 0)]))]))]))]
        [else
@@ -916,7 +917,7 @@
              [(integer? v)
               (apply (unsafe-struct-ref self-p v) args)]
              [else
-              (#%apply (do-extract-procedure p self-p self-p (length args) #f not-a-procedure)
+              (#%apply (do-extract-procedure p self-p (length args))
                        args)]))]))])))
 
 (define (set-procedure-impersonator-hash!)

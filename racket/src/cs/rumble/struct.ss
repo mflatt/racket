@@ -169,7 +169,17 @@
     [(eq? prop prop:procedure-arity)
      (set-racket-rtd-arity! rtd val)]
     [else
-     (set-racket-rtd-props! rtd (cons (cons prop val) (racket-rtd-props rtd)))]))
+     (let* ([props
+             (let loop ([props (racket-rtd-props rtd)])
+               (cond
+                 [(null? props) '()]
+                 [(eq? (caar props) prop) (cdr props)]
+                 [else
+                  (let ([new-r (loop (cdr props))])
+                    (if (eq? new-r (cdr props))
+                        props
+                        (cons (car props) new-r)))]))])
+     (set-racket-rtd-props! rtd (cons (cons prop val) props)))]))
 
 ;; Must be consistent with `procedure-rename` in "procedure.ss",
 ;; but needed before that one is defined:
@@ -288,16 +298,12 @@
      ;; The rest has to be delayed until we have an rtd:
      (lambda (rtd)
        (let* ([parent-rtd* (strip-impersonator parent-rtd)]
-              [parent-props
-               (if 
-                   (racket-rtd-props parent-rtd*)
-                   '())]
               [all-immutables (if (integer? proc-spec)
                                   (cons proc-spec immutables)
                                   immutables)])
          ;; Copy parent properties for this type:
          (when parent-rtd*
-           (set-racket-rtd-props! rtd (racket-rtd-props parent-rtd*))
+           (set-racket-rtd-props! rtd (append (racket-rtd-props rtd) (racket-rtd-props parent-rtd*)))
            (set-racket-rtd-procedure! rtd (racket-rtd-procedure parent-rtd*))
            (set-racket-rtd-arity! rtd (racket-rtd-arity parent-rtd*)))
          ;; Set default comparison
@@ -725,9 +731,12 @@
          [constructor-name (or constructor-name
                                (string->symbol (string-append "make-" (symbol->string name))))])
     (when (or parent-rtd* auto-field-adder)
-      (unless (eq? insp 'prefab)
-        (let ([field-info (make-field-info init*-count auto*-count auto-field-adder)])
-          (struct-property-set! 'field-info rtd field-info))))
+      (cond
+        [(eq? insp 'prefab)
+         (putprop prefab-uid 'prefab-auto-adder auto-field-adder)]
+        [else
+         (let ([field-info (make-field-info init*-count auto*-count auto-field-adder)])
+           (struct-property-set! 'field-info rtd field-info))]))
     (finish! rtd)
     (let ([ctr (struct-type-constructor-add-guards
                 (let ([c (record-constructor rtd)])
@@ -775,6 +784,7 @@
                       (and (impersonator? v)
                            (record? (impersonator-val v) rtd))))
                 (string->symbol (string-append (symbol->string name) "?")))])
+    (struct-property-set! prop:authentic rtd #t)  
     (values
      rtd
      (|#%make-struct-type-type| rtd name rtd-field-count)
@@ -782,7 +792,6 @@
      (make-position-based-accessor rtd NUMBER-OF-RACKET-BASE-RTD-FIELDS rtd-field-count))))
 
 (define (|#%make-struct-type-type| rtd rtd-name rtd-field-count)
-  (struct-property-set! prop:authentic rtd #t)  
   (lambda (name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name . args)
     (define (make-who) (string->symbol (string-append "make-" (#%symbol->string rtd-name) "-struct-type")))
     (unless (= (length args) rtd-field-count)
@@ -1015,7 +1024,8 @@
 
 (define/who (procedure-struct-type? v)
   (check who struct-type? v)
-  (procedure-struct? v))
+  (and (racket-rtd-procedure (strip-impersonator v))
+       #t))
 
 (define (struct? v)
   (let ([v (strip-impersonator v)])
@@ -1197,7 +1207,8 @@
 (define (struct-type-field-info rtd*)
   (or (struct-property-ref 'field-info rtd* #f)
       (and (struct-type-prefab? rtd*)
-           (prefab-key+count->field-info (getprop (record-type-uid rtd*) 'prefab-key+count #f)))
+           (let ([uid (record-type-uid rtd*)])
+             (prefab-key+count->field-info (getprop uid 'prefab-key+count #f) uid)))
       (let ([n (record-type-field-count rtd*)]
             [parent-rtd* (record-type-parent rtd*)])
         ;; If `parent-rtd` is not #f, then we'll get here
@@ -1213,13 +1224,13 @@
                                    #f)))
             n))))
 
-(define (prefab-key+count->field-info prefab-key+count)
+(define (prefab-key+count->field-info prefab-key+count uid)
   (let ([key (car prefab-key+count)]
         [count (cdr prefab-key+count)]
         [init*-count (prefab-key+count->init-count* prefab-key+count)])
-    (make-field-info (- count init*-count)
-                     init*-count
-                     #f)))
+    (make-field-info init*-count
+                     (- count init*-count)
+                     (getprop uid 'prefab-auto-adder #f))))
 
 (define (get-field-info-init*-count fi)
   (if (fixnum? fi)

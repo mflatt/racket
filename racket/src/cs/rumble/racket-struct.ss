@@ -96,7 +96,7 @@
                 #f    ; procedure
                 #f    ; arity
                 '()   ; props
-                #f))  ; insp
+                none))  ; insp
              (define rcd:name (make-record-constructor-descriptor rtd:name
                                                                   #,(if (datum parent)
                                                                         (mk "rcd:" #'parent)

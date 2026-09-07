@@ -815,16 +815,20 @@
                             "attempt to cross a continuation barrier"))
 
 (define (set-continuation-applicables!)
-  ;; These procedure registrations may be short-circuited by a special
-  ;; case that dispatches directly to `apply-continuation`
   (struct-property-set! prop:procedure
                         rtd:composable-continuation
+                        'cont
+                        #;
                         (lambda (c . args) (apply-composable-continuation c args)))
   (struct-property-set! prop:procedure
                         rtd:non-composable-continuation
+                        'cont
+                        #;
                         (lambda (c . args) (apply-non-composable-continuation c args)))
   (struct-property-set! prop:procedure
                         rtd:escape-continuation
+                        'cont
+                        #;
                         (lambda (c . args) (apply-escape-continuation c args)))
   (struct-property-set! prop:object-name
                         rtd:continuation-prompt-tag

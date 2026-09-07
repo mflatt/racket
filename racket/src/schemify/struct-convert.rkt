@@ -172,12 +172,12 @@
                                            [else
                                             mask])))))
                               (quote make-struct-type)
-                              ,@(if (not (symbol? (struct-type-info-base-rtd sti)))
+                              ,@(if (struct-type-info-is-type-type? sti)
+                                    null
                                     (list '#f
                                           '#f
                                           (if (struct-type-info-prefab-immutables sti) '|#%prefab-properties| '(quote ()))
-                                          (if (struct-type-info-prefab-immutables sti) '(quote prefab) '#f))
-                                    null)
+                                          (if (struct-type-info-prefab-immutables sti) '(quote prefab) '#f)))
                               ,@(if (struct-type-info-base-rtd sti)
                                     (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
                                                                null
