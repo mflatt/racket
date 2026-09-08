@@ -343,7 +343,8 @@
   [nongenerative]
   [sealed #t]  
   [constructor make-impersonator-property-predicate-procedure]
-  [predicate raw:impersonator-property-predicate-procedure?])
+  [predicate raw:impersonator-property-predicate-procedure?]
+  [procedure 0])
 
 (define-racket-record-type impersonator-property-accessor-procedure
   [fields (immutable proc)
@@ -352,7 +353,8 @@
   [nongenerative]
   [sealed #t]  
   [constructor make-impersonator-property-accessor-procedure]
-  [predicate raw:impersonator-property-accessor-procedure?])
+  [predicate raw:impersonator-property-accessor-procedure?]
+  [procedure 0])
 
 (define/who make-impersonator-property
   (case-lambda
@@ -425,14 +427,22 @@
 
 ;; Applicable variants:
 (define-racket-record-type props-procedure-impersonator props-impersonator
-  [fields (immutable arity-mask)])
+  [fields (immutable arity-mask)]
+  [procedure 'impersonate-apply]
+  [procedure-arity 3])
 (define-racket-record-type props-procedure-chaperone props-chaperone
-  [fields (immutable arity-mask)])
+  [fields (immutable arity-mask)]
+  [procedure 'impersonate-apply]
+  [procedure-arity 3])
 ;; Incomplete-arity variants:
 (define-racket-record-type props-procedure~-impersonator props-procedure-impersonator
-  [fields])
+  [fields]
+  [procedure 'impersonate-apply]
+  [procedure-arity 3])
 (define-racket-record-type props-procedure~-chaperone props-procedure-chaperone
-  [fields])
+  [fields]
+  [procedure 'impersonate-apply]
+  [procedure-arity 3])
 
 (define (add-impersonator-properties who props base-props)
   (let loop ([props props] [base-props base-props])
@@ -479,13 +489,21 @@
       (struct-chaperone-procs i)))
 
 (define-racket-record-type procedure-struct-impersonator struct-impersonator
-  [fields (immutable arity-mask)])
+  [fields (immutable arity-mask)]
+  [procedure 'struct-impersonate-apply]
+  [procedure-arity 4])
 (define-racket-record-type procedure-struct-chaperone struct-chaperone
-  [fields (immutable arity-mask)])
+  [fields (immutable arity-mask)]
+  [procedure 'struct-impersonate-apply]
+  [procedure-arity 4])
 (define-racket-record-type procedure~-struct-impersonator procedure-struct-impersonator
-  [fields])
+  [fields]
+  [procedure 'struct-impersonate-apply]
+  [procedure-arity 4])
 (define-racket-record-type procedure~-struct-chaperone procedure-struct-chaperone
-  [fields])
+  [fields]
+  [procedure 'struct-impersonate-apply]
+  [procedure-arity 4])
 
 (define (impersonate-struct v . args)
   (do-impersonate-struct 'impersonate-struct #f v args))
@@ -706,9 +724,11 @@
 ;; ----------------------------------------
 
 (define-racket-record-type struct-undefined-chaperone chaperone
-  [fields])
+  [fields]
+  [procedure 'struct-impersonate-apply])
 (define-racket-record-type procedure-struct-undefined-chaperone chaperone
-  [fields])
+  [fields]
+  [procedure 'struct-impersonate-apply])
 (define-racket-record-type procedure~-struct-undefined-chaperone procedure-struct-undefined-chaperone
   [fields])
 
@@ -803,24 +823,9 @@
 ;; ----------------------------------------
 
 (define (set-impersonator-applicables!)
-  (let ([add (lambda (rtd)
-               (struct-property-set! prop:procedure rtd 'impersonate-apply)
-               (struct-property-set! prop:procedure-arity rtd 3))])
-    (add rtd:props-procedure-impersonator)
-    (add rtd:props-procedure-chaperone)
-    (add rtd:props-procedure~-impersonator)
-    (add rtd:props-procedure~-chaperone))
-
-  (struct-property-set! prop:procedure
-                        rtd:impersonator-property-predicate-procedure
-                        0)
   (struct-property-set! prop:object-name
                         rtd:impersonator-property-predicate-procedure
                         1)
-
-  (struct-property-set! prop:procedure
-                        rtd:impersonator-property-accessor-procedure
-                        0)
   (struct-property-set! prop:object-name
                         rtd:impersonator-property-accessor-procedure
                         1))
@@ -828,7 +833,7 @@
 (define (set-impersonator-hash!)
   (let ([struct-impersonator-hash-code
          (lambda (c hash-code mode)
-           (let ([eq+hash (struct-property-ref prop:equal+hash (#%$record-type-descriptor (impersonator-val c)) #f)])
+           (let ([eq+hash (struct-equal+hash-property-ref (#%$record-type-descriptor (impersonator-val c)) #f)])
              (let ([rec-hash (equal+hash-hash-code-proc eq+hash)])
                (if (equal+hash-supports-mode? eq+hash)
                    (rec-hash c hash-code mode)

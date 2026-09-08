@@ -145,7 +145,7 @@
                            (position-based-accessor-procedure f s p))])
               (loop new-f
                     new-f
-                    (and n-args (fx+ n-args 1))
+                    n-args
                     success-k
                     wrong-arity-wrapper))]
            [(eq? v 'position-based-mutator)
@@ -153,7 +153,7 @@
                            (position-based-mutator-procedure f s p v))])
               (loop new-f
                     new-f
-                    (and n-args (fx+ n-args 1))
+                    n-args
                     success-k
                     wrong-arity-wrapper))]
            [else
@@ -304,6 +304,8 @@
                     (proc-arity-mask (impersonator-next f) shift 0)]
                    [(eq? v 'cont)
                     -1]
+                   [(eq? v 'position-based-accessor) 4]
+                   [(eq? v 'position-based-mutator) 8]
                    [else
                     (proc-arity-mask v (add1 shift) 0)]))]))]))]
        [else
@@ -434,7 +436,8 @@
 ;; ----------------------------------------
 
 (define-racket-record-type method-procedure
-  [fields (immutable proc)])
+  [fields (immutable proc)]
+  [procedure 0])
 
 (define (method-wrapper-vector? vec)
   (fx= 4 (#%vector-length vec)))
@@ -556,7 +559,9 @@
   [fields (immutable proc)
           (immutable mask)
           (immutable name)
-          (immutable realm)])
+          (immutable realm)]
+  [procedure 0]
+  [procedure-arity 1])
 
 (define/who procedure-reduce-arity
   (case-lambda
@@ -636,7 +641,8 @@
 (define-racket-record-type named-procedure
   [fields (immutable proc)
           (immutable name)
-          (immutable realm)])
+          (immutable realm)]
+  [procedure 0])
 
 (define/who procedure-rename
   (case-lambda
@@ -732,15 +738,23 @@
 
 (define-racket-record-type procedure-impersonator impersonator
   [fields (immutable wrapper)
-          (immutable arity-mask)])
+          (immutable arity-mask)]
+  [procedure 'impersonate-apply]
+  [procedure-arity 4])
 (define-racket-record-type procedure-chaperone chaperone
   [fields (immutable wrapper)
-          (immutable arity-mask)])
+          (immutable arity-mask)]
+  [procedure 'impersonate-apply]
+  [procedure-arity 4])
 
 (define-racket-record-type procedure*-impersonator procedure-impersonator
-  [fields])
+  [fields]
+  [procedure 'impersonate-apply]
+  [procedure-arity 4])
 (define-racket-record-type procedure*-chaperone procedure-chaperone
-  [fields])
+  [fields]
+  [procedure 'impersonate-apply]
+  [procedure-arity 4])
 
 (define-values (impersonator-prop:application-mark application-mark? application-mark-ref)
   (make-impersonator-property 'application-mark))
@@ -1005,9 +1019,11 @@
 ;; ----------------------------------------
 
 (define-racket-record-type unsafe-procedure-impersonator impersonator
-  [fields (immutable replace-proc)])
+  [fields (immutable replace-proc)]
+  [procedure 'unsafe])
 (define-racket-record-type unsafe-procedure-chaperone chaperone
-  [fields (immutable replace-proc)])
+  [fields (immutable replace-proc)]
+  [procedure 'unsafe])
 
 (define/who (unsafe-impersonate-procedure proc replace-proc . props)
   (do-unsafe-impersonate-procedure who make-unsafe-procedure-impersonator
@@ -1174,70 +1190,16 @@
 ;; ----------------------------------------
 
 (define (set-primitive-applicables!)
-  (struct-property-set! prop:procedure
-                        rtd:position-based-accessor
-                        'position-based-accessor)
-  (struct-property-set! prop:procedure
-                        rtd:position-based-mutator
-                        'position-based-mutator)
-
-  (struct-property-set! prop:procedure-arity
-                        rtd:position-based-accessor
-                        4)
-  (struct-property-set! prop:procedure-arity
-                        rtd:position-based-mutator
-                        8)
-
-  (struct-property-set! prop:procedure
-                        rtd:named-procedure
-                        0)
   (struct-property-set! prop:object-name
                         rtd:named-procedure
                         1)
-
-  (struct-property-set! prop:procedure
-                        rtd:reduced-arity-procedure
-                        0)
-  (struct-property-set! prop:procedure-arity
-                        rtd:reduced-arity-procedure
-                        1)
-
-  (struct-property-set! prop:procedure
-                        rtd:method-procedure
-                        0)
   (struct-property-set! prop:method-arity-error
                         rtd:method-procedure
                         #t)
-
-  (let ([register-procedure-impersonator-struct-type!
-         (lambda (rtd struct?)
-           (struct-property-set! prop:procedure rtd (if struct?
-                                                        'struct-impersonate-apply
-                                                        'impersonate-apply)))])
-    (let ([register-procedure-impersonator-struct-type!
-           (lambda (rtd struct?)
-             (register-procedure-impersonator-struct-type! rtd struct?)
-             (struct-property-set! prop:procedure-arity rtd 4))])
-      (register-procedure-impersonator-struct-type! rtd:procedure-chaperone #f)
-      (register-procedure-impersonator-struct-type! rtd:procedure-impersonator #f)
-      (register-procedure-impersonator-struct-type! rtd:procedure*-chaperone #f)
-      (register-procedure-impersonator-struct-type! rtd:procedure*-impersonator #f)
-      (register-procedure-impersonator-struct-type! rtd:procedure-struct-chaperone #t)
-      (register-procedure-impersonator-struct-type! rtd:procedure-struct-impersonator #t)
-      (register-procedure-impersonator-struct-type! rtd:procedure~-struct-chaperone #t)
-      (register-procedure-impersonator-struct-type! rtd:procedure~-struct-impersonator #t))
-    (register-procedure-impersonator-struct-type! rtd:procedure-struct-undefined-chaperone #t)
-    (register-procedure-impersonator-struct-type! rtd:procedure~-struct-undefined-chaperone #t))
 
   (let ([register-procedure-incomplete-arity!
          (lambda (rtd)
            (struct-property-set! prop:incomplete-arity rtd #t))])
     (register-procedure-incomplete-arity! rtd:procedure~-struct-chaperone)
     (register-procedure-incomplete-arity! rtd:procedure~-struct-impersonator)
-    (register-procedure-incomplete-arity! rtd:procedure~-struct-undefined-chaperone))
-
-  (let ([register-unsafe-procedure-impersonator-struct-type!
-         (lambda (rtd)
-           (struct-property-set! prop:procedure rtd 'unsafe))])
-    (register-unsafe-procedure-impersonator-struct-type! rtd:unsafe-procedure-chaperone)
-    (register-unsafe-procedure-impersonator-struct-type! rtd:unsafe-procedure-impersonator)))
+    (register-procedure-incomplete-arity! rtd:procedure~-struct-undefined-chaperone)))

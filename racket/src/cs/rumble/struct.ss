@@ -495,11 +495,13 @@
 (define-racket-record-type position-based-accessor
   [fields (immutable rtd)
           (immutable offset)
-          (immutable field-count)])
+          (immutable field-count)]
+  [procedure 'position-based-accessor])
 (define-racket-record-type position-based-mutator
   [fields (immutable rtd)
           (immutable offset)
-          (immutable field-count)])
+          (immutable field-count)]
+  [procedure 'position-based-mutator])
 
 (define (position-based-accessor-name f)
   (let ([rtd (position-based-accessor-rtd f)])

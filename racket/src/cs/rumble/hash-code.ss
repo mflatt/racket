@@ -217,7 +217,7 @@
          (values (number-hash (ftype-pointer-address x))
                  burn))]
     [(and (#%$record? x)
-          (let ([eq+hash (struct-property-ref prop:equal+hash (#%$record-type-descriptor x) #f)])
+          (let ([eq+hash (struct-equal+hash-property-ref (#%$record-type-descriptor x) #f)])
             (and eq+hash
                  (or (eq? mode 'equal?)
                      (not (or (struct-type-mutable? (#%$record-type-descriptor x))

@@ -510,13 +510,16 @@
           (immutable tag)])
 (define-racket-record-type composable-continuation full-continuation
   [fields (immutable wind?)]
-  [sealed #t])
+  [sealed #t]
+  [procedure 'cont])
 (define-racket-record-type non-composable-continuation full-continuation
   [fields]
-  [sealed #t])
+  [sealed #t]
+  [procedure 'cont])
 (define-racket-record-type escape-continuation continuation
   [fields (immutable tag)]
-  [sealed #t])
+  [sealed #t]
+  [procedure 'cont])
 
 (define/who call-with-current-continuation
   (case-lambda
@@ -815,21 +818,6 @@
                             "attempt to cross a continuation barrier"))
 
 (define (set-continuation-applicables!)
-  (struct-property-set! prop:procedure
-                        rtd:composable-continuation
-                        'cont
-                        #;
-                        (lambda (c . args) (apply-composable-continuation c args)))
-  (struct-property-set! prop:procedure
-                        rtd:non-composable-continuation
-                        'cont
-                        #;
-                        (lambda (c . args) (apply-non-composable-continuation c args)))
-  (struct-property-set! prop:procedure
-                        rtd:escape-continuation
-                        'cont
-                        #;
-                        (lambda (c . args) (apply-escape-continuation c args)))
   (struct-property-set! prop:object-name
                         rtd:continuation-prompt-tag
                         0))
