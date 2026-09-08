@@ -736,6 +736,8 @@
                                                          #f #f '(0)))
                           list))
          (err/rt-test (make-struct-type '? base 1 0 #f (list (cons prop:procedure 0)) #f 1))
+         (err/rt-test (make-struct-type '? base 1 0 #f (list (cons prop:procedure 0)) #f 1 '(0)))
+         (err/rt-test (make-struct-type '? base 2 0 #f (list (cons prop:procedure 0)) #f 1 '(0 1)))
          (test #t list? (call-with-values
                             (lambda () (make-struct-type '? base 1 0 #f (list (cons prop:procedure 0)) #f 0))
                           list))

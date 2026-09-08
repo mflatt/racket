@@ -102,9 +102,8 @@
                                     (or (not exports)
                                         (eq? 'no (hash-ref exports (unwrap struct:s) 'no)))))
         (define finish!-id (and (or (pair? (struct-type-info-rest sti))
-                                    (and (struct-type-info-prefab-immutables sti)
-                                         ;; to ensure that the super is also a prefab:
-                                         (unwrap (struct-type-info-parent sti))))
+                                    (and (unwrap (struct-type-info-parent sti))
+                                         (not (struct-type-info-is-type-type? sti))))
                                 (deterministic-gensym "finish")))
         `(begin
            ,@(if finish!-id
@@ -147,6 +146,8 @@
                                      ,(struct-type-info-immediate-field-count sti)
                                      0 #f
                                      ',(struct-type-info-prefab-immutables sti)))
+                              ;; will be fixed up if this is conservatively `#f`, but we assume
+                              ;; that no mutation is needed for a 'system target
                               ,(struct-type-info-sealed? sti)
                               #f
                               ,(if (struct-type-info-is-type-type? sti)
@@ -174,10 +175,39 @@
                               (quote make-struct-type)
                               ,@(if (struct-type-info-is-type-type? sti)
                                     null
-                                    (list '#f ; procedure
-                                          '#f ; arity
-                                          '#f ; reserved
-                                          (if (struct-type-info-prefab-immutables sti) '(quote prefab) '#f)))
+                                    (list
+                                     ;; procedure:
+                                     (cond
+                                       [(struct-type-info-prefab-immutables sti) '#f]
+                                       [finish!-id `(,finish!-id 'proc)]
+                                       [else '#f])
+                                     ;; arity:
+                                     (cond
+                                       [(struct-type-info-prefab-immutables sti) '#f]
+                                       [finish!-id `(,finish!-id 'arity)]
+                                       [else '#f])
+                                     ;; props:
+                                     (cond
+                                       [(struct-type-info-prefab-immutables sti) '#f]
+                                       [finish!-id `(,finish!-id 'props)]
+                                       [else '#f])
+                                     ;; inspector:
+                                     (cond
+                                       [(struct-type-info-prefab-immutables sti)
+                                        '(quote prefab)]
+                                       [(or (null? (struct-type-info-rest sti))
+                                            (null? (cdr (struct-type-info-rest sti))))
+                                        '(current-inspector)]
+                                       [else
+                                        (define insp-expr (cadr (struct-type-info-rest sti)))
+                                        (match insp-expr
+                                          [`#f '#f]
+                                          [`(quote current) '(current-inspector)]
+                                          [`(current-inspector) '(current-inspector)]
+                                          [`,_
+                                           (cond
+                                             [(symbol? (unwrap insp-expr)) insp-expr]
+                                             [else `(,finish!-id 'insp)])])])))
                               ,@(if (struct-type-info-base-rtd sti)
                                     (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
                                                                null

@@ -32,11 +32,14 @@
 
 (define (procedure? v)
   (or (#%procedure? v)
-      (and (#%$record? v)
-           (let ([rtd (record-rtd v)])
-             (and (racket-rtd? rtd)
-                  (racket-rtd-procedure rtd)
-                  #t)))))
+      (and (record? v)
+           (#%$app/no-inline struct-procedure? v))))
+
+(define (struct-procedure? v)
+  (let ([rtd (record-rtd v)])
+    (and (racket-rtd? rtd)
+         (racket-rtd-procedure rtd)
+         #t)))
 
 (define/who (procedure-specialize proc)
   (check who procedure? proc)

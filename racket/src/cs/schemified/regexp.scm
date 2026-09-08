@@ -890,9 +890,9 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2124 'proc)
+   (finish_2124 'arity)
+   (finish_2124 'props)
    #f))
 (define effect_2414 (finish_2124 struct:rx:alts))
 (define rx:alts1.1
@@ -927,9 +927,9 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_3074 'proc)
+   (finish_3074 'arity)
+   (finish_3074 'props)
    #f))
 (define effect_2459 (finish_3074 struct:rx:sequence))
 (define rx:sequence2.1
@@ -967,9 +967,9 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2409 'proc)
+   (finish_2409 'arity)
+   (finish_2409 'props)
    #f))
 (define effect_1819 (finish_2409 struct:rx:group))
 (define rx:group3.1
@@ -1003,9 +1003,9 @@
    #f
    '(4 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2710 'proc)
+   (finish_2710 'arity)
+   (finish_2710 'props)
    #f))
 (define effect_2312 (finish_2710 struct:rx:repeat))
 (define rx:repeat4.1
@@ -1044,9 +1044,9 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2057 'proc)
+   (finish_2057 'arity)
+   (finish_2057 'props)
    #f))
 (define effect_2202 (finish_2057 struct:rx:maybe))
 (define rx:maybe5.1
@@ -1080,9 +1080,9 @@
    #f
    '(6 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2914 'proc)
+   (finish_2914 'arity)
+   (finish_2914 'props)
    #f))
 (define effect_2905 (finish_2914 struct:rx:conditional))
 (define rx:conditional6.1
@@ -1128,9 +1128,9 @@
    #f
    '(4 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2954 'proc)
+   (finish_2954 'arity)
+   (finish_2954 'props)
    #f))
 (define effect_2486 (finish_2954 struct:rx:lookahead))
 (define rx:lookahead7.1
@@ -1170,9 +1170,9 @@
    #f
    '(6 . 12)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_1844 'proc)
+   (finish_1844 'arity)
+   (finish_1844 'props)
    #f))
 (define effect_2468 (finish_1844 struct:rx:lookbehind))
 (define rx:lookbehind8.1
@@ -1220,9 +1220,9 @@
    #f
    '(4 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_1951 'proc)
+   (finish_1951 'arity)
+   (finish_1951 'props)
    #f))
 (define effect_2158 (finish_1951 struct:rx:cut))
 (define rx:cut9.1
@@ -1259,9 +1259,9 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2358 'proc)
+   (finish_2358 'arity)
+   (finish_2358 'props)
    #f))
 (define effect_2306 (finish_2358 struct:rx:reference))
 (define rx:reference10.1
@@ -1299,9 +1299,9 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2696 'proc)
+   (finish_2696 'arity)
+   (finish_2696 'props)
    #f))
 (define effect_2071 (finish_2696 struct:rx:range))
 (define rx:range11.1
@@ -1334,9 +1334,9 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
+   (finish_2757 'proc)
+   (finish_2757 'arity)
+   (finish_2757 'props)
    #f))
 (define effect_2341 (finish_2757 struct:rx:unicode-categories))
 (define rx:unicode-categories12.1
@@ -1562,10 +1562,10 @@
    #f
    '(7 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2184 'proc)
+   (finish_2184 'arity)
+   (finish_2184 'props)
+   (current-inspector)))
 (define effect_2622 (finish_2184 struct:parse-config))
 (define parse-config1.1
   (|#%name|
@@ -3770,10 +3770,10 @@
    #f
    '(13 . 3075)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3069 'proc)
+   (finish_3069 'arity)
+   (finish_3069 'props)
+   (current-inspector)))
 (define effect_2741 (finish_3069 struct:lazy-bytes))
 (define lazy-bytes1.1
   (|#%name|
@@ -5993,10 +5993,10 @@
    #f
    '(10 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_1953 'proc)
+   (finish_1953 'arity)
+   (finish_1953 'props)
+   (current-inspector)))
 (define effect_2726 (finish_1953 struct:rx:regexp))
 (define rx:regexp1.1
   (|#%name|

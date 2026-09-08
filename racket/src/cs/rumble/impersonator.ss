@@ -592,7 +592,7 @@
                                                     "a structure type, accessor, or mutator acts as a witness\n"
                                                     "   that the given value's representation can be chaperoned or impersonated")
                                      "given value" v))
-            (when (and (authentic? v)
+            (when (and (authentic? val)
                        (not (authentic-override? v)))
               (raise-arguments-error who
                                      (string-append "cannot "

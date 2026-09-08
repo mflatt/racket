@@ -3326,10 +3326,10 @@
    #f
    '(3 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3115 'proc)
+   (finish_3115 'arity)
+   (finish_3115 'props)
+   (current-inspector)))
 (define effect_2626 (finish_3115 struct:m+s))
 (define m+s1.1
   (|#%name|
@@ -3611,10 +3611,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2882 'proc)
+   (finish_2882 'arity)
+   (finish_2882 'props)
+   (current-inspector)))
 (define effect_2505 (finish_2882 struct:exts))
 (define exts1.1
   (|#%name|
@@ -3910,10 +3910,10 @@
    #f
    '(8 . 252)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2338 'proc)
+   (finish_2338 'arity)
+   (finish_2338 'props)
+   (current-inspector)))
 (define effect_2337 (finish_2338 struct:core-port))
 (define create-core-port
   (|#%name|
@@ -3971,10 +3971,10 @@
    #f
    '(5 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2057 'proc)
+   (finish_2057 'arity)
+   (finish_2057 'props)
+   (current-inspector)))
 (define effect_2309 (finish_2057 struct:core-port-methods.1))
 (define core-port-methods1.1
   (|#%name|
@@ -4107,10 +4107,10 @@
    #f
    '(3 . 7)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2711 'proc)
+   (finish_2711 'arity)
+   (finish_2711 'props)
+   (current-inspector)))
 (define effect_2682 (finish_2711 struct:direct))
 (define direct2.1
   (|#%name|
@@ -4149,10 +4149,10 @@
    #f
    '(5 . 31)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2554 'proc)
+   (finish_2554 'arity)
+   (finish_2554 'props)
+   (current-inspector)))
 (define effect_3131 (finish_2554 struct:location))
 (define location3.1
   (|#%name|
@@ -4211,10 +4211,10 @@
    #f
    '(5 . 7)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2359 'proc)
+   (finish_2359 'arity)
+   (finish_2359 'props)
+   (current-inspector)))
 (define effect_2400 (finish_2359 struct:lock))
 (define lock1.1
   (|#%name|
@@ -4493,10 +4493,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2218 'proc)
+   (finish_2218 'arity)
+   (finish_2218 'props)
+   (current-inspector)))
 (define effect_2528 (finish_2218 struct:core-input-port))
 (define create-core-input-port
   (|#%name|
@@ -4543,10 +4543,10 @@
    #f
    '(6 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2853 'proc)
+   (finish_2853 'arity)
+   (finish_2853 'props)
+   (current-inspector)))
 (define effect_2085 (finish_2853 struct:core-input-port-methods.1))
 (define core-input-port-methods6.1
   (|#%name|
@@ -4817,10 +4817,10 @@
    #f
    '(4 . 15)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3032 'proc)
+   (finish_3032 'arity)
+   (finish_3032 'props)
+   (current-inspector)))
 (define effect_2808 (finish_3032 struct:core-output-port))
 (define create-core-output-port
   (|#%name|
@@ -4881,10 +4881,10 @@
    #f
    '(4 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2648 'proc)
+   (finish_2648 'arity)
+   (finish_2648 'props)
+   (current-inspector)))
 (define effect_2050 (finish_2648 struct:core-output-port-methods.1))
 (define core-output-port-methods6.1
   (|#%name|
@@ -5077,10 +5077,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2564 'proc)
+   (finish_2564 'arity)
+   (finish_2564 'props)
+   (current-inspector)))
 (define effect_2493 (finish_2564 struct:write-evt))
 (define write-evt7.1
   (|#%name|
@@ -5143,10 +5143,10 @@
    #f
    '(3 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2110 'proc)
+   (finish_2110 'arity)
+   (finish_2110 'props)
+   (current-inspector)))
 (define effect_2751 (finish_2110 struct:utf-8-state))
 (define utf-8-state1.1
   (|#%name|
@@ -6317,10 +6317,10 @@
    #f
    '(3 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2075 'proc)
+   (finish_2075 'arity)
+   (finish_2075 'props)
+   (current-inspector)))
 (define effect_2594 (finish_2075 struct:commit-manager))
 (define commit-manager1.1
   (|#%name|
@@ -6361,10 +6361,10 @@
    #f
    '(6 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2247 'proc)
+   (finish_2247 'arity)
+   (finish_2247 'props)
+   (current-inspector)))
 (define effect_2646 (finish_2247 struct:commit-request))
 (define commit-request2.1
   (|#%name|
@@ -6413,10 +6413,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2621 'proc)
+   (finish_2621 'arity)
+   (finish_2621 'props)
+   (current-inspector)))
 (define effect_2529 (finish_2621 struct:commit-response))
 (define commit-response3.1
   (|#%name|
@@ -6769,10 +6769,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3101 'proc)
+   (finish_3101 'arity)
+   (finish_3101 'props)
+   (current-inspector)))
 (define effect_2802 (finish_3101 struct:commit-input-port))
 (define create-commit-input-port
   (|#%name|
@@ -6819,10 +6819,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2483 'proc)
+   (finish_2483 'arity)
+   (finish_2483 'props)
+   (current-inspector)))
 (define effect_3199 (finish_2483 struct:commit-input-port-methods.1))
 (define commit-input-port-methods5.1
   (|#%name|
@@ -7002,10 +7002,10 @@
    #f
    '(5 . 31)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2316 'proc)
+   (finish_2316 'arity)
+   (finish_2316 'props)
+   (current-inspector)))
 (define effect_2578 (finish_2316 struct:peek-via-read-input-port))
 (define create-peek-via-read-input-port
   (|#%name|
@@ -7081,10 +7081,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2372 'proc)
+   (finish_2372 'arity)
+   (finish_2372 'props)
+   (current-inspector)))
 (define effect_2499 (finish_2372 struct:peek-via-read-input-port-methods.1))
 (define peek-via-read-input-port-methods10.1
   (|#%name|
@@ -8629,10 +8629,10 @@
    #f
    '(4 . 15)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2841 'proc)
+   (finish_2841 'arity)
+   (finish_2841 'props)
+   (current-inspector)))
 (define effect_1979 (finish_2841 struct:fd-input-port))
 (define create-fd-input-port
   (|#%name|
@@ -8691,10 +8691,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2012 'proc)
+   (finish_2012 'arity)
+   (finish_2012 'props)
+   (current-inspector)))
 (define effect_2420 (finish_2012 struct:fd-input-port-methods.1))
 (define fd-input-port-methods7.1
   (|#%name|
@@ -9082,10 +9082,10 @@
    #f
    '(8 . 255)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3078 'proc)
+   (finish_3078 'arity)
+   (finish_3078 'props)
+   (current-inspector)))
 (define effect_2896 (finish_3078 struct:fd-output-port))
 (define create-fd-output-port
   (|#%name|
@@ -9170,10 +9170,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2810 'proc)
+   (finish_2810 'arity)
+   (finish_2810 'props)
+   (current-inspector)))
 (define effect_1955 (finish_2810 struct:fd-output-port-methods.1))
 (define fd-output-port-methods27.1
   (|#%name|
@@ -9944,10 +9944,10 @@
    #f
    '(3 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2545 'proc)
+   (finish_2545 'arity)
+   (finish_2545 'props)
+   (current-inspector)))
 (define effect_2660 (finish_2545 struct:fd-evt))
 (define fd-evt47.1
   (|#%name|
@@ -10074,10 +10074,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2402 'proc)
+   (finish_2402 'arity)
+   (finish_2402 'props)
+   (current-inspector)))
 (define effect_2170 (finish_2402 struct:rktio-fd-flushed-evt))
 (define rktio-fd-flushed-evt48.1
   (|#%name|
@@ -10443,10 +10443,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2339 'proc)
+   (finish_2339 'arity)
+   (finish_2339 'props)
+   (current-inspector)))
 (define effect_2490 (finish_2339 struct:progress-evt))
 (define progress-evt1.1
   (|#%name|
@@ -11355,10 +11355,10 @@
    #f
    '(16 . 65534)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2207 'proc)
+   (finish_2207 'arity)
+   (finish_2207 'props)
+   (current-inspector)))
 (define effect_3021 (finish_2207 struct:pipe-data))
 (define create-pipe-data
   (|#%name|
@@ -11462,10 +11462,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2129 'proc)
+   (finish_2129 'arity)
+   (finish_2129 'props)
+   (current-inspector)))
 (define effect_2537 (finish_2129 struct:pipe-data-methods.1))
 (define pipe-data-methods10.1
   (|#%name|
@@ -11592,10 +11592,10 @@
    #f
    '(1 . 1)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3163 'proc)
+   (finish_3163 'arity)
+   (finish_3163 'props)
+   (current-inspector)))
 (define effect_2318 (finish_3163 struct:pipe-input-port))
 (define create-pipe-input-port
   (|#%name|
@@ -11630,10 +11630,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2415 'proc)
+   (finish_2415 'arity)
+   (finish_2415 'props)
+   (current-inspector)))
 (define effect_2335 (finish_2415 struct:pipe-input-port-methods.1))
 (define pipe-input-port-methods15.1
   (|#%name|
@@ -12003,10 +12003,10 @@
    #f
    '(1 . 1)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2124 'proc)
+   (finish_2124 'arity)
+   (finish_2124 'props)
+   (current-inspector)))
 (define effect_2635 (finish_2124 struct:pipe-output-port))
 (define create-pipe-output-port
   (|#%name|
@@ -12043,10 +12043,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2185 'proc)
+   (finish_2185 'arity)
+   (finish_2185 'props)
+   (current-inspector)))
 (define effect_3193 (finish_2185 struct:pipe-output-port-methods.1))
 (define pipe-output-port-methods20.1
   (|#%name|
@@ -12631,10 +12631,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2435 'proc)
+   (finish_2435 'arity)
+   (finish_2435 'props)
+   (current-inspector)))
 (define effect_2599 (finish_2435 struct:pipe-write-poller))
 (define pipe-write-poller27.1
   (|#%name|
@@ -12737,10 +12737,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2170 'proc)
+   (finish_2170 'arity)
+   (finish_2170 'props)
+   (current-inspector)))
 (define effect_2907 (finish_2170 struct:pipe-read-poller))
 (define pipe-read-poller28.1
   (|#%name|
@@ -15956,10 +15956,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2760 'proc)
+   (finish_2760 'arity)
+   (finish_2760 'props)
+   (current-inspector)))
 (define effect_2402 (finish_2760 struct:utf-8-converter))
 (define utf-8-converter1.1
   (|#%name|
@@ -16780,10 +16780,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2770 'proc)
+   (finish_2770 'arity)
+   (finish_2770 'props)
+   (current-inspector)))
 (define effect_2496 (finish_2770 struct:bytes-converter))
 (define bytes-converter1.1
   (|#%name|
@@ -17601,10 +17601,10 @@
    #f
    '(4 . 15)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_1919 'proc)
+   (finish_1919 'arity)
+   (finish_1919 'props)
+   (current-inspector)))
 (define effect_2561 (finish_1919 struct:cache))
 (define cache1.1
   (|#%name|
@@ -17976,10 +17976,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2782 'proc)
+   (finish_2782 'arity)
+   (finish_2782 'props)
+   (current-inspector)))
 (define effect_2995 (finish_2782 struct:path))
 (define path1.1
   (|#%name|
@@ -19165,10 +19165,10 @@
    #f
    '(3 . 7)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2932 'proc)
+   (finish_2932 'arity)
+   (finish_2932 'props)
+   (current-inspector)))
 (define effect_2847 (finish_2932 struct:bytes-input-port))
 (define create-bytes-input-port
   (|#%name|
@@ -19219,10 +19219,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2871 'proc)
+   (finish_2871 'arity)
+   (finish_2871 'props)
+   (current-inspector)))
 (define effect_2130 (finish_2871 struct:bytes-input-port-methods.1))
 (define bytes-input-port-methods4.1
   (|#%name|
@@ -19485,10 +19485,10 @@
    #f
    '(3 . 7)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2411 'proc)
+   (finish_2411 'arity)
+   (finish_2411 'props)
+   (current-inspector)))
 (define effect_2052 (finish_2411 struct:bytes-output-port))
 (define create-bytes-output-port
   (|#%name|
@@ -19543,10 +19543,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2698 'proc)
+   (finish_2698 'arity)
+   (finish_2698 'props)
+   (current-inspector)))
 (define effect_2430 (finish_2698 struct:bytes-output-port-methods.1))
 (define bytes-output-port-methods8.1
   (|#%name|
@@ -20011,10 +20011,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2069 'proc)
+   (finish_2069 'arity)
+   (finish_2069 'props)
+   (current-inspector)))
 (define effect_3019 (finish_2069 struct:max-output-port))
 (define create-max-output-port
   (|#%name|
@@ -20057,10 +20057,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2618 'proc)
+   (finish_2618 'arity)
+   (finish_2618 'props)
+   (current-inspector)))
 (define effect_2933 (finish_2618 struct:max-output-port-methods.1))
 (define max-output-port-methods1.1
   (|#%name|
@@ -20981,10 +20981,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2460 'proc)
+   (finish_2460 'arity)
+   (finish_2460 'props)
+   (current-inspector)))
 (define effect_2267 (finish_2460 struct:nowhere-output-port))
 (define create-nowhere-output-port
   (|#%name|
@@ -21017,10 +21017,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2952 'proc)
+   (finish_2952 'arity)
+   (finish_2952 'props)
+   (current-inspector)))
 (define effect_2301 (finish_2952 struct:nowhere-output-port-methods.1))
 (define nowhere-output-port-methods1.1
   (|#%name|
@@ -21272,10 +21272,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2175 'proc)
+   (finish_2175 'arity)
+   (finish_2175 'props)
+   (current-inspector)))
 (define effect_2645 (finish_2175 struct:as-constructor))
 (define as-constructor1.1
   (|#%name|
@@ -24271,10 +24271,10 @@
    #f
    '(7 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3672 'proc)
+   (finish_3672 'arity)
+   (finish_3672 'props)
+   (current-inspector)))
 (define effect_2521 (finish_3672 struct:starting-point))
 (define starting-point7.1
   (|#%name|
@@ -26131,10 +26131,10 @@
    #f
    '(4 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2262 'proc)
+   (finish_2262 'arity)
+   (finish_2262 'props)
+   (current-inspector)))
 (define effect_2369 (finish_2262 struct:security-guard))
 (define security-guard1.1
   (|#%name|
@@ -31466,10 +31466,10 @@
    #f
    '(1 . 1)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2186 'proc)
+   (finish_2186 'arity)
+   (finish_2186 'props)
+   (current-inspector)))
 (define effect_2329 (finish_2186 struct:environment-variables))
 (define environment-variables1.1
   (|#%name|
@@ -33187,10 +33187,10 @@
    #f
    '(11 . 376)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_1890 'proc)
+   (finish_1890 'arity)
+   (finish_1890 'props)
+   (current-inspector)))
 (define effect_2687 (finish_1890 struct:logger))
 (define logger1.1
   (|#%name|
@@ -33628,10 +33628,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2164 'proc)
+   (finish_2164 'arity)
+   (finish_2164 'props)
+   (current-inspector)))
 (define effect_2998 (finish_2164 struct:queue))
 (define queue1.1
   (|#%name|
@@ -33667,10 +33667,10 @@
    #f
    '(3 . 6)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2845 'proc)
+   (finish_2845 'arity)
+   (finish_2845 'props)
+   (current-inspector)))
 (define effect_2547 (finish_2845 struct:node))
 (define node2.1
   (|#%name|
@@ -33736,10 +33736,10 @@
    #f
    '(1 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2335 'proc)
+   (finish_2335 'arity)
+   (finish_2335 'props)
+   (current-inspector)))
 (define effect_2969 (finish_2335 struct:log-receiver))
 (define log-receiver1.1
   (|#%name|
@@ -33850,10 +33850,10 @@
    #f
    '(3 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2386 'proc)
+   (finish_2386 'arity)
+   (finish_2386 'props)
+   (current-inspector)))
 (define effect_2324 (finish_2386 struct:queue-log-receiver))
 (define queue-log-receiver2.1
   (|#%name|
@@ -33989,10 +33989,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2083 'proc)
+   (finish_2083 'arity)
+   (finish_2083 'props)
+   (current-inspector)))
 (define effect_2591 (finish_2083 struct:stdio-log-receiver))
 (define stdio-log-receiver3.1
   (|#%name|
@@ -34134,10 +34134,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2544 'proc)
+   (finish_2544 'arity)
+   (finish_2544 'props)
+   (current-inspector)))
 (define effect_2288 (finish_2544 struct:syslog-log-receiver))
 (define syslog-log-receiver4.1
   (|#%name|
@@ -35108,10 +35108,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2790 'proc)
+   (finish_2790 'arity)
+   (finish_2790 'props)
+   (current-inspector)))
 (define effect_3368 (finish_2790 struct:fs-change-evt))
 (define fs-change-evt1.1
   (|#%name|
@@ -35657,10 +35657,10 @@
    #f
    '(3 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3020 'proc)
+   (finish_3020 'arity)
+   (finish_3020 'props)
+   (current-inspector)))
 (define effect_2289 (finish_3020 struct:subprocess))
 (define make-subprocess
   (|#%name|
@@ -36686,10 +36686,10 @@
    #f
    '(1 . 1)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2010 'proc)
+   (finish_2010 'arity)
+   (finish_2010 'props)
+   (current-inspector)))
 (define effect_2486 (finish_2010 struct:tcp-input-port))
 (define create-tcp-input-port
   (|#%name|
@@ -36726,10 +36726,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2584 'proc)
+   (finish_2584 'arity)
+   (finish_2584 'props)
+   (current-inspector)))
 (define effect_2506 (finish_2584 struct:tcp-input-port-methods.1))
 (define tcp-input-port-methods1.1
   (|#%name|
@@ -36886,10 +36886,10 @@
    #f
    '(1 . 1)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2476 'proc)
+   (finish_2476 'arity)
+   (finish_2476 'props)
+   (current-inspector)))
 (define effect_2179 (finish_2476 struct:tcp-output-port))
 (define create-tcp-output-port
   (|#%name|
@@ -36928,10 +36928,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2811 'proc)
+   (finish_2811 'arity)
+   (finish_2811 'props)
+   (current-inspector)))
 (define effect_2820 (finish_2811 struct:tcp-output-port-methods.1))
 (define tcp-output-port-methods9.1
   (|#%name|
@@ -37130,10 +37130,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2561 'proc)
+   (finish_2561 'arity)
+   (finish_2561 'props)
+   (current-inspector)))
 (define effect_1868 (finish_2561 struct:rktio-evt))
 (define rktio-evt1.1
   (|#%name|
@@ -37330,10 +37330,10 @@
    #f
    '(2 . 3)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_3124 'proc)
+   (finish_3124 'arity)
+   (finish_3124 'props)
+   (current-inspector)))
 (define effect_2319 (finish_3124 struct:connect-progress))
 (define connect-progress1.1
   (|#%name|
@@ -37757,10 +37757,10 @@
    #f
    '(3 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2775 'proc)
+   (finish_2775 'arity)
+   (finish_2775 'props)
+   (current-inspector)))
 (define effect_2347 (finish_2775 struct:tcp-listener))
 (define tcp-listener1.1
   (|#%name|
@@ -38243,10 +38243,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_1939 'proc)
+   (finish_1939 'arity)
+   (finish_1939 'props)
+   (current-inspector)))
 (define effect_2608 (finish_1939 struct:accept-evt))
 (define accept-evt6.1
   (|#%name|
@@ -38367,10 +38367,10 @@
    #f
    '(4 . 15)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2442 'proc)
+   (finish_2442 'arity)
+   (finish_2442 'props)
+   (current-inspector)))
 (define effect_2743 (finish_2442 struct:udp))
 (define udp1.1
   (|#%name|
@@ -39717,10 +39717,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2690 'proc)
+   (finish_2690 'arity)
+   (finish_2690 'props)
+   (current-inspector)))
 (define effect_2114 (finish_2690 struct:udp-sending-evt))
 (define udp-sending-evt66.1
   (|#%name|
@@ -39755,10 +39755,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2617 'proc)
+   (finish_2617 'arity)
+   (finish_2617 'props)
+   (current-inspector)))
 (define effect_2524 (finish_2617 struct:udp-sending-ready-evt))
 (define udp-sending-ready-evt67.1
   (|#%name|
@@ -40158,10 +40158,10 @@
    #f
    '(2 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2327 'proc)
+   (finish_2327 'arity)
+   (finish_2327 'props)
+   (current-inspector)))
 (define effect_2638 (finish_2327 struct:udp-receiving-evt))
 (define udp-receiving-evt43.1
   (|#%name|
@@ -40196,10 +40196,10 @@
    #f
    '(0 . 0)
    'make-struct-type
-   #f
-   #f
-   #f
-   #f))
+   (finish_2856 'proc)
+   (finish_2856 'arity)
+   (finish_2856 'props)
+   (current-inspector)))
 (define effect_2865 (finish_2856 struct:udp-receiving-ready-evt))
 (define udp-receiving-ready-evt44.1
   (|#%name|

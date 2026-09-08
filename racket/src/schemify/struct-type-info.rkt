@@ -160,7 +160,7 @@
 ;; Check the degree to which `e` has the shape of a property list,
 ;; and for each property--value pair, whether the property is known
 ;; to be one that that doesn't have a guard or won't invoke
-;; a guarded procedure. If `e` has the rgith shape, the result is
+;; a guarded procedure. If `e` has the rigth shape, the result is
 ;; `(list (list* <bool> <key> <val>) ...)` where the <bool> is
 ;; `#t` if `<key>` is known to be such a property, `#f` otherwise.
 (define (pure-properties-list e prim-knowns knowns imports mutated simples)

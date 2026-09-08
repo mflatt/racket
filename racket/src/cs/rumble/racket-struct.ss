@@ -8,27 +8,23 @@
   (make-record-type-descriptor
    'struct
    #!base-rtd
-   #f ; '#{struct icw1nrrg1rjuf16733snprjoz-0}
+   '#{struct icw1nrrg1rjuf16733snprjoz-0}
    #f ; sealed?
    #t ; opaque?
    ;; When creating a nongenerative Racket structure type,
-   ;; these fields must be treated as immutable and initialized
-   ;; with faslable values:
-   '#((mutable procedure)
-      (mutable arity)
-      (mutable reserved)
-      (mutable insp))))
+   ;; these fields must be faslable values:
+   '#((immutable procedure)
+      (immutable arity)
+      (immutable props) ; #f => properties attached via uid
+      (immutable insp))))
 
 (define (racket-rtd? rtd)
   (#%record? rtd |#%racket-base-rtd|))
 
 (define racket-rtd-procedure (record-accessor |#%racket-base-rtd| 0))
 (define racket-rtd-arity (record-accessor |#%racket-base-rtd| 1))
+(define racket-rtd-props (record-accessor |#%racket-base-rtd| 2))
 (define racket-rtd-insp (record-accessor |#%racket-base-rtd| 3))
-
-(define set-racket-rtd-procedure! (record-mutator |#%racket-base-rtd| 0))
-(define set-racket-rtd-arity! (record-mutator |#%racket-base-rtd| 1))
-(define set-racket-rtd-insp! (record-mutator |#%racket-base-rtd| 3))
 
 (define-syntax (define-racket-record-type stx)
   (syntax-case stx (fields nongenerative)
@@ -115,7 +111,7 @@
                     'define-racket-record-type
                     proc   ; procedure
                     arity  ; arity
-                    #f     ; reserved
+                    #f     ; props
                     none)) ; insp
                  (define rcd:name (make-record-constructor-descriptor rtd:name
                                                                       #,(if (datum parent)
