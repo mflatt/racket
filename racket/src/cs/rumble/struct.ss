@@ -243,6 +243,8 @@
       (racket-rtd-insp rtd)
       none))
 
+(define |#%system-inspector| none)
+
 ;; ----------------------------------------
 
 ;; returns a procedure that takes an rtd and finishes creating/installing it
@@ -324,14 +326,18 @@
                                                       (+ v (struct-type-total*-field-count parent-rtd*))
                                                       v)))
                                            (and parent-rtd*
-                                                (racket-rtd-procedure parent-rtd*)))]
+                                                (struct-procedure-property-ref parent-rtd* #f)))]
              [(eq? rtd-or-query 'arity) (or arity-val
                                             (and parent-rtd*
-                                                 (racket-rtd-arity parent-rtd*)))]
-             [(eq? rtd-or-query 'props) props-table]
-             [(eq? rtd-or-query 'insp) (if (eq? insp 'current)
-                                           (current-inspector)
-                                           insp)]
+                                                 (struct-procedure-arity-property-ref parent-rtd* #f)))]
+             [(eq? rtd-or-query 'props) (if system?
+                                            #f
+                                            props-table)]
+             [(eq? rtd-or-query 'insp) (cond
+                                         [system? |#%system-inspector|]
+                                         [(eq? insp 'current)
+                                          (current-inspector)]
+                                         [else insp])]
              [else
               (let* ([rtd rtd-or-query]
                      [all-immutables (if (integer? proc-spec)
@@ -441,6 +447,15 @@
                   (set-car! proc-val (eq-hashtable-ref props-table prop:procedure #f)))
                 (when (pair? arity-val)
                   (set-car! arity-val (eq-hashtable-ref props-table prop:procedure-arity #f)))
+
+                (when system?
+                  ;; Install props via uid
+                  (let ([vec (hashtable-cells props-table)])
+                    (let loop ([i 0])
+                      (unless (fx= i (#%vector-length vec))
+                        (let ([p (#%vector-ref vec i)])
+                          (struct-property-set! (car p) rtd (cdr p)))
+                        (loop (fx+ i 1))))))
 
                 ;; Register guard
                 (register-guards! rtd parent-rtd guard 'at-start))]))))]))

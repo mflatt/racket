@@ -1919,6 +1919,24 @@
   (test #t values asked?))
 
 ;; ----------------------------------------
+;; Make sure implied `prop:procedure` is inhereited correctly
+
+(let ()
+  (define-values (prop:demo demo? demo-ref)
+    (make-struct-type-property
+     'demo
+     (lambda (x si) x)
+     (list (cons prop:procedure (lambda (y) y)))))
+  
+  (struct p (f)
+    #:property prop:demo 0)
+
+  (struct p2 p ())
+
+  (test 3 (p add1) 2)
+  (test 3 (p2 add1) 2))
+
+;; ----------------------------------------
 ;; Check that a property guard always gets a super structure type
 
 (let ()

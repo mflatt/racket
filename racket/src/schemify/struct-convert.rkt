@@ -179,35 +179,41 @@
                                      ;; procedure:
                                      (cond
                                        [(struct-type-info-prefab-immutables sti) '#f]
+                                       [(not (struct-type-info-maybe-proc? sti)) '#f]
                                        [finish!-id `(,finish!-id 'proc)]
                                        [else '#f])
                                      ;; arity:
                                      (cond
                                        [(struct-type-info-prefab-immutables sti) '#f]
+                                       [(not (struct-type-info-maybe-arity? sti)) '#f]
                                        [finish!-id `(,finish!-id 'arity)]
                                        [else '#f])
                                      ;; props:
                                      (cond
                                        [(struct-type-info-prefab-immutables sti) '#f]
+                                       [(aim? target 'system) '#f]
                                        [finish!-id `(,finish!-id 'props)]
                                        [else '#f])
                                      ;; inspector:
-                                     (cond
-                                       [(struct-type-info-prefab-immutables sti)
-                                        '(quote prefab)]
-                                       [(or (null? (struct-type-info-rest sti))
-                                            (null? (cdr (struct-type-info-rest sti))))
-                                        '(current-inspector)]
-                                       [else
-                                        (define insp-expr (cadr (struct-type-info-rest sti)))
-                                        (match insp-expr
-                                          [`#f '#f]
-                                          [`(quote current) '(current-inspector)]
-                                          [`(current-inspector) '(current-inspector)]
-                                          [`,_
-                                           (cond
-                                             [(symbol? (unwrap insp-expr)) insp-expr]
-                                             [else `(,finish!-id 'insp)])])])))
+                                     (let ([default (if (aim? target 'system)
+                                                        '|#%system-inspector|
+                                                        '(current-inspector))])
+                                       (cond
+                                         [(struct-type-info-prefab-immutables sti)
+                                          '(quote prefab)]
+                                         [(or (null? (struct-type-info-rest sti))
+                                              (null? (cdr (struct-type-info-rest sti))))
+                                          default]
+                                         [else
+                                          (define insp-expr (cadr (struct-type-info-rest sti)))
+                                          (match insp-expr
+                                            [`#f '#f]
+                                            [`(quote current) default]
+                                            [`(current-inspector) default]
+                                            [`,_
+                                             (cond
+                                               [(symbol? (unwrap insp-expr)) insp-expr]
+                                               [else `(,finish!-id 'insp)])])]))))
                               ,@(if (struct-type-info-base-rtd sti)
                                     (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
                                                                null

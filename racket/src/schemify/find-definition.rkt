@@ -105,7 +105,9 @@
               (hash-set knowns (unwrap struct:s) (known-struct-type type
                                                                     (struct-type-info-field-count info)
                                                                     (struct-type-info-pure-constructor? info)
-                                                                    (struct-type-info-sealed? info)))
+                                                                    (struct-type-info-sealed? info)
+                                                                    (struct-type-info-maybe-proc? info)
+                                                                    (struct-type-info-maybe-arity? info)))
               info))]
           [else (nothing)])]
        [`((,struct:s ,make-s ,s? ,s-ref ,s-set!) ,rhs)
@@ -128,7 +130,9 @@
               (hash-set knowns (unwrap struct:s) (known-struct-type type
                                                                     (struct-type-info-field-count info)
                                                                     (struct-type-info-pure-constructor? info)
-                                                                    (struct-type-info-sealed? info))))
+                                                                    (struct-type-info-sealed? info)
+                                                                    (struct-type-info-maybe-proc? info)
+                                                                    (struct-type-info-maybe-arity? info))))
             info)]
           [else (maybe-immediate-values)])]
        [`((,struct:st ,maker ,st? ,st-refs ...)
@@ -152,7 +156,9 @@
                                      (known-struct-type type
                                                         (+ NUMBER-OF-RACKET-BASE-RTD-FIELDS n)
                                                         #t ; pure-constructor?
-                                                        sealed?))]
+                                                        sealed?
+                                                        #f
+                                                        #f))]
                    [knowns (hash-set knowns
                                      (unwrap st?)
                                      (known-struct-predicate 2 type struct:st authentic? sealed?))]

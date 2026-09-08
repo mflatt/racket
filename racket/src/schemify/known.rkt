@@ -35,6 +35,7 @@
          known-procedure/has-unsafe/folding/limited-kind
          known-struct-type known-struct-type? known-struct-type-type
          known-struct-type-field-count known-struct-type-pure-constructor? known-struct-type-sealed?
+         known-struct-type-maybe-proc? known-struct-type-maybe-arity?
          known-constructor known-constructor? known-constructor-type
          known-predicate known-predicate? known-predicate-type
          known-accessor known-accessor? known-accessor-type
@@ -141,7 +142,8 @@
 (struct known-procedure/has-unsafe/folding () #:prefab #:omit-define-syntaxes #:super struct:known-procedure/has-unsafe)
 (struct known-procedure/has-unsafe/folding/limited (kind) #:prefab #:omit-define-syntaxes #:super struct:known-procedure/has-unsafe/folding)
 
-(struct known-struct-type (type field-count pure-constructor? sealed?) #:prefab #:omit-define-syntaxes #:super struct:known-consistent)
+(struct known-struct-type (type field-count pure-constructor? sealed? maybe-proc? maybe-arity?)
+  #:prefab #:omit-define-syntaxes #:super struct:known-consistent)
 
 ;; procedures with a known connection to a structure type:
 (struct known-constructor (type) #:prefab #:omit-define-syntaxes #:super struct:known-procedure/allocates)

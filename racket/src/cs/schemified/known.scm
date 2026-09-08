@@ -1933,10 +1933,10 @@
          0
          s
          'kind))))))
-(define finish_2844
+(define finish_2863
   (make-struct-type-install-properties
    '(known-struct-type)
-   4
+   6
    0
    (if (struct-type? struct:known-consistent)
      struct:known-consistent
@@ -1944,7 +1944,7 @@
    null
    'prefab
    #f
-   '(0 1 2 3)
+   '(0 1 2 3 4 5)
    #f
    'known-struct-type))
 (define struct:known-struct-type
@@ -1959,19 +1959,19 @@
     (if (struct-type? struct:known-consistent)
       struct:known-consistent
       (check-struct-type 'struct struct:known-consistent))
-    4
+    6
     0
     #f
-    '(0 1 2 3))
+    '(0 1 2 3 4 5))
    #f
    #f
-   '(4 . 15)
+   '(6 . 63)
    'make-struct-type
    #f
    #f
    #f
    'prefab))
-(define effect_2667 (finish_2844 struct:known-struct-type))
+(define effect_2667 (finish_2863 struct:known-struct-type))
 (define known-struct-type
   (|#%name|
    known-struct-type
@@ -2057,6 +2057,40 @@
          3
          s
          'sealed?))))))
+(define known-struct-type-maybe-proc?_2212
+  (|#%name|
+   known-struct-type-maybe-proc?
+   (record-accessor struct:known-struct-type 4)))
+(define known-struct-type-maybe-proc?
+  (|#%name|
+   known-struct-type-maybe-proc?
+   (lambda (s)
+     (if (known-struct-type?_2572 s)
+       (known-struct-type-maybe-proc?_2212 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-maybe-proc?_2212
+         struct:known-struct-type
+         4
+         s
+         'maybe-proc?))))))
+(define known-struct-type-maybe-arity?_2947
+  (|#%name|
+   known-struct-type-maybe-arity?
+   (record-accessor struct:known-struct-type 5)))
+(define known-struct-type-maybe-arity?
+  (|#%name|
+   known-struct-type-maybe-arity?
+   (lambda (s)
+     (if (known-struct-type?_2572 s)
+       (known-struct-type-maybe-arity?_2947 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-maybe-arity?_2947
+         struct:known-struct-type
+         5
+         s
+         'maybe-arity?))))))
 (define finish_2453
   (make-struct-type-install-properties
    '(known-constructor)

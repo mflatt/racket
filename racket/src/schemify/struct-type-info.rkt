@@ -23,6 +23,8 @@
                                pure-constructor?
                                authentic?
                                sealed?
+                               maybe-proc?
+                               maybe-arity?
                                prefab-immutables ; #f or immutable expression to be quoted
                                non-prefab-immutables ; #f or immutable expression to be quoted
                                constructor-name-expr  ; an expression
@@ -82,6 +84,26 @@
                            (for/or ([prop (in-list props)])
                              (eq? (unwrap prop) name))]
                           [`,_ #f])))
+                 (define (property-not-implied? name)
+                   (or (null? rest)
+                       (match (car rest)
+                         [`(list . ,props)
+                          (let loop ([props props])
+                            (cond
+                              [(null? props) #t]
+                              [else
+                               (match (car props)
+                                 [`(cons ,p ,_)
+                                  (and (memq p '(prop:authentic
+                                                 prop:sealed
+                                                 prop:procedure
+                                                 prop:procedure-arity))
+                                       (not (eq? p name))
+                                       (loop (cdr props)))]
+                                 [`,_ #f])]))]
+                         [`null #t]
+                         [`(quote ()) #t]
+                         [`,_ #f])))
                  (define (handle-proc-spec proc-spec imms)
                    (cond
                      [(not proc-spec) imms]
@@ -133,6 +155,14 @@
                                              (not (includes-property? 'prop:chaperone-unsafe-undefined)))
                                         (includes-property? 'prop:authentic)
                                         (includes-property? 'prop:sealed)
+                                        (not (and (or (not parent-sti)
+                                                      (not (known-struct-type-maybe-proc? parent-sti)))
+                                                  (or ((length rest) . < . 3)
+                                                      (not (unwrap (list-ref rest 2))))
+                                                  (property-not-implied? 'prop:procedure)))
+                                        (not (and (or (not parent-sti)
+                                                      (not (known-struct-type-maybe-arity? parent-sti)))
+                                                  (property-not-implied? 'prop:procedure-arity)))
                                         (if (eq? prefab-imms 'non-prefab)
                                             #f
                                             prefab-imms)
@@ -151,6 +181,8 @@
                             #t ; pure constructor
                             #t ; authentic
                             #f ; sealed
+                            #f ; maybe-proc?
+                            #f ; maybe-arity?
                             #f ; not prefab
                             (for/list ([i (in-range fields)]) #t) ; all immutable
                             #f
@@ -160,7 +192,7 @@
 ;; Check the degree to which `e` has the shape of a property list,
 ;; and for each property--value pair, whether the property is known
 ;; to be one that that doesn't have a guard or won't invoke
-;; a guarded procedure. If `e` has the rigth shape, the result is
+;; a guarded procedure. If `e` has the right shape, the result is
 ;; `(list (list* <bool> <key> <val>) ...)` where the <bool> is
 ;; `#t` if `<key>` is known to be such a property, `#f` otherwise.
 (define (pure-properties-list e prim-knowns knowns imports mutated simples)

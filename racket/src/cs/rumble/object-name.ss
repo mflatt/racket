@@ -67,7 +67,7 @@
 (define (struct-object-name v)
   (let ([rtd (record-rtd v)])
     (and
-     (racket-rtd? rtd)
+     (not (eq? none (inspector-ref rtd))) ; don't get the name of a system structure type
      (object-name (record-rtd v)))))
 
 ;; Since a procedure name is the one way we have to attach static
