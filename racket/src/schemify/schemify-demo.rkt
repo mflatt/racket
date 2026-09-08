@@ -68,7 +68,7 @@
 (define-values (schemified importss exports import-keys imports-abis exports-info)
   (schemify-linklet `(linklet 
                       ()
-                      (x y [z ext-z] w c1 c2)
+                      (x y [z ext-z] w c1 c2 class2-struct-type-ref)
                        .
                       ,(map
                         wrap
@@ -106,7 +106,7 @@
                           (define-values (c1 c2) (call))
                           (define-values (struct:class-struct-type make-class-struct-type class-struct-type? class-struct-type-ref)
                             (let-values ([(-struct:class-struct-type -make-class-struct-type -class-struct-type? -class-struct-type-ref)
-                                          (make-struct-type-type 'class 1)])
+                                          (make-struct-type-type 'class #f 1)])
                               (values -struct:class-struct-type -make-class-struct-type -class-struct-type?
                                       (make-struct-field-accessor -class-struct-type-ref 0))))
                           (define-values (struct:c make-c c? c-ref1 c-ref2)
@@ -118,7 +118,16 @@
                           (define-values (class-ref)
                             (lambda (o)
                               (list (class-struct-type? o)
-                                    (class-struct-type-ref o)))))))
+                                    (class-struct-type-ref o))))
+                          (define-values (struct:class2-struct-type make-class2-struct-type class2-struct-type? class2-struct-type-ref)
+                            (let-values ([(-struct:class2-struct-type -make-class2-struct-type -class2-struct-type? -class2-struct-type-ref)
+                                          (make-struct-type-type 'class2 struct:class-struct-type 2)])
+                              (values -struct:class2-struct-type -make-class2-struct-type -class2-struct-type?
+                                      (make-struct-field-accessor -class2-struct-type-ref 1))))
+                          (define-values (class2-ref)
+                            (lambda (o)
+                              (list (class2-struct-type? o)
+                                    (class2-struct-type-ref o)))))))
                     #;
                     (call-with-input-file "regexp.rktl" read)
                     #t          ; serializable

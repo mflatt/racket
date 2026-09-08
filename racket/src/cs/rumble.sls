@@ -273,6 +273,7 @@
           struct?
           struct-type?
           procedure-struct-type?
+          struct-type-type?
           struct-type-info
           struct-type-sealed?
           struct-type-authentic?

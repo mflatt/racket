@@ -138,7 +138,8 @@
                  (and (if (eq? prefab-imms 'non-prefab)
                           non-prefab-imms
                           prefab-imms)
-                      (or (not u-parent) parent-sti)
+                      (or (not u-parent) (and (known-struct-type? parent-sti)
+                                              (not (known-struct-type-is-type-type? parent-sti))))
                       (struct-type-info name
                                         #f
                                         (and maker (cons maker maker-im))
@@ -170,23 +171,35 @@
                                         constructor-name-expr
                                         rest)))))]
        [else #f])]
-    [`(make-struct-type-type (quote ,name) ,fields)
+    [`(make-struct-type-type (quote ,name) ,parent ,fields)
      (and (exact-nonnegative-integer? fields)
-          (struct-type-info name
-                            #t
-                            '|#%base-rtd|
-                            '|#%racket-base-rtd| ; parent
-                            fields
-                            (+ fields NUMBER-OF-RACKET-BASE-RTD-FIELDS)
-                            #t ; pure constructor
-                            #t ; authentic
-                            #f ; sealed
-                            #f ; maybe-proc?
-                            #f ; maybe-arity?
-                            #f ; not prefab
-                            (for/list ([i (in-range fields)]) #t) ; all immutable
-                            #f
-                            null))]
+          (let ([u-parent (unwrap parent)])
+            (and 
+             (or (not u-parent)
+                 (symbol? u-parent))
+             (let ([parent-sti (and u-parent (find-known u-parent prim-knowns knowns imports mutated))])
+               (and
+                (or (not parent)
+                    (and (known-struct-type? parent-sti)
+                         (known-struct-type-is-type-type? parent-sti)))
+                (struct-type-info name
+                                  #t
+                                  '|#%base-rtd|
+                                  (or parent
+                                      '|#%racket-base-rtd|)
+                                  fields
+                                  (+ fields (if parent
+                                                (known-struct-type-field-count parent-sti)
+                                                NUMBER-OF-RACKET-BASE-RTD-FIELDS))
+                                  #t ; pure constructor
+                                  #t ; authentic
+                                  #f ; sealed
+                                  #f ; maybe-proc?
+                                  #f ; maybe-arity?
+                                  #f ; not prefab
+                                  (for/list ([i (in-range fields)]) #t) ; all immutable
+                                  #f
+                                  null))))))]
     [`,_ #f]))
 
 ;; Check the degree to which `e` has the shape of a property list,

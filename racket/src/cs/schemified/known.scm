@@ -1933,10 +1933,10 @@
          0
          s
          'kind))))))
-(define finish_2863
+(define finish_2487
   (make-struct-type-install-properties
    '(known-struct-type)
-   6
+   7
    0
    (if (struct-type? struct:known-consistent)
      struct:known-consistent
@@ -1944,7 +1944,7 @@
    null
    'prefab
    #f
-   '(0 1 2 3 4 5)
+   '(0 1 2 3 4 5 6)
    #f
    'known-struct-type))
 (define struct:known-struct-type
@@ -1959,19 +1959,19 @@
     (if (struct-type? struct:known-consistent)
       struct:known-consistent
       (check-struct-type 'struct struct:known-consistent))
-    6
+    7
     0
     #f
-    '(0 1 2 3 4 5))
+    '(0 1 2 3 4 5 6))
    #f
    #f
-   '(6 . 63)
+   '(7 . 127)
    'make-struct-type
    #f
    #f
    #f
    'prefab))
-(define effect_2667 (finish_2863 struct:known-struct-type))
+(define effect_2667 (finish_2487 struct:known-struct-type))
 (define known-struct-type
   (|#%name|
    known-struct-type
@@ -2006,89 +2006,106 @@
          0
          s
          'type))))))
-(define known-struct-type-field-count_2903
+(define known-struct-type-is-type-type?_2903
+  (|#%name|
+   known-struct-type-is-type-type?
+   (record-accessor struct:known-struct-type 1)))
+(define known-struct-type-is-type-type?
+  (|#%name|
+   known-struct-type-is-type-type?
+   (lambda (s)
+     (if (known-struct-type?_2572 s)
+       (known-struct-type-is-type-type?_2903 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-is-type-type?_2903
+         struct:known-struct-type
+         1
+         s
+         'is-type-type?))))))
+(define known-struct-type-field-count_2541
   (|#%name|
    known-struct-type-field-count
-   (record-accessor struct:known-struct-type 1)))
+   (record-accessor struct:known-struct-type 2)))
 (define known-struct-type-field-count
   (|#%name|
    known-struct-type-field-count
    (lambda (s)
      (if (known-struct-type?_2572 s)
-       (known-struct-type-field-count_2903 s)
+       (known-struct-type-field-count_2541 s)
        ($value
         (impersonate-ref
-         known-struct-type-field-count_2903
+         known-struct-type-field-count_2541
          struct:known-struct-type
-         1
+         2
          s
          'field-count))))))
-(define known-struct-type-pure-constructor?_2541
+(define known-struct-type-pure-constructor?_2229
   (|#%name|
    known-struct-type-pure-constructor?
-   (record-accessor struct:known-struct-type 2)))
+   (record-accessor struct:known-struct-type 3)))
 (define known-struct-type-pure-constructor?
   (|#%name|
    known-struct-type-pure-constructor?
    (lambda (s)
      (if (known-struct-type?_2572 s)
-       (known-struct-type-pure-constructor?_2541 s)
+       (known-struct-type-pure-constructor?_2229 s)
        ($value
         (impersonate-ref
-         known-struct-type-pure-constructor?_2541
+         known-struct-type-pure-constructor?_2229
          struct:known-struct-type
-         2
+         3
          s
          'pure-constructor?))))))
-(define known-struct-type-sealed?_2229
+(define known-struct-type-sealed?_2212
   (|#%name|
    known-struct-type-sealed?
-   (record-accessor struct:known-struct-type 3)))
+   (record-accessor struct:known-struct-type 4)))
 (define known-struct-type-sealed?
   (|#%name|
    known-struct-type-sealed?
    (lambda (s)
      (if (known-struct-type?_2572 s)
-       (known-struct-type-sealed?_2229 s)
+       (known-struct-type-sealed?_2212 s)
        ($value
         (impersonate-ref
-         known-struct-type-sealed?_2229
+         known-struct-type-sealed?_2212
          struct:known-struct-type
-         3
+         4
          s
          'sealed?))))))
-(define known-struct-type-maybe-proc?_2212
+(define known-struct-type-maybe-proc?_2947
   (|#%name|
    known-struct-type-maybe-proc?
-   (record-accessor struct:known-struct-type 4)))
+   (record-accessor struct:known-struct-type 5)))
 (define known-struct-type-maybe-proc?
   (|#%name|
    known-struct-type-maybe-proc?
    (lambda (s)
      (if (known-struct-type?_2572 s)
-       (known-struct-type-maybe-proc?_2212 s)
+       (known-struct-type-maybe-proc?_2947 s)
        ($value
         (impersonate-ref
-         known-struct-type-maybe-proc?_2212
+         known-struct-type-maybe-proc?_2947
          struct:known-struct-type
-         4
+         5
          s
          'maybe-proc?))))))
-(define known-struct-type-maybe-arity?_2947
+(define known-struct-type-maybe-arity?_2738
   (|#%name|
    known-struct-type-maybe-arity?
-   (record-accessor struct:known-struct-type 5)))
+   (record-accessor struct:known-struct-type 6)))
 (define known-struct-type-maybe-arity?
   (|#%name|
    known-struct-type-maybe-arity?
    (lambda (s)
      (if (known-struct-type?_2572 s)
-       (known-struct-type-maybe-arity?_2947 s)
+       (known-struct-type-maybe-arity?_2738 s)
        ($value
         (impersonate-ref
-         known-struct-type-maybe-arity?_2947
+         known-struct-type-maybe-arity?_2738
          struct:known-struct-type
-         5
+         6
          s
          'maybe-arity?))))))
 (define finish_2453

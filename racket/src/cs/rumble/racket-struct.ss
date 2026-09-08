@@ -1,8 +1,13 @@
 
 ;; Every Racket struct type should be a record subtype of `|#%racket-base-rtd|`
+;; instead of just `#!base-rtd`. That gives us room to record key properties
+;; like `prop:procedure` for faster access.
 
-(define NUMBER-OF-BASE-RTD-FIELDS 9)
-(define NUMBER-OF-RACKET-BASE-RTD-FIELDS (+ NUMBER-OF-BASE-RTD-FIELDS 4))
+;; When creating a nongenerative Racket structure type, the extra
+;; field values must be faslable values. In the case of Racket
+;; structure-type properties, that's not always possible, so properties
+;; can be recorded on the uid, instead. For the key properties,
+;; choose a faslable representation so that they can always be fast.
 
 (define |#%racket-base-rtd|
   (make-record-type-descriptor
@@ -11,12 +16,22 @@
    '#{struct icw1nrrg1rjuf16733snprjoz-0}
    #f ; sealed?
    #t ; opaque?
-   ;; When creating a nongenerative Racket structure type,
-   ;; these fields must be faslable values:
    '#((immutable procedure)
       (immutable arity)
       (immutable props) ; #f => properties attached via uid
       (immutable insp))))
+
+(define |#%racket-type-base-rtd|
+  (make-record-type-descriptor
+   'struct-type
+   #!base-rtd
+   '#{struct-type icw1nrrg1rjuf16733snprjoz-1}
+   #f ; sealed?
+   #t ; opaque?
+   '#()))
+
+(define NUMBER-OF-BASE-RTD-FIELDS (#%$record-type-field-count #!base-rtd))
+(define NUMBER-OF-RACKET-BASE-RTD-FIELDS (#%$record-type-field-count |#%racket-base-rtd|))
 
 (define (racket-rtd? rtd)
   (#%record? rtd |#%racket-base-rtd|))

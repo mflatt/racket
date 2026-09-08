@@ -103,6 +103,7 @@
                          [`,_ knowns])))])
              (values
               (hash-set knowns (unwrap struct:s) (known-struct-type type
+                                                                    #f
                                                                     (struct-type-info-field-count info)
                                                                     (struct-type-info-pure-constructor? info)
                                                                     (struct-type-info-sealed? info)
@@ -128,6 +129,7 @@
                                                              (struct-type-info-sealed? info)))])
               ;; For now, we don't try to track the position-consuming accessor or mutator
               (hash-set knowns (unwrap struct:s) (known-struct-type type
+                                                                    #f
                                                                     (struct-type-info-field-count info)
                                                                     (struct-type-info-pure-constructor? info)
                                                                     (struct-type-info-sealed? info)
@@ -136,7 +138,7 @@
             info)]
           [else (maybe-immediate-values)])]
        [`((,struct:st ,maker ,st? ,st-refs ...)
-          (let-values (((,struct: ,make ,? ,-ref) (make-struct-type-type ,_ ,n)))
+          (let-values (((,struct: ,make ,? ,-ref) (make-struct-type-type ,name ,parent ,n)))
             (values ,struct:2
                     ,make2
                     ,?2
@@ -146,39 +148,44 @@
                 (wrap-eq? struct: struct:2)
                 (wrap-eq? make make2)
                 (wrap-eq? ? ?2)
-                (= (length make-accs) n))
-           (define type (string->uninterned-symbol (symbol->string (unwrap maker))))
-           (define authentic? #t)
-           (define sealed? #f)
-           (values
-            (let* ([knowns (hash-set knowns
-                                     (unwrap struct:st)
-                                     (known-struct-type type
-                                                        (+ NUMBER-OF-RACKET-BASE-RTD-FIELDS n)
-                                                        #t ; pure-constructor?
-                                                        sealed?
-                                                        #f
-                                                        #f))]
-                   [knowns (hash-set knowns
-                                     (unwrap st?)
-                                     (known-struct-predicate 2 type struct:st authentic? sealed?))]
-                   [knowns (hash-set knowns (unwrap maker)
-                                     (known-struct-type-maker (arithmetic-shift 1 (+ 11 (unwrap n)))
-                                                              struct:st
-                                                              (unwrap n)))]
-                   [knowns (for/fold ([knowns knowns]) ([make-acc (in-list make-accs)]
-                                                        [st-ref (in-list st-refs)])
-                             (match make-acc
-                               [`(make-struct-field-accessor ,ref ,pos . ,_)
-                                (if (and (eq? ref -ref)
-                                         (exact-integer? pos)
-                                         (<= 0 pos (sub1 n)))
-                                    (hash-set knowns (unwrap st-ref)
-                                              (known-field-accessor 2 type struct:st #t (+ NUMBER-OF-RACKET-BASE-RTD-FIELDS pos) #t))
-                                    knowns)]
-                               [`,_ knowns]))])
-              knowns)
-            #f)]
+                (= (length make-accs) (length st-refs))
+                (make-struct-type-info `(make-struct-type-type ,name ,parent ,n) prim-knowns knowns imports mutated))
+           => (lambda (sti)
+                (define type (string->uninterned-symbol (symbol->string (unwrap maker))))
+                (define authentic? #t)
+                (define sealed? #f)
+                (values
+                 (let* ([knowns (hash-set knowns
+                                          (unwrap struct:st)
+                                          (known-struct-type type
+                                                             #t
+                                                             (struct-type-info-field-count sti)
+                                                             #t ; pure-constructor?
+                                                             sealed?
+                                                             #f
+                                                             #f))]
+                        [knowns (hash-set knowns
+                                          (unwrap st?)
+                                          (known-struct-predicate 2 type struct:st authentic? sealed?))]
+                        [knowns (hash-set knowns (unwrap maker)
+                                          (known-struct-type-maker (arithmetic-shift 1 (+ 11 (struct-type-info-field-count sti)))
+                                                                   struct:st
+                                                                   (unwrap n)))]
+                        [knowns (for/fold ([knowns knowns]) ([make-acc (in-list make-accs)]
+                                                             [st-ref (in-list st-refs)])
+                                  (match make-acc
+                                    [`(make-struct-field-accessor ,ref ,pos . ,_)
+                                     (if (and (eq? ref -ref)
+                                              (exact-integer? pos)
+                                              (<= 0 pos (sub1 n)))
+                                         (hash-set knowns (unwrap st-ref)
+                                                   (known-field-accessor 2 type struct:st #t
+                                                                         (+ (- (struct-type-info-field-count sti) n) pos)
+                                                                         #t))
+                                         knowns)]
+                                    [`,_ knowns]))])
+                   knowns)
+                 #f))]
           [else (nothing)])]
        [`((,prop:s ,s? ,s-ref) (make-struct-type-property ,_ . ,rest))
         (values

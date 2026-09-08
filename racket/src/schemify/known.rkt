@@ -33,7 +33,7 @@
          known-procedure/has-unsafe/folding known-procedure/has-unsafe/folding?  ; not a subtype of `known-procedure/folding`
          known-procedure/has-unsafe/folding/limited known-procedure/has-unsafe/folding/limited?
          known-procedure/has-unsafe/folding/limited-kind
-         known-struct-type known-struct-type? known-struct-type-type
+         known-struct-type known-struct-type? known-struct-type-type known-struct-type-is-type-type?
          known-struct-type-field-count known-struct-type-pure-constructor? known-struct-type-sealed?
          known-struct-type-maybe-proc? known-struct-type-maybe-arity?
          known-constructor known-constructor? known-constructor-type
@@ -142,7 +142,7 @@
 (struct known-procedure/has-unsafe/folding () #:prefab #:omit-define-syntaxes #:super struct:known-procedure/has-unsafe)
 (struct known-procedure/has-unsafe/folding/limited (kind) #:prefab #:omit-define-syntaxes #:super struct:known-procedure/has-unsafe/folding)
 
-(struct known-struct-type (type field-count pure-constructor? sealed? maybe-proc? maybe-arity?)
+(struct known-struct-type (type is-type-type? field-count pure-constructor? sealed? maybe-proc? maybe-arity?)
   #:prefab #:omit-define-syntaxes #:super struct:known-consistent)
 
 ;; procedures with a known connection to a structure type:
