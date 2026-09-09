@@ -1091,7 +1091,7 @@
                                     (+ pos (position-based-accessor-offset pba)))])
       (lambda (v default)
         (let ([c (if (impersonator? v)
-                     (impersonate-ref pba rtd 0 v #f)
+                     (impersonate-type-ref pba v)
                      (unsafe-object-type v))])
           (if (impersonator? c)
               (if (record? (strip-impersonator c) rtd)
@@ -1106,7 +1106,7 @@
   (let ([rtd (position-based-accessor-rtd pba)])
     (lambda (o default)
       (let ([c (if (impersonator? o)
-                   (impersonate-ref unsafe-object-type rtd 0 o #f)
+                   (impersonate-type-ref pba o)
                    (unsafe-object-type o))])
         (if (record? (strip-impersonator c) rtd)
             c
@@ -1571,8 +1571,8 @@
 ;; `v` is known to be a record with an exposed accessor, mutator, or structure type
 (define (authentic? v)
   (cond
-    [(record? v |#%racket-type-base-rtd|)
-     (and (racket-type-rtd-authenticity v) #t)]
+    [(record? (unsafe-object-type v) |#%racket-type-base-rtd|)
+     (and (racket-type-rtd-authenticity (unsafe-object-type v)) #t)]
     [else
      (struct-property-ref prop:authentic (record-rtd v) #f)]))
 

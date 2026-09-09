@@ -375,7 +375,7 @@
                                           ;; struct-type access can be impersonated only if pba is exposed
                                           raw-pba)
                                      `(if (impersonator? o)
-                                          ($value (impersonate-ref ,raw-pba ,struct:s 0 o #f))
+                                          ($value (impersonate-type-ref ,raw-pba o))
                                           (unsafe-object-type o))]
                                     [else
                                      `(unsafe-object-type o)])])

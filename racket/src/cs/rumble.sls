@@ -197,6 +197,7 @@
           impersonator-val ; not exported to Racket
           impersonate-ref ; not exported to Racket
           impersonate-set! ; not exported to Racket
+          impersonate-type-ref ; not exported to Racket
           impersonator-property?
           make-impersonator-property
           impersonator-property-predicate-procedure?
@@ -259,6 +260,7 @@
           struct-type-constructor-add-guards ; not exported to Racket
           |#%base-rtd| ; not exported to Racket
           |#%racket-base-rtd| ; not exported to Racket
+          |#%racket-type-base-rtd| ; not exported to Racket
           |#%system-inspector| ; not exported to Racket
           |#%struct-constructor| ; not exported to Racket
           |#%struct-predicate| ; not exported to Racket

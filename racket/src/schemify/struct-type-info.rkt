@@ -188,7 +188,7 @@
                          (known-struct-type-is-meta? parent-sti)))
                 (struct-type-info name
                                   #t
-                                  '|#%base-rtd|
+                                  '|#%racket-type-base-rtd|
                                   (or parent
                                       '|#%racket-base-rtd|)
                                   fields

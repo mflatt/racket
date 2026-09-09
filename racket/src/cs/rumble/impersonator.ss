@@ -254,6 +254,24 @@
       (loop (impersonator-next v))]
      [else (struct-info v)])))
 
+(define (impersonate-type-ref acc orig)
+  (let loop ([v orig])
+    (cond
+     [(struct-chaperone? v)
+      (let ([wrapper (imp-procs-ref1 (struct-impersonator/chaperone-procs v) acc)])
+        (cond
+         [wrapper
+          (let ([rtd (loop (impersonator-next v))])
+            (let ([new-rtd (|#%app| wrapper orig rtd)])
+              (unless (chaperone-of? new-rtd rtd)
+                (raise-chaperone-error 'struct-ref "value" rtd new-rtd))
+              new-rtd))]
+         [else
+          (loop (impersonator-next v))]))]
+     [(impersonator? v)
+      (loop (impersonator-next v))]
+     [else (unsafe-object-type v)])))
+
 (define (raise-impersonator-result-arity-error who orig n args)
   (raise
    (|#%app|
@@ -592,7 +610,6 @@
                                                     "a structure type, accessor, or mutator acts as a witness\n"
                                                     "   that the given value's representation can be chaperoned or impersonated")
                                      "given value" v))
-            (#%printf "~s ~s\n" val (authentic? val))
             (when (and (authentic? val)
                        (not (authentic-override? v)))
               (raise-arguments-error who

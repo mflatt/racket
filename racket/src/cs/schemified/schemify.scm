@@ -11118,7 +11118,7 @@
                              (struct-type-info1.1
                               name_0
                               #t
-                              '|#%base-rtd|
+                              '|#%racket-type-base-rtd|
                               (if parent_0 parent_0 '|#%racket-base-rtd|)
                               fields_0
                               app_0
@@ -23046,12 +23046,9 @@
                                                                                                                            (list
                                                                                                                             '$value
                                                                                                                             (list*
-                                                                                                                             'impersonate-ref
+                                                                                                                             'impersonate-type-ref
                                                                                                                              raw-pba_0
-                                                                                                                             struct:s_0
-                                                                                                                             '(0
-                                                                                                                               o
-                                                                                                                               #f)))
+                                                                                                                             '(o)))
                                                                                                                            '((unsafe-object-type
                                                                                                                               o)))
                                                                                                                           '(unsafe-object-type
