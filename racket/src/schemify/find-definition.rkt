@@ -41,19 +41,17 @@
            #f)]
          [else (nothing)]))
      (match `(,ids ,new-rhs)
-       [`((,struct:st ,maker ,st? ,get-st ,st-refs ...)
-          (let-values (((,struct: ,make ,? ,-get ,-ref) (make-struct-metatype ,name ,parent ,n)))
+       [`((,struct:st ,maker ,st? ,st-refs ...)
+          (let-values (((,struct: ,make ,? ,-ref) (make-struct-metatype ,name ,parent ,n)))
             (values ,struct:2
                     ,make2
                     ,?2
-                    ,get2
                     ,make-accs ...)))
         (cond
           [(and (exact-nonnegative-integer? n)
                 (wrap-eq? struct: struct:2)
                 (wrap-eq? make make2)
                 (wrap-eq? ? ?2)
-                (wrap-eq? -get get2)
                 (= (length make-accs) (length st-refs))
                 (make-struct-type-info `(make-struct-metatype ,name ,parent ,n) prim-knowns knowns imports mutated))
            => (lambda (sti)
@@ -77,14 +75,11 @@
                                           (known-struct-type-maker (arithmetic-shift 1 (+ 11 (struct-type-info-field-count sti)))
                                                                    struct:st
                                                                    (unwrap n)))]
-                        [knowns (hash-set knowns
-                                          (unwrap get-st)
-                                          (known-struct-metatype-ref 4 struct:st #f))]
                         [knowns (for/fold ([knowns knowns]) ([make-acc (in-list make-accs)]
                                                              [st-ref (in-list st-refs)])
                                   (match make-acc
                                     [`(make-struct-field-accessor ,ref ,pos . ,_)
-                                     (if (and (eq? ref -ref)
+                                     (if (and (wrap-eq? ref -ref)
                                               (exact-integer? pos)
                                               (<= 0 pos (sub1 n)))
                                          (hash-set knowns (unwrap st-ref)
@@ -93,12 +88,18 @@
                                                                          #t))
                                          knowns)]
                                     [`(make-struct-field-metaaccessor ,ref ,pos . ,_)
-                                     (if (and (eq? ref -ref)
+                                     (if (and (wrap-eq? ref -ref)
                                               (exact-integer? pos)
                                               (<= 0 pos (sub1 n)))
                                          (hash-set knowns (unwrap st-ref)
                                                    (known-struct-metatype-ref 4 struct:st
                                                                               (+ (- (struct-type-info-field-count sti) n) pos)))
+                                         knowns)]
+                                    [`(make-struct-type-metaaccessor ,ref . ,_)
+                                     (if (wrap-eq? ref -ref)
+                                         (hash-set knowns
+                                                   (unwrap st-ref)
+                                                   (known-struct-metatype-ref 4 struct:st #f))
                                          knowns)]
                                     [`,_ knowns]))])
                    knowns)

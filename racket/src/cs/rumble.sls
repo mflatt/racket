@@ -255,7 +255,7 @@
           make-struct-field-accessor
           make-struct-field-mutator
           make-struct-field-metaaccessor
-          make-struct-metaaccessor
+          make-struct-type-metaaccessor
           struct-type-constructor-add-guards ; not exported to Racket
           |#%base-rtd| ; not exported to Racket
           |#%racket-base-rtd| ; not exported to Racket

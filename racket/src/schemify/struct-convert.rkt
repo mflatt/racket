@@ -15,10 +15,10 @@
 
 (define (struct-convert form prim-knowns knowns imports exports mutated
                         schemify inline-type-id target no-prompt? top?)
-  (define (convert struct:s make-s s? get acc/muts
-                   struct: make ?1 -get -ref -set!
+  (define (convert struct:s make-s s? acc/muts
+                   struct: make ?1 -ref -set!
                    mk
-                   struct:2 make2 ?2 get2 make-acc/muts)
+                   struct:2 make2 ?2 make-acc/muts)
     ;; Convert a `make-struct-type` binding into a 
     ;; set of bindings that Chez's cp0 recognizes,
     ;; and push the struct-specific extra work into
@@ -29,7 +29,6 @@
     (define sti (and (wrap-eq? struct: struct:2)
                      (wrap-eq? make make2)
                      (wrap-eq? ?1 ?2)
-                     (wrap-eq? -get get2)
                      (for/and ([acc/mut (in-list acc/muts)]
                                [make-acc/mut (in-list make-acc/muts)])
                        (define (ok-contract? contract)
@@ -74,24 +73,9 @@
                           (and make-meta?
                                (wrap-eq? ref-id -ref)
                                (exact-nonnegative-integer? pos))]
-                         [`(make-struct-field-metaaccessor ,ref-id ,pos ',field-name)
+                         [`(make-struct-type-metaaccessor ,ref-id)
                           (and make-meta?
-                               (wrap-eq? ref-id -ref)
-                               (symbol? field-name)
-                               (exact-nonnegative-integer? pos))]
-                         [`(make-struct-field-metaaccessor ,ref-id ,pos ',field/proc-name ,contract)
-                          (and make-meta?
-                               (wrap-eq? ref-id -ref)
-                               (symbol? field/proc-name)
-                               (exact-nonnegative-integer? pos)
-                               (ok-contract? contract))]
-                         [`(make-struct-field-metaaccessor ,ref-id ,pos ',field/proc-name ,contract ',realm)
-                          (and make-meta?
-                               (wrap-eq? ref-id -ref)
-                               (symbol? field/proc-name)
-                               (exact-nonnegative-integer? pos)
-                               (ok-contract? contract)
-                               (symbol? realm))]
+                               (wrap-eq? ref-id -ref))]
                          [`,_ #f]))
                      (make-struct-type-info mk prim-knowns knowns imports mutated)))
      (cond
@@ -99,6 +83,7 @@
              ;; make sure all accessor/mutator positions are in range:
              (for/and ([make-acc/mut (in-list make-acc/muts)])
                (match (unwrap-let make-acc/mut)
+                 [`(make-struct-type-metaaccessor . ,_) #t]
                  [`(,_ ,_ ,pos . ,_) (pos . < . (struct-type-info-immediate-field-count sti))]))
              ;; make sure `struct:` isn't used too early, since we're
              ;; reordering it's definition with respect to some arguments
@@ -281,14 +266,6 @@
                                       p
                                       `(#%struct-predicate ,p)))))
                  null)
-           ,@(if get
-                 `((define ,get (lambda (o default)
-                                  (let ([o (if (impersonator? o) (impersonator-val o) o)])
-                                    (let ([c (unsafe-object-type o)])
-                                      (if (unsafe-struct? c ,struct:s)
-                                          c
-                                          default))))))
-                 null)
            ,@(for/list ([acc/mut (in-list acc/muts)]
                         [make-acc/mut (in-list make-acc/muts)])
                (define raw-acc/mut (if generate-check? (deterministic-gensym (unwrap acc/mut)) acc/mut))
@@ -316,7 +293,7 @@
                                        (if (or generate-check?
                                                system-opaque?)
                                            p
-                                           `(#%struct-field-accessor ,p ,struct:s ,pos #f)))))
+                                           `(#%struct-field-accessor ,p ,struct:s ,pos)))))
                  (define (err-args need-type-name?) (make-err-args field/proc-name proc-name contract realm need-type-name?))
                  (if generate-check?
                       `(begin
@@ -338,7 +315,7 @@
                                                       `(#%struct-ref-error s ,@(err-args #t)))))))])
                               (if system-opaque?
                                   p
-                                  `(#%struct-field-accessor ,p ,struct:s ,pos ,meta?)))))
+                                  `(#%struct-field-accessor ,p ,struct:s ,pos)))))
                       raw-def))
                (define (build-mutator pos field/proc-name contract realm)
                  (define proc-name (if contract
@@ -370,6 +347,16 @@
                                  p
                                  `(#%struct-field-mutator ,p ,struct:s ,pos)))))
                      raw-def))
+               (define (build-metaaccessor pos)
+                 `(define ,acc/mut
+                    (lambda (o default)
+                      (let ([o (if (impersonator? o) (impersonator-val o) o)])
+                        (let ([c (unsafe-object-type o)])
+                          (if (unsafe-struct? c ,struct:s)
+                              ,(if pos
+                                   `((record-accessor ,struct:s ,pos) c)
+                                   'c)
+                              default))))))
                (match (unwrap-let make-acc/mut)
                  [`(make-struct-field-accessor ,_ ,pos)
                   (build-accessor pos 'field #f 'racket #f)]
@@ -386,37 +373,32 @@
                  [`(make-struct-field-mutator ,_ ,pos ',field-name ,contract ',realm)
                   (build-mutator pos field-name contract realm)]
                  [`(make-struct-field-metaaccessor ,_ ,pos)
-                  (build-accessor pos 'field #f 'racket #t)]
-                 [`(make-struct-field-metaaccessor ,_ ,pos ',field-name)
-                  (build-accessor pos field-name #f 'racket #t)]
-                 [`(make-struct-field-metaaccessor ,_ ,pos ',field/proc-name ,contract)
-                  (build-accessor pos field/proc-name contract 'racket #t)]
-                 [`(make-struct-field-metaaccessor ,_ ,pos ',field/proc-name ,contract ',realm)
-                  (build-accessor pos field/proc-name contract realm #t)]
+                  (build-metaaccessor pos)]
+                 [`(make-struct-type-metaaccessor ,_)
+                  (build-metaaccessor #f)]
                  [`,_ (error "oops")])))]
        [else #f]))
   (match form
-    [`(define-values (,struct:s ,make-s ,s? ,get ,acc/muts ...)
-        (let-values (((,struct: ,make ,?1 ,-get ,-ref) (make-struct-metatype . ,args)))
+    [`(define-values (,struct:s ,make-s ,s? ,acc/muts ...)
+        (let-values (((,struct: ,make ,?1 ,-ref) (make-struct-metatype . ,args)))
           (values ,struct:2
                   ,make2
                   ,?2
-                  ,get2
                   ,make-acc/muts ...)))
-     (convert struct:s make-s s? get acc/muts
-              struct: make ?1 -get -ref #f
+     (convert struct:s make-s s? acc/muts
+              struct: make ?1 -ref #f
               `(make-struct-metatype . ,args)
-              struct:2 make2 ?2 get2 make-acc/muts)]
+              struct:2 make2 ?2 make-acc/muts)]
     [`(define-values (,struct:s ,make-s ,s? ,acc/muts ...)
         (let-values (((,struct: ,make ,?1 ,-ref ,-set!) ,mk))
           (values ,struct:2
                   ,make2
                   ,?2
                   ,make-acc/muts ...)))
-     (convert struct:s make-s s? #f acc/muts
-              struct: make ?1 #f -ref -set!
+     (convert struct:s make-s s? acc/muts
+              struct: make ?1 -ref -set!
               mk
-              struct:2 make2 ?2 #f make-acc/muts)]
+              struct:2 make2 ?2 make-acc/muts)]
     [`,_ #f]))
 
 (define (struct-convert-local form #:letrec? [letrec? #f]

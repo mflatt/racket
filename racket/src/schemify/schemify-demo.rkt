@@ -105,9 +105,10 @@
                           (define-values (call) (lambda () (values 'c1 'c2)))
                           (define-values (c1 c2) (call))
                           (define-values (struct:class-struct-type make-class-struct-type class-struct-type? class-type-ref class-struct-type-ref)
-                            (let-values ([(-struct:class-struct-type -make-class-struct-type -class-struct-type? -class-type-ref -class-struct-type-ref)
+                            (let-values ([(-struct:class-struct-type -make-class-struct-type -class-struct-type? -class-struct-type-ref)
                                           (make-struct-metatype 'class #f 1)])
-                              (values -struct:class-struct-type -make-class-struct-type -class-struct-type? -class-type-ref
+                              (values -struct:class-struct-type -make-class-struct-type -class-struct-type?
+                                      (make-struct-type-metaaccessor -class-struct-type-ref)
                                       (make-struct-field-accessor -class-struct-type-ref 0))))
                           (define-values (struct:c make-c c? c-ref1 c-ref2)
                             (let-values ([(-struct:c -make-c -c? -c-ref -c-set!)
@@ -121,9 +122,10 @@
                                     (class-struct-type-ref o))))
                           (define-values (struct:class2-struct-type make-class2-struct-type class2-struct-type? class2-type-ref
                                                                     class2-struct-type-ref class2-struct-type-metaref)
-                            (let-values ([(-struct:class2-struct-type -make-class2-struct-type -class2-struct-type? -class2-type-ref -class2-struct-type-ref)
+                            (let-values ([(-struct:class2-struct-type -make-class2-struct-type -class2-struct-type? -class2-struct-type-ref)
                                           (make-struct-metatype 'class2 struct:class-struct-type 2)])
-                              (values -struct:class2-struct-type -make-class2-struct-type -class2-struct-type? -class2-type-ref
+                              (values -struct:class2-struct-type -make-class2-struct-type -class2-struct-type?
+                                      (make-struct-type-metaaccessor -class2-struct-type-ref)
                                       (make-struct-field-accessor -class2-struct-type-ref 1)
                                       (make-struct-field-metaaccessor -class2-struct-type-ref 1))))
                           (define-values (class2-t-ref)
