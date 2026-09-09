@@ -84,7 +84,7 @@ override the default @racket[equal?] definition through the
 @section[#:tag "creatingmorestructs"]{Creating Structure Types}
 
 @defproc[(make-struct-type [name symbol?]
-                           [super-type (or/c (and/c struct-type? (not/c struct-type-type?)) #f)]
+                           [super-type (or/c (and/c struct-type? (not/c struct-metatype?)) #f)]
                            [init-field-cnt exact-nonnegative-integer?]
                            [auto-field-cnt exact-nonnegative-integer?]
                            [auto-v any/c #f]
@@ -101,7 +101,7 @@ override the default @racket[equal?] definition through the
                                        null]
                            [guard (or/c procedure? #f) #f]
                            [constructor-name (or/c symbol? #f) #f])
-          (values (and/c struct-type? struct-type-type?)
+          (values (and/c struct-type? struct-metatype?)
                   struct-constructor-procedure?
                   struct-predicate-procedure?
                   struct-accessor-procedure?
@@ -326,67 +326,76 @@ instance of a structure type that might have subtypes.
 @history[#:added "8.0.0.7"]}
 
 
-@defproc[(make-struct-type-type [name symbol?]
-                                [super-type-type (or/c struct-type-type? #f)]
-                                [init-field-cnt exact-nonnegative-integer?])
+@defproc[(make-struct-metatype [name symbol?]
+                               [super-metatype (or/c struct-metatype? #f)]
+                               [init-field-cnt exact-nonnegative-integer?])
          (values
           struct-type?
           (procedure-arity-includes/c (+ 11 init-field-cnt))
           struct-predicate-procedure?
+          procedure?
           struct-accessor-procedure?)]{
 
 Creates a @deftech{structure metatype} that can be used to generate
 new @tech{structure types}. The new structure metatype is a
-submetatype of @racket[super-type-type] if @racket[super-type-type] is
-provided s non-@racket[#f].
+submetatype of @racket[super-metatype] if @racket[super-metatype] is
+provided as non-@racket[#f].
+
+The result is four values:
 
 @itemlist[
 
  @item{@racket[_struct:name]: An opaque structure type that is
- instantiated by the structure type (not its instances) produced by
- calling @racket[_make-name-type]. If @racket[super-type-type]
+ instantiated by each structure type (not its instances) produced by
+ calling the @racket[_make-name-type] result. If @racket[super-metatype]
  is provided, structure types produced by @racket[_make-name-type]
- are also instances of @racket[super-type-type].}
+ are also instances of @racket[super-metatype].}
 
- @item{@racket[_make-name-type]: Like @racket[make-struct-type], but all
- arguments or @racket[make-struct-type] are required for
+ @item{@racket[_make-name-type]: A procedure like @racket[make-struct-type], but all
+ arguments of @racket[make-struct-type] are required for
  @racket[_make-name-type], and @racket[_make-name-type] requires
- @racket[init-field-cnt] additional arguments plus any additional
- arguments required by the constructor of @racket[super-type-type].}
+ @racket[init-field-cnt] additional arguments. If @racket[super-metatype],
+ it contributes additional required arguments before the
+ @racket[init-field-cnt] additional arguments.}
 
  @item{@racket[_name?]: A predicate to recognize structure types
- produced by @racket[_make-name-type].}
+ produced by @racket[_make-name-type] or a submetatype's maker.}
 
- @item{@racket[_name-ref]: An accessor procedure to apply to a result
- of @racket[_make-name-type] and extract one of the additional
+ @item{@racket[_name-type-ref]: A procedure of two arguments: a
+ value potentially recognized by @racket[_name?], and a value
+ to return if not. If the first argument is recognized,
+ @racket[_name-type-ref] produces @racket[_struct:name] or the
+ maker's submetatype.}
+
+ @item{@racket[_name-ref]: An accessor procedure for use on a result
+ of @racket[_make-name-type] to extract one of the additional
  @racket[init-field-cnt] arguments that were provided to
  @racket[_make-name-type]. This accessor is analogous to the
  position-based accessor returned by @racket[make-struct-type], and it
  can be converted to a position-specific accessor using
- @racket[struct-field-accessor].}
+ @racket[make-struct-field-accessor].}
 
 ]
 
 A structure type produced by @racket[_make-name-type] can be used as
 supertype for @racket[make-struct-type] or vice-versa. A structure
-metatype produced by @racket[make-struct-type-type] cannot be used as
+metatype produced by @racket[make-struct-metatype] cannot be used as
 a supertype for @racket[make-struct-type], and
-@racket[super-type-type] cannot be a structure type produced by
-@racket[make-struct-type] or a @racket[_make-name-type]
+@racket[super-metatype] cannot be a structure type produced by
+@racket[make-struct-type] or by any @racket[_make-name-type]
 produced by @racket[make-struct-type].
 
-Additional structure-type fields created by
-@racket[make-struct-type-type] are analogous to property values
-associated with a structure type by supplying a @tech{structure type
-property} to @racket[make-struct-type]. Structure metatype fields can
-be accessed more efficiently than property values due to the
-single-inheretance nature of metatypes.
+Fields added in a structure metatype are similar to property values
+that can associated with a structure type by supplying a
+@tech{structure type property} to @racket[make-struct-type]. Structure
+metatype fields may be accessed more efficiently than property values,
+however, due to the single-inheretance nature of metatypes.
 
 @history[#:added "9.3.0.6"]}
 
-@defproc[(struct-type-type? [v any/c]) boolean?]{Returns @racket[#t] if
+@defproc[(struct-metatype? [v any/c]) boolean?]{Returns @racket[#t] if
  @racket[v] is a @tech{structure metatype} value created via
- @racket[make-struct-type-type], @racket[#f] otherwise.
+ @racket[make-struct-metatype], @racket[#f] otherwise.
 
 @history[#:added "9.3.0.6"]}
 

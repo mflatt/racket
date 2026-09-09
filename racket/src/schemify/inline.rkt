@@ -103,6 +103,8 @@
                      (known-field-mutator-type-id k)]
                     [(known-struct-type-maker? k)
                      (known-struct-type-maker-base-rtd k)]
+                    [(known-struct-metatype-ref? k)
+                     (known-struct-metatype-ref-type-id k)]
                     [else #f]))
   (define env
     ;; A `needed->env` setup can fail if a needed import cannot be
@@ -128,6 +130,10 @@
                     im)]
       [(known-struct-type-maker/need-imports? k)
        (needed->env (known-struct-type-maker/need-imports-needed k)
+                    add-import!
+                    im)]
+      [(known-struct-metatype-ref/need-imports? k)
+       (needed->env (known-struct-metatype-ref/need-imports-needed k)
                     add-import!
                     im)]
       [else '()]))
@@ -325,6 +331,17 @@
                                               (known-struct-type-maker-base-rtd k)
                                               (known-struct-type-maker-field-count k)
                                               (needed->list needed))]
+       [else
+        (known-procedure (known-procedure-arity-mask k))])]
+    [(known-struct-metatype-ref? k)
+     (define needed
+       (needed-imports (known-struct-metatype-ref-type-id k) prim-knowns imports exports added-exports mutated '() '#hasheq()))
+     (cond
+       [needed
+        (known-struct-metatype-ref/need-imports (known-procedure-arity-mask k)
+                                                (known-struct-metatype-ref-type-id k)
+                                                (known-struct-metatype-ref-pos k)
+                                                (needed->list needed))]
        [else
         (known-procedure (known-procedure-arity-mask k))])]
     [else k]))

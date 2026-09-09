@@ -22,7 +22,7 @@
   [|#%nongenerative-uid| (known-constant)]
   [make-record-type-descriptor (known-constant)]
   [|#%make-record-type-descriptor| (known-constant)]
-  [|#%make-struct-type-type| (known-constant)]
+  [|#%make-struct-metatype| (known-constant)]
   [|#%base-rtd| (known-constant)]
   [|#%racket-base-rtd| (known-constant)]
   [|#%system-inspector| (known-constant)]

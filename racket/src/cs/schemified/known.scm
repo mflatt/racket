@@ -2006,23 +2006,23 @@
          0
          s
          'type))))))
-(define known-struct-type-is-type-type?_2903
+(define known-struct-type-is-meta?_2903
   (|#%name|
-   known-struct-type-is-type-type?
+   known-struct-type-is-meta?
    (record-accessor struct:known-struct-type 1)))
-(define known-struct-type-is-type-type?
+(define known-struct-type-is-meta?
   (|#%name|
-   known-struct-type-is-type-type?
+   known-struct-type-is-meta?
    (lambda (s)
      (if (known-struct-type?_2572 s)
-       (known-struct-type-is-type-type?_2903 s)
+       (known-struct-type-is-meta?_2903 s)
        ($value
         (impersonate-ref
-         known-struct-type-is-type-type?_2903
+         known-struct-type-is-meta?_2903
          struct:known-struct-type
          1
          s
-         'is-type-type?))))))
+         'is-meta?))))))
 (define known-struct-type-field-count_2541
   (|#%name|
    known-struct-type-field-count
@@ -3358,5 +3358,179 @@
           (known-struct-type-property/immediate-guard?_2536
            (impersonator-val v))
           #f))))))
+(define finish_2996
+  (make-struct-type-install-properties
+   '(known-struct-metatype-ref)
+   2
+   0
+   (if (struct-type? struct:known-procedure/pure)
+     struct:known-procedure/pure
+     (check-struct-type 'struct struct:known-procedure/pure))
+   null
+   'prefab
+   #f
+   '(0 1)
+   #f
+   'known-struct-metatype-ref))
+(define struct:known-struct-metatype-ref
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
+   'known-struct-metatype-ref
+   (if (struct-type? struct:known-procedure/pure)
+     struct:known-procedure/pure
+     (check-struct-type 'struct struct:known-procedure/pure))
+   (structure-type-lookup-prefab-uid
+    'known-struct-metatype-ref
+    (if (struct-type? struct:known-procedure/pure)
+      struct:known-procedure/pure
+      (check-struct-type 'struct struct:known-procedure/pure))
+    2
+    0
+    #f
+    '(0 1))
+   #f
+   #f
+   '(2 . 3)
+   'make-struct-type
+   #f
+   #f
+   #f
+   'prefab))
+(define effect_3059 (finish_2996 struct:known-struct-metatype-ref))
+(define known-struct-metatype-ref
+  (|#%name|
+   known-struct-metatype-ref
+   (record-constructor
+    (make-record-constructor-descriptor
+     struct:known-struct-metatype-ref
+     #f
+     #f))))
+(define known-struct-metatype-ref?_2706
+  (|#%name|
+   known-struct-metatype-ref?
+   (record-predicate struct:known-struct-metatype-ref)))
+(define known-struct-metatype-ref?
+  (|#%name|
+   known-struct-metatype-ref?
+   (lambda (v)
+     (if (known-struct-metatype-ref?_2706 v)
+       #t
+       ($value
+        (if (impersonator? v)
+          (known-struct-metatype-ref?_2706 (impersonator-val v))
+          #f))))))
+(define known-struct-metatype-ref-type-id_2431
+  (|#%name|
+   known-struct-metatype-ref-type-id
+   (record-accessor struct:known-struct-metatype-ref 0)))
+(define known-struct-metatype-ref-type-id
+  (|#%name|
+   known-struct-metatype-ref-type-id
+   (lambda (s)
+     (if (known-struct-metatype-ref?_2706 s)
+       (known-struct-metatype-ref-type-id_2431 s)
+       ($value
+        (impersonate-ref
+         known-struct-metatype-ref-type-id_2431
+         struct:known-struct-metatype-ref
+         0
+         s
+         'type-id))))))
+(define known-struct-metatype-ref-pos_2895
+  (|#%name|
+   known-struct-metatype-ref-pos
+   (record-accessor struct:known-struct-metatype-ref 1)))
+(define known-struct-metatype-ref-pos
+  (|#%name|
+   known-struct-metatype-ref-pos
+   (lambda (s)
+     (if (known-struct-metatype-ref?_2706 s)
+       (known-struct-metatype-ref-pos_2895 s)
+       ($value
+        (impersonate-ref
+         known-struct-metatype-ref-pos_2895
+         struct:known-struct-metatype-ref
+         1
+         s
+         'pos))))))
+(define finish_2113
+  (make-struct-type-install-properties
+   '(known-struct-metatype-ref/need-imports)
+   1
+   0
+   (if (struct-type? struct:known-struct-metatype-ref)
+     struct:known-struct-metatype-ref
+     (check-struct-type 'struct struct:known-struct-metatype-ref))
+   null
+   'prefab
+   #f
+   '(0)
+   #f
+   'known-struct-metatype-ref/need-imports))
+(define struct:known-struct-metatype-ref/need-imports
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
+   'known-struct-metatype-ref/need-imports
+   (if (struct-type? struct:known-struct-metatype-ref)
+     struct:known-struct-metatype-ref
+     (check-struct-type 'struct struct:known-struct-metatype-ref))
+   (structure-type-lookup-prefab-uid
+    'known-struct-metatype-ref/need-imports
+    (if (struct-type? struct:known-struct-metatype-ref)
+      struct:known-struct-metatype-ref
+      (check-struct-type 'struct struct:known-struct-metatype-ref))
+    1
+    0
+    #f
+    '(0))
+   #f
+   #f
+   '(1 . 1)
+   'make-struct-type
+   #f
+   #f
+   #f
+   'prefab))
+(define effect_2713
+  (finish_2113 struct:known-struct-metatype-ref/need-imports))
+(define known-struct-metatype-ref/need-imports
+  (|#%name|
+   known-struct-metatype-ref/need-imports
+   (record-constructor
+    (make-record-constructor-descriptor
+     struct:known-struct-metatype-ref/need-imports
+     #f
+     #f))))
+(define known-struct-metatype-ref/need-imports?_2808
+  (|#%name|
+   known-struct-metatype-ref/need-imports?
+   (record-predicate struct:known-struct-metatype-ref/need-imports)))
+(define known-struct-metatype-ref/need-imports?
+  (|#%name|
+   known-struct-metatype-ref/need-imports?
+   (lambda (v)
+     (if (known-struct-metatype-ref/need-imports?_2808 v)
+       #t
+       ($value
+        (if (impersonator? v)
+          (known-struct-metatype-ref/need-imports?_2808 (impersonator-val v))
+          #f))))))
+(define known-struct-metatype-ref/need-imports-needed_2111
+  (|#%name|
+   known-struct-metatype-ref/need-imports-needed
+   (record-accessor struct:known-struct-metatype-ref/need-imports 0)))
+(define known-struct-metatype-ref/need-imports-needed
+  (|#%name|
+   known-struct-metatype-ref/need-imports-needed
+   (lambda (s)
+     (if (known-struct-metatype-ref/need-imports?_2808 s)
+       (known-struct-metatype-ref/need-imports-needed_2111 s)
+       ($value
+        (impersonate-ref
+         known-struct-metatype-ref/need-imports-needed_2111
+         struct:known-struct-metatype-ref/need-imports
+         0
+         s
+         'needed))))))
 (define a-known-constant (known-constant))
 (define a-known-consistent (known-consistent))

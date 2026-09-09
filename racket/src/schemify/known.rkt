@@ -33,7 +33,7 @@
          known-procedure/has-unsafe/folding known-procedure/has-unsafe/folding?  ; not a subtype of `known-procedure/folding`
          known-procedure/has-unsafe/folding/limited known-procedure/has-unsafe/folding/limited?
          known-procedure/has-unsafe/folding/limited-kind
-         known-struct-type known-struct-type? known-struct-type-type known-struct-type-is-type-type?
+         known-struct-type known-struct-type? known-struct-type-type known-struct-type-is-meta?
          known-struct-type-field-count known-struct-type-pure-constructor? known-struct-type-sealed?
          known-struct-type-maybe-proc? known-struct-type-maybe-arity?
          known-constructor known-constructor? known-constructor-type
@@ -54,6 +54,8 @@
          known-field-mutator/need-imports known-field-mutator/need-imports? known-field-mutator/need-imports-needed
          known-struct-type-maker/need-imports known-struct-type-maker/need-imports? known-struct-type-maker/need-imports-needed
          known-struct-type-property/immediate-guard known-struct-type-property/immediate-guard?
+         known-struct-metatype-ref known-struct-metatype-ref? known-struct-metatype-ref-type-id known-struct-metatype-ref-pos
+         known-struct-metatype-ref/need-imports known-struct-metatype-ref/need-imports? known-struct-metatype-ref/need-imports-needed
          a-known-constant
          a-known-consistent)
 
@@ -142,7 +144,7 @@
 (struct known-procedure/has-unsafe/folding () #:prefab #:omit-define-syntaxes #:super struct:known-procedure/has-unsafe)
 (struct known-procedure/has-unsafe/folding/limited (kind) #:prefab #:omit-define-syntaxes #:super struct:known-procedure/has-unsafe/folding)
 
-(struct known-struct-type (type is-type-type? field-count pure-constructor? sealed? maybe-proc? maybe-arity?)
+(struct known-struct-type (type is-meta? field-count pure-constructor? sealed? maybe-proc? maybe-arity?)
   #:prefab #:omit-define-syntaxes #:super struct:known-consistent)
 
 ;; procedures with a known connection to a structure type:
@@ -163,6 +165,9 @@
 (struct known-struct-type-maker/need-imports (needed) #:prefab #:omit-define-syntaxes #:super struct:known-struct-type-maker)
 
 (struct known-struct-type-property/immediate-guard () #:prefab #:omit-define-syntaxes)
+
+(struct known-struct-metatype-ref (type-id pos) #:prefab #:omit-define-syntaxes #:super struct:known-procedure/pure)
+(struct known-struct-metatype-ref/need-imports (needed) #:prefab #:omit-define-syntaxes #:super struct:known-struct-metatype-ref)
 
 (define a-known-constant (known-constant))
 (define a-known-consistent (known-consistent))

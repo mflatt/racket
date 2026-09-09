@@ -15,7 +15,7 @@
          NUMBER-OF-RACKET-BASE-RTD-FIELDS
          ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)
 
-(struct struct-type-info (name is-type-type?
+(struct struct-type-info (name is-meta?
                                base-rtd ; #f, symbol, or (cons <known> <import>)
                                parent
                                immediate-field-count
@@ -139,7 +139,7 @@
                           non-prefab-imms
                           prefab-imms)
                       (or (not u-parent) (and (known-struct-type? parent-sti)
-                                              (not (known-struct-type-is-type-type? parent-sti))))
+                                              (not (known-struct-type-is-meta? parent-sti))))
                       (struct-type-info name
                                         #f
                                         (and maker (cons maker maker-im))
@@ -171,7 +171,7 @@
                                         constructor-name-expr
                                         rest)))))]
        [else #f])]
-    [`(make-struct-type-type (quote ,name) ,parent ,fields)
+    [`(make-struct-metatype (quote ,name) ,parent ,fields)
      (and (exact-nonnegative-integer? fields)
           (let ([u-parent (unwrap parent)])
             (and 
@@ -181,7 +181,7 @@
                (and
                 (or (not parent)
                     (and (known-struct-type? parent-sti)
-                         (known-struct-type-is-type-type? parent-sti)))
+                         (known-struct-type-is-meta? parent-sti)))
                 (struct-type-info name
                                   #t
                                   '|#%base-rtd|

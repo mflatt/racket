@@ -1010,6 +1010,27 @@
                            (wrap-tmp tmp-rhs (cadr args)
                                      mut))]
                 [else #f]))
+            (define (inline-metatype-ref k s-rator im args)
+              (define type-id (and (pair? args)
+                                   (pair? (cdr args))
+                                   (null? (cddr args))
+                                   (inline-type-id k im add-import! mutated imports)))
+              (cond
+                [type-id
+                 (define pos (known-struct-metatype-ref-pos k))
+                 (define tmp (maybe-tmp (car args) 'v))
+                 (define tmp-default (maybe-tmp (cadr args) 'default))
+                 (define ref
+                   `(let ([c (unsafe-object-type ,tmp)])
+                      (if (unsafe-struct? c ,(schemify type-id 'fresh))
+                          ,(if pos
+                               `(unsafe-struct*-ref c ,pos)
+                               `c)
+                          (,s-rator ,tmp ,tmp-default))))
+                 (wrap-tmp tmp (car args)
+                           (wrap-tmp tmp-default (cadr args)
+                                     ref))]
+                [else #f]))
             (or (left-left-lambda-convert rator inline-fuel)
                 (and (positive? inline-fuel)
                      (inline-rator))
@@ -1052,6 +1073,12 @@
                                 (aim? target 'system)))
                           (known-field-mutator? k)
                           (inline-field-mutate k s-rator im args))
+                     => (lambda (e) e)]
+                    [(and (not (or
+                                (aim? target 'cify)
+                                (aim? target 'system)))
+                          (known-struct-metatype-ref? k)
+                          (inline-metatype-ref k s-rator im args))
                      => (lambda (e) e)]
                     [(and unsafe-mode?
                           (known-procedure/has-unsafe? k))

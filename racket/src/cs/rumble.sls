@@ -247,13 +247,15 @@
           struct-type-property-accessor-procedure?
           struct-type-property-predicate-procedure?
           make-struct-type
-          make-struct-type-type
-          |#%make-struct-type-type|           ; not exported to Racket
+          make-struct-metatype
+          |#%make-struct-metatype|            ; not exported to Racket
           |#%make-record-type-descriptor|     ; not exported to Racket
           make-struct-type-install-properties ; not exported to Racket
           structure-type-lookup-prefab-uid    ; not exported to Racket
           make-struct-field-accessor
           make-struct-field-mutator
+          make-struct-field-metaaccessor
+          make-struct-metaaccessor
           struct-type-constructor-add-guards ; not exported to Racket
           |#%base-rtd| ; not exported to Racket
           |#%racket-base-rtd| ; not exported to Racket
@@ -270,10 +272,11 @@
           struct-predicate-procedure?
           struct-accessor-procedure?
           struct-mutator-procedure?
+          struct-metaaccessor-procedure?
           struct?
           struct-type?
           procedure-struct-type?
-          struct-type-type?
+          struct-metatype?
           struct-type-info
           struct-type-sealed?
           struct-type-authentic?
@@ -820,6 +823,7 @@
           unsafe-struct*-set!
           unsafe-struct*-cas!
           unsafe-struct*-type
+          unsafe-object-type
           unsafe-struct?        ; not exported to racket
           unsafe-sealed-struct? ; not exported to racket
           unsafe-struct         ; not exported to racket

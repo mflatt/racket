@@ -252,8 +252,8 @@
                                           props insp proc-spec immutables guard constructor-name
                                           system?)
   (check who symbol? name)
-  (check who (lambda (v) (or (not v) (and (struct-type? v) (not (struct-type-type? v)))))
-         :contract "(or/c (and/c struct-type? (not/c struct-type-type?)) #f)"
+  (check who (lambda (v) (or (not v) (and (struct-type? v) (not (struct-metatype? v)))))
+         :contract "(or/c (and/c struct-type? (not/c struct-metatype?)) #f)"
          parent-rtd)
   (check who exact-nonnegative-integer? init-count)
   (check who exact-nonnegative-integer? auto-count)
@@ -638,8 +638,8 @@
 (define (|#%struct-predicate| p)
   (make-wrapper-procedure p 2 #\p))
 
-(define (|#%struct-field-accessor| p rtd pos)
-  (make-wrapper-procedure p 2 (cons rtd pos)))
+(define (|#%struct-field-accessor| p rtd pos meta?)
+  (make-wrapper-procedure p (if meta? 4 2) (cons rtd pos)))
 
 (define (|#%struct-field-mutator| p rtd pos)
   (make-wrapper-procedure p 4 (cons pos rtd)))
@@ -667,6 +667,10 @@
              (let ([d (wrapper-procedure-data v)])
                (and (pair? d)
                     (record-type-descriptor? (car d))))))))
+
+(define (struct-metaaccessor-procedure? v)
+  (and (position-based-accessor? v)
+       (struct-metatype? (position-based-accessor-rtd v))))
 
 (define (struct-mutator-procedure? v)
   (let ([v (strip-impersonator v)])
@@ -864,9 +868,9 @@
               (make-position-based-accessor rtd parent-total*-count (+ init-count auto-count))
               (make-position-based-mutator rtd parent-total*-count (+ init-count auto-count))))))
 
-(define/who (make-struct-type-type name parent-rtd rtd-field-count)
+(define/who (make-struct-metatype name parent-rtd rtd-field-count)
   (check who symbol? name)
-  (check who struct-type-type? :or-false parent-rtd)
+  (check who struct-metatype? :or-false parent-rtd)
   (unless (exact-nonnegative-integer? rtd-field-count)
     (raise-argument-error who "exact-nonnegative-integer?" rtd-field-count))
   (let ([parent-rtd* (or parent-rtd |#%racket-base-rtd|)])
@@ -883,26 +887,23 @@
                         '()
                         (cons `(immutable field)
                               (loop (- rtd-field-count 1))))))
-                 'make-struct-type-type)]
+                 'make-struct-metatype)]
            [pred (procedure-rename
-                  (lambda (v)
-                    (or (record? v rtd)
-                        (and (impersonator? v)
-                             (record? (impersonator-val v) rtd))))
+                  (lambda (v) (record? v rtd))
                   (string->symbol (string-append (symbol->string name) "?")))])
       ;; result `rtd` is counter as authentic by `authentic?`
       (values
        rtd
-       (|#%make-struct-type-type| rtd name (+ (- (#%$record-type-field-count parent-rtd*)
-                                                 NUMBER-OF-RACKET-BASE-RTD-FIELDS)
-                                              rtd-field-count))
+       (|#%make-struct-metatype| rtd name (+ (- (#%$record-type-field-count parent-rtd*)
+                                                NUMBER-OF-RACKET-BASE-RTD-FIELDS)
+                                             rtd-field-count))
        (|#%struct-predicate| pred)
        (make-position-based-accessor rtd (#%$record-type-field-count parent-rtd*) rtd-field-count)))))
 
-(define (struct-type-type? v)
+(define (struct-metatype? v)
   (record? v |#%racket-type-base-rtd|))
 
-(define (|#%make-struct-type-type| rtd rtd-name rtd-field-count)
+(define (|#%make-struct-metatype| rtd rtd-name rtd-field-count)
   (procedure-reduce-arity-mask
    (lambda (name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name . args)
      (do-make-struct-type rtd
@@ -1020,36 +1021,7 @@
 (define/who make-struct-field-accessor
   (case-lambda
    [(pba pos name contract realm)
-    (check who position-based-accessor?
-           :contract "(and/c struct-accessor-procedure? (procedure-arity-includes/c 2))"
-           pba)
-    (check who exact-nonnegative-integer? pos)
-    (check who symbol? :or-false name)
-    (check who (lambda (x) (or (symbol? x) (string? x) (not x)))
-           :contract "(or/c symbol? string? #f)"
-           contract)
-    (check who symbol? realm)
-    (let ([rtd (position-based-accessor-rtd pba)])
-      (check-accessor-or-mutator-index who rtd pos)
-      (let* ([p (record-field-accessor rtd
-                                       (+ pos (position-based-accessor-offset pba)))]
-             [rec-name (record-type-name rtd)]
-             [proc-name (if (and contract name)
-                            name
-                            (if name
-                                (make-struct-accessor-name rec-name name)
-                                'accessor))]
-             [field/proc-name (if contract proc-name name)]
-             [wrap-p
-              (procedure-rename
-                (lambda (v)
-                  ($value
-                   (if (record? v rtd)
-                       (p v)
-                       (impersonate-ref p rtd pos v field/proc-name contract realm))))
-                proc-name
-                realm)])
-        (|#%struct-field-accessor| wrap-p rtd pos)))]
+    (do-make-struct-field-accessor who pba pos name contract realm #f)]
    [(pba pos name contract)
     (make-struct-field-accessor pba pos name contract default-realm)]
    [(pba pos name)
@@ -1060,6 +1032,75 @@
                                                       (number->string pos)
                                                       "")))])
       (make-struct-field-accessor pba pos name #f default-realm))]))
+
+(define/who make-struct-field-metaaccessor
+  (case-lambda
+   [(pba pos name contract realm)
+    (do-make-struct-field-accessor who pba pos name contract realm #t)]
+   [(pba pos name contract)
+    (make-struct-field-metaaccessor pba pos name contract default-realm)]
+   [(pba pos name)
+    (make-struct-field-metaaccessor pba pos name #f default-realm)]
+   [(pba pos)
+    (let ([name (string->symbol
+                 (string-append-immutable "field" (if (exact-nonnegative-integer? pos)
+                                                      (number->string pos)
+                                                      "")))])
+      (make-struct-field-metaaccessor pba pos name #f default-realm))]))
+
+(define (do-make-struct-field-accessor who pba pos name contract realm meta?)
+  (if meta?
+      (check who (lambda (v) (and (position-based-accessor? v)
+                                  (struct-metatype? (position-based-accessor-rtd v))))
+             :contract "(and/c struct-metaaccessor-procedure? (procedure-arity-includes/c 2))"
+             pba)
+      (check who position-based-accessor?
+             :contract "(and/c struct-accessor-procedure? (procedure-arity-includes/c 2))"
+             pba))
+  (check who exact-nonnegative-integer? pos)
+  (check who symbol? :or-false name)
+  (check who (lambda (x) (or (symbol? x) (string? x) (not x)))
+         :contract "(or/c symbol? string? #f)"
+         contract)
+  (check who symbol? realm)
+  (let ([rtd (position-based-accessor-rtd pba)])
+    (check-accessor-or-mutator-index who rtd pos)
+    (let* ([p (record-field-accessor rtd
+                                     (+ pos (position-based-accessor-offset pba)))]
+           [rec-name (record-type-name rtd)]
+           [proc-name (if (and contract name)
+                          name
+                          (if name
+                              (make-struct-accessor-name rec-name name)
+                              'accessor))]
+           [field/proc-name (if contract proc-name name)]
+           [wrap-p
+            (procedure-rename
+             (if meta?
+                 (lambda (v default)
+                   (let ([v (unsafe-object-type (strip-impersonator v))])
+                     (if (record? v rtd)
+                         (p v)
+                         default)))
+                 (lambda (v)
+                   ($value
+                    (if (record? v rtd)
+                        (p v)
+                        (impersonate-ref p rtd pos v field/proc-name contract realm)))))
+             proc-name
+             realm)])
+      (|#%struct-field-accessor| wrap-p rtd pos meta?))))
+
+(define/who (make-struct-metaaccessor rtd)
+  (check who struct-metatype? rtd)
+  (lambda (o default)
+    (let ([o (strip-impersonator o)])
+      (if (#%record? o)
+          (let ([c (#%$record-type-descriptor o)])
+            (if (record? c rtd)
+                c
+                default))
+          default))))
 
 (define/who make-struct-field-mutator
   (case-lambda
@@ -1440,6 +1481,8 @@
 (define (unsafe-sealed-struct? v r)
   (#3%$sealed-record? v r))
 (define (unsafe-struct*-type s)
+  (#%$record-type-descriptor s))
+(define (unsafe-object-type s)
   (and (#3%$record? s)
        (#%$record-type-descriptor s)))
 
@@ -1519,7 +1562,7 @@
 (define (authentic? v)
   (cond
     [(record-type-descriptor? v)
-     ;; must be a structure type from `make-struct-type-type`
+     ;; must be a structure type from `make-struct-metatype`
      #t]
     [else
      (struct-property-ref prop:authentic (record-rtd v) #f)]))
@@ -1728,7 +1771,8 @@
                              (name-field v)
                              (pariah (impersonate-ref name-field struct:name field-index v 'field #f primitive-realm)))))
                       struct:name
-                      field-index)))
+                      field-index
+                      #f)))
                  ...))))])))
 
 (define-syntax define-struct
