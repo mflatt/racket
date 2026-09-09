@@ -583,7 +583,7 @@
   [make-struct-field-metaaccessor (known-procedure/single-valued 4)]
   [make-struct-field-mutator (known-procedure/single-valued 60)]
   [make-struct-type-metaaccessor (known-procedure/no-prompt 2)]
-  [make-struct-metatype (known-procedure 8)]
+  [make-struct-metatype (known-procedure 24)]
   [make-struct-type (known-procedure 4080)]
   [make-struct-type-property (known-procedure 254)]
   [make-thread-cell (known-procedure/allocates 6)]

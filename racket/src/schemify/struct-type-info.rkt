@@ -21,7 +21,7 @@
                                immediate-field-count
                                field-count
                                pure-constructor?
-                               authentic?
+                               authentic? ; can be 'auto-authentic
                                sealed?
                                maybe-proc?
                                maybe-arity?
@@ -154,7 +154,10 @@
                                              (or ((length rest) . < . 5)
                                                  (not (unwrap (list-ref rest 4))))
                                              (not (includes-property? 'prop:chaperone-unsafe-undefined)))
-                                        (includes-property? 'prop:authentic)
+                                        (or (and maker
+                                                 (known-struct-type-maker-auto-authentic? maker)
+                                                 'auto-authentic)
+                                            (includes-property? 'prop:authentic))
                                         (includes-property? 'prop:sealed)
                                         (not (and (or (not parent-sti)
                                                       (not (known-struct-type-maybe-proc? parent-sti)))
@@ -171,8 +174,9 @@
                                         constructor-name-expr
                                         rest)))))]
        [else #f])]
-    [`(make-struct-metatype (quote ,name) ,parent ,fields)
+    [`(make-struct-metatype (quote ,name) ,parent ,fields . ,more)
      (and (exact-nonnegative-integer? fields)
+          ((length more) . <= . 1)
           (let ([u-parent (unwrap parent)])
             (and 
              (or (not u-parent)
@@ -192,14 +196,21 @@
                                                 (known-struct-type-field-count parent-sti)
                                                 NUMBER-OF-RACKET-BASE-RTD-FIELDS))
                                   #t ; pure constructor
-                                  #t ; authentic
+                                  (match more
+                                    [`() #t]
+                                    [`(#f) #f]
+                                    [`('metaauthentic) #t]
+                                    [`('authentic) 'auto-authentic]
+                                    [`,_ #f])
                                   #f ; sealed
                                   #f ; maybe-proc?
                                   #f ; maybe-arity?
                                   #f ; not prefab
                                   (for/list ([i (in-range fields)]) #t) ; all immutable
                                   #f
-                                  null))))))]
+                                  (if (null? more)
+                                      '('metaauthentic)
+                                      more)))))))]
     [`,_ #f]))
 
 ;; Check the degree to which `e` has the shape of a property list,

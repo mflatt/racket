@@ -332,12 +332,12 @@ instance of a structure type that might have subtypes.
 
 @defproc[(make-struct-metatype [name symbol?]
                                [super-metatype (or/c struct-metatype? #f)]
-                               [init-field-cnt exact-nonnegative-integer?])
+                               [init-field-cnt exact-nonnegative-integer?]
+                               [authenticity (or/c #f 'metaauthentic 'authentic) 'metaauthentic])
          (values
           struct-type?
           (procedure-arity-includes/c (+ 11 init-field-cnt))
           struct-predicate-procedure?
-          procedure?
           (and/c struct-metaaccessor-procedure?
                  struct-accessor-procedure?
                  (procedure-arity-includes/c 2)))]{
@@ -359,14 +359,22 @@ The result is four values:
  @racket[super-metatype].
 
  The @racket[_metastruct:name] result also counts as a structure type,
- but it is instantiated only as other structure types.}
+ but it is instantiated only as other structure types.
+
+ If @racket[authenticity] is @racket['metaauthentic] or @racket['authentic],
+ then @racket[_metastruct:name] is created with @racket[prop:authentic].
+ If @racket[super-metatype] is provided, it must have the same authenticity.}
 
  @item{@racket[_make-name-type]: A procedure like @racket[make-struct-type], but all
  arguments of @racket[make-struct-type] are required for
  @racket[_make-name-type], and @racket[_make-name-type] requires
  @racket[init-field-cnt] additional arguments. If @racket[super-metatype],
  it contributes additional required arguments before the
- @racket[init-field-cnt] additional arguments.}
+ @racket[init-field-cnt] additional arguments.
+
+ If @racket[authenticity] is @racket['authentic], then every structure
+ type created by @racket[_make-name-type] has
+ @racket[prop:authentic].}
 
  @item{@racket[_name?]: A predicate to recognize structure types
  produced by @racket[_make-name-type] or a submetatype's maker.}
@@ -380,6 +388,12 @@ The result is four values:
  @racket[make-struct-field-accessor]. The accessor's argument
  can be any @racket[_metastruct:name], including structure types
  produced via makers of a submetatypes.
+
+ The @racket[_name-ref] procedure can be provided to
+ @racket[chaperone-struct] to interpose on extraction of an instance's
+ structure type, as long as @racket[authenticity] is not
+ @racket['authentic] and the instance's strcuture type is itself of an
+ instance of @racket[_metastruct:name].
 
  See also @racket[make-struct-field-metaaccessor] and
  @racket[make-struct-type-accessor].}
@@ -420,12 +434,6 @@ however, due to the single-inheretance nature of metatypes.
 (eq? ((make-struct-type-metaaccessor klass-type-ref) p 'oops)
      struct:posn)
 ]
-
-@history[#:added "9.3.0.6"]}
-
-@defproc[(struct-metatype? [v any/c]) boolean?]{Returns @racket[#t] if
- @racket[v] is a @tech{structure metatype} value created via
- @racket[make-struct-metatype], @racket[#f] otherwise.
 
 @history[#:added "9.3.0.6"]}
 

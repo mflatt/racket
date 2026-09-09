@@ -3128,10 +3128,10 @@
          0
          s
          'needed))))))
-(define finish_2984
+(define finish_2275
   (make-struct-type-install-properties
    '(known-struct-type-maker)
-   2
+   3
    0
    (if (struct-type? struct:known-procedure)
      struct:known-procedure
@@ -3139,7 +3139,7 @@
    null
    'prefab
    #f
-   '(0 1)
+   '(0 1 2)
    #f
    'known-struct-type-maker))
 (define struct:known-struct-type-maker
@@ -3154,19 +3154,19 @@
     (if (struct-type? struct:known-procedure)
       struct:known-procedure
       (check-struct-type 'struct struct:known-procedure))
-    2
+    3
     0
     #f
-    '(0 1))
+    '(0 1 2))
    #f
    #f
-   '(2 . 3)
+   '(3 . 7)
    'make-struct-type
    #f
    #f
    #f
    'prefab))
-(define effect_2428 (finish_2984 struct:known-struct-type-maker))
+(define effect_2428 (finish_2275 struct:known-struct-type-maker))
 (define known-struct-type-maker
   (|#%name|
    known-struct-type-maker
@@ -3223,6 +3223,23 @@
          1
          s
          'field-count))))))
+(define known-struct-type-maker-auto-authentic?_2576
+  (|#%name|
+   known-struct-type-maker-auto-authentic?
+   (record-accessor struct:known-struct-type-maker 2)))
+(define known-struct-type-maker-auto-authentic?
+  (|#%name|
+   known-struct-type-maker-auto-authentic?
+   (lambda (s)
+     (if (known-struct-type-maker?_2195 s)
+       (known-struct-type-maker-auto-authentic?_2576 s)
+       ($value
+        (impersonate-ref
+         known-struct-type-maker-auto-authentic?_2576
+         struct:known-struct-type-maker
+         2
+         s
+         'auto-authentic?))))))
 (define finish_3037
   (make-struct-type-install-properties
    '(known-struct-type-maker/need-imports)

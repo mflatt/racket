@@ -104,7 +104,9 @@
                           (define-values (done) (z))
                           (define-values (call) (lambda () (values 'c1 'c2)))
                           (define-values (c1 c2) (call))
-                          (define-values (struct:class-struct-type make-class-struct-type class-struct-type? class-type-ref class-struct-type-ref)
+                          (define-values (struct:class-struct-type make-class-struct-type class-struct-type?
+                                                                   class-type-ref
+                                                                   class-struct-type-ref)
                             (let-values ([(-struct:class-struct-type -make-class-struct-type -class-struct-type? -class-struct-type-ref)
                                           (make-struct-metatype 'class #f 1)])
                               (values -struct:class-struct-type -make-class-struct-type -class-struct-type?
@@ -120,11 +122,15 @@
                             (lambda (o)
                               (list (class-struct-type? o)
                                     (class-struct-type-ref o))))
-                          (define-values (struct:class2-struct-type make-class2-struct-type class2-struct-type? class2-type-ref
-                                                                    class2-struct-type-ref class2-struct-type-metaref)
+                          (define-values (struct:class2-struct-type make-class2-struct-type class2-struct-type?
+                                                                    exposed-class2-struct-type-ref
+                                                                    class2-type-ref
+                                                                    class2-struct-type-ref
+                                                                    class2-struct-type-metaref)
                             (let-values ([(-struct:class2-struct-type -make-class2-struct-type -class2-struct-type? -class2-struct-type-ref)
-                                          (make-struct-metatype 'class2 struct:class-struct-type 2)])
+                                          (make-struct-metatype 'class2 struct:class-struct-type 2 'authentic)])
                               (values -struct:class2-struct-type -make-class2-struct-type -class2-struct-type?
+                                      -class2-struct-type-ref
                                       (make-struct-type-metaaccessor -class2-struct-type-ref)
                                       (make-struct-field-accessor -class2-struct-type-ref 1)
                                       (make-struct-field-metaaccessor -class2-struct-type-ref 1))))

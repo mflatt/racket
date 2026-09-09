@@ -592,6 +592,7 @@
                                                     "a structure type, accessor, or mutator acts as a witness\n"
                                                     "   that the given value's representation can be chaperoned or impersonated")
                                      "given value" v))
+            (#%printf "~s ~s\n" val (authentic? val))
             (when (and (authentic? val)
                        (not (authentic-override? v)))
               (raise-arguments-error who
@@ -640,7 +641,11 @@
                   saw-props
                   witnessed?
                   (add-impersonator-properties who args iprops))]
-           [(struct-accessor-procedure? (car args))
+           [(and (struct-accessor-procedure? (car args))
+                 ;; defer metaacessor to later case if it does not apply
+                 ;; here as an accessor directly on a structure type
+                 (or (not (struct-metaaccessor-procedure? (car args)))
+                     (record? val (position-based-accessor-rtd (car args)))))
             (let* ([orig-proc (car args)]
                    [key-proc (strip-impersonator orig-proc)]
                    [rtd+pos (struct-accessor-procedure-rtd+pos key-proc)])
@@ -675,6 +680,19 @@
                         orig-proc key-proc #f
                         ((struct-type-property-accessor-procedure-pred key-proc) val)
                         #t))]
+           [(and as-chaperone?
+                 (struct-metaaccessor-procedure? (car args)))
+            (let ([pba (car args)])
+              (get-proc "metaccessor" args 2
+                        unsafe-object-type pba #f
+                        (record? (unsafe-object-type val) (position-based-accessor-rtd pba))
+                        #t))]
+           [(and as-chaperone?
+                 (eq? unsafe-object-type (car args)))
+            (get-proc "struct-info procedure" args 2
+                      unsafe-object-type unsafe-object-type #f
+                      #t
+                      #f)]
            [(and as-chaperone?
                  (equal? struct-info (car args)))
             (get-proc "struct-info procedure" args 2

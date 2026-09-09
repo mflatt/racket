@@ -267,6 +267,7 @@
           |#%nongenerative-uid| ; not exported to Racket
           |#%struct-ref-error| ; not exported to Racket
           |#%struct-set!-error| ; not exported to Racket
+          |#%make-position-based-accessor| ; not exported to Racket
           struct-property-set!  ; not exported to Racket
           struct-constructor-procedure?
           struct-predicate-procedure?

@@ -330,6 +330,7 @@
         (known-struct-type-maker/need-imports (known-procedure-arity-mask k)
                                               (known-struct-type-maker-base-rtd k)
                                               (known-struct-type-maker-field-count k)
+                                              (known-struct-type-maker-auto-authentic? k)
                                               (needed->list needed))]
        [else
         (known-procedure (known-procedure-arity-mask k))])]

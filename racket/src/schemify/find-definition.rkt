@@ -42,18 +42,19 @@
          [else (nothing)]))
      (match `(,ids ,new-rhs)
        [`((,struct:st ,maker ,st? ,st-refs ...)
-          (let-values (((,struct: ,make ,? ,-ref) (make-struct-metatype ,name ,parent ,n)))
+          (let-values (((,struct: ,make ,? ,-ref) (make-struct-metatype ,name ,parent ,n . ,more)))
             (values ,struct:2
                     ,make2
                     ,?2
                     ,make-accs ...)))
         (cond
           [(and (exact-nonnegative-integer? n)
+                ((length more) . <= . 1)
                 (wrap-eq? struct: struct:2)
                 (wrap-eq? make make2)
                 (wrap-eq? ? ?2)
                 (= (length make-accs) (length st-refs))
-                (make-struct-type-info `(make-struct-metatype ,name ,parent ,n) prim-knowns knowns imports mutated))
+                (make-struct-type-info `(make-struct-metatype ,name ,parent ,n . ,more) prim-knowns knowns imports mutated))
            => (lambda (sti)
                 (define type (string->uninterned-symbol (symbol->string (unwrap maker))))
                 (define authentic? #t)
@@ -74,7 +75,10 @@
                         [knowns (hash-set knowns (unwrap maker)
                                           (known-struct-type-maker (arithmetic-shift 1 (+ 11 (struct-type-info-field-count sti)))
                                                                    struct:st
-                                                                   (unwrap n)))]
+                                                                   (unwrap n)
+                                                                   (match more
+                                                                     [`('authentic) #t]
+                                                                     [`,_ #f])))]
                         [knowns (for/fold ([knowns knowns]) ([make-acc (in-list make-accs)]
                                                              [st-ref (in-list st-refs)])
                                   (match make-acc

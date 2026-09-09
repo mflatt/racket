@@ -28,7 +28,7 @@
    '#{struct-type icw1nrrg1rjuf16733snprjoz-1}
    #f ; sealed?
    #t ; opaque?
-   '#()))
+   '#((immutable authenticity))))
 
 (define NUMBER-OF-BASE-RTD-FIELDS (#%$record-type-field-count #!base-rtd))
 (define NUMBER-OF-RACKET-BASE-RTD-FIELDS (#%$record-type-field-count |#%racket-base-rtd|))
@@ -40,6 +40,8 @@
 (define racket-rtd-arity (record-accessor |#%racket-base-rtd| 1))
 (define racket-rtd-props (record-accessor |#%racket-base-rtd| 2))
 (define racket-rtd-insp (record-accessor |#%racket-base-rtd| 3))
+
+(define racket-type-rtd-authenticity (record-accessor |#%racket-type-base-rtd| 0))
 
 (define-syntax (define-racket-record-type stx)
   (syntax-case stx (fields nongenerative)

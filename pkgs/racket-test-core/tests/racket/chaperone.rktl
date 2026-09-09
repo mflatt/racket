@@ -3004,6 +3004,36 @@
 ;; ----------------------------------------
 
 (let ()
+  (define-values (struct:klass make-klass klass? klass-ref) (make-struct-metatype 'klass #f 2))
+  (define klass-one (make-struct-field-accessor klass-ref 0 'one-ref))
+  (define klass-two (make-struct-field-accessor klass-ref 1 'two-ref))
+  (define klass-meta-one (make-struct-field-metaaccessor klass-ref 0))
+  (define klass-meta-two (make-struct-field-metaaccessor klass-ref 1))  
+  (define-values (s:b make-b b? b-ref b-set!) (make-klass 'b #f 2 0 #f null #f #f '(1) #f #f (box 'One) (box 'Two)))
+  (define b (make-b 1 2))
+
+  (define chap-s:b (chaperone-struct s:b klass-one (lambda (s bx) (chaperone-box bx (lambda (b v) v) (lambda (b v) v)))))
+
+  (test #t chaperone-of? chap-s:b s:b)
+  (test #t chaperone-of? (klass-one chap-s:b) (klass-one s:b))
+  (test #f eq? (klass-one chap-s:b) (klass-one s:b))
+  (test #t eq? (klass-two chap-s:b) (klass-two s:b))
+
+  (define chap-b (chaperone-struct b klass-ref
+                                   (lambda (o s:t)
+                                     (chaperone-struct s:t klass-two (lambda (s bx) (chaperone-box bx (lambda (b v) v) (lambda (b v) v)))))))
+  (test #t chaperone-of? chap-b b)
+  (test #t chaperone-of? (klass-meta-two chap-b 'no1) (klass-meta-two b 'no2))
+  (test #t eq? (klass-meta-one chap-b) (klass-meta-one b))
+  (test #f eq? (klass-meta-two chap-b) (klass-meta-two b))
+
+  (void))
+
+(exit)
+
+;; ----------------------------------------
+
+(let ()
   (define f1 (λ (k) k))
   (define f2 (λ (#:key k) k))
   (define f3 (λ (#:key [k 0]) k))

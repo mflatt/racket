@@ -250,7 +250,7 @@
 ;; returns a procedure that takes an rtd and finishes creating/installing it
 (define (check-make-struct-type-arguments who name parent-rtd init-count auto-count
                                           props insp proc-spec immutables guard constructor-name
-                                          system?)
+                                          system? auto-authentic?)
   (check who symbol? name)
   (check who (lambda (v) (or (not v) (and (struct-type? v) (not (struct-metatype? v)))))
          :contract "(or/c (and/c struct-type? (not/c struct-metatype?)) #f)"
@@ -316,7 +316,7 @@
                                                        props
                                                        proc-spec
                                                        (cond
-                                                         [(or guard (positive? auto-count) parent-rtd*)
+                                                         [(or guard (positive? auto-count) parent-rtd* auto-authentic?)
                                                           (make-eq-hashtable)]
                                                          [else empty-props-table]))])
          (let ([install-table? (not system?)])
@@ -366,6 +366,9 @@
                         [(null? props)
                          (when proc-spec
                            (check-and-add-property who prop:procedure proc-spec rtd props-table '()
+                                                   get-struct-info))
+                         (when auto-authentic?
+                           (check-and-add-property who prop:authentic #f rtd props-table '()
                                                    get-struct-info))]
                         [else
                          (loop (check-and-add-property who (caar props) (cdar props) rtd props-table (cdr props)
@@ -582,7 +585,8 @@
    [(name init-count auto-count parent-rtd props insp proc-spec immutables guard constructor-name)
     ;; returns a finishing procedure
     (check-make-struct-type-arguments 'make-struct-type (if (pair? name) (car name) name) parent-rtd init-count auto-count
-                                      props insp proc-spec immutables guard constructor-name (pair? name))]))
+                                      props insp proc-spec immutables guard constructor-name
+                                      (pair? name) (and (pair? name) (not (cdr name))))]))
 
 ;; ----------------------------------------
 
@@ -605,6 +609,8 @@
           (immutable offset)
           (immutable field-count)]
   [procedure 'position-based-mutator])
+
+(define |#%make-position-based-accessor| make-position-based-accessor)
 
 (define (position-based-accessor-name f)
   (let ([rtd (position-based-accessor-rtd f)])
@@ -785,13 +791,13 @@
     [(name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name)
      (do-make-struct-type |#%racket-base-rtd|
                           name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
-                          '())]))
+                          #f '())]))
 
 (define (do-make-struct-type base-rtd
                              name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
-                             more)
+                             auth-authentic? more)
   (let* ([finish! (check-make-struct-type-arguments 'make-struct-type name parent-rtd init-count auto-count
-                                                    props insp proc-spec immutables guard constructor-name #f)]
+                                                    props insp proc-spec immutables guard constructor-name #f auth-authentic?)]
          [prefab-uid (and (eq? insp 'prefab)
                           (structure-type-lookup-prefab-uid name parent-rtd init-count auto-count auto-val immutables))]
          [parent-rtd* (strip-impersonator parent-rtd)]
@@ -868,47 +874,61 @@
               (make-position-based-accessor rtd parent-total*-count (+ init-count auto-count))
               (make-position-based-mutator rtd parent-total*-count (+ init-count auto-count))))))
 
-(define/who (make-struct-metatype name parent-rtd rtd-field-count)
-  (check who symbol? name)
-  (check who struct-metatype? :or-false parent-rtd)
-  (unless (exact-nonnegative-integer? rtd-field-count)
-    (raise-argument-error who "exact-nonnegative-integer?" rtd-field-count))
-  (let ([parent-rtd* (or parent-rtd |#%racket-base-rtd|)])
-    (let* ([rtd (#%$make-record-type-descriptor
-                 |#%racket-type-base-rtd|
-                 name
-                 parent-rtd*
-                 #f ; uid
-                 #f ; sealed?
-                 #t ; opaque?
-                 (list->vector
-                  (let loop ([rtd-field-count rtd-field-count])
-                    (if (zero? rtd-field-count)
-                        '()
-                        (cons `(immutable field)
-                              (loop (- rtd-field-count 1))))))
-                 'make-struct-metatype)]
-           [pred (procedure-rename
-                  (lambda (v) (record? v rtd))
-                  (string->symbol (string-append (symbol->string name) "?")))])
-      ;; result `rtd` is counter as authentic by `authentic?`
-      (values
-       rtd
-       (|#%make-struct-metatype| rtd name (+ (- (#%$record-type-field-count parent-rtd*)
-                                                NUMBER-OF-RACKET-BASE-RTD-FIELDS)
-                                             rtd-field-count))
-       (|#%struct-predicate| pred)
-       (make-position-based-accessor rtd (#%$record-type-field-count parent-rtd*) rtd-field-count)))))
+(define/who make-struct-metatype
+  (case-lambda
+   [(name parent-rtd rtd-field-count)
+    (make-struct-metatype name parent-rtd rtd-field-count 'metaauthentic)]
+   [(name parent-rtd rtd-field-count authenticity)
+    (check who symbol? name)
+    (check who struct-metatype? :or-false parent-rtd)
+    (check who exact-nonnegative-integer? rtd-field-count)
+    (check who (lambda (v) (#%memq v '(#f metaauthentic authentic)))
+           :contract "(or/c #f 'metaauthentic 'authentic)"
+           authenticity)
+    (let ([parent-rtd* (or (strip-impersonator parent-rtd) |#%racket-base-rtd|)])
+      (when parent-rtd
+        (unless (eq? authenticity (racket-type-rtd-authenticity parent-rtd*))
+          (raise-arguments-error who
+                                 "inconsistent authenticity with supermetatype"
+                                 "metatype name" name
+                                 "supermetatype" parent-rtd)))
+      (let* ([rtd (#%$make-record-type-descriptor
+                   |#%racket-type-base-rtd|
+                   name
+                   parent-rtd*
+                   #f ; uid
+                   #f ; sealed?
+                   #t ; opaque?
+                   (list->vector
+                    (let loop ([rtd-field-count rtd-field-count])
+                      (if (zero? rtd-field-count)
+                          '()
+                          (cons `(immutable field)
+                                (loop (- rtd-field-count 1))))))
+                   'make-struct-metatype
+                   authenticity)]
+             [pred (procedure-rename
+                    (lambda (v) (record? v rtd))
+                    (string->symbol (string-append (symbol->string name) "?")))])
+        (values
+         rtd
+         (|#%make-struct-metatype|
+          rtd name
+          (+ (- (#%$record-type-field-count parent-rtd*)
+                NUMBER-OF-RACKET-BASE-RTD-FIELDS)
+             rtd-field-count))
+         (|#%struct-predicate| pred)
+         (make-position-based-accessor rtd (#%$record-type-field-count parent-rtd*) rtd-field-count))))]))
 
 (define (struct-metatype? v)
-  (record? v |#%racket-type-base-rtd|))
+  (record? (strip-impersonator v) |#%racket-type-base-rtd|))
 
 (define (|#%make-struct-metatype| rtd rtd-name rtd-field-count)
   (procedure-reduce-arity-mask
    (lambda (name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name . args)
      (do-make-struct-type rtd
                           name parent-rtd init-count auto-count auto-val props insp proc-spec immutables guard constructor-name
-                          args))
+                          (eq? (racket-type-rtd-authenticity rtd) 'authentic) args))
    (bitwise-arithmetic-shift-left 1 (+ 11 rtd-field-count))
    (string->symbol (string-append "make-" (#%symbol->string rtd-name) "-struct-type"))))
 
@@ -1070,21 +1090,26 @@
     (let ([p (record-field-accessor rtd
                                     (+ pos (position-based-accessor-offset pba)))])
       (lambda (v default)
-        (let ([v (unsafe-object-type (strip-impersonator v))])
-          (if (record? v rtd)
-              (p v)
-              default))))))
+        (let ([c (if (impersonator? v)
+                     (impersonate-ref pba rtd 0 v #f)
+                     (unsafe-object-type v))])
+          (if (impersonator? c)
+              (if (record? (strip-impersonator c) rtd)
+                  (impersonate-ref p rtd pos c #f)
+                  default)
+              (if (record? c rtd)
+                  (p c)
+                  default)))))))
     
 (define/who (make-struct-type-metaaccessor pba)
   (check who struct-metaaccessor-procedure? pba)
   (let ([rtd (position-based-accessor-rtd pba)])
     (lambda (o default)
-      (let ([o (strip-impersonator o)])
-        (if (#%record? o)
-            (let ([c (#%$record-type-descriptor o)])
-              (if (record? c rtd)
-                  c
-                  default))
+      (let ([c (if (impersonator? o)
+                   (impersonate-ref unsafe-object-type rtd 0 o #f)
+                   (unsafe-object-type o))])
+        (if (record? (strip-impersonator c) rtd)
+            c
             default)))))
 
 (define/who make-struct-field-mutator
@@ -1546,9 +1571,8 @@
 ;; `v` is known to be a record with an exposed accessor, mutator, or structure type
 (define (authentic? v)
   (cond
-    [(record-type-descriptor? v)
-     ;; must be a structure type from `make-struct-metatype`
-     #t]
+    [(record? v |#%racket-type-base-rtd|)
+     (and (racket-type-rtd-authenticity v) #t)]
     [else
      (struct-property-ref prop:authentic (record-rtd v) #f)]))
 

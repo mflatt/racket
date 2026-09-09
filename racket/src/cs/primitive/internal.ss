@@ -19,6 +19,7 @@
   [|#%struct-predicate| (known-constant)]
   [|#%struct-field-accessor| (known-constant)]
   [|#%struct-field-mutator| (known-constant)]
+  [|#%make-position-based-accessor| (known-constant)]
   [|#%nongenerative-uid| (known-constant)]
   [make-record-type-descriptor (known-constant)]
   [|#%make-record-type-descriptor| (known-constant)]

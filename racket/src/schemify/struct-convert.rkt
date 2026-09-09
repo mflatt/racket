@@ -76,7 +76,8 @@
                          [`(make-struct-type-metaaccessor ,ref-id)
                           (and make-meta?
                                (wrap-eq? ref-id -ref))]
-                         [`,_ #f]))
+                         [`,e
+                          (wrap-eq? e -ref)]))
                      (make-struct-type-info mk prim-knowns knowns imports mutated)))
      (cond
        [(and sti
@@ -84,7 +85,8 @@
              (for/and ([make-acc/mut (in-list make-acc/muts)])
                (match (unwrap-let make-acc/mut)
                  [`(make-struct-type-metaaccessor . ,_) #t]
-                 [`(,_ ,_ ,pos . ,_) (pos . < . (struct-type-info-immediate-field-count sti))]))
+                 [`(,_ ,_ ,pos . ,_) (pos . < . (struct-type-info-immediate-field-count sti))]
+                 [`,_ #t]))
              ;; make sure `struct:` isn't used too early, since we're
              ;; reordering it's definition with respect to some arguments
              ;; of `make-struct-type`:
@@ -101,18 +103,27 @@
         (define system-opaque? (and (aim? target 'system)
                                     (or (not exports)
                                         (eq? 'no (hash-ref exports (unwrap struct:s) 'no)))))
-        (define finish!-id (and (or (pair? (struct-type-info-rest sti))
-                                    (and (unwrap (struct-type-info-parent sti))
-                                         (not (struct-type-info-is-meta? sti))))
+        (define raw-pba (for/first ([acc/mut (in-list acc/muts)]
+                                    [make-acc/mut (in-list make-acc/muts)])
+                          (and (wrap-eq? -ref (unwrap-let make-acc/mut))
+                               acc/mut)))
+        (define finish!-id (and (not (struct-type-info-is-meta? sti))
+                                (or (pair? (struct-type-info-rest sti))
+                                    (unwrap (struct-type-info-parent sti)))
                                 (deterministic-gensym "finish")))
         `(begin
            ,@(if finish!-id
                  `((define ,finish!-id
-                     (make-struct-type-install-properties ',(if system-opaque?
-                                                                ;; list is recognized by `struct-type-install-properties!`
-                                                                ;; to indicate a system structure type:
-                                                                (list (struct-type-info-name sti))
-                                                                (struct-type-info-name sti))
+                     (make-struct-type-install-properties ',(cond
+                                                              [system-opaque?
+                                                               ;; list is recognized by `struct-type-install-properties!`
+                                                               ;; to indicate a system structure type:
+                                                               (list (struct-type-info-name sti))]
+                                                              [(and (not make-meta?)
+                                                                    (eq? (struct-type-info-authentic? sti) 'auto-authentic))
+                                                               (cons (struct-type-info-name sti) #f)]
+                                                              [else
+                                                               (struct-type-info-name sti)])
                                                           ,(struct-type-info-immediate-field-count sti)
                                                           0
                                                           ,(schemify (struct-type-info-parent sti) knowns)
@@ -215,8 +226,8 @@
                                                [(symbol? (unwrap insp-expr)) insp-expr]
                                                [else `(,finish!-id 'insp)])])]))))
                               ,@(if (struct-type-info-base-rtd sti)
-                                    (for/list ([e (in-list (if (null? (struct-type-info-rest sti))
-                                                               null
+                                    (for/list ([e (in-list (if (struct-type-info-is-meta? sti)
+                                                               (struct-type-info-rest sti)
                                                                (list-tail (struct-type-info-rest sti)
                                                                           ARGUMENT-COUNT-BEFORE-TYPE-FIELDS)))])
                                       (schemify e knowns))
@@ -347,16 +358,47 @@
                                  p
                                  `(#%struct-field-mutator ,p ,struct:s ,pos)))))
                      raw-def))
-               (define (build-metaaccessor pos)
+               (define (build-position-based-accessor)
                  `(define ,acc/mut
-                    (lambda (o default)
-                      (let ([o (if (impersonator? o) (impersonator-val o) o)])
-                        (let ([c (unsafe-object-type o)])
-                          (if (unsafe-struct? c ,struct:s)
+                    ,(if (wrap-eq? acc/mut raw-pba)
+                         `(|#%make-position-based-accessor| ,struct:s
+                                                            ,(- (struct-type-info-field-count sti)
+                                                                (struct-type-info-immediate-field-count sti))
+                                                            ,(struct-type-info-immediate-field-count sti))
+                         raw-pba)))
+               (define (build-metaaccessor pos)
+                 (define metaacc-def
+                   `(define ,acc/mut
+                      (lambda (o default)
+                        (let ([c ,(cond
+                                    [(and (not (eq? 'auto-authentic (struct-type-info-authentic? sti)))
+                                          ;; struct-type access can be impersonated only if pba is exposed
+                                          raw-pba)
+                                     `(if (impersonator? o)
+                                          ($value (impersonate-ref ,raw-pba ,struct:s 0 o #f))
+                                          (unsafe-object-type o))]
+                                    [else
+                                     `(unsafe-object-type o)])])
+                          (if (unsafe-struct? ,(if (struct-type-info-authentic? sti)
+                                                   `c
+                                                   `(if (impersonator? c)
+                                                        (impersonator-val c)
+                                                        c))
+                                              ,struct:s)
                               ,(if pos
-                                   `((record-accessor ,struct:s ,pos) c)
+                                   (if (struct-type-info-authentic? sti)
+                                       `((record-accessor ,struct:s ,pos) c)
+                                       `(if (impersonator? c)
+                                            `($value (impersonate-ref ,raw-acc/mut ,struct:s ,pos c #f))
+                                            `((record-accessor ,struct:s ,pos) c)))
                                    'c)
-                              default))))))
+                              default)))))
+                 (if (struct-type-info-authentic? sti)
+                     metaacc-def
+                     `(begin
+                        (define ,raw-acc/mut
+                          (#%struct-field-accessor (record-accessor ,struct:s ,pos) ,struct:s ,pos))
+                        ,metaacc-def)))
                (match (unwrap-let make-acc/mut)
                  [`(make-struct-field-accessor ,_ ,pos)
                   (build-accessor pos 'field #f 'racket #f)]
@@ -376,7 +418,12 @@
                   (build-metaaccessor pos)]
                  [`(make-struct-type-metaaccessor ,_)
                   (build-metaaccessor #f)]
-                 [`,_ (error "oops")])))]
+                 [`,e
+                  (cond
+                    [(eq? e -ref)
+                     (build-position-based-accessor)]
+                    [else
+                     (error "oops")])])))]
        [else #f]))
   (match form
     [`(define-values (,struct:s ,make-s ,s? ,acc/muts ...)
