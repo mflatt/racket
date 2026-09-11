@@ -6691,7 +6691,7 @@
 (define commit-manager-pause
   (lambda (mgr_0)
     (let ((lock_0 (make-semaphore)))
-      (let ((suspend-evt_0 (thread-suspend-evt (current-thread))))
+      (let ((suspend-evt_0 #f))
         (begin
           (dynamic-wind
            void
@@ -6700,6 +6700,7 @@
                (unsafe-end-atomic)
                (begin0
                  (begin
+                   (set! suspend-evt_0 (thread-suspend-evt (current-thread)))
                    (thread-resume
                     (commit-manager-thread mgr_0)
                     (current-thread))
@@ -6708,13 +6709,14 @@
                      (commit-manager-pause-channel mgr_0)
                      (|#%app|
                       1/choice-evt
-                      (list
-                       lock_0
-                       suspend-evt_0
-                       (thread-dead-evt (current-thread)))))))
+                      (let ((app_0 suspend-evt_0))
+                        (list
+                         lock_0
+                         app_0
+                         (thread-dead-evt (current-thread))))))))
                  (unsafe-start-atomic))))
            (lambda () (semaphore-post lock_0)))
-          (if (sync/timeout 0 suspend-evt_0)
+          (if (if suspend-evt_0 (sync/timeout 0 suspend-evt_0) #f)
             (commit-manager-pause mgr_0)
             (void)))))))
 (define commit-manager-wait
