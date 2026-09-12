@@ -529,6 +529,28 @@
 (go read-line/expire3)
 (go read-line/expire4)
 
+;; Check main thread blocked on a nestee that is blocked, and no
+;; other thread is running.
+(let ([self (parameterize ([current-directory (find-system-path 'orig-dir)])
+              (find-executable-path (find-system-path 'exec-file) #f))])
+  (define-values (sp out in err)
+    (subprocess #f #f #f
+                self
+                "-e"
+                (string-append
+                 "(define s (make-semaphore))"
+                 "(void (thread (lambda () (sync (system-idle-evt)) (semaphore-post s))))"
+                 "(void (call-in-nested-thread (lambda () (semaphore-wait s))))"
+                 "(display \"ok\")")))
+  (close-output-port in)
+  (define done? (and (sync/timeout 60 sp) #t))
+  (unless done?
+    (subprocess-kill sp #t))
+  (test #t 'nested-thread-blocks-idle done?)
+  (test "ok" read-string 100 out)
+  (close-input-port out)
+  (close-input-port err))
+
 ;; Make sure queueing works, and check kill/wait interaction:
 (let* ([s (make-semaphore)]
        [l null]
