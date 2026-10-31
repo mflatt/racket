@@ -245,7 +245,12 @@
 (test '(#"\265") regexp-match #px#"(?i:[\265])" #"\265")
 (test '(#"\377") regexp-match #px#"(?i:[\377])" #"\377")
 (test '(#"\377") regexp-match #px#"(?i:[\376-\377])" #"\377")
-(test '(#"\311") regexp-match #px#"(?i:[\351\377])" #"\311")
+;; Case-insensitive mode for a byte regexp folds only ASCII
+(test #f regexp-match #px#"(?i:[\351\377])" #"\311")
+(test #f regexp-match #px#"(?i:\351)" #"\311")
+(test #f regexp-match #px#"(?i:[\340-\352])" #"\311")
+(test '("\311") regexp-match #px"(?i:\351)" "\311")
+(test '(#"aB") regexp-match #px#"(?i:[a-b]+)" #"aB")
 (test #f regexp-match #px#"(?i:[\265\377])" #"x")
 (test '("\u039C") regexp-match #px"(?i:[\u00B5])" "\u039C")
 (test '("\u0178") regexp-match #px"(?i:[\u00FF])" "\u0178")

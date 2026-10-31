@@ -1928,25 +1928,22 @@
             (let ((fmt_1 fmt_0)) (apply regexp-error fmt_1 args_0))))))))
 (define range-add*
   (lambda (range_0 c_0 config_0 limit-c_0)
-    (let ((add_0
-           (|#%name|
-            add
-            (lambda (range_1 c2_0)
-              (if (> c2_0 limit-c_0) range_1 (range-add range_1 c2_0))))))
-      (if (not c_0)
-        range_0
-        (let ((range2_0 (range-add range_0 c_0)))
-          (if (parse-config-case-sensitive? config_0)
+    (if (not c_0)
+      range_0
+      (let ((range2_0 (range-add range_0 c_0)))
+        (if (parse-config-case-sensitive? config_0)
+          range2_0
+          (if (if (> c_0 127) (< limit-c_0 256) #f)
             range2_0
             (let ((range3_0
-                   (add_0
+                   (range-add
                     range2_0
                     (char->integer (char-upcase (integer->char c_0))))))
               (let ((range4_0
-                     (add_0
+                     (range-add
                       range3_0
                       (char->integer (char-foldcase (integer->char c_0))))))
-                (add_0
+                (range-add
                  range4_0
                  (char->integer (char-downcase (integer->char c_0))))))))))))
 (define range-add-span*
