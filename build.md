@@ -530,6 +530,18 @@ When you make a pull request, the Racket developers will help you get
 the improvement in shape to merge to the Racket repository. You can make
 that process faster by keeping a few guidelines in mind:
 
+* Be clear about what tools you used to produce the contribution,
+  including AI tools.
+
+  This guideline is not about preventing or favoring AI use. It is about
+  providing context to a developer who is considering a pull request and
+  setting expectations on both sides. For example, that context helps a
+  developer judge the value of trying to help the contributor refine a
+  pull request, as opposed to just correcting problems themselves or
+  ignoring a request that is too far from being acceptable. Disclosure
+  does not replace a developer’s judgment about the quality or source of
+  a potential contribution, but it can save time and effort.
+
 * Try to follow the style guide.
 
 * When you fix a bug or create a new feature, include a test case for

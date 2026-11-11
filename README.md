@@ -45,6 +45,14 @@ racket/src/LICENSE-MIT.txt.
 See the [Building, Distributing, and Contributing to Racket](build.md) 
 for more guidance on contributing.
 
+Acceptance of contributions is up to Racket developers, whether or not
+AI-based tools were used to produce a contribution. Those developers
+are charged with ensuring Racket's quality and stability, and they
+take responsibility for all accepted contributions. For guidance on
+pull requests, including the potential use of AI, see [General
+Contribution Guidelines](build.md#23-general-contribution-guidelines)
+within [Building, Distributing, and Contributing to Racket](build.md).
+
 The [Friendly Environment Policy](https://racket-lang.org/friendly.html) 
 contains guidelines on expected behavior within the Racket community.
 
