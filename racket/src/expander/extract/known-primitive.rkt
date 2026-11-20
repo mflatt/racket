@@ -14,6 +14,7 @@
   (hash-set! seen-defns 'string (known-struct-op 'constructor 2))
   (hash-set! seen-defns 'cons (known-struct-op 'constructor 2))
   (hash-set! seen-defns 'vector (known-struct-op 'constructor #t))
+  (hash-set! seen-defns 'vector-immutable (known-struct-op 'constructor #t))
   (hash-set! seen-defns 'list (known-struct-op 'constructor #t))
   (hash-set! seen-defns 'eq? (known-struct-op 'constructor 2))
   (hash-set! seen-defns 'not (known-predicate 'anything))

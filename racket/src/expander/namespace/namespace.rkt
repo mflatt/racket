@@ -185,15 +185,35 @@
       (string-append "(submod " s " " (substring (format "~s" (cdr r)) 1))
       s))
   
-(define (namespace->definitions ns phase-level)
+(define (namespace->definitions ns phase-level #:detached-data? [detached-data? #f])
   (define d (small-hash-ref (namespace-phase-level-to-definitions ns) phase-level #f))
   (or d
       (let ()
         (define p-ns (namespace->namespace-at-phase ns (phase+ (namespace-0-phase ns)
                                                                phase-level)))
-        (define d (definitions (make-instance (namespace->name p-ns) p-ns) (make-hasheq)))
+        (define data (if detached-data?
+                         (namespace-detached p-ns)
+                         p-ns))
+        (define d (definitions (make-instance (namespace->name p-ns) data) (make-hasheq)))
         (small-hash-set! (namespace-phase-level-to-definitions ns) phase-level d)
         d)))
+
+;; A copy of `ns` that has the same identity information (module path
+;; index, phase, registry, inspectors) but none of the state that is
+;; specific to the namespace's module-instance context. That state can
+;; include all module instances that are created during an expansion,
+;; so it should not be retained by a definitions instance that is
+;; shared across instantiations; the instance's data is accessed only
+;; for operations like `variable-reference->module-source`.
+(define (namespace-detached ns)
+  (struct-copy namespace ns
+               [root-expand-ctx (box #f)]
+               [phase-to-namespace (make-small-hasheqv)]
+               [phase-level-to-definitions (make-small-hasheqv)]
+               [submodule-declarations (make-small-hasheq)]
+               [available-module-instances (make-hasheqv)]
+               [available-cross-phase-module-instances (box null)]
+               [module-instances (make-hasheqv)]))
 
 (define (namespace-set-variable! ns phase-level name val [as-constant? #f])
   (define d (namespace->definitions ns phase-level))

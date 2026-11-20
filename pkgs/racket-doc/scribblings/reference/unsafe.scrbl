@@ -1025,6 +1025,20 @@ the same as @racket[(unsafe-car x)] makes both branches of the
 
 @history[#:added "8.0.0.11"]}
 
+
+@defproc[(unsafe-assume-shareable [v any/c]) any/c]{
+
+Returns @racket[v]. When @racket[(unsafe-assume-shareable _expr)]
+appears in a module body outside of any function, the compiler treats
+@racket[_expr] as creating no state for the purpose of deciding
+whether the enclosing module's @tech{instance} can be shared across
+module expansions (see @racket[syntax-local-expansion-state]). The
+``unsafe'' implication is that a programmer promises that any state
+created by @racket[_expr]---such as a logger, a cache, or a value that
+is never mutated---behaves correctly when shared.
+
+@history[#:added "9.4.0.7"]}
+
 @; ------------------------------------------------------------------------
 
 @section[#:tag "unsafe-struct-type-prop"]{Unsafe Structure Type Properties}

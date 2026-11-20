@@ -4,6 +4,7 @@
 ;; Compile-time
 
 (module ct racket/base
+  (require (only-in '#%unsafe unsafe-assume-shareable))
   (provide (struct-out attr)
            (struct-out stxclass)
            (struct-out scopts)
@@ -54,7 +55,10 @@
   ;; alt-stxclass-mapping : (Boxof (Listof (cons Identifier Stxclass)))
   ;; Maps existing bindings (can't use syntax-local-value mechanism) to stxclasses.
   ;; Uses alist to avoid residual dependence on syntax/id-table.
-  (define alt-stxclass-mapping (box null))
+  ;; Set by "lib.rkt" with the same mapping in every instantiation, so
+  ;; it's ok to share across instantiations; "lib.rkt" is shared only
+  ;; when it imports the same instance of this module
+  (define alt-stxclass-mapping (unsafe-assume-shareable (box null)))
 
   ;; A SCOpts is (scopts Nat Bool Bool String/#f)
   ;; These are passed on to var patterns.
@@ -369,6 +373,7 @@
            current-state-writable?
            state-cons!
            track-literals)
+  (require (only-in '#%unsafe unsafe-assume-shareable))
 
   (define (unwind-to undos base)
     ;; PRE: undos = (list* proc/hash ... base)
@@ -388,8 +393,11 @@
   ;; - literals (handled automatically)
   ;; - in ~do/#:do blocks (sets current-state-writable? = #t)
 
-  (define current-state (make-parameter (hasheq)))
-  (define current-state-writable? (make-parameter #f))
+  ;; These parameters are ok to share across instantiations, because
+  ;; each `syntax-parse` parameterizes them, and `current-state` can be
+  ;; changed only when `current-state-writable?` is true
+  (define current-state (unsafe-assume-shareable (make-parameter (hasheq))))
+  (define current-state-writable? (unsafe-assume-shareable (make-parameter #f)))
 
   (define (state-cons! key value)
     (define state (current-state))

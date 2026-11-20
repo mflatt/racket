@@ -632,7 +632,7 @@
                   (check-for-break)))
                (loop_0 (cdr l_1))))))))
       (loop_0 l_0)))))
-(define false-thread-cell (make-thread-cell #f))
+(define false-thread-cell (unsafe-assume-shareable (make-thread-cell #f)))
 (define handler-prompt-key (make-continuation-prompt-tag 'handler-prompt-tag))
 (define call-handled-body
   (lambda (bpz_0 handle-proc_0 body-thunk_0)
@@ -716,7 +716,7 @@
           (let ((or-part_1 (relative-path? s_0)))
             (if or-part_1 or-part_1 (absolute-path? s_0)))
           #f)))))
-(define bsbs (string '#\x5c '#\x5c))
+(define bsbs "\\\\")
 (define normal-case-path
   (lambda (s_0)
     (begin
@@ -1039,16 +1039,18 @@
                                   (void))))))
                         conv_0))
                       (void))))))))))))
-(define rx:path-list #f)
-(define init-rx:path-list!
+(define rx:path-list-box (unsafe-assume-shareable (box #f)))
+(define get-rx:path-list
   (lambda ()
-    (if rx:path-list
-      (void)
-      (set! rx:path-list
-        (byte-regexp
-         (string->bytes/utf-8
-          (let ((sep_0 (if (eq? (system-type) 'windows) ";" ":")))
-            (format "([^~a]*)~a(.*)" sep_0 sep_0))))))))
+    (let ((or-part_0 (unbox rx:path-list-box)))
+      (if or-part_0
+        or-part_0
+        (let ((rx_0
+               (byte-regexp
+                (string->bytes/utf-8
+                 (let ((sep_0 (if (eq? (system-type) 'windows) ";" ":")))
+                   (format "([^~a]*)~a(.*)" sep_0 sep_0))))))
+          (begin (set-box! rx:path-list-box rx_0) rx_0))))))
 (define cons-path
   (lambda (default_0 s_0 l_0)
     (let ((s_1
@@ -1088,13 +1090,12 @@
          'path-list-string->path-list
          "(listof path?)"
          default_0))
-      (init-rx:path-list!)
       (letrec*
        ((loop_0
          (|#%name|
           loop
           (lambda (s_1)
-            (let ((m_0 (regexp-match rx:path-list s_1)))
+            (let ((m_0 (regexp-match (get-rx:path-list) s_1)))
               (if m_0
                 (let ((app_0 (cadr m_0)))
                   (cons-path default_0 app_0 (loop_0 (caddr m_0))))
@@ -2743,10 +2744,7 @@
         (void)
         (1/raise-argument-error
          'guard-for-prop:stream
-         (string-append
-          "(vector/c (procedure-arity-includes/c 1)\n"
-          "          (procedure-arity-includes/c 1)\n"
-          "          (procedure-arity-includes/c 1))")
+         "(vector/c (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1))"
          v_0))
       (vector->immutable-vector v_0)))
   '()
@@ -2943,7 +2941,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0)
        (let ((cont?_0 (|#%app| range-ref v_0 2)))
          (if cont?_0 (not (|#%app| cont?_0 (|#%app| range-ref v_0 0))) #f)))
@@ -2992,7 +2990,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0) (not (pair? (|#%app| list-stream-ref v_0 0))))
      (lambda (v_0) (car (|#%app| list-stream-ref v_0 0)))
      (lambda (v_0) (make-list-stream (cdr (|#%app| list-stream-ref v_0 0))))))
@@ -3248,7 +3246,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 0)))
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 1)))
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 2))))))))
@@ -3767,6 +3765,25 @@
        (if key1_0
          (|#%app| sort lst5_0 less?6_0 key1_0 cache-keys?2_0)
          (|#%app| sort lst5_0 less?6_0))))))
+(define do-remove
+  (lambda (who_0 item_0 list_0 equal?_0)
+    (begin
+      (if (list? list_0) (void) (raise-argument-error who_0 "list?" list_0))
+      (letrec*
+       ((loop_0
+         (|#%name|
+          loop
+          (lambda (list_1)
+            (if (null? list_1)
+              list_1
+              (if (|#%app| equal?_0 item_0 (car list_1))
+                (cdr list_1)
+                (let ((next_0 (loop_0 (cdr list_1))))
+                  (if (eq? next_0 (cdr list_1))
+                    list_1
+                    (cons (car list_1) next_0)))))))))
+       (loop_0 list_0)))))
+(define remq (lambda (item_0 list_0) (do-remove 'remq item_0 list_0 eq?)))
 (define filter
   (lambda (f_0 list_0)
     (begin
@@ -3788,6 +3805,7 @@
                    (cons (car l_0) result_0)
                    result_0))))))))
        (loop_0 list_0 null)))))
+(define no-empty-edge-table (unsafe-assume-shareable (make-hash)))
 (define binary-or-text-desc "(or/c 'binary 'text)")
 (define raise-argument-error$1
   (|#%name|
@@ -3877,17 +3895,6 @@
           void
           (lambda () (|#%app| proc62_0 p_0))
           (lambda () (close-input-port p_0))))))))
-(define print-value-columns/fallback
-  (make-parameter
-   +inf.0
-   (lambda (c_0)
-     (if (if (eqv? c_0 +inf.0) #t (if (exact-integer? c_0) (> c_0 5) #f))
-       c_0
-       (raise-argument-error
-        'print-value-columns
-        "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
-        c_0)))
-   'print-value-columns))
 (define the-empty-hash hash2725)
 (define the-empty-hasheq hash2610)
 (define the-empty-hasheqv hash2589)
@@ -16193,16 +16200,16 @@
        (error
         "broken '#%linklet primitive table; maybe you need to use \"bootstrap-run.rkt\"")))
     (void)))
-(define finish_2938
+(define finish_2597
   (make-struct-type-install-properties
    '(module-registry)
-   2
+   5
    0
    #f
    null
    (current-inspector)
    #f
-   '(0 1)
+   '(0 1 2 3)
    #f
    'module-registry))
 (define struct:module-registry
@@ -16213,13 +16220,13 @@
    (|#%nongenerative-uid| module-registry)
    #f
    #f
-   '(2 . 0)
+   '(5 . 16)
    'make-struct-type
    #f
    #f
    #f
    |#%system-inspector|))
-(define effect_2565 (finish_2938 struct:module-registry))
+(define effect_2565 (finish_2597 struct:module-registry))
 (define module-registry1.1
   (|#%name|
    module-registry
@@ -16271,9 +16278,82 @@
          1
          s
          'lock-box))))))
+(define module-registry-shared-instances_2353
+  (|#%name|
+   module-registry-shared-instances
+   (record-accessor struct:module-registry 2)))
+(define module-registry-shared-instances
+  (|#%name|
+   module-registry-shared-instances
+   (lambda (s)
+     (if (module-registry?_2653 s)
+       (module-registry-shared-instances_2353 s)
+       ($value
+        (impersonate-ref
+         module-registry-shared-instances_2353
+         struct:module-registry
+         2
+         s
+         'shared-instances))))))
+(define module-registry-shared-linklet-instances_2848
+  (|#%name|
+   module-registry-shared-linklet-instances
+   (record-accessor struct:module-registry 3)))
+(define module-registry-shared-linklet-instances
+  (|#%name|
+   module-registry-shared-linklet-instances
+   (lambda (s)
+     (if (module-registry?_2653 s)
+       (module-registry-shared-linklet-instances_2848 s)
+       ($value
+        (impersonate-ref
+         module-registry-shared-linklet-instances_2848
+         struct:module-registry
+         3
+         s
+         'shared-linklet-instances))))))
+(define module-registry-shared-tick_2036
+  (|#%name|
+   module-registry-shared-tick
+   (record-accessor struct:module-registry 4)))
+(define module-registry-shared-tick
+  (|#%name|
+   module-registry-shared-tick
+   (lambda (s)
+     (if (module-registry?_2653 s)
+       (module-registry-shared-tick_2036 s)
+       ($value
+        (impersonate-ref
+         module-registry-shared-tick_2036
+         struct:module-registry
+         4
+         s
+         'shared-tick))))))
+(define set-module-registry-shared-tick!_2513
+  (|#%name|
+   set-module-registry-shared-tick!
+   (record-mutator struct:module-registry 4)))
+(define set-module-registry-shared-tick!
+  (|#%name|
+   set-module-registry-shared-tick!
+   (lambda (s v)
+     (if (module-registry?_2653 s)
+       (set-module-registry-shared-tick!_2513 s v)
+       ($value
+        (impersonate-set!
+         set-module-registry-shared-tick!_2513
+         struct:module-registry
+         4
+         4
+         s
+         v
+         'shared-tick))))))
 (define make-module-registry
   (lambda ()
-    (let ((app_0 (make-hasheq))) (module-registry1.1 app_0 (box #f)))))
+    (let ((app_0 (make-hasheq)))
+      (let ((app_1 (box #f)))
+        (let ((app_2 (make-hasheq)))
+          (module-registry1.1 app_0 app_1 app_2 (make-weak-hasheq) 0))))))
 (define registry-call-with-lock
   (lambda (r_0 proc_0)
     (let ((lock-box_0 (module-registry-lock-box r_0)))
@@ -16599,7 +16679,7 @@
         or-part_0
         (let ((p-ns_0
                (if (1/namespace? ns_0)
-                 (let ((root-namespace18_0
+                 (let ((root-namespace23_0
                         (let ((or-part_1 (namespace-root-namespace ns_0)))
                           (if or-part_1 or-part_1 ns_0))))
                    (let ((app_0 (namespace-inspector ns_0)))
@@ -16619,7 +16699,7 @@
                           (namespace-module-instance-shifted-requires ns_0)
                           (namespace-bulk-binding-registry ns_0)
                           (namespace-submodule-declarations ns_0)
-                          root-namespace18_0
+                          root-namespace23_0
                           (namespace-declaration-inspector ns_0)
                           app_0
                           app_1
@@ -16651,50 +16731,95 @@
              " "
              (substring (format "~s" (cdr r_0)) 1))
             s_0))))))
-(define namespace->definitions
-  (lambda (ns_0 phase-level_0)
-    (let ((d_0
-           (let ((small-ht_0 (namespace-phase-level-to-definitions ns_0)))
-             (hash-ref (unbox small-ht_0) phase-level_0 #f))))
-      (if d_0
-        d_0
-        (let ((p-ns_0
-               (namespace->namespace-at-phase
-                ns_0
-                (phase+ (namespace-0-phase ns_0) phase-level_0))))
-          (let ((d_1
-                 (let ((app_0 (make-instance (namespace->name p-ns_0) p-ns_0)))
-                   (definitions2.1 app_0 (make-hasheq)))))
-            (begin
-              (let ((small-ht_0 (namespace-phase-level-to-definitions ns_0)))
-                (set-box!
-                 small-ht_0
-                 (hash-set (unbox small-ht_0) phase-level_0 d_1)))
-              d_1)))))))
+(define namespace->definitions.1
+  (|#%name|
+   namespace->definitions
+   (lambda (detached-data?9_0 ns11_0 phase-level12_0)
+     (let ((d_0
+            (let ((small-ht_0 (namespace-phase-level-to-definitions ns11_0)))
+              (hash-ref (unbox small-ht_0) phase-level12_0 #f))))
+       (if d_0
+         d_0
+         (let ((p-ns_0
+                (namespace->namespace-at-phase
+                 ns11_0
+                 (phase+ (namespace-0-phase ns11_0) phase-level12_0))))
+           (let ((data_0
+                  (if detached-data?9_0 (namespace-detached p-ns_0) p-ns_0)))
+             (let ((d_1
+                    (let ((app_0
+                           (make-instance (namespace->name p-ns_0) data_0)))
+                      (definitions2.1 app_0 (make-hasheq)))))
+               (begin
+                 (let ((small-ht_0
+                        (namespace-phase-level-to-definitions ns11_0)))
+                   (set-box!
+                    small-ht_0
+                    (hash-set (unbox small-ht_0) phase-level12_0 d_1)))
+                 d_1)))))))))
+(define namespace-detached
+  (lambda (ns_0)
+    (if (1/namespace? ns_0)
+      (let ((root-expand-ctx24_0 (box #f)))
+        (let ((phase-to-namespace25_0 (make-small-hasheqv)))
+          (let ((phase-level-to-definitions26_0 (make-small-hasheqv)))
+            (let ((submodule-declarations27_0 (make-small-hasheq)))
+              (let ((available-module-instances28_0 (make-hasheqv)))
+                (let ((available-cross-phase-module-instances29_0 (box null)))
+                  (let ((module-instances30_0 (make-hasheqv)))
+                    (let ((available-cross-phase-module-instances29_1
+                           available-cross-phase-module-instances29_0)
+                          (available-module-instances28_1
+                           available-module-instances28_0)
+                          (submodule-declarations27_1
+                           submodule-declarations27_0)
+                          (phase-level-to-definitions26_1
+                           phase-level-to-definitions26_0)
+                          (phase-to-namespace25_1 phase-to-namespace25_0)
+                          (root-expand-ctx24_1 root-expand-ctx24_0))
+                      (namespace1.1
+                       (namespace-mpi ns_0)
+                       (namespace-source-name ns_0)
+                       root-expand-ctx24_1
+                       (namespace-phase ns_0)
+                       (namespace-0-phase ns_0)
+                       phase-to-namespace25_1
+                       phase-level-to-definitions26_1
+                       (namespace-module-registry$1 ns_0)
+                       (namespace-module-instance-shifted-requires ns_0)
+                       (namespace-bulk-binding-registry ns_0)
+                       submodule-declarations27_1
+                       (namespace-root-namespace ns_0)
+                       (namespace-declaration-inspector ns_0)
+                       (namespace-inspector ns_0)
+                       available-module-instances28_1
+                       available-cross-phase-module-instances29_1
+                       module-instances30_0)))))))))
+      (raise-argument-error 'struct-copy "namespace?" ns_0))))
 (define namespace-set-variable!
   (let ((namespace-set-variable!_0
          (|#%name|
           namespace-set-variable!
-          (lambda (ns10_0 phase-level11_0 name12_0 val13_0 as-constant?9_0)
-            (let ((d_0 (namespace->definitions ns10_0 phase-level11_0)))
+          (lambda (ns15_0 phase-level16_0 name17_0 val18_0 as-constant?14_0)
+            (let ((d_0 (namespace->definitions.1 #f ns15_0 phase-level16_0)))
               (instance-set-variable-value!
                (definitions-variables d_0)
-               name12_0
-               val13_0
-               (if as-constant?9_0 'constant #f)))))))
+               name17_0
+               val18_0
+               (if as-constant?14_0 'constant #f)))))))
     (case-lambda
      ((ns_0 phase-level_0 name_0 val_0)
       (namespace-set-variable!_0 ns_0 phase-level_0 name_0 val_0 #f))
-     ((ns_0 phase-level_0 name_0 val_0 as-constant?9_0)
+     ((ns_0 phase-level_0 name_0 val_0 as-constant?14_0)
       (namespace-set-variable!_0
        ns_0
        phase-level_0
        name_0
        val_0
-       as-constant?9_0)))))
+       as-constant?14_0)))))
 (define namespace-set-consistent!
   (lambda (ns_0 phase-level_0 name_0 val_0)
-    (let ((d_0 (namespace->definitions ns_0 phase-level_0)))
+    (let ((d_0 (namespace->definitions.1 #f ns_0 phase-level_0)))
       (instance-set-variable-value!
        (definitions-variables d_0)
        name_0
@@ -16702,33 +16827,33 @@
        'consistent))))
 (define namespace-unset-variable!
   (lambda (ns_0 phase-level_0 name_0)
-    (let ((d_0 (namespace->definitions ns_0 phase-level_0)))
+    (let ((d_0 (namespace->definitions.1 #f ns_0 phase-level_0)))
       (instance-unset-variable! (definitions-variables d_0) name_0))))
 (define namespace-set-transformer!
   (lambda (ns_0 phase-level_0 name_0 val_0)
     (let ((d_0
-           (namespace->definitions
-            ns_0
-            (if phase-level_0 (add1 phase-level_0) #f))))
+           (let ((temp38_0 (if phase-level_0 (add1 phase-level_0) #f)))
+             (namespace->definitions.1 #f ns_0 temp38_0))))
       (hash-set! (definitions-transformers d_0) name_0 val_0))))
 (define namespace-unset-transformer!
   (lambda (ns_0 phase-level_0 name_0)
-    (let ((d_0 (namespace->definitions ns_0 (add1 phase-level_0))))
+    (let ((d_0
+           (let ((temp40_0 (add1 phase-level_0)))
+             (namespace->definitions.1 #f ns_0 temp40_0))))
       (hash-remove! (definitions-transformers d_0) name_0))))
 (define namespace-get-variable
   (lambda (ns_0 phase-level_0 name_0 fail-k_0)
-    (let ((d_0 (namespace->definitions ns_0 phase-level_0)))
+    (let ((d_0 (namespace->definitions.1 #f ns_0 phase-level_0)))
       (instance-variable-value (definitions-variables d_0) name_0 fail-k_0))))
 (define namespace-get-transformer
   (lambda (ns_0 phase-level_0 name_0 fail-k_0)
     (let ((d_0
-           (namespace->definitions
-            ns_0
-            (if phase-level_0 (add1 phase-level_0) #f))))
+           (let ((temp44_0 (if phase-level_0 (add1 phase-level_0) #f)))
+             (namespace->definitions.1 #f ns_0 temp44_0))))
       (hash-ref (definitions-transformers d_0) name_0 fail-k_0))))
 (define namespace->instance
   (lambda (ns_0 phase-shift_0)
-    (definitions-variables (namespace->definitions ns_0 phase-shift_0))))
+    (definitions-variables (namespace->definitions.1 #f ns_0 phase-shift_0))))
 (define namespace-same-instance?
   (lambda (a-ns_0 b-ns_0 phase-level_0)
     (let ((app_0
@@ -17847,16 +17972,16 @@
   (|#%name| module-instance-cache (record-accessor struct:module 26)))
 (define set-module-access!
   (|#%name| set-module-access! (record-mutator struct:module 6)))
-(define finish_2207
+(define finish_2808
   (make-struct-type-install-properties
    '(shared-instance)
-   7
+   9
    0
    #f
    (list (cons prop:authentic #t))
    (current-inspector)
    #f
-   '(0 1 2 3 4 5 6)
+   '(0 1 2 3 4 5 6 7)
    #f
    'shared-instance))
 (define struct:shared-instance
@@ -17867,13 +17992,13 @@
    (|#%nongenerative-uid| shared-instance)
    #f
    #f
-   '(7 . 0)
+   '(9 . 256)
    'make-struct-type
    #f
    #f
    #f
    |#%system-inspector|))
-(define effect_2401 (finish_2207 struct:shared-instance))
+(define effect_2401 (finish_2808 struct:shared-instance))
 (define shared-instance2.1
   (|#%name|
    shared-instance
@@ -17887,22 +18012,93 @@
   (|#%name|
    shared-instance-mpi-shape
    (record-accessor struct:shared-instance 1)))
-(define shared-instance-bulk-binding-registry
-  (|#%name|
-   shared-instance-bulk-binding-registry
-   (record-accessor struct:shared-instance 2)))
 (define shared-instance-mpi
-  (|#%name| shared-instance-mpi (record-accessor struct:shared-instance 3)))
+  (|#%name| shared-instance-mpi (record-accessor struct:shared-instance 2)))
 (define shared-instance-data-box
   (|#%name|
    shared-instance-data-box
-   (record-accessor struct:shared-instance 4)))
+   (record-accessor struct:shared-instance 3)))
 (define shared-instance-phase-levels
   (|#%name|
    shared-instance-phase-levels
-   (record-accessor struct:shared-instance 5)))
+   (record-accessor struct:shared-instance 4)))
 (define shared-instance-levels
-  (|#%name| shared-instance-levels (record-accessor struct:shared-instance 6)))
+  (|#%name| shared-instance-levels (record-accessor struct:shared-instance 5)))
+(define shared-instance-by-phase
+  (|#%name|
+   shared-instance-by-phase
+   (record-accessor struct:shared-instance 6)))
+(define shared-instance-phase-shift
+  (|#%name|
+   shared-instance-phase-shift
+   (record-accessor struct:shared-instance 7)))
+(define shared-instance-last-use
+  (|#%name|
+   shared-instance-last-use
+   (record-accessor struct:shared-instance 8)))
+(define set-shared-instance-last-use!
+  (|#%name|
+   set-shared-instance-last-use!
+   (record-mutator struct:shared-instance 8)))
+(define shared-instance-limit 4000)
+(define registry-tick!
+  (lambda (r_0)
+    (let ((t_0 (add1 (module-registry-shared-tick r_0))))
+      (begin (set-module-registry-shared-tick! r_0 t_0) t_0))))
+(define register-shared-instance!
+  (lambda (r_0 shared_0)
+    (let ((all_0 (module-registry-shared-instances r_0)))
+      (begin
+        (hash-set! all_0 shared_0 #t)
+        (if (> (hash-count all_0) 4000)
+          (let ((sorted_0
+                 (let ((temp172_0 (hash-keys all_0)))
+                   (let ((temp173_0
+                          (lambda (a_0 b_0)
+                            (let ((app_0 (shared-instance-last-use a_0)))
+                              (< app_0 (shared-instance-last-use b_0))))))
+                     (let ((temp172_1 temp172_0))
+                       (sort.1 #f #f temp172_1 temp173_0))))))
+            (begin
+              (let ((end_0 (- (hash-count all_0) 2000)))
+                (letrec*
+                 ((for-loop_0
+                   (|#%name|
+                    for-loop
+                    (lambda (lst_0 pos_0)
+                      (if (if (pair? lst_0) (< pos_0 end_0) #f)
+                        (let ((shared_1 (unsafe-car lst_0)))
+                          (let ((rest_0 (unsafe-cdr lst_0)))
+                            (begin
+                              (begin
+                                (hash-remove! all_0 shared_1)
+                                (let ((by-phase_0
+                                       (shared-instance-by-phase shared_1)))
+                                  (let ((phase-shift_0
+                                         (shared-instance-phase-shift
+                                          shared_1)))
+                                    (let ((l_0
+                                           (let ((list_0
+                                                  (hash-ref
+                                                   by-phase_0
+                                                   phase-shift_0
+                                                   null)))
+                                             (do-remove
+                                              'remq
+                                              shared_1
+                                              list_0
+                                              eq?))))
+                                      (if (null? l_0)
+                                        (hash-remove! by-phase_0 phase-shift_0)
+                                        (hash-set!
+                                         by-phase_0
+                                         phase-shift_0
+                                         l_0))))))
+                              (for-loop_0 rest_0 (+ pos_0 1)))))
+                        (values))))))
+                 (for-loop_0 sorted_0 0)))
+              (void)))
+          (void))))))
 (define finish_2550
   (make-struct-type-install-properties
    '(module-linklet-info)
@@ -18085,7 +18281,9 @@
                   shareable-phase-levels26_0
                   shareable-knowns27_0
                   (if (pair? shareable-phase-levels26_0)
-                    (if (not cross-phase-persistent?_0) (make-hasheqv) #f)
+                    (if (not cross-phase-persistent?_0)
+                      (make-ephemeron-hasheq)
+                      #f)
                     #f)))))))))))
 (define module-shareable-known
   (lambda (m_0 phase-level_0 sym_0)
@@ -18205,30 +18403,30 @@
               (let ((the-struct_0
                      (new-namespace.1 #f root-expand-context59_0 ns66_0)))
                 (if (1/namespace? the-struct_0)
-                  (let ((source-name175_0
+                  (let ((source-name177_0
                          (resolved-module-path-root-name name_0)))
-                    (let ((submodule-declarations178_0
+                    (let ((submodule-declarations180_0
                            (if for-submodule?60_0
                              (namespace-submodule-declarations ns66_0)
                              (make-small-hasheq))))
-                      (let ((available-module-instances179_0 (make-hasheqv)))
-                        (let ((available-cross-phase-module-instances180_0
+                      (let ((available-module-instances181_0 (make-hasheqv)))
+                        (let ((available-cross-phase-module-instances182_0
                                (box null)))
-                          (let ((module-instances181_0 (make-hasheqv)))
-                            (let ((declaration-inspector182_0
+                          (let ((module-instances183_0 (make-hasheqv)))
+                            (let ((declaration-inspector184_0
                                    (current-code-inspector)))
-                              (let ((module-instances181_1
-                                     module-instances181_0)
-                                    (available-cross-phase-module-instances180_1
-                                     available-cross-phase-module-instances180_0)
-                                    (available-module-instances179_1
-                                     available-module-instances179_0)
-                                    (submodule-declarations178_1
-                                     submodule-declarations178_0)
-                                    (source-name175_1 source-name175_0))
+                              (let ((module-instances183_1
+                                     module-instances183_0)
+                                    (available-cross-phase-module-instances182_1
+                                     available-cross-phase-module-instances182_0)
+                                    (available-module-instances181_1
+                                     available-module-instances181_0)
+                                    (submodule-declarations180_1
+                                     submodule-declarations180_0)
+                                    (source-name177_1 source-name177_0))
                                 (namespace1.1
                                  mpi58_0
-                                 source-name175_1
+                                 source-name177_1
                                  (namespace-root-expand-ctx the-struct_0)
                                  0
                                  0
@@ -18239,13 +18437,13 @@
                                  (namespace-module-instance-shifted-requires
                                   the-struct_0)
                                  (namespace-bulk-binding-registry the-struct_0)
-                                 submodule-declarations178_1
+                                 submodule-declarations180_1
                                  (namespace-root-namespace the-struct_0)
-                                 declaration-inspector182_0
+                                 declaration-inspector184_0
                                  (namespace-inspector the-struct_0)
-                                 available-module-instances179_1
-                                 available-cross-phase-module-instances180_1
-                                 module-instances181_1))))))))
+                                 available-module-instances181_1
+                                 available-cross-phase-module-instances182_1
+                                 module-instances183_1))))))))
                   (raise-argument-error
                    'struct-copy
                    "namespace?"
@@ -18276,14 +18474,14 @@
        (let ((prior-mi_0
               (if prior-m_0
                 (if (not (eq? m71_0 prior-m_0))
-                  (let ((temp188_0 (namespace-phase ns70_0)))
+                  (let ((temp190_0 (namespace-phase ns70_0)))
                     (namespace->module-instance.1
                      #f
                      #f
                      void
                      ns70_0
                      mod-name72_0
-                     temp188_0))
+                     temp190_0))
                   #f)
                 #f)))
          (begin
@@ -18349,16 +18547,16 @@
                             (namespace-module-instance-shifted-requires ns70_0)
                             mod-name72_0)
                            (if visit?_0
-                             (let ((temp190_0 (namespace-mpi m-ns_0)))
+                             (let ((temp192_0 (namespace-mpi m-ns_0)))
                                (namespace-module-visit!.1
                                 #f
                                 unsafe-undefined
                                 ns70_0
-                                temp190_0
+                                temp192_0
                                 phase_0))
                              (void))
                            (if run?_0
-                             (let ((temp193_0 (namespace-mpi m-ns_0)))
+                             (let ((temp195_0 (namespace-mpi m-ns_0)))
                                (namespace-module-instantiate!.1
                                 #f
                                 #t
@@ -18369,7 +18567,7 @@
                                 #f
                                 #f
                                 ns70_0
-                                temp193_0
+                                temp195_0
                                 phase_0))
                              (void)))))))))
              (void))))))))
@@ -18471,52 +18669,52 @@
   (lambda (ns_0 name_0 0-phase_0 m_0 existing-m-ns_0 run-phase_0)
     (let ((m-ns_0
            (if (1/namespace? ns_0)
-             (let ((mpi195_0 (namespace-mpi existing-m-ns_0)))
-               (let ((source-name196_0
+             (let ((mpi197_0 (namespace-mpi existing-m-ns_0)))
+               (let ((source-name198_0
                       (namespace-source-name existing-m-ns_0)))
-                 (let ((root-expand-ctx197_0
+                 (let ((root-expand-ctx199_0
                         (box
                          (unbox (namespace-root-expand-ctx existing-m-ns_0)))))
-                   (let ((phase198_0 (namespace-phase existing-m-ns_0)))
-                     (let ((0-phase199_0 (namespace-0-phase existing-m-ns_0)))
-                       (let ((phase-to-namespace200_0 (make-small-hasheqv)))
-                         (let ((phase-level-to-definitions201_0
+                   (let ((phase200_0 (namespace-phase existing-m-ns_0)))
+                     (let ((0-phase201_0 (namespace-0-phase existing-m-ns_0)))
+                       (let ((phase-to-namespace202_0 (make-small-hasheqv)))
+                         (let ((phase-level-to-definitions203_0
                                 (if (module-cross-phase-persistent? m_0)
                                   (namespace-phase-level-to-definitions
                                    existing-m-ns_0)
                                   (make-small-hasheqv))))
-                           (let ((declaration-inspector202_0
+                           (let ((declaration-inspector204_0
                                   (module-inspector m_0)))
-                             (let ((inspector203_0
+                             (let ((inspector205_0
                                     (namespace-inspector existing-m-ns_0)))
-                               (let ((declaration-inspector202_1
-                                      declaration-inspector202_0)
-                                     (phase-level-to-definitions201_1
-                                      phase-level-to-definitions201_0)
-                                     (phase-to-namespace200_1
-                                      phase-to-namespace200_0)
-                                     (0-phase199_1 0-phase199_0)
-                                     (phase198_1 phase198_0)
-                                     (root-expand-ctx197_1
-                                      root-expand-ctx197_0)
-                                     (source-name196_1 source-name196_0)
-                                     (mpi195_1 mpi195_0))
+                               (let ((declaration-inspector204_1
+                                      declaration-inspector204_0)
+                                     (phase-level-to-definitions203_1
+                                      phase-level-to-definitions203_0)
+                                     (phase-to-namespace202_1
+                                      phase-to-namespace202_0)
+                                     (0-phase201_1 0-phase201_0)
+                                     (phase200_1 phase200_0)
+                                     (root-expand-ctx199_1
+                                      root-expand-ctx199_0)
+                                     (source-name198_1 source-name198_0)
+                                     (mpi197_1 mpi197_0))
                                  (namespace1.1
-                                  mpi195_1
-                                  source-name196_1
-                                  root-expand-ctx197_1
-                                  phase198_1
-                                  0-phase199_1
-                                  phase-to-namespace200_1
-                                  phase-level-to-definitions201_1
+                                  mpi197_1
+                                  source-name198_1
+                                  root-expand-ctx199_1
+                                  phase200_1
+                                  0-phase201_1
+                                  phase-to-namespace202_1
+                                  phase-level-to-definitions203_1
                                   (namespace-module-registry$1 ns_0)
                                   (namespace-module-instance-shifted-requires
                                    ns_0)
                                   (namespace-bulk-binding-registry ns_0)
                                   (namespace-submodule-declarations ns_0)
                                   (namespace-root-namespace ns_0)
-                                  declaration-inspector202_1
-                                  inspector203_0
+                                  declaration-inspector204_1
+                                  inspector205_0
                                   (namespace-available-module-instances ns_0)
                                   (namespace-available-cross-phase-module-instances
                                    ns_0)
@@ -18530,7 +18728,7 @@
               (let ((small-ht_0 (namespace-phase-to-namespace m-ns_0)))
                 (set-box! small-ht_0 (hash-set (unbox small-ht_0) 0 m-ns_0)))
               (let ((small-ht_0 (namespace-phase-level-to-definitions m-ns_0)))
-                (let ((val_0 (namespace->definitions existing-m-ns_0 0)))
+                (let ((val_0 (namespace->definitions.1 #f existing-m-ns_0 0)))
                   (let ((small-ht_1 small-ht_0))
                     (set-box!
                      small-ht_1
@@ -18542,7 +18740,7 @@
                      small-ht_1
                      (hash-set (unbox small-ht_1) 1 val_0)))))
               (let ((small-ht_0 (namespace-phase-level-to-definitions m-ns_0)))
-                (let ((val_0 (namespace->definitions existing-m-ns_0 1)))
+                (let ((val_0 (namespace->definitions.1 #f existing-m-ns_0 1)))
                   (let ((small-ht_1 small-ht_0))
                     (set-box!
                      small-ht_1
@@ -18567,7 +18765,8 @@
                   (let ((small-ht_0
                          (namespace-phase-level-to-definitions m-ns_0)))
                     (let ((val_0
-                           (namespace->definitions
+                           (namespace->definitions.1
+                            #f
                             existing-m-ns_0
                             run-phase-level_0)))
                       (let ((small-ht_1 small-ht_0))
@@ -18608,47 +18807,47 @@
            (find-or-create-shared-instance ns_0 name_0 0-phase_0 m_0 mpi_0)))
       (let ((m-ns_0
              (if (1/namespace? ns_0)
-               (let ((mpi204_0
+               (let ((mpi212_0
                       (if shared_0 (shared-instance-mpi shared_0) mpi_0)))
-                 (let ((source-name205_0
+                 (let ((source-name213_0
                         (let ((or-part_0 (module-source-name m_0)))
                           (if or-part_0
                             or-part_0
                             (resolved-module-path-root-name
                              (1/module-path-index-resolve mpi_0))))))
-                   (let ((root-expand-ctx206_0 (box #f)))
-                     (let ((phase-to-namespace209_0 (make-small-hasheqv)))
-                       (let ((phase-level-to-definitions210_0
+                   (let ((root-expand-ctx214_0 (box #f)))
+                     (let ((phase-to-namespace217_0 (make-small-hasheqv)))
+                       (let ((phase-level-to-definitions218_0
                               (make-small-hasheqv)))
-                         (let ((declaration-inspector211_0
+                         (let ((declaration-inspector219_0
                                 (module-inspector m_0)))
-                           (let ((inspector212_0
+                           (let ((inspector220_0
                                   (make-inspector (module-inspector m_0))))
-                             (let ((declaration-inspector211_1
-                                    declaration-inspector211_0)
-                                   (phase-level-to-definitions210_1
-                                    phase-level-to-definitions210_0)
-                                   (phase-to-namespace209_1
-                                    phase-to-namespace209_0)
-                                   (root-expand-ctx206_1 root-expand-ctx206_0)
-                                   (source-name205_1 source-name205_0)
-                                   (mpi204_1 mpi204_0))
+                             (let ((declaration-inspector219_1
+                                    declaration-inspector219_0)
+                                   (phase-level-to-definitions218_1
+                                    phase-level-to-definitions218_0)
+                                   (phase-to-namespace217_1
+                                    phase-to-namespace217_0)
+                                   (root-expand-ctx214_1 root-expand-ctx214_0)
+                                   (source-name213_1 source-name213_0)
+                                   (mpi212_1 mpi212_0))
                                (namespace1.1
-                                mpi204_1
-                                source-name205_1
-                                root-expand-ctx206_1
+                                mpi212_1
+                                source-name213_1
+                                root-expand-ctx214_1
                                 0-phase_0
                                 0-phase_0
-                                phase-to-namespace209_1
-                                phase-level-to-definitions210_1
+                                phase-to-namespace217_1
+                                phase-level-to-definitions218_1
                                 (namespace-module-registry$1 ns_0)
                                 (namespace-module-instance-shifted-requires
                                  ns_0)
                                 (namespace-bulk-binding-registry ns_0)
                                 (namespace-submodule-declarations ns_0)
                                 (namespace-root-namespace ns_0)
-                                declaration-inspector211_1
-                                inspector212_0
+                                declaration-inspector219_1
+                                inspector220_0
                                 (namespace-available-module-instances ns_0)
                                 (namespace-available-cross-phase-module-instances
                                  ns_0)
@@ -18659,36 +18858,58 @@
             (set-box!
              small-ht_0
              (hash-set (unbox small-ht_0) 0-phase_0 m-ns_0)))
-          (let ((mi_0 (make-module-instance m-ns_0 m_0 #f shared_0)))
-            (begin
-              (if (module-cross-phase-persistent? m_0)
-                (hash-set! (namespace-module-instances ns_0) name_0 mi_0)
-                (let ((at-phase_0
-                       (let ((or-part_0
-                              (hash-ref
-                               (namespace-module-instances ns_0)
-                               0-phase_0
-                               #f)))
-                         (if or-part_0
-                           or-part_0
-                           (let ((at-phase_0 (make-hasheq)))
-                             (begin
-                               (hash-set!
-                                (namespace-module-instances ns_0)
-                                0-phase_0
-                                at-phase_0)
-                               at-phase_0))))))
-                  (hash-set! at-phase_0 name_0 mi_0)))
-              mi_0)))))))
+          (begin
+            (if shared_0
+              (begin
+                (let ((lst_0 (shared-instance-phase-levels shared_0)))
+                  (letrec*
+                   ((for-loop_0
+                     (|#%name|
+                      for-loop
+                      (lambda (lst_1)
+                        (if (pair? lst_1)
+                          (let ((phase-level_0 (unsafe-car lst_1)))
+                            (let ((rest_0 (unsafe-cdr lst_1)))
+                              (begin
+                                (namespace->definitions.1
+                                 #t
+                                 m-ns_0
+                                 phase-level_0)
+                                (for-loop_0 rest_0))))
+                          (values))))))
+                   (for-loop_0 lst_0)))
+                (void))
+              (void))
+            (let ((mi_0 (make-module-instance m-ns_0 m_0 #f shared_0)))
+              (begin
+                (if (module-cross-phase-persistent? m_0)
+                  (hash-set! (namespace-module-instances ns_0) name_0 mi_0)
+                  (let ((at-phase_0
+                         (let ((or-part_0
+                                (hash-ref
+                                 (namespace-module-instances ns_0)
+                                 0-phase_0
+                                 #f)))
+                           (if or-part_0
+                             or-part_0
+                             (let ((at-phase_0 (make-hasheq)))
+                               (begin
+                                 (hash-set!
+                                  (namespace-module-instances ns_0)
+                                  0-phase_0
+                                  at-phase_0)
+                                 at-phase_0))))))
+                    (hash-set! at-phase_0 name_0 mi_0)))
+                mi_0))))))))
 (define fresh-module-instance-namespace
   (lambda (m-ns_0)
     (let ((new-m-ns_0
            (if (1/namespace? m-ns_0)
-             (let ((root-expand-ctx213_0 (box #f)))
-               (let ((phase-to-namespace214_0 (make-small-hasheqv)))
-                 (let ((phase-level-to-definitions215_0 (make-small-hasheqv)))
-                   (let ((phase-to-namespace214_1 phase-to-namespace214_0)
-                         (root-expand-ctx213_1 root-expand-ctx213_0))
+             (let ((root-expand-ctx224_0 (box #f)))
+               (let ((phase-to-namespace225_0 (make-small-hasheqv)))
+                 (let ((phase-level-to-definitions226_0 (make-small-hasheqv)))
+                   (let ((phase-to-namespace225_1 phase-to-namespace225_0)
+                         (root-expand-ctx224_1 root-expand-ctx224_0))
                      (let ((app_0 (namespace-inspector m-ns_0)))
                        (let ((app_1
                               (namespace-available-module-instances m-ns_0)))
@@ -18698,11 +18919,11 @@
                            (namespace1.1
                             (namespace-mpi m-ns_0)
                             (namespace-source-name m-ns_0)
-                            root-expand-ctx213_1
+                            root-expand-ctx224_1
                             (namespace-phase m-ns_0)
                             (namespace-0-phase m-ns_0)
-                            phase-to-namespace214_1
-                            phase-level-to-definitions215_0
+                            phase-to-namespace225_1
+                            phase-level-to-definitions226_0
                             (namespace-module-registry$1 m-ns_0)
                             (namespace-module-instance-shifted-requires m-ns_0)
                             (namespace-bulk-binding-registry m-ns_0)
@@ -18727,12 +18948,15 @@
       (if cache_0
         (if (not (not 0-phase_0))
           (if (non-self-derived-module-path-index? mpi_0)
-            (let ((bulk-binding-registry_0
-                   (namespace-bulk-binding-registry ns_0)))
-              (let ((shareds_0 (hash-ref cache_0 0-phase_0 null)))
-                (let ((mpi-shape_0 (module-path-index-shape mpi_0)))
-                  (let ((shareds_1 shareds_0)
-                        (bulk-binding-registry_1 bulk-binding-registry_0))
+            (let ((r_0 (namespace-module-registry$1 ns_0)))
+              (let ((by-phase_0
+                     (let ((or-part_0 (hash-ref cache_0 r_0 #f)))
+                       (if or-part_0
+                         or-part_0
+                         (let ((ht_0 (make-hasheqv)))
+                           (begin (hash-set! cache_0 r_0 ht_0) ht_0))))))
+                (let ((shareds_0 (hash-ref by-phase_0 0-phase_0 null)))
+                  (let ((mpi-shape_0 (module-path-index-shape mpi_0)))
                     (let ((or-part_0
                            (letrec*
                             ((for-loop_0
@@ -18748,16 +18972,16 @@
                                                           name_0
                                                           (shared-instance-name
                                                            shared_0))
-                                                       (if (eq?
-                                                            bulk-binding-registry_1
-                                                            (shared-instance-bulk-binding-registry
+                                                       (if (equal?
+                                                            mpi-shape_0
+                                                            (shared-instance-mpi-shape
                                                              shared_0))
-                                                         (if (equal?
-                                                              mpi-shape_0
-                                                              (shared-instance-mpi-shape
-                                                               shared_0))
-                                                           shared_0
-                                                           #f)
+                                                         (begin
+                                                           (set-shared-instance-last-use!
+                                                            shared_0
+                                                            (registry-tick!
+                                                             r_0))
+                                                           shared_0)
                                                          #f)
                                                        #f)))
                                                 (values result_1))))
@@ -18769,24 +18993,35 @@
                                            (for-loop_0 result_1 rest_0)
                                            result_1))))
                                    result_0)))))
-                            (for-loop_0 #f shareds_1))))
+                            (for-loop_0 #f shareds_0))))
                       (if or-part_0
                         or-part_0
                         (let ((app_0 (box #f)))
                           (let ((shared_0
-                                 (shared-instance2.1
-                                  name_0
-                                  mpi-shape_0
-                                  bulk-binding-registry_1
-                                  mpi_0
-                                  app_0
-                                  (module-shareable-phase-levels m_0)
-                                  (make-hasheqv))))
+                                 (let ((app_1 (make-hasheqv)))
+                                   (shared-instance2.1
+                                    name_0
+                                    mpi-shape_0
+                                    mpi_0
+                                    app_0
+                                    (module-shareable-phase-levels m_0)
+                                    app_1
+                                    by-phase_0
+                                    0-phase_0
+                                    (registry-tick! r_0)))))
                             (begin
                               (hash-set!
-                               cache_0
+                               by-phase_0
                                0-phase_0
-                               (cons shared_0 shareds_1))
+                               (cons shared_0 shareds_0))
+                              (register-shared-instance! r_0 shared_0)
+                              (if (log-sharing-enabled?)
+                                (log-sharing
+                                 (vector name_0 0-phase_0 mpi-shape_0 'new)
+                                 "new shared instance of ~s with phase shift ~a"
+                                 name_0
+                                 0-phase_0)
+                                (void))
                               shared_0)))))))))
             #f)
           #f)
@@ -18884,20 +19119,72 @@
                 (void))))))
       (void))))
 (define shared-instance-record!
-  (lambda (shared_0 ns_0 phase-level_0 import-instances_0)
+  (lambda (shared_0
+           ns_0
+           phase-level_0
+           import-module-instances_0
+           import-instances_0)
     (let ((levels_0 (shared-instance-levels shared_0)))
-      (if (let ((or-part_0 (hash-ref levels_0 phase-level_0 #f)))
-            (if or-part_0
-              or-part_0
-              (not
-               (memv phase-level_0 (shared-instance-phase-levels shared_0)))))
-        (void)
-        (hash-set!
-         levels_0
-         phase-level_0
-         (cons
-          (namespace->definitions ns_0 phase-level_0)
-          import-instances_0))))))
+      (let ((r_0 (namespace-module-registry$1 ns_0)))
+        (let ((long-lived_0 (module-registry-shared-linklet-instances r_0)))
+          (if (let ((or-part_0 (hash-ref levels_0 phase-level_0 #f)))
+                (if or-part_0
+                  or-part_0
+                  (let ((or-part_1
+                         (not
+                          (memv
+                           phase-level_0
+                           (shared-instance-phase-levels shared_0)))))
+                    (if or-part_1
+                      or-part_1
+                      (not
+                       (letrec*
+                        ((for-loop_0
+                          (|#%name|
+                           for-loop
+                           (lambda (result_0 lst_0 lst_1)
+                             (if (if (pair? lst_0) (pair? lst_1) #f)
+                               (let ((mi_0 (unsafe-car lst_0)))
+                                 (let ((rest_0 (unsafe-cdr lst_0)))
+                                   (let ((inst_0 (unsafe-car lst_1)))
+                                     (let ((rest_1 (unsafe-cdr lst_1)))
+                                       (let ((result_1
+                                              (let ((result_1
+                                                     (let ((or-part_2
+                                                            (module-cross-phase-persistent?
+                                                             (module-instance-module
+                                                              mi_0))))
+                                                       (if or-part_2
+                                                         or-part_2
+                                                         (hash-ref
+                                                          long-lived_0
+                                                          inst_0
+                                                          #f)))))
+                                                (values result_1))))
+                                         (if (if (not
+                                                  (let ((x_0 (list mi_0)))
+                                                    (not result_1)))
+                                               (if (not
+                                                    (let ((x_0 (list inst_0)))
+                                                      (not result_1)))
+                                                 #t
+                                                 #f)
+                                               #f)
+                                           (for-loop_0 result_1 rest_0 rest_1)
+                                           result_1))))))
+                               result_0)))))
+                        (for-loop_0
+                         #t
+                         import-module-instances_0
+                         import-instances_0)))))))
+            (void)
+            (let ((d_0 (namespace->definitions.1 #f ns_0 phase-level_0)))
+              (begin
+                (hash-set! long-lived_0 (definitions-variables d_0) #t)
+                (hash-set!
+                 levels_0
+                 phase-level_0
+                 (cons d_0 import-instances_0))))))))))
 (define check-availablilty
   (lambda (mi_0 check-available-at-phase-level_0 unavailable-callback_0)
     (let ((m_0 (module-instance-module mi_0)))
@@ -19048,12 +19335,12 @@
             (if (eq? visit-phase114_0 unsafe-undefined)
               (namespace-phase ns118_0)
               visit-phase114_0)))
-       (let ((temp241_0 (add1 visit-phase_0)))
+       (let ((temp254_0 (add1 visit-phase_0)))
          (namespace-module-instantiate!.1
           #f
           #t
           #t
-          temp241_0
+          temp254_0
           hash2610
           null
           #f
@@ -19073,12 +19360,12 @@
             (if (eq? visit-phase122_0 unsafe-undefined)
               (namespace-phase ns126_0)
               visit-phase122_0)))
-       (let ((temp246_0 (add1 visit-phase_0)))
+       (let ((temp259_0 (add1 visit-phase_0)))
          (namespace-module-instantiate!.1
           #f
           #t
           #t
-          temp246_0
+          temp259_0
           hash2610
           null
           #t
@@ -19294,28 +19581,28 @@
                                                  (lambda (req-mpi_0
                                                           req-phase_0
                                                           req-recur?_0)
-                                                   (let ((temp254_0
+                                                   (let ((temp267_0
                                                           (phase+
                                                            instance-phase_0
                                                            req-phase_0)))
-                                                     (let ((temp259_0
+                                                     (let ((temp272_0
                                                             (cons
                                                              mi146_0
                                                              seen-list135_0)))
-                                                       (let ((temp254_1
-                                                              temp254_0))
+                                                       (let ((temp267_1
+                                                              temp267_0))
                                                          (namespace-module-instantiate!.1
                                                           inspector_0
                                                           otherwise-available?132_0
                                                           req-recur?_0
                                                           run-phase130_0
                                                           new-seen_0
-                                                          temp259_0
+                                                          temp272_0
                                                           skip-run?131_0
                                                           transitive-record137_0
                                                           ns147_0
                                                           req-mpi_0
-                                                          temp254_1))))))))
+                                                          temp267_1))))))))
                                            (begin
                                              (if (not
                                                   (module-flattened-requires
@@ -19523,7 +19810,8 @@
                                                                  'started)))
                                                              (begin
                                                                (void
-                                                                (namespace->definitions
+                                                                (namespace->definitions.1
+                                                                 #f
                                                                  m-ns_0
                                                                  pos_0))
                                                                (let ((p-ns_0
@@ -20481,7 +20769,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish963
+  (let ((finish976
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -20503,11 +20791,11 @@
             #f
             '(1 . 0)
             'make-struct-type
-            (finish963 'proc)
-            (finish963 'arity)
+            (finish976 'proc)
+            (finish976 'arity)
             #f
             |#%system-inspector|)))
-      (let ((effect964 (finish963 struct:set!-transformer_0)))
+      (let ((effect977 (finish976 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -45982,8 +46270,7 @@
                                 0)))
                           (if ns_2
                             (module-linklet-info3.1
-                             (definitions-variables
-                              (namespace->definitions ns_2 0))
+                             (namespace->instance ns_2 0)
                              #f
                              core-mpi
                              insp_0
@@ -50330,10 +50617,9 @@
                                                                                                                                                              (instantiate-linklet
                                                                                                                                                               phase-linklet_0
                                                                                                                                                               app_0
-                                                                                                                                                              (definitions-variables
-                                                                                                                                                               (namespace->definitions
-                                                                                                                                                                ns44_0
-                                                                                                                                                                phase-level46_0))))))))
+                                                                                                                                                              (namespace->instance
+                                                                                                                                                               ns44_0
+                                                                                                                                                               phase-level46_0)))))))
                                                                                                                                                    (if (if shared42_0
                                                                                                                                                          (shared-instance-install!
                                                                                                                                                           shared42_0
@@ -50360,6 +50646,7 @@
                                                                                                                                                           shared42_0
                                                                                                                                                           ns44_0
                                                                                                                                                           phase-level46_0
+                                                                                                                                                          import-module-instances_0
                                                                                                                                                           import-instances_0)
                                                                                                                                                          (void)))))))))))
                                                                                                                                       (void))))))
@@ -54708,19 +54995,16 @@
                                                                                        (instantiate-linklet
                                                                                         linklet_0
                                                                                         app_0
-                                                                                        (let ((phase-shift_1
-                                                                                               (let ((app_1
-                                                                                                      (phase+
-                                                                                                       pos_0
-                                                                                                       phase-shift_0)))
-                                                                                                 (phase-
-                                                                                                  app_1
-                                                                                                  (namespace-0-phase
-                                                                                                   ns9_0)))))
-                                                                                          (definitions-variables
-                                                                                           (namespace->definitions
-                                                                                            ns9_0
-                                                                                            phase-shift_1)))
+                                                                                        (namespace->instance
+                                                                                         ns9_0
+                                                                                         (let ((app_1
+                                                                                                (phase+
+                                                                                                 pos_0
+                                                                                                 phase-shift_0)))
+                                                                                           (phase-
+                                                                                            app_1
+                                                                                            (namespace-0-phase
+                                                                                             ns9_0))))
                                                                                         (not
                                                                                          tail?_0)))))))
                                                                              (if (eq?
@@ -60059,27 +60343,29 @@
             (get-current-expand-context.1 #f 'syntax-local-lift-context)))
        (root-expand-context/inner-lift-key
         (root-expand-context/outer-inner ctx_0))))))
-(define syntax-local-expansion-state
-  (lambda (key_0 make-value_0)
-    (begin
-      (if (if (procedure? make-value_0)
-            (procedure-arity-includes? make-value_0 0)
-            #f)
-        (void)
-        (raise-argument-error
-         'syntax-local-expansion-state
-         "(procedure-arity-includes/c 0)"
-         make-value_0))
-      (let ((ctx_0
-             (get-current-expand-context.1 #f 'syntax-local-expansion-state)))
-        (let ((ht_0
-               (root-expand-context/inner-state
-                (root-expand-context/outer-inner ctx_0))))
-          (let ((or-part_0 (hash-ref ht_0 key_0 #f)))
-            (if or-part_0
-              or-part_0
-              (let ((v_0 (|#%app| make-value_0)))
-                (begin (hash-set! ht_0 key_0 v_0) v_0)))))))))
+(define 1/syntax-local-expansion-state
+  (|#%name|
+   syntax-local-expansion-state
+   (lambda (key_0 make-value_0)
+     (begin
+       (if (if (procedure? make-value_0)
+             (procedure-arity-includes? make-value_0 0)
+             #f)
+         (void)
+         (raise-argument-error
+          'syntax-local-expansion-state
+          "(procedure-arity-includes/c 0)"
+          make-value_0))
+       (let ((ctx_0
+              (get-current-expand-context.1 #f 'syntax-local-expansion-state)))
+         (let ((ht_0
+                (root-expand-context/inner-state
+                 (root-expand-context/outer-inner ctx_0))))
+           (let ((or-part_0 (hash-ref ht_0 key_0 #f)))
+             (if or-part_0
+               or-part_0
+               (let ((v_0 (|#%app| make-value_0)))
+                 (begin (hash-set! ht_0 key_0 v_0) v_0))))))))))
 (define 1/syntax-local-lift-module
   (|#%name|
    syntax-local-lift-module
@@ -62860,8 +63146,7 @@
                     app_0
                     (list->set
                      (instance-variable-names
-                      (definitions-variables
-                       (namespace->definitions ns_0 0)))))))))))))
+                      (namespace->instance ns_0 0))))))))))))
     (|#%name|
      namespace-mapped-symbols
      (case-lambda
@@ -79663,7 +79948,7 @@
    'variable-reference->module-declaration-inspector
    'read-syntax
    'read-syntax/recursive))
-(define effect_3107
+(define effect_2940
   (begin
     (void
      (begin
@@ -79923,7 +80208,7 @@
        (add-core-primitive!.1
         #f
         'syntax-local-expansion-state
-        syntax-local-expansion-state)
+        1/syntax-local-expansion-state)
        (add-core-primitive!.1
         #f
         'syntax-local-lift-module

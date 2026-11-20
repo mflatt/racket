@@ -256,7 +256,8 @@
                                      (install-portal-syntaxes!)
                                      (instantiate-phase-body! phase-level phase-shift ns insp instantiate-body)
                                      (when shared
-                                       (shared-instance-record! shared ns phase-level import-instances))]))))))
+                                       (shared-instance-record! shared ns phase-level
+                                                                import-module-instances import-instances))]))))))
 
        (define declare-name (substitute-module-declare-name default-name))
        

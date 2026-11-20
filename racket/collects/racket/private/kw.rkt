@@ -418,7 +418,7 @@
                            struct:km/ae
                            0 0 #f
                            (list (cons prop:named-keyword-procedure
-                                       (vector name realm fail-proc)))
+                                       (vector-immutable name realm fail-proc)))
                            (current-inspector)
                            fail-proc)]))
 

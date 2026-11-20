@@ -3,7 +3,8 @@
          "keywords.rkt"
          (only-in "residual.rkt" state-cons!)
          (for-syntax (submod "residual.rkt" ct))
-         (for-syntax racket/base))
+         (for-syntax racket/base
+                     (only-in '#%unsafe unsafe-assume-shareable)))
 
 (provide identifier
          boolean
@@ -66,11 +67,14 @@
 
 ;; Overloading the meaning of existing identifiers
 (begin-for-syntax
-  (set-box! alt-stxclass-mapping
-            (list (cons #'string (syntax-local-value #'-string))
-                  (cons #'bytes  (syntax-local-value #'-bytes))
-                  (cons #'regexp (syntax-local-value #'-regexp))
-                  (cons #'byte-regexp (syntax-local-value #'-byte-regexp)))))
+  ;; Installs the same mapping in every instantiation, so it's ok
+  ;; to perform once for instantiations that share an instance
+  (unsafe-assume-shareable
+   (set-box! alt-stxclass-mapping
+             (list (cons #'string (syntax-local-value #'-string))
+                   (cons #'bytes  (syntax-local-value #'-bytes))
+                   (cons #'regexp (syntax-local-value #'-regexp))
+                   (cons #'byte-regexp (syntax-local-value #'-byte-regexp))))))
 
 ;; Aliases
 (define-syntax id (make-rename-transformer #'identifier))
@@ -81,7 +85,7 @@
 
 ;; == Normal syntax classes ==
 
-(define notfound (box 'notfound))
+(define notfound (string->uninterned-symbol "notfound"))
 
 (define-syntax-class (static pred [name #f])
   #:attributes (value)

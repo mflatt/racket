@@ -1,3 +1,5 @@
+(define false-thread-cell (unsafe-assume-shareable (make-thread-cell #f)))
+(define rx:path-list-box (unsafe-assume-shareable (box #f)))
 (define-values
  (prop:procedure-accessor procedure-accessor? procedure-accessor-ref)
  (make-struct-type-property
@@ -51,10 +53,7 @@
         (void)
         (raise-argument-error$1
          'guard-for-prop:stream
-         (string-append
-          "(vector/c (procedure-arity-includes/c 1)\n"
-          "          (procedure-arity-includes/c 1)\n"
-          "          (procedure-arity-includes/c 1))")
+         "(vector/c (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1))"
          v_0))
       (vector->immutable-vector v_0)))
   '()
@@ -83,7 +82,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0)
        (let ((cont?_0 (|#%app| range-ref v_0 2)))
          (if cont?_0 (not (|#%app| cont?_0 (|#%app| range-ref v_0 0))) #f)))
@@ -115,7 +114,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0) (not (pair? (|#%app| list-stream-ref v_0 0))))
      (lambda (v_0) (car (|#%app| list-stream-ref v_0 0)))
      (lambda (v_0) (make-list-stream (cdr (|#%app| list-stream-ref v_0 0))))))
@@ -134,22 +133,12 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 0)))
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 1)))
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 2))))))))
 (define empty-stream (make-do-stream (lambda () #t) void void))
-(define print-value-columns/fallback
-  (make-parameter
-   +inf.0
-   (lambda (c_0)
-     (if (if (eqv? c_0 +inf.0) #t (if (exact-integer? c_0) (> c_0 5) #f))
-       c_0
-       (raise-argument-error
-        'print-value-columns
-        "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
-        c_0)))
-   'print-value-columns))
+(define no-empty-edge-table (unsafe-assume-shareable (make-hash)))
 (define finish_2045
   (make-struct-type-install-properties
    '(known-constant)

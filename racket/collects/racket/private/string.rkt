@@ -12,7 +12,8 @@
            regexp-try-match
            -regexp-replace* ; exported from "base.rkt" as `regexp-replace*`
            regexp-replaces)
-  (require (for-syntax "stxcase-scheme.rkt"))
+  (require (for-syntax "stxcase-scheme.rkt")
+           (only-in '#%unsafe unsafe-assume-shareable))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (define (real->decimal-string n [digits 2])
@@ -78,7 +79,8 @@
           [else (raise-argument-error 'regexp-replace-quote
                                       "(or/c string? bytes?)" s)]))
 
-  (define no-empty-edge-table (make-hash))
+  ;; This table is a cache, so it's ok to share
+  (define no-empty-edge-table (unsafe-assume-shareable (make-hash)))
   (define (no-empty-edge-matches rx n)
     (define (tweaker rx n)
       (if (bytes? rx)

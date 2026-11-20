@@ -4,7 +4,8 @@
 	  scribblings/private/docname
           (for-label (only-in racket/require-transform
                               make-require-transformer
-                              current-require-module-path)
+                              current-require-module-path
+                              call-with-current-require-module-path)
                      racket/require-syntax
                      racket/require
                      (only-in racket/provide-transform
@@ -639,7 +640,7 @@ bindings of each @racket[require-spec] are visible for expanding later
   context.
 
   The @tech{require transformer} that implements @racket[relative-in]
-  sets @racket[current-require-module-path] to adjust module paths
+  uses @racket[call-with-current-require-module-path] to adjust module paths
   in the @racket[require-spec]s.}
 
  @defsubform[(only-meta-in phase-level require-spec ...)]{

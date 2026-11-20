@@ -1,6 +1,7 @@
 #lang racket/base
 (require syntax/srcloc
-         (for-syntax racket/base syntax/srcloc setup/path-to-relative))
+         (for-syntax racket/base syntax/srcloc setup/path-to-relative
+                     (only-in '#%unsafe unsafe-assume-shareable)))
 (provide (protect-out module-name-fixup)
          quote-srcloc
          quote-srcloc-string
@@ -17,7 +18,8 @@
 
 (begin-for-syntax
 
-  (define cache (make-hash))
+  ;; A cache is ok to share across instantiations
+  (define cache (unsafe-assume-shareable (make-hash)))
   
   (define (source-location-relative-source loc)
     (define src (source-location-source loc))
@@ -94,16 +96,22 @@
   (source-transformer syntax-quote-prefix))
 
 (define (variable-reference->module-source/submod vr)
-  (define src (variable-reference->module-source vr))
-  (define rname (variable-reference->resolved-module-path vr))
+  (module-source/submod (variable-reference->module-source vr)
+                        (variable-reference->resolved-module-path vr)))
+
+(define (module-source/submod src rname)
   (define name (and rname (resolved-module-path-name rname)))
   (if (pair? name)
       (cons src (cdr name))
       src))
 
+;; Passing `(#%variable-reference)` directly to primitives (instead of
+;; to `variable-reference->module-source/submod`) lets a module that
+;; uses `quote-module-name` have its instance shared across namespaces
 (define-syntax-rule (module-source)
- (variable-reference->module-source/submod
-  (#%variable-reference)))
+  (module-source/submod
+   (variable-reference->module-source (#%variable-reference))
+   (variable-reference->resolved-module-path (#%variable-reference))))
 
 (define-for-syntax (do-quote-module stx fixup)
   (syntax-case stx ()

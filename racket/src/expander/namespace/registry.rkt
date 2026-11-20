@@ -4,11 +4,14 @@
          make-module-registry
          registry-call-with-lock)
 
-(struct module-registry (declarations  ; resolved-module-path -> module
-                         lock-box))    ; reentrant lock to guard registry for use by on-demand visits
+(struct module-registry (declarations     ; resolved-module-path -> module
+                         lock-box         ; reentrant lock to guard registry for use by on-demand visits
+                         shared-instances ; mutable shared-instance -> #t; see "module.rkt"
+                         shared-linklet-instances ; weak linklet instance -> #t for shared definitions
+                         [shared-tick #:mutable]))  ; for least-recently-used eviction of shared instances
 
 (define (make-module-registry)
-  (module-registry (make-hasheq) (box #f)))
+  (module-registry (make-hasheq) (box #f) (make-hasheq) (make-weak-hasheq) 0))
 
 (define (registry-call-with-lock r proc)
   (define lock-box (module-registry-lock-box r))

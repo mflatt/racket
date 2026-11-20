@@ -432,6 +432,7 @@
                     (eq? rator 'list)
                     (eq? rator 'list*)
                     (eq? rator 'vector)
+                    (eq? rator 'immutable-vector)
                     (eq? rator 'hasheq)
                     (eq? rator 'make-struct-type-property))
                 (bitwise-bit-set? (known-procedure-arity-mask v) (length exps))))

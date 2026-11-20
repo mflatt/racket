@@ -2,7 +2,8 @@
 (#%require "stx.rkt" "core-syntax.rkt" "performance-hint.rkt"
            "ellipses.rkt"
            (for-syntax "stx.rkt" "core-syntax.rkt"
-                       "sc.rkt" '#%kernel))
+                       "sc.rkt" '#%kernel
+                       (only '#%unsafe unsafe-assume-shareable)))
 (#%provide syntax
            syntax/loc
            datum
@@ -74,7 +75,7 @@
 
   (define here-stx (quote-syntax here))
 
-  (define template-logger (make-logger 'template (current-logger)))
+  (define template-logger (unsafe-assume-shareable (make-logger 'template (current-logger))))
 
   ;; An Attribute is an identifier statically bound to a syntax-mapping
   ;; (see sc.rkt) whose valvar is an identifier statically bound to an
@@ -507,11 +508,17 @@
       (map (lambda (loc) (datum->syntax id (string->symbol (substring id-string 0 loc))))
            dot-locations)))
 
-  (define gentemp-counter 0)
+  ;; The counter is specific to an expansion, so that this module's
+  ;; instance has no state and can be shared across expansions; see
+  ;; also "with-stx.rkt"
+  (define gentemp-counter-key (gensym 'gentemp))
   (define (gentemp)
-    (set! gentemp-counter (add1 gentemp-counter))
+    (define counter (if (syntax-transforming?)
+                        (syntax-local-expansion-state gentemp-counter-key (lambda () (box 0)))
+                        (box 0)))
+    (set-box! counter (add1 (unbox counter)))
     ((make-syntax-introducer)
-     (datum->syntax #f (string->symbol (format "pv_~s" gentemp-counter)))))
+     (datum->syntax #f (string->symbol (format "pv_~s" (unbox counter))))))
 
   (define (stx-drop n x)
     (if (zero? n) x (stx-drop (sub1 n) (stx-cdr x))))

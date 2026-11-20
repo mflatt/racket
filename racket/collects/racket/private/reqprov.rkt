@@ -259,7 +259,9 @@
       [(module-begin)
        (quasisyntax/loc stx (begin #,stx))]
       [(module top-level)
-       (parameterize ([current-require-module-path #f])
+       (call-with-current-require-module-path
+        #f
+        (lambda ()
          (letrec ([mode-wrap
                    (lambda (mode base)
                      (cond
@@ -433,13 +435,15 @@
            (syntax-case stx ()
              [(_ in)
               (let ([lifted-require-definitions (box '())])
-                (parameterize ([syntax-local-lift-require-definition-param lifted-require-definitions])
+                (call-with-lift-require-definition-box
+                 lifted-require-definitions
+                 (lambda ()
                   (with-syntax ([(new-in ...) (transform-one #'in 0 #| run phase |#)]
                                 [(lifted-require-definitions ...)
                                  (reverse (unbox lifted-require-definitions))])
                     (syntax/loc stx
                       (begin (#%require new-in ...)
-                             lifted-require-definitions ...)))))]
+                             lifted-require-definitions ...))))))]
              [(_ in ...)
               ;; Prefetch on simple module paths:
               (let ([prefetches
@@ -475,7 +479,7 @@
                                         (syntax/loc stx (require in))))
                                     (syntax->list #'(in ...)))])
                   (syntax/loc stx
-                    (begin req-in ...))))])))]
+                    (begin req-in ...))))]))))]
       [else
        (raise-syntax-error #f
                            "not at module level or top level"
@@ -766,10 +770,10 @@
                                   "bad module path"
                                   stx
                                   #'mod-path))
-            (parameterize ([current-require-module-path (module-path-index-join
-                                                         mp
-                                                         (current-require-module-path))])
-              (expand-import #`(combine-in in ...))))]))))
+            (call-with-current-require-module-path
+             (module-path-index-join mp (current-require-module-path))
+             (lambda ()
+               (expand-import #`(combine-in in ...)))))]))))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; provide

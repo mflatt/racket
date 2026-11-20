@@ -16,7 +16,7 @@
                (or (relative-path? s)
                    (absolute-path? s))))))
 
-  (define-values (bsbs) (string #\u5C #\u5C))
+  (define-values (bsbs) "\\\\")
 
   (define-values (normal-case-path)
     (lambda (s)

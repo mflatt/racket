@@ -5,12 +5,14 @@
              "private/core-syntax.rkt"
              "private/require-lift.rkt"
              "phase+space.rkt"
+             (only '#%unsafe unsafe-root-continuation-prompt-tag)
              (for-template (only '#%kernel quote))
              (for-syntax '#%kernel))
   
   (#%provide expand-import
              syntax-local-lift-require-top-level-form
-             current-require-module-path convert-relative-module-path
+             current-require-module-path call-with-current-require-module-path
+             convert-relative-module-path
              syntax-local-require-certifier
              make-require-transformer prop:require-transformer require-transformer?
              ;; the import struct type:
@@ -73,16 +75,29 @@
   (define orig-insp (variable-reference->module-declaration-inspector
                      (#%variable-reference)))
 
-  (define current-require-module-path 
-    (make-parameter #f
-                    (lambda (v)
-                      (unless (or (not v)
-                                  (module-path-index? v))
-                        (raise-argument-error 'current-require-module-path 
-                                              "(or/c module-path-index? #f)"
-                                              v))
-                      v)
-                    'current-require-module-path))
+  ;; Implemented with a continuation mark instead of a parameter, so
+  ;; that this module has no state, and its instance can be shared
+  ;; across module expansions
+  (define current-require-module-path-key
+    (make-continuation-mark-key 'current-require-module-path))
+
+  (define (current-require-module-path)
+    (continuation-mark-set-first #f current-require-module-path-key #f
+                                 (unsafe-root-continuation-prompt-tag)))
+
+  (define (call-with-current-require-module-path mpi thunk)
+    (unless (or (not mpi)
+                (module-path-index? mpi))
+      (raise-argument-error 'call-with-current-require-module-path
+                            "(or/c module-path-index? #f)"
+                            mpi))
+    (unless (and (procedure? thunk)
+                 (procedure-arity-includes? thunk 0))
+      (raise-argument-error 'call-with-current-require-module-path
+                            "(-> any)"
+                            thunk))
+    (with-continuation-mark current-require-module-path-key mpi
+      (thunk)))
 
   ;; a simplified version of `collapse-module-path-index', where
   ;; we don't have to normalize:
@@ -350,7 +365,7 @@
       (raise-argument-error 'syntax-local-lift-require-top-level-form
                             "syntax?"
                             exp))
-    (define b (syntax-local-lift-require-definition-param))
+    (define b (current-lift-require-definition-box))
     (unless b
       (error 'syntax-local-lift-require-definition
              "not currently expanding `require`"))

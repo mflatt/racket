@@ -929,6 +929,36 @@ for caching lift information to avoid redundant lifts.
 @transform-time[]}
 
 
+@defproc[(syntax-local-expansion-state [key any/c]
+                                       [make-value (-> any/c)])
+         any/c]{
+
+Returns the value associated with @racket[key] (as determined by
+@racket[eq?]) for the current expansion of an enclosing module, or for
+the current @tech{namespace} when expanding at the top level. If no
+value is associated with @racket[key], then @racket[make-value] is
+called to produce a value, which is associated with @racket[key] and
+returned. Typically, the value is mutable, such as a box or hash
+table, and it serves as state for a library's compile-time code that
+is specific to a module's expansion.
+
+Using expansion-specific state instead of state in a module-level
+variable allows a module's @tech{instance} to be shared across the
+expansions of multiple modules. A module instance can be shared when
+the module body creates no mutable state, which is determined
+conservatively when the module is compiled; see also
+@racket[unsafe-assume-shareable].
+
+A submodule that is declared with @racket[module] or @racket[module*]
+has its own expansion state, separate from that of the enclosing
+module.
+
+@transform-time[]
+
+@history[#:added "9.4.0.7"]}
+
+
+
 @defproc[(syntax-local-lift-module [stx syntax?])
          void?]{
 
@@ -1533,22 +1563,36 @@ into a module.
 @history[#:changed "8.2.0.3" @elem{Generalized @racket[mode] to phase--space combinations.}]}
 
 
-@defparam[current-require-module-path module-path (or/c #f module-path-index?)]{
+@deftogether[(
+@defproc[(current-require-module-path) (or/c #f module-path-index?)]
+@defproc[(call-with-current-require-module-path [module-path (or/c #f module-path-index?)]
+                                                [thunk (-> any)])
+         any]
+)]{
 
-A @tech{parameter} that determines how relative @racket[require]-level module
-paths are expanded to @racket[#%require]-level module paths by
+The @racket[current-require-module-path] function returns a module
+path that determines how relative @racket[require]-level module paths
+are expanded to @racket[#%require]-level module paths by
 @racket[convert-relative-module-path] (which is used implicitly by all
-built-in @racket[require] sub-forms).
+built-in @racket[require] sub-forms). The
+@racket[call-with-current-require-module-path] function calls
+@racket[thunk] in tail position with @racket[module-path] as the
+result of @racket[current-require-module-path] during the dynamic
+extent of the call.
 
 When the value of @racket[current-require-module-path] is @racket[#f],
 relative module paths are left as-is, which means that the
 @racket[require] context determines the resolution of the module
 path.
 
-The @racket[require] form @racket[parameterize]s
-@racket[current-require-module-path] as @racket[#f] while invoking
-sub-form transformers, while @racket[relative-in] @racket[parameterize]s
-to a given module path.}
+The @racket[require] form uses
+@racket[call-with-current-require-module-path] to set the module path
+to @racket[#f] while invoking sub-form transformers, while
+@racket[relative-in] uses it to set a given module path.
+
+@history[#:changed "9.4.0.7" @elem{Changed @racket[current-require-module-path]
+                                   from a @tech{parameter} to a function and added
+                                   @racket[call-with-current-require-module-path].}]}
 
 
 @defproc[(convert-relative-module-path [module-path

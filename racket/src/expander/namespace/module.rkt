@@ -103,7 +103,7 @@
                 get-portal-syntax-callback ; for `identifier-binding-portal-syntax`
                 shareable-phase-levels ; list of phase levels whose instances can be shared
                 shareable-knowns ; phase-level -> sym -> encoded info for "../compile/shareable.rkt"
-                instance-cache) ; #f or mutable phase-shift -> list of shared-instance; see [**] below
+                instance-cache) ; #f or ephemeron module-registry -> phase-shift -> list of shared-instance; see [**] below
   #:authentic)
 
 ;; [*] Beware that tables in `provides` may map non-interned symbols
@@ -135,12 +135,45 @@
 ;;      `shared-instance` record for shared information.
 (struct shared-instance (name                  ; resolved module path
                          mpi-shape             ; list of module paths in `mpi` chain
-                         bulk-binding-registry ; must match for sharing
                          mpi                   ; module path index for all sharing instances
                          data-box              ; shared `module-instance-data-box`
                          phase-levels          ; phase levels that can be shared
-                         levels)               ; mutable phase-level -> (cons definitions import-instances)
+                         levels                ; mutable phase-level -> (cons definitions import-instances)
+                         by-phase              ; cache table that holds this record
+                         phase-shift           ; key in `by-phase`
+                         [last-use #:mutable]) ; tick from the module registry, for eviction
   #:authentic)
+
+;; Retaining shared instances keeps them alive for as long as the
+;; module registry is reachable, and instances accumulate across
+;; module expansions (at various phase shifts), so the number cached
+;; per module registry is limited; when the limit is exceeded, the
+;; least-recently used half of the cached instances are dropped from
+;; the cache (but instances that still refer to them continue to use
+;; them)
+(define shared-instance-limit 4000)
+
+(define (registry-tick! r)
+  (define t (add1 (module-registry-shared-tick r)))
+  (set-module-registry-shared-tick! r t)
+  t)
+
+(define (register-shared-instance! r shared)
+  (define all (module-registry-shared-instances r))
+  (hash-set! all shared #t)
+  (when ((hash-count all) . > . shared-instance-limit)
+    (define sorted (sort (hash-keys all) (lambda (a b)
+                                          (< (shared-instance-last-use a)
+                                             (shared-instance-last-use b)))))
+    (for ([shared (in-list sorted)]
+          [i (in-range (- (hash-count all) (quotient shared-instance-limit 2)))])
+      (hash-remove! all shared)
+      (define by-phase (shared-instance-by-phase shared))
+      (define phase-shift (shared-instance-phase-shift shared))
+      (define l (remq shared (hash-ref by-phase phase-shift null)))
+      (if (null? l)
+          (hash-remove! by-phase phase-shift)
+          (hash-set! by-phase phase-shift l)))))
 
 (struct module-linklet-info (linklet-or-instance ; #f, linklet, or instance supplied for cross-linking optimization
                              module-uses         ; #f or vector for linklet's imports
@@ -205,7 +238,12 @@
           shareable-knowns
           (and (pair? shareable-phase-levels)
                (not cross-phase-persistent?)
-               (make-hasheqv))))
+               ;; Keyed by module registry (which corresponds to a bulk-binding
+               ;; registry), and ephemeron-based so that cached instances
+               ;; can be reclaimed when the module registry is unreachable
+               ;; (while the module declaration may remain reachable via
+               ;; other module registries):
+               (make-ephemeron-hasheq))))
 
 (define (module-shareable-known m phase-level sym)
   (hash-ref (hash-ref (module-shareable-knowns m) phase-level #hasheq()) sym #f))
@@ -433,6 +471,11 @@
                             [declaration-inspector (module-inspector m)]
                             [inspector (make-inspector (module-inspector m))]))
   (small-hash-set! (namespace-phase-to-namespace m-ns) 0-phase m-ns)
+  (when shared
+    ;; Since definitions for these phase levels might be shared, make
+    ;; sure they don't retain this instance's namespace context
+    (for ([phase-level (in-list (shared-instance-phase-levels shared))])
+      (namespace->definitions m-ns phase-level #:detached-data? #t)))
   (define mi (make-module-instance m-ns m #f shared))
   (if (module-cross-phase-persistent? m)
       (hash-set! (namespace-module-instances ns) name mi)
@@ -459,22 +502,34 @@
   (and cache
        (not (label-phase? 0-phase))
        (non-self-derived-module-path-index? mpi)
-       (let ([bulk-binding-registry (namespace-bulk-binding-registry ns)]
-             [shareds (hash-ref cache 0-phase null)]
-             [mpi-shape (module-path-index-shape mpi)])
+       (let* ([r (namespace-module-registry ns)]
+              [by-phase (or (hash-ref cache r #f)
+                            (let ([ht (make-hasheqv)])
+                              (hash-set! cache r ht)
+                              ht))]
+              [shareds (hash-ref by-phase 0-phase null)]
+              [mpi-shape (module-path-index-shape mpi)])
          (or (for/or ([shared (in-list shareds)])
                (and (eq? name (shared-instance-name shared))
-                    (eq? bulk-binding-registry (shared-instance-bulk-binding-registry shared))
                     (equal? mpi-shape (shared-instance-mpi-shape shared))
-                    shared))
+                    (begin
+                      (set-shared-instance-last-use! shared (registry-tick! r))
+                      shared)))
              (let ([shared (shared-instance name
                                             mpi-shape
-                                            bulk-binding-registry
                                             mpi
                                             (box #f)
                                             (module-shareable-phase-levels m)
-                                            (make-hasheqv))])
-               (hash-set! cache 0-phase (cons shared shareds))
+                                            (make-hasheqv)
+                                            by-phase
+                                            0-phase
+                                            (registry-tick! r))])
+               (hash-set! by-phase 0-phase (cons shared shareds))
+               (register-shared-instance! r shared)
+               (when (log-sharing-enabled?)
+                 (log-sharing (vector name 0-phase mpi-shape 'new)
+                              "new shared instance of ~s with phase shift ~a"
+                              name 0-phase))
                shared)))))
 
 ;; Assumes `non-self-derived-module-path-index?`
@@ -531,12 +586,22 @@
 
 ;; Called by a module's `instantiate-phase` callback after running a
 ;; phase-level body, so that the resulting definitions can be reused
-(define (shared-instance-record! shared ns phase-level import-instances)
+(define (shared-instance-record! shared ns phase-level import-module-instances import-instances)
   (define levels (shared-instance-levels shared))
+  (define r (namespace-module-registry ns))
+  (define long-lived (module-registry-shared-linklet-instances r))
   (unless (or (hash-ref levels phase-level #f)
-              (not (memv phase-level (shared-instance-phase-levels shared))))
-    (hash-set! levels phase-level (cons (namespace->definitions ns phase-level)
-                                        import-instances))))
+              (not (memv phase-level (shared-instance-phase-levels shared)))
+              ;; If an import is specific to this instantiation, then a
+              ;; later instantiation cannot match it, and recording
+              ;; would retain this instantiation's context:
+              (not (for/and ([mi (in-list import-module-instances)]
+                             [inst (in-list import-instances)])
+                     (or (module-cross-phase-persistent? (module-instance-module mi))
+                         (hash-ref long-lived inst #f)))))
+    (define d (namespace->definitions ns phase-level))
+    (hash-set! long-lived (definitions-variables d) #t)
+    (hash-set! levels phase-level (cons d import-instances))))
 
 (define (check-availablilty mi check-available-at-phase-level unavailable-callback)
   (define m (module-instance-module mi))

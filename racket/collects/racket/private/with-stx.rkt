@@ -69,10 +69,20 @@
   (-define-syntax with-syntax (lambda (stx) (gen-with-syntax stx #f)))
   (-define-syntax with-datum (lambda (stx) (gen-with-syntax stx #t)))
 
-  (-define counter 0)
-  (-define (append-number s)
-    (set! counter (add1 counter))
-    (string->symbol (format "~a~s" s counter)))
+  ;; The counter for generated names is specific to an expansion, so
+  ;; that names (and therefore compiled code) are deterministic for a
+  ;; module, and so that this module's instance has no state and can
+  ;; be shared across expansions. Outside of an expansion, the counter
+  ;; is specific to a `generate-temporaries` call; uniqueness of the
+  ;; generated identifiers is from a fresh scope, anyway.
+  (-define counter-key (gensym 'generate-temporaries))
+  (-define (get-counter)
+    (if (syntax-transforming?)
+        (syntax-local-expansion-state counter-key (lambda () (box 0)))
+        (box 0)))
+  (-define (append-number counter s)
+    (set-box! counter (add1 (unbox counter)))
+    (string->symbol (format "~a~s" s (unbox counter))))
 
   (-define (generate-temporaries sl)
     (unless (stx-list? sl)
@@ -80,22 +90,23 @@
        'generate-temporaries
        "stx-list?"
        sl))
-    (let ([l (stx->list sl)])
+    (let ([l (stx->list sl)]
+          [counter (get-counter)])
       (map (lambda (x) 
 	     ((make-syntax-introducer)
 	      (cond
 	       [(symbol? x)
-		(datum->syntax #f (append-number x))]
+		(datum->syntax #f (append-number counter x))]
 	       [(string? x)
-		(datum->syntax #f (append-number x))]
+		(datum->syntax #f (append-number counter x))]
 	       [(keyword? x)
-		(datum->syntax #f (append-number (keyword->string x)))]
+		(datum->syntax #f (append-number counter (keyword->string x)))]
 	       [(identifier? x)
-		(datum->syntax #f (append-number (syntax-e x)))]
+		(datum->syntax #f (append-number counter (syntax-e x)))]
 	       [(and (syntax? x) (keyword? (syntax-e x)))
-		(datum->syntax #f (append-number (keyword->string (syntax-e x))))]
+		(datum->syntax #f (append-number counter (keyword->string (syntax-e x))))]
 	       [else 
-		(datum->syntax #f (append-number 'temp))])))
+		(datum->syntax #f (append-number counter 'temp))])))
 	   l)))
 
   (#%provide with-syntax with-datum generate-temporaries))

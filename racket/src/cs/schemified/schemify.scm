@@ -12,6 +12,7 @@
 (define fixnum-for-every-system?
   (lambda (v_0)
     (if (fixnum? v_0) (if (fx>= v_0 -536870912) (fx<= v_0 536870911) #f) #f)))
+(define false-thread-cell (unsafe-assume-shareable (make-thread-cell #f)))
 (define call-with-exception-handler
   (lambda (exnh_0 thunk_0)
     (begin0
@@ -43,6 +44,7 @@
           (let ((or-part_1 (relative-path? s_0)))
             (if or-part_1 or-part_1 (absolute-path? s_0)))
           #f)))))
+(define rx:path-list-box (unsafe-assume-shareable (box #f)))
 (define-values
  (prop:keyword-impersonator keyword-impersonator? keyword-impersonator-ref)
  (make-struct-type-property 'keyword-impersonator))
@@ -1485,10 +1487,7 @@
         (void)
         (1/raise-argument-error
          'guard-for-prop:stream
-         (string-append
-          "(vector/c (procedure-arity-includes/c 1)\n"
-          "          (procedure-arity-includes/c 1)\n"
-          "          (procedure-arity-includes/c 1))")
+         "(vector/c (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1))"
          v_0))
       (vector->immutable-vector v_0)))
   '()
@@ -1517,7 +1516,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0)
        (let ((cont?_0 (|#%app| range-ref v_0 2)))
          (if cont?_0 (not (|#%app| cont?_0 (|#%app| range-ref v_0 0))) #f)))
@@ -1564,7 +1563,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0) (not (pair? (|#%app| list-stream-ref v_0 0))))
      (lambda (v_0) (car (|#%app| list-stream-ref v_0 0)))
      (lambda (v_0) (make-list-stream (cdr (|#%app| list-stream-ref v_0 0))))))
@@ -1682,7 +1681,7 @@
   (list
    (cons
     prop:stream
-    (vector
+    (vector-immutable
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 0)))
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 1)))
      (lambda (v_0) (|#%app| (|#%app| do-stream-ref v_0 2))))))))
@@ -2018,17 +2017,7 @@
        (if key1_0
          (|#%app| sort lst5_0 less?6_0 key1_0 cache-keys?2_0)
          (|#%app| sort lst5_0 less?6_0))))))
-(define print-value-columns/fallback
-  (make-parameter
-   +inf.0
-   (lambda (c_0)
-     (if (if (eqv? c_0 +inf.0) #t (if (exact-integer? c_0) (> c_0 5) #f))
-       c_0
-       (raise-argument-error
-        'print-value-columns
-        "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
-        c_0)))
-   'print-value-columns))
+(define no-empty-edge-table (unsafe-assume-shareable (make-hash)))
 (define correlated?$1 syntax?)
 (define correlated-e$1 syntax-e)
 (define correlated-property$1 syntax-property)
@@ -29139,12 +29128,17 @@
                                   (let ((or-part_4 (eq? rator_1 'vector)))
                                     (if or-part_4
                                       or-part_4
-                                      (let ((or-part_5 (eq? rator_1 'hasheq)))
+                                      (let ((or-part_5
+                                             (eq? rator_1 'immutable-vector)))
                                         (if or-part_5
                                           or-part_5
-                                          (eq?
-                                           rator_1
-                                           'make-struct-type-property)))))))))))))
+                                          (let ((or-part_6
+                                                 (eq? rator_1 'hasheq)))
+                                            (if or-part_6
+                                              or-part_6
+                                              (eq?
+                                               rator_1
+                                               'make-struct-type-property)))))))))))))))
                 (let ((app_0 (known-procedure-arity-mask v_0)))
                   (bitwise-bit-set? app_0 (length exps_0)))
                 #f))

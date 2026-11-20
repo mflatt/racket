@@ -38,13 +38,14 @@
                              stx)])))
 
   (begin-for-syntax
-   ;; The following table is newly instantiated for each module
-   ;; expansion that uses `module+', so it is effectively
-   ;; module-local:
-   (define-values (submodule->stxs-box) (make-weak-hash))
+   ;; The table mapping submodule names to accumulated forms is kept in
+   ;; the expansion state, so it is specific to the enclosing module's
+   ;; expansion (and this module's instance can be shared):
+   (define-values (submodule->stxs-box-key) (gensym 'module+))
    (define-values (get-stxs-box)
      (lambda (form-stx the-submodule-stx lift?)
-       (hash-ref! submodule->stxs-box (syntax-e the-submodule-stx)
+       (hash-ref! (syntax-local-expansion-state submodule->stxs-box-key make-hasheq)
+                  (syntax-e the-submodule-stx)
                   (lambda ()
                     (when lift?
                       (syntax-local-lift-module-end-declaration

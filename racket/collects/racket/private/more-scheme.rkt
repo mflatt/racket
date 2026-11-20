@@ -4,6 +4,7 @@
 
 (module more-scheme '#%kernel
   (#%require "core-syntax.rkt" '#%paramz "case.rkt" "logger.rkt"
+             (only '#%unsafe unsafe-assume-shareable)
              (for-syntax '#%kernel "stx.rkt" "core-syntax.rkt" "stxcase-scheme.rkt" "qqstx.rkt"))
 
   ;; For `old-case`:
@@ -190,7 +191,9 @@
      [else
       (select-handler/breaks-as-is e bpz (cdr l))]))
 
-  (define false-thread-cell (make-thread-cell #f))
+  ;; This cell is only installed while jumping to a handler, where no
+  ;; user code runs that could mutate it; so, it can be shared
+  (define false-thread-cell (unsafe-assume-shareable (make-thread-cell #f)))
 
 
   (define (check-with-handlers-in-context handler-prompt-key)

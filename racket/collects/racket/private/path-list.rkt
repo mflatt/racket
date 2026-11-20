@@ -1,19 +1,24 @@
 (module path-list '#%kernel
   (#%require "core-syntax.rkt"
              (rename "core-syntax.rkt" -define define)
-             (rename "core-syntax.rkt" -define-syntax define-syntax))
+             (rename "core-syntax.rkt" -define-syntax define-syntax)
+             (only '#%unsafe unsafe-assume-shareable))
 
   (#%provide path-list-string->path-list)
 
-  (-define rx:path-list #f)
+  ;; The regexp is created lazily, and it's ok to share the box
+  ;; across instances
+  (-define rx:path-list-box (unsafe-assume-shareable (box #f)))
 
-  (-define (init-rx:path-list!)
-    (unless rx:path-list
-      (set! rx:path-list (byte-regexp (string->bytes/utf-8
-                                       (let ((sep (if (eq? (system-type) 'windows)
-                                                      ";"
-                                                      ":")))
-                                         (format "([^~a]*)~a(.*)" sep sep)))))))
+  (-define (get-rx:path-list)
+    (or (unbox rx:path-list-box)
+        (let ([rx (byte-regexp (string->bytes/utf-8
+                                (let ((sep (if (eq? (system-type) 'windows)
+                                               ";"
+                                               ":")))
+                                  (format "([^~a]*)~a(.*)" sep sep))))])
+          (set-box! rx:path-list-box rx)
+          rx)))
 
   (-define (cons-path default s l) 
     (let ([s (if (eq? (system-type) 'windows)
@@ -36,11 +41,10 @@
     (unless (and (list? default)
                  (andmap (lambda (p) (or (eq? p 'same) path?)) default))
       (raise-argument-error 'path-list-string->path-list "(listof path?)" default))
-    (init-rx:path-list!)
     (let loop ([s (if (string? s)
                       (string->bytes/utf-8 s)
                       s)])
-      (let ([m (regexp-match rx:path-list s)])
+      (let ([m (regexp-match (get-rx:path-list) s)])
         (if m
             (cons-path default (cadr m) (loop (caddr m)))
             (cons-path default s null))))))

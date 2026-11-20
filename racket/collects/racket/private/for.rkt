@@ -10,6 +10,7 @@
              '#%unsafe
              '#%flfxnum
              (for-syntax '#%kernel
+                         (only '#%unsafe unsafe-assume-shareable)
                          "stx.rkt"
                          "qqstx.rkt"
                          "core-syntax.rkt"
@@ -182,7 +183,7 @@
       clause)
 
     (define sequence-specialization-logger
-      (make-logger 'sequence-specialization (current-logger)))
+      (unsafe-assume-shareable (make-logger 'sequence-specialization (current-logger))))
 
     (define (check-identifier-bindings orig-stx ids-stx kind result)
       (let ([ids (syntax->list ids-stx)])
@@ -521,10 +522,9 @@
                     (procedure? (vector-ref v 2))
                     (procedure-arity-includes? (vector-ref v 2) 1))
          (raise-argument-error 'guard-for-prop:stream
-                               (string-append
-                                "(vector/c (procedure-arity-includes/c 1)\n"
-                                "          (procedure-arity-includes/c 1)\n"
-                                "          (procedure-arity-includes/c 1))")
+                               ;; a literal string, instead of `string-append`,
+                               ;; so that the guard is pure:
+                               "(vector/c (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1)\n          (procedure-arity-includes/c 1))"
                                v))
        (vector->immutable-vector v))
      '()
@@ -672,7 +672,7 @@
                   range-set!)
     (make-struct-type 'stream #f 3 0 #f
                       (list (cons prop:stream
-                                  (vector
+                                  (vector-immutable
                                    (lambda (v)
                                      (let ([cont? (range-ref v 2)])
                                        (and cont?
@@ -750,7 +750,7 @@
                   list-stream-set!)
     (make-struct-type 'stream #f 1 0 #f
                       (list (cons prop:stream
-                                  (vector
+                                  (vector-immutable
                                    (lambda (v) (not (pair? (list-stream-ref v 0))))
                                    (lambda (v) (car (list-stream-ref v 0)))
                                    (lambda (v) (make-list-stream (cdr (list-stream-ref v 0))))))
@@ -1499,7 +1499,7 @@
                   do-stream-set!)
     (make-struct-type 'stream #f 3 0 #f
                       (list (cons prop:stream
-                                  (vector
+                                  (vector-immutable
                                    (lambda (v) ((do-stream-ref v 0)))
                                    (lambda (v) ((do-stream-ref v 1)))
                                    (lambda (v) ((do-stream-ref v 2))))))))

@@ -1,6 +1,7 @@
 
 (module logger '#%kernel
   (#%require "core-syntax.rkt"
+             (only '#%unsafe unsafe-assume-shareable)
              (for-syntax '#%kernel "stx.rkt" "core-syntax.rkt"
                          "stxcase-scheme.rkt"))
 
@@ -61,7 +62,11 @@
                        [X X])
            (syntax-property
             #'(begin
-                (define X-logger (make-logger 'X (check-logger-or-false 'd-l parent)))
+                (define X-logger
+                  (let-values ([(p) (check-logger-or-false 'd-l parent)])
+                    ;; Sharing a logger is ok, so a module that uses `define-logger`
+                    ;; can still have its instance shared across namespaces
+                    (unsafe-assume-shareable (make-logger 'X p))))
                 (define-syntax log-X-fatal (make-define-log 'fatal #'X-logger #''X))
                 (define-syntax log-X-error (make-define-log 'error #'X-logger #''X))
                 (define-syntax log-X-warning (make-define-log 'warning #'X-logger #''X))
