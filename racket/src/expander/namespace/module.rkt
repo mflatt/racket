@@ -10,6 +10,7 @@
          "../expand/root-expand-context.rkt"
          "../expand/portal-syntax.rkt"
          "../host/linklet.rkt"
+         "../common/sharing-log.rkt"
          "namespace.rkt"
          "provided.rkt"
          "registry.rkt"
@@ -50,6 +51,7 @@
          module-access
          module-compute-access!
          module-realm
+         module-shareable-known
          
          module-instance-namespace
          module-instance-module
@@ -64,7 +66,11 @@
 
          namespace-module-get-portal-syntax-lookup
 
-         namespace-module-use->module+linklet-instances)
+         namespace-module-use->module+linklet-instances
+
+         shared-instance-install!
+         shared-instance-record!
+         log-shared-instance-miss)
 
 (module+ for-module-reflect
   (provide (struct-out module)))
@@ -94,7 +100,10 @@
                 submodule-names ; associated submodules (i.e, when declared together)
                 supermodule-name ; associated supermodule (i.e, when declared together)
                 get-all-variables ; for `module->indirect-exports`
-                get-portal-syntax-callback) ; for `identifier-binding-portal-syntax`
+                get-portal-syntax-callback ; for `identifier-binding-portal-syntax`
+                shareable-phase-levels ; list of phase levels whose instances can be shared
+                shareable-knowns ; phase-level -> sym -> encoded info for "../compile/shareable.rkt"
+                instance-cache) ; #f or mutable phase-shift -> list of shared-instance; see [**] below
   #:authentic)
 
 ;; [*] Beware that tables in `provides` may map non-interned symbols
@@ -104,6 +113,34 @@
 ;;     to a particular module, `require`ing unreadable symbols can
 ;;     create collisions. Still, the provided binding is supposed to
 ;;     be accessible via `dynamic-require`.
+
+;; [**] When a module's body has no state (as determined by the
+;;      compiler), then instantiations of the module with the same
+;;      phase shift can share the same underlying instances of each
+;;      phase level, as long as the instances of imported variables
+;;      are also the same --- which typically means that the imported
+;;      modules are similarly shared. This sharing is useful, for
+;;      example, to avoid re-instantiating the same phase-1 modules for
+;;      each separate module expansion. Sharing is limited to
+;;      instances whose module path index is not relative to the
+;;      "self" of some module (such as a module being expanded), so
+;;      that syntax literals in a shared instance refer to modules in
+;;      a way that is independent of the instantiation context.
+;;      Furthermore, sharing is limited to instances whose module path
+;;      index has the same shape (i.e., the same chain of module
+;;      paths), so that syntax literals serialize the same as for an
+;;      unshared instance; that way, compiled code is independent of
+;;      whether and how instances have been shared. Each
+;;      instance-specific `module-instance` record refers to a
+;;      `shared-instance` record for shared information.
+(struct shared-instance (name                  ; resolved module path
+                         mpi-shape             ; list of module paths in `mpi` chain
+                         bulk-binding-registry ; must match for sharing
+                         mpi                   ; module path index for all sharing instances
+                         data-box              ; shared `module-instance-data-box`
+                         phase-levels          ; phase levels that can be shared
+                         levels)               ; mutable phase-level -> (cons definitions import-instances)
+  #:authentic)
 
 (struct module-linklet-info (linklet-or-instance ; #f, linklet, or instance supplied for cross-linking optimization
                              module-uses         ; #f or vector for linklet's imports
@@ -138,7 +175,9 @@
                      #:submodule-names [submodule-names null]
                      #:supermodule-name [supermodule-name #f]
                      #:get-all-variables [get-all-variables (lambda () null)] ; ok to omit exported
-                     #:get-portal-syntax-callback [get-portal-syntax-callback (lambda (data-box phase sym) #f)])
+                     #:get-portal-syntax-callback [get-portal-syntax-callback (lambda (data-box phase sym) #f)]
+                     #:shareable-phase-levels [shareable-phase-levels null]
+                     #:shareable-knowns [shareable-knowns #hasheqv()])
   (module source-name
           self
           requires
@@ -161,7 +200,15 @@
           submodule-names
           supermodule-name
           get-all-variables
-          get-portal-syntax-callback))
+          get-portal-syntax-callback
+          shareable-phase-levels
+          shareable-knowns
+          (and (pair? shareable-phase-levels)
+               (not cross-phase-persistent?)
+               (make-hasheqv))))
+
+(define (module-shareable-known m phase-level sym)
+  (hash-ref (hash-ref (module-shareable-knowns m) phase-level #hasheq()) sym #f))
 
 ;; A `module-instance` represents the instantiation of a module in a particular
 ;; namespace. If a module instance is attached from one namespace to another,
@@ -174,18 +221,22 @@
                          [made-available? #:mutable]   ; no #f in `phase-level-to-state`?
                          [attached? #:mutable]         ; whether the instance has been attached elsewhere
                          data-box                      ; for use by module implementation
-                         portal-syntaxes)              ; for a module being expanded 
+                         portal-syntaxes               ; for a module being expanded 
+                         shared)                       ; #f or `shared-instance`
   #:authentic)
 
-(define (make-module-instance m-ns m portal-syntaxes)
+(define (make-module-instance m-ns m portal-syntaxes [shared #f])
   (module-instance m-ns           ; namespace
                    m              ; module
                    #f             ; shifted-requires (not yet computed)
                    (make-small-hasheqv) ; phase-level-to-state
                    #f             ; made-available?
                    #f             ; attached?
-                   (box #f)       ; data-box
-                   portal-syntaxes))
+                   (if shared     ; data-box
+                       (shared-instance-data-box shared)
+                       (box #f))
+                   portal-syntaxes
+                   shared))
 
 ;; ----------------------------------------
 
@@ -250,7 +301,12 @@
     ((current-module-name-resolver) mod-name #f))
   ;; If this module is already instantiated, re-instantiate it
   (when prior-mi
-    (define m-ns (module-instance-namespace prior-mi))
+    (define m-ns (let ([m-ns (module-instance-namespace prior-mi)])
+                   (if (module-instance-shared prior-mi)
+                       ;; Don't re-instantiate in place, since definitions
+                       ;; may be shared with other namespaces
+                       (fresh-module-instance-namespace m-ns)
+                       m-ns)))
     (define states (module-instance-phase-level-to-state prior-mi))
     (define phase (namespace-phase ns))
     (define visit? (eq? 'started (small-hash-ref states (add1 phase) #f)))
@@ -361,8 +417,11 @@
     (hash-set! at-phase name mi)]))
 
 (define (namespace-create-module-instance! ns name 0-phase m mpi)
+  (define shared (find-or-create-shared-instance ns name 0-phase m mpi))
   (define m-ns (struct-copy namespace ns
-                            [mpi mpi]
+                            [mpi (if shared
+                                     (shared-instance-mpi shared)
+                                     mpi)]
                             [source-name (or (module-source-name m)
                                              (resolved-module-path-root-name
                                               (module-path-index-resolve mpi)))]
@@ -374,7 +433,7 @@
                             [declaration-inspector (module-inspector m)]
                             [inspector (make-inspector (module-inspector m))]))
   (small-hash-set! (namespace-phase-to-namespace m-ns) 0-phase m-ns)
-  (define mi (make-module-instance m-ns m #f))
+  (define mi (make-module-instance m-ns m #f shared))
   (if (module-cross-phase-persistent? m)
       (hash-set! (namespace-module-instances ns) name mi)
       (let ([at-phase (or (hash-ref (namespace-module-instances ns) 0-phase #f)
@@ -383,6 +442,101 @@
                             at-phase))])
         (hash-set! at-phase name mi)))
   mi)
+
+;; Copies a module instance's namespace, but with fresh definitions
+(define (fresh-module-instance-namespace m-ns)
+  (define new-m-ns (struct-copy namespace m-ns
+                                [root-expand-ctx (box #f)]
+                                [phase-to-namespace (make-small-hasheqv)]
+                                [phase-level-to-definitions (make-small-hasheqv)]))
+  (small-hash-set! (namespace-phase-to-namespace new-m-ns) (namespace-0-phase m-ns) new-m-ns)
+  new-m-ns)
+
+;; Finds or creates a `shared-instance` record for a module instance,
+;; or returns #f if the instance cannot be shared
+(define (find-or-create-shared-instance ns name 0-phase m mpi)
+  (define cache (module-instance-cache m))
+  (and cache
+       (not (label-phase? 0-phase))
+       (non-self-derived-module-path-index? mpi)
+       (let ([bulk-binding-registry (namespace-bulk-binding-registry ns)]
+             [shareds (hash-ref cache 0-phase null)]
+             [mpi-shape (module-path-index-shape mpi)])
+         (or (for/or ([shared (in-list shareds)])
+               (and (eq? name (shared-instance-name shared))
+                    (eq? bulk-binding-registry (shared-instance-bulk-binding-registry shared))
+                    (equal? mpi-shape (shared-instance-mpi-shape shared))
+                    shared))
+             (let ([shared (shared-instance name
+                                            mpi-shape
+                                            bulk-binding-registry
+                                            mpi
+                                            (box #f)
+                                            (module-shareable-phase-levels m)
+                                            (make-hasheqv))])
+               (hash-set! cache 0-phase (cons shared shareds))
+               shared)))))
+
+;; Assumes `non-self-derived-module-path-index?`
+(define (module-path-index-shape mpi)
+  (let loop ([mpi mpi])
+    (define-values (path base) (module-path-index-split mpi))
+    (cons path (if base (loop base) null))))
+
+;; Called by a module's `instantiate-phase` callback, so that existing
+;; definitions can be used if they were created with the same imports.
+;; Returns #t if shared definitions were installed, in which case the
+;; caller should not run the phase-level body.
+(define (shared-instance-install! shared ns phase-level import-instances)
+  (define d+imports (hash-ref (shared-instance-levels shared) phase-level #f))
+  (cond
+    [(not (memv phase-level (shared-instance-phase-levels shared))) #f]
+    [(and d+imports
+          (let loop ([a (cdr d+imports)] [b import-instances])
+            (cond
+              [(null? a) (null? b)]
+              [(null? b) #f]
+              [else (and (eq? (car a) (car b))
+                         (loop (cdr a) (cdr b)))])))
+     (small-hash-set! (namespace-phase-level-to-definitions ns) phase-level (car d+imports))
+     #t]
+    [else #f]))
+
+;; Called by a module's `instantiate-phase` callback when a phase level
+;; is about to be run instead of installed via `shared-instance-install!`
+(define (log-shared-instance-miss shared ns phase-level import-instances)
+  (when (and shared (log-sharing-enabled?))
+    (define name (resolved-module-path-name (module-path-index-resolve (namespace-mpi ns))))
+    (define phase (phase+ phase-level (namespace-0-phase ns)))
+    (cond
+      [(not (memv phase-level (shared-instance-phase-levels shared)))
+       (log-sharing (vector name phase-level phase 'unshareable)
+                    "phase level ~a of ~s is not shareable, so instantiating at phase ~a"
+                    phase-level name phase)]
+      [(hash-ref (shared-instance-levels shared) phase-level #f)
+       => (lambda (d+imports)
+            ;; Find the first import that is different
+            (define diff-name
+              (let loop ([a (cdr d+imports)] [b import-instances])
+                (cond
+                  [(or (null? a) (null? b)) #f]
+                  [(eq? (car a) (car b)) (loop (cdr a) (cdr b))]
+                  [else (instance-name (car b))])))
+            (log-sharing (vector name phase-level phase 'imports-differ diff-name)
+                         "phase level ~a of ~s at phase ~a not shared, because an import differs: ~a"
+                         phase-level name phase diff-name))]
+      [else
+       ;; First instantiation, which will be recorded for sharing
+       (void)])))
+
+;; Called by a module's `instantiate-phase` callback after running a
+;; phase-level body, so that the resulting definitions can be reused
+(define (shared-instance-record! shared ns phase-level import-instances)
+  (define levels (shared-instance-levels shared))
+  (unless (or (hash-ref levels phase-level #f)
+              (not (memv phase-level (shared-instance-phase-levels shared))))
+    (hash-set! levels phase-level (cons (namespace->definitions ns phase-level)
+                                        import-instances))))
 
 (define (check-availablilty mi check-available-at-phase-level unavailable-callback)
   (define m (module-instance-module mi))
@@ -624,8 +778,11 @@
              (define data-box (module-instance-data-box mi))
              (define prep (module-prepare-instance m))
              (define go (module-instantiate-phase m))
+             (define shared (module-instance-shared mi))
              (prep data-box p-ns phase-shift mpi bulk-binding-registry insp)
-             (go data-box p-ns phase-shift phase-level mpi bulk-binding-registry insp))]
+             (if shared
+                 (go data-box p-ns phase-shift phase-level mpi bulk-binding-registry insp shared)
+                 (go data-box p-ns phase-shift phase-level mpi bulk-binding-registry insp)))]
           [(and otherwise-available?
                 (not (negative? run-phase))
                 (not (small-hash-ref (module-instance-phase-level-to-state mi) phase-level #f)))

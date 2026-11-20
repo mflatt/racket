@@ -72,7 +72,7 @@
 
   (define-syntax define-primitive-table
     (syntax-rules ()
-      [(_ id [prim known] ...)
+      [(_ id [prim known . _] ...)
        (define id
          (let ([ht (unsafe-make-hasheq)])
            (hash-set! ht 'prim (redirect-primitive prim))

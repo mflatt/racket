@@ -72,6 +72,7 @@ static Scheme_Object *print_unreadable(int, Scheme_Object *[]);
 static Scheme_Object *print_pair_curly(int, Scheme_Object *[]);
 static Scheme_Object *print_mpair_curly(int, Scheme_Object *[]);
 static Scheme_Object *print_syntax_width(int, Scheme_Object *[]);
+static Scheme_Object *print_value_columns(int, Scheme_Object *[]);
 static Scheme_Object *print_reader(int, Scheme_Object *[]);
 static Scheme_Object *print_as_qq(int, Scheme_Object *[]);
 static Scheme_Object *print_long_bool(int, Scheme_Object *[]);
@@ -257,6 +258,7 @@ void scheme_init_read(Scheme_Startup_Env *env)
   ADD_PARAMETER("print-pair-curly-braces",       print_pair_curly,       MZCONFIG_PRINT_PAIR_CURLY,            env);
   ADD_PARAMETER("print-mpair-curly-braces",      print_mpair_curly,      MZCONFIG_PRINT_MPAIR_CURLY,           env);
   ADD_PARAMETER("print-syntax-width",            print_syntax_width,     MZCONFIG_PRINT_SYNTAX_WIDTH,          env);
+  ADD_PARAMETER("print-value-columns",           print_value_columns,    MZCONFIG_PRINT_VALUE_COLUMNS,         env);
   ADD_PARAMETER("print-reader-abbreviations",    print_reader,           MZCONFIG_PRINT_READER,                env);
   ADD_PARAMETER("print-boolean-long-form",       print_long_bool,        MZCONFIG_PRINT_LONG_BOOLEAN,          env);
   ADD_PARAMETER("print-as-expression",           print_as_qq,            MZCONFIG_PRINT_AS_QQ,                 env);
@@ -392,6 +394,32 @@ print_syntax_width(int argc, Scheme_Object *argv[])
                               argc, argv,
                               -1, good_syntax_width, 
                               "(or/c +inf.0 0 (and/c exact-integer? (>=/c 3)))", 0);
+}
+
+static Scheme_Object *good_value_columns(int c, Scheme_Object **argv)
+{
+  int ok;
+
+  /* somewhat arbitrary minimum, enough for "(list" */
+  ok = (SCHEME_INTP(argv[0])
+	? (SCHEME_INT_VAL(argv[0]) > 5)
+	: (SCHEME_BIGNUMP(argv[0])
+	   ? SCHEME_BIGPOS(argv[0])
+	   : (SCHEME_DBLP(argv[0])
+              ? MZ_IS_POS_INFINITY(SCHEME_DBL_VAL(argv[0]))
+              : 0)));
+
+  return ok ? scheme_true : scheme_false;
+}
+
+static Scheme_Object *
+print_value_columns(int argc, Scheme_Object *argv[])
+{
+  return scheme_param_config2("print-value-columns",
+                              scheme_make_integer(MZCONFIG_PRINT_VALUE_COLUMNS),
+                              argc, argv,
+                              -1, good_value_columns,
+                              "(or/c +inf.0 (and/c exact-integer? (>/c 5)))", 0);
 }
 
 #ifdef LOAD_ON_DEMAND

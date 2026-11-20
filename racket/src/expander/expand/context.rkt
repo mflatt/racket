@@ -91,6 +91,7 @@
                   (root-expand-context-frame-id root-ctx)
                   (root-expand-context-counter root-ctx)
                   (root-expand-context-lift-key root-ctx)
+                  (root-expand-context-state root-ctx)
                   to-parsed?
                   'top-level
                   (namespace-phase ns)
@@ -137,6 +138,7 @@
                 [frame-id #:parent root-expand-context (root-expand-context-frame-id root-ctx)]
                 [counter #:parent root-expand-context (root-expand-context-counter root-ctx)]
                 [lift-key #:parent root-expand-context (root-expand-context-lift-key root-ctx)]
+                [state #:parent root-expand-context (root-expand-context-state root-ctx)]
                 [binding-layer (root-expand-context-frame-id root-ctx)]))
 
 ;; An expand-context or a delayed expand context (so use `force`):

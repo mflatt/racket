@@ -8,6 +8,10 @@
 (define unsafe-cdr (unsafe-primitive cdr))
 (define unsafe-list-tail (unsafe-primitive list-tail))
 (define unsafe-list-ref (unsafe-primitive list-ref))
+;; Recognized by the expander's analysis of module instances that can be
+;; shared across namespaces; see "../../expander/compile/shareable.rkt"
+(define (unsafe-assume-shareable v) v)
+
 (define (unsafe-set-immutable-car! p a) ((unsafe-primitive set-car!) p a))
 (define (unsafe-set-immutable-cdr! p d) ((unsafe-primitive set-cdr!) p d))
 

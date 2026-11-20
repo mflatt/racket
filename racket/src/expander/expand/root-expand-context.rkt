@@ -34,6 +34,7 @@
           * frame-id      ; #f or a gensym to identify a binding frame; 'all matches any for use-site scopes
           counter         ; box of an integer; used for generating names deterministically
           lift-key        ; identifies (via `syntax-local-lift-context`) a target for lifts
+          state           ; mutable hasheq for `syntax-local-expansion-state`
           )) ; after adding a field, update `copy-module-context` in "context.rkt"
 
 (define (make-root-expand-context #:self-mpi self-mpi
@@ -54,7 +55,8 @@
                        (make-hasheqv)  ; defined-syms
                        (string->uninterned-symbol "root-frame") ; frame-id
                        (box 0)         ; counter
-                       (generate-lift-key)))
+                       (generate-lift-key)
+                       (make-hasheq))) ; state
 
 ;; ----------------------------------------
 
@@ -111,7 +113,8 @@
                        (unpack-defined-syms (vector-ref vec 4)) ; defined-syms
                        (syntax-e (vector-ref vec 5))           ; frame-id
                        (box (syntax-e (vector-ref vec 6)))     ; counter
-                       (generate-lift-key)))
+                       (generate-lift-key)
+                       (make-hasheq)))                         ; state
 
 (define (defined-syms-hash? v)
   (and (for/and ([(phase ht-s) (in-hash v)])

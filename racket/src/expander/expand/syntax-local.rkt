@@ -49,6 +49,7 @@
          syntax-local-lift-expression
          syntax-local-lift-values-expression
          syntax-local-lift-context
+         syntax-local-expansion-state
          
          syntax-local-lift-module
          
@@ -274,6 +275,23 @@
 (define/who (syntax-local-lift-context)
   (define ctx (get-current-expand-context who))
   (root-expand-context-lift-key ctx))
+
+;; ----------------------------------------
+
+;; Returns a value associated with `key` for the current expansion of
+;; a module or top-level namespace, calling `make-value` to create the
+;; value if none is associated with `key` already. Since a library's
+;; compile-time instance can be shared across module expansions, a
+;; library should use this function instead of module-level mutable
+;; state to keep information that is specific to an expansion.
+(define/who (syntax-local-expansion-state key make-value)
+  (check who (procedure-arity-includes/c 0) make-value)
+  (define ctx (get-current-expand-context who))
+  (define ht (root-expand-context-state ctx))
+  (or (hash-ref ht key #f)
+      (let ([v (make-value)])
+        (hash-set! ht key v)
+        v)))
 
 ;; ----------------------------------------
 

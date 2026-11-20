@@ -290,7 +290,12 @@ Files in this directory:
 
  primitive/*.ss - for "expander.sls", tables of bindings for
          primitive linklet instances; see "From primitives to modules"
-         below for more information.
+         below for more information. An entry can have a `shareable`,
+         `shareable-for-error`, or `shareable-to-read` tag after its
+         known-value description, which informs the expander's analysis
+         of module instances that can be shared; after changing a tag,
+         run "../expander/gen-shareable-primitive.rkt" to update
+         "../expander/compile/shareable-primitive.rkt".
 
  convert.rkt - A "schemify"-based linklet-to-library-body compiler,
          which is used to convert a ".rktl" file to a ".scm" file to

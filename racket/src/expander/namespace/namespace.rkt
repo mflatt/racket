@@ -18,6 +18,7 @@
          namespace-root-namespace
          namespace-get-root-expand-ctx
          namespace-set-root-expand-ctx!
+         namespace-root-expand-ctx-set?
          namespace-self-mpi
          namespace-self-mpi/no-top-level
          namespace->namespace-at-phase
@@ -146,6 +147,9 @@
 
 (define (namespace-set-root-expand-ctx! ns root-ctx)
   (set-box! (namespace-root-expand-ctx ns) root-ctx))
+
+(define (namespace-root-expand-ctx-set? ns)
+  (and (unbox (namespace-root-expand-ctx ns)) #t))
 
 (define (namespace-self-mpi ns)
   (root-expand-context-self-mpi (namespace-get-root-expand-ctx ns)))

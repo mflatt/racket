@@ -84,7 +84,7 @@
   [memmove (known-procedure 120)]
   [memset (known-procedure 56)]
   [offset-ptr? (known-procedure 2)]
-  [prop:cpointer (known-constant)]
+  [prop:cpointer (known-constant) shareable-property]
   [ptr-add (known-procedure 12)]
   [ptr-add! (known-procedure 12)]
   [ptr-equal? (known-procedure 4)]

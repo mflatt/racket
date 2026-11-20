@@ -594,6 +594,7 @@
           unsafe-list-tail
           unsafe-list-ref
           unsafe-cons-list
+          unsafe-assume-shareable
           unsafe-set-immutable-car!
           unsafe-set-immutable-cdr!
 

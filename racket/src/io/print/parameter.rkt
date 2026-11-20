@@ -4,7 +4,8 @@
          "../path/relativity.rkt")
 
 (provide current-write-relative-directory
-         print-syntax-width)
+         print-syntax-width
+         print-value-columns)
 
 (define-syntax-rule (define-boolean-parameter print-x init-val)
   (begin
@@ -60,3 +61,17 @@
                                                 v))
                         v)
                   'print-syntax-width))
+
+;; Not used by the printer, but used by `racket/pretty` and the REPL; defined
+;; here so that it's a primitive, as opposed to state in a Racket module
+(define print-value-columns
+  (make-parameter +inf.0 (lambda (v)
+                           (unless (or (eqv? v +inf.0)
+                                       ;; somewhat arbitrary value, enough for "(list"
+                                       (and (exact-integer? v)
+                                            (v . > . 5)))
+                             (raise-argument-error 'print-value-columns
+                                                   "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
+                                                   v))
+                           v)
+                  'print-value-columns))

@@ -211,6 +211,7 @@
                 (1/print-struct print-struct)
                 (1/print-syntax-width print-syntax-width)
                 (1/print-unreadable print-unreadable)
+                (print-value-columns print-value-columns)
                 (1/print-vector-length print-vector-length)
                 (1/printf printf)
                 (1/processor-count processor-count)
@@ -2442,12 +2443,11 @@
                     (cons (car list_1) next_0)))))))))
        (loop_0 list_0)))))
 (define remq (lambda (item_0 list_0) (do-remove 'remq item_0 list_0 eq?)))
-(define print-value-columns
+(define print-value-columns/fallback
   (make-parameter
    +inf.0
    (lambda (c_0)
-     (if (let ((or-part_0 (eqv? c_0 +inf.0)))
-           (if or-part_0 or-part_0 (if (exact-integer? c_0) (> c_0 5) #f)))
+     (if (if (eqv? c_0 +inf.0) #t (if (exact-integer? c_0) (> c_0 5) #f))
        c_0
        (raise-argument-error
         'print-value-columns
@@ -19359,6 +19359,20 @@
           v_0))
        v_0))
    'print-syntax-width))
+(define print-value-columns
+  (make-parameter
+   +inf.0
+   (lambda (v_0)
+     (begin
+       (if (let ((or-part_0 (eqv? v_0 +inf.0)))
+             (if or-part_0 or-part_0 (if (exact-integer? v_0) (> v_0 5) #f)))
+         (void)
+         (raise-argument-error
+          'print-value-columns
+          "(or/c +inf.0 (and/c exact-integer? (>/c 5)))"
+          v_0))
+       v_0))
+   'print-value-columns))
 (define 1/open-input-bytes
   (let ((open-input-bytes_0
          (|#%name|

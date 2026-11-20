@@ -12,7 +12,7 @@
 
 (define (get-prim-knowns)
   (let ([knowns (hasheq)])
-    (define-syntax-rule (define-primitive-table id [prim known] ...)
+    (define-syntax-rule (define-primitive-table id [prim known . _] ...)
       (begin (set! knowns (hash-set knowns 'prim known)) ...))
     (include "primitive/kernel.ss")
     (include "primitive/unsafe.ss")

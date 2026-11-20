@@ -160,6 +160,7 @@
                       syntax-local-lift-expression
                       syntax-local-lift-values-expression
                       syntax-local-lift-context
+                      syntax-local-expansion-state
                       
                       syntax-local-lift-module
                       

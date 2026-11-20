@@ -1065,12 +1065,11 @@
                   (for-loop_0 (hash-iterate-first table7_0)))
                  (void)
                  acc_0)))))))))
-(define print-value-columns
+(define print-value-columns/fallback
   (make-parameter
    +inf.0
    (lambda (c_0)
-     (if (let ((or-part_0 (eqv? c_0 +inf.0)))
-           (if or-part_0 or-part_0 (if (exact-integer? c_0) (> c_0 5) #f)))
+     (if (if (eqv? c_0 +inf.0) #t (if (exact-integer? c_0) (> c_0 5) #f))
        c_0
        (raise-argument-error
         'print-value-columns

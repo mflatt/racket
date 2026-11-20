@@ -1,11 +1,14 @@
 #lang racket/base
 (require "../syntax/syntax.rkt"
+         (only-in "../syntax/srcloc.rkt" syntax-source)
+         "../common/sharing-log.rkt"
          "../syntax/property.rkt"
          "../syntax/scope.rkt"
          "../syntax/taint.rkt"
          "../syntax/match.rkt"
          "../common/phase.rkt"
          "../namespace/core.rkt"
+         "../namespace/namespace.rkt"
          "../namespace/module.rkt"
          "../common/module-path.rkt"
          "../common/performance.rkt"
@@ -13,8 +16,12 @@
          "module-use.rkt"
          "serialize.rkt"
          "side-effect.rkt"
+         "shareable.rkt"
+         "../namespace/provided.rkt"
+         "../syntax/module-binding.rkt"
          "built-in-symbol.rkt"
          "../host/linklet.rkt"
+         "../host/correlate.rkt"
          "context.rkt"
          "header.rkt"
          "reserved-symbol.rkt"
@@ -123,15 +130,29 @@
    (define unsafe?-box (box #f))
    (define unlimited-compile?-box (box #f))
    
+   ;; Information for determining whether a module instance can be
+   ;; shared across instantiations with the same phase shift; see
+   ;; "shareable.rkt"
+   (define shareable-records null)
+
    ;; Callback to track phases that have side effects
    (define side-effects (make-hasheqv))
    (define (check-side-effects! e ; compiled expression
                                 expected-results ; number of expected results, or #f if any number is ok
                                 phase
-                                required-reference?)
+                                required-reference?
+                                required-use
+                                def-info) ; #f or (vector def-syms binding-syms id-syms)
      (unless (hash-ref side-effects phase #f)
        (when (any-side-effects? e expected-results #:ready-variable? required-reference?)
-         (hash-set! side-effects phase #t))))
+         (hash-set! side-effects phase #t)))
+     (set! shareable-records (cons (shareable-record phase e expected-results
+                                                     ;; def-syms can be correlated to record a source name:
+                                                     (and def-info (map correlated-e (vector-ref def-info 0)))
+                                                     (and def-info (vector-ref def-info 1))
+                                                     (and def-info (vector-ref def-info 2))
+                                                     (make-import-lookup cctx required-use))
+                                   shareable-records)))
    
    (when (and need-compiled-submodule-rename?
               modules-being-compiled)
@@ -187,6 +208,25 @@
                     #:to-correlated-linklet? to-correlated-linklet?
                     #:unsafe?-box unsafe?-box
                     #:realm realm))
+
+   (define-values (shareable-phases shareable-knowns)
+     (if (or cross-phase-persistent?
+             ;; Without constant enforcement, a module's variables can be
+             ;; mutated via `module->namespace`:
+             (not (compile-enforce-module-constants)))
+         (values null null)
+         (analyze-shareable shareable-records
+                            #:log-name (and (log-sharing-enabled?)
+                                            (let ([src (or (syntax-source (parsed-s p))
+                                                           (if (pair? full-module-name)
+                                                               (car full-module-name)
+                                                               full-module-name))])
+                                              (if (pair? full-module-name)
+                                                  `(submod ,src ,@(cdr full-module-name))
+                                                  src)))
+                            #:phases (sort (hash-keys body-linklets) <)
+                            #:provided-sym? (make-provided-sym? provides)
+                            #:literal-sym? (make-literal-sym? syntax-literals root-ctx-pos))))
 
    ;; register any portal syntax objects:
    (define-values (portal-stxes max-phase min-phase)
@@ -355,6 +395,12 @@
             [bundle (if (hash-count side-effects)
                         (hash-set bundle 'side-effects (sort (hash-keys side-effects) <))
                         bundle)]
+            [bundle (if (null? shareable-phases)
+                        bundle
+                        (hash-set bundle 'shareable-phases shareable-phases))]
+            [bundle (if (null? shareable-knowns)
+                        bundle
+                        (hash-set bundle 'shareable-knowns shareable-knowns))]
             [bundle (if empty-result-for-module->namespace?
                         (hash-set bundle 'module->namespace 'empty)
                         bundle)]
@@ -445,6 +491,55 @@
     (if (integer? phase)
         (values new-portal-stxes (max (add1 phase) max-phase) (min (add1 phase) min-phase))
         (values new-portal-stxes max-phase min-phase))))
+
+;; ----------------------------------------
+
+;; For "shareable.rkt": is a symbol the internal name of a provided binding?
+;; Produces a function that maps an import symbol to known information
+;; for the analysis in "shareable.rkt"
+(define (make-import-lookup cctx required-use)
+  (lambda (sym)
+    (define-values (mpi phase-level ext-sym) (required-use sym))
+    (and mpi
+         (let ([m (namespace->module (compile-context-namespace cctx)
+                                     (module-path-index-resolve mpi))])
+           (and m
+                (if (module-is-predefined? m)
+                    ;; A primitive module, so check for a known primitive:
+                    (vector 'primitive ext-sym)
+                    (module-shareable-known m phase-level ext-sym)))))))
+
+(define (make-provided-sym? provides)
+  (define syms #f)
+  (lambda (sym)
+    (unless syms
+      (set! syms (make-hasheq))
+      (for* ([at-phase (in-hash-values provides)]
+             [b/p (in-hash-values at-phase)])
+        (hash-set! syms (module-binding-sym (provided-as-binding b/p)) #t)))
+    (hash-ref syms sym #f)))
+
+;; For "shareable.rkt": does a symbol appear in any syntax literal?
+;; The encoding of the module's root context (for `module->namespace`)
+;; is excluded, since it mentions every definition.
+(define (make-literal-sym? syntax-literals root-ctx-pos)
+  (define syms #f)
+  (lambda (sym)
+    (unless syms
+      (set! syms (make-hasheq))
+      (for ([stx (in-vector (syntax-literals-as-vector syntax-literals))]
+            [i (in-naturals)]
+            #:unless (eqv? i root-ctx-pos))
+        (let loop ([v (syntax->datum stx)])
+          (cond
+            [(symbol? v) (hash-set! syms v #t)]
+            [(pair? v) (loop (car v)) (loop (cdr v))]
+            [(vector? v) (for ([e (in-vector v)]) (loop e))]
+            [(box? v) (loop (unbox v))]
+            [(hash? v) (for ([(k e) (in-hash v)]) (loop k) (loop e))]
+            [(prefab-struct-key v) (loop (struct->vector v))]
+            [else (void)]))))
+    (hash-ref syms sym #f)))
 
 ;; ----------------------------------------
 

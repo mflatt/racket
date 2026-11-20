@@ -104,6 +104,9 @@
   ;; Provided for callbacks to detect required references:
   (define ((as-required? header) sym)
     (registered-as-required? header sym))
+  ;; Provided for callbacks to get information about required references:
+  (define ((as-required-use header) sym)
+    (registered-required-variable-use header sym))
 
   ;; Compile each form in `bodys`, recording results in `phase-to-body`
   (define last-i (sub1 (length bodys)))
@@ -142,7 +145,9 @@
                                           [header header])
                              (and (= (length ids) 1) (car ids))))
         (definition-callback)
-        (compiled-expression-callback rhs (length def-syms) phase (as-required? header))
+        (compiled-expression-callback rhs (length def-syms) phase (as-required? header)
+                                      (as-required-use header)
+                                      (vector def-syms binding-syms (map syntax-e ids)))
         ;; Generate a definition:
         (add-body! phase (propagate-inline-property
                           (correlate* (parsed-s body) `(define-values ,def-syms ,rhs))
@@ -177,7 +182,9 @@
                                           [phase (add1 phase)]
                                           [header next-header])))
         (definition-callback)
-        (compiled-expression-callback rhs (length gen-syms) (add1 phase) (as-required? header))
+        (compiled-expression-callback rhs (length gen-syms) (add1 phase) (as-required? header)
+                                      (as-required-use next-header)
+                                      #f)
         (define transformer-set!s (for/list ([binding-sym (in-list binding-syms)]
                                              [gen-sym (in-list gen-syms)])
                                     `(,set-transformer!-id ',binding-sym ,gen-sym)))
@@ -206,7 +213,7 @@
                                                          [phase phase]
                                                          [header header])))
         (when e
-          (compiled-expression-callback e #f phase (as-required? header))
+          (compiled-expression-callback e #f phase (as-required? header) (as-required-use header) #f)
           (add-body! phase e))]
        [else
         (define e (compile body
@@ -215,7 +222,7 @@
                                         [header header])
                            #f
                            (= i last-i)))
-        (compiled-expression-callback e #f phase (as-required? header))
+        (compiled-expression-callback e #f phase (as-required? header) (as-required-use header) #f)
         (add-body! phase e)])))
 
   ;; Register root-expand-context, if any, encoded as a syntax object;

@@ -75,7 +75,7 @@
                     #:to-correlated-linklet? to-correlated-linklet?
                     #:definition-callback (lambda () (set! purely-functional? #f))
                     #:compiled-expression-callback
-                    (lambda (e expected-results phase required-reference?)
+                    (lambda (e expected-results phase required-reference? required-use def-info)
                       (when (and purely-functional?
                                  (any-side-effects? e expected-results #:ready-variable? required-reference?))
                         (set! purely-functional? #f)))

@@ -76,7 +76,7 @@
                     (let ([known-l '()])
                       (define-syntax define-primitive-table
                         (syntax-rules ()
-                          [(_ id [prim known] ...)
+                          [(_ id [prim known . _] ...)
                            (begin (set! known-l (cons (cons 'prim 'known) known-l))
                                   ...)]))
                       (include "primitive/kernel.ss")

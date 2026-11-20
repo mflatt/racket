@@ -136,6 +136,7 @@ static Scheme_Object *procedure_equal_closure_p(int argc, Scheme_Object *argv[])
 static Scheme_Object *procedure_specialize(int argc, Scheme_Object *argv[]);
 static Scheme_Object *chaperone_procedure(int argc, Scheme_Object *argv[]);
 static Scheme_Object *unsafe_chaperone_procedure(int argc, Scheme_Object *argv[]);
+static Scheme_Object *unsafe_assume_shareable(int argc, Scheme_Object *argv[]);
 static Scheme_Object *impersonate_procedure(int argc, Scheme_Object *argv[]);
 static Scheme_Object *unsafe_impersonate_procedure(int argc, Scheme_Object *argv[]);
 static Scheme_Object *chaperone_procedure_star(int argc, Scheme_Object *argv[]);
@@ -739,6 +740,11 @@ scheme_init_unsafe_fun (Scheme_Startup_Env *env)
   scheme_addto_prim_instance("check-not-unsafe-undefined/assign", o, env);
 
   scheme_addto_prim_instance("unsafe-undefined", scheme_undefined, env);
+
+  /* Recognized by the expander's analysis of module instances that can be
+     shared across namespaces */
+  o = scheme_make_immed_prim(unsafe_assume_shareable, "unsafe-assume-shareable", 1, 1);
+  scheme_addto_prim_instance("unsafe-assume-shareable", o, env);
 
   REGISTER_SO(scheme_chaperone_undefined_property);
   o = scheme_make_struct_type_property(scheme_intern_symbol("chaperone-unsafe-undefined"));
@@ -3676,6 +3682,11 @@ static Scheme_Object *do_chaperone_procedure(const char *name, const char *whati
 static Scheme_Object *chaperone_procedure(int argc, Scheme_Object *argv[])
 {
   return do_chaperone_procedure("chaperone-procedure", "chaperoning", 0, 0, argc, argv, 0);
+}
+
+static Scheme_Object *unsafe_assume_shareable(int argc, Scheme_Object *argv[])
+{
+  return argv[0];
 }
 
 static Scheme_Object *unsafe_chaperone_procedure(int argc, Scheme_Object *argv[])

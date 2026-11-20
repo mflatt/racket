@@ -32,6 +32,7 @@
          register-required-variable-use!
          register-as-defined!
          registered-as-required?
+         registered-required-variable-use
          generate-links+imports)
 
 ;; A compilation header accumulates information about syntax literals
@@ -50,6 +51,7 @@
                 binding-sym-to-define-sym  ; sym -> sym; avoid conflicts with primitives
                 [binding-syms-in-order #:mutable] ; list of sym
                 require-var-to-import-sym  ; variable-use -> sym
+                import-sym-to-require-var  ; sym -> variable-use
                 import-sym-to-extra-inspectors ; sym -> set of inspectors
                 [require-vars-in-order #:mutable] ; list of variable-use
                 define-and-import-syms     ; hash of sym -> 'defined/'imported, to select distinct symbols
@@ -66,6 +68,7 @@
           (make-hasheq)        ; binding-sym-to-define-sym
           null                 ; binding-syms-in-order
           (make-variable-uses) ; require-var-to-import-sym
+          (make-hasheq)        ; import-sym-to-require-var
           (make-hasheq)        ; import-sym-to-extra-inspectors
           null                 ; require-vars-in-order
           (make-hasheq)        ; define-and-import-syms
@@ -238,6 +241,7 @@
     (or prev-var-sym
         (let ([sym (select-fresh (variable-use-sym key) header)])
           (hash-set! variable-uses key sym)
+          (hash-set! (header-import-sym-to-require-var header) sym key)
           (set-header-require-vars-in-order! header
                                              (cons key
                                                    (header-require-vars-in-order header)))
@@ -256,6 +260,16 @@
 
 (define (registered-as-required? header var-sym)
   (eq? 'required (hash-ref  (header-define-and-import-syms header) var-sym #f)))
+
+;; Returns three values: module path index, phase level, and symbol
+;; for an imported variable, or #f for all three
+(define (registered-required-variable-use header var-sym)
+  (define vu (and (registered-as-required? header var-sym)
+                  (hash-ref (header-import-sym-to-require-var header) var-sym #f)))
+  (if vu
+      (let ([mu (variable-use-module-use vu)])
+        (values (module-use-module mu) (module-use-phase mu) (variable-use-sym vu)))
+      (values #f #f #f)))
 
 ;; Returns:
 ;;  link-names : a list of sym

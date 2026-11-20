@@ -75,6 +75,8 @@
                        (hash-ref h 'hash-code #f))))
 
    (define cross-phase-persistent? (hash-ref h 'cross-phase-persistent? #f))
+   (define shareable-phase-levels (hash-ref h 'shareable-phases null))
+   (define shareable-knowns (decode-shareable-knowns (hash-ref h 'shareable-knowns null)))
    (define min-phase (hash-ref h 'min-phase 0))
    (define max-phase (hash-ref h 'max-phase 0))
    (define language-info (hash-ref h 'language-info #f))
@@ -146,6 +148,8 @@
                               #:min-phase-level min-phase
                               #:max-phase-level max-phase
                               #:cross-phase-persistent? cross-phase-persistent?
+                              #:shareable-phase-levels shareable-phase-levels
+                              #:shareable-knowns shareable-knowns
                               #:predefined? (current-module-declare-as-predefined)
                               #:submodule-names (append pre-submodule-names post-submodule-names)
                               #:supermodule-name supermodule-name
@@ -167,11 +171,17 @@
                                 (force-syntax-deserialize syntax-literals-data-instance bulk-binding-registry))
                               #:prepare-instance-callback
                               (lambda (data-box ns phase-shift self bulk-binding-registry insp)
-                                (unless (unbox data-box)
+                                (define fresh? (not (unbox data-box)))
+                                (when fresh?
                                   (init-instance-data! data-box cache-key ns
                                                        syntax-literals-linklet data-instance syntax-literals-data-instance
-                                                       phase-shift original-self self bulk-binding-registry insp
-                                                       create-root-expand-context-from-module)))
+                                                       phase-shift original-self self bulk-binding-registry insp))
+                                ;; The data box can be shared among instances, while the
+                                ;; root expand context is specific to a namespace
+                                (when (or fresh?
+                                          (not (namespace-root-expand-ctx-set? ns)))
+                                  (init-root-expand-context! data-box ns phase-shift original-self self
+                                                             create-root-expand-context-from-module)))
                               #:get-portal-syntax-callback
                               (lambda (data-box phase sym)
                                 (define ht (hash-ref portal-stxes phase #hasheq()))
@@ -183,21 +193,24 @@
                                    ((instance-variable-value syntax-literals-instance get-syntax-literal!-id) pos)]
                                   [else #f]))
                               #:instantiate-phase-callback
-                              (lambda (data-box ns phase-shift phase-level self bulk-binding-registry insp)
+                              (lambda (data-box ns phase-shift phase-level self bulk-binding-registry insp [shared #f])
                                 (performance-region
                                  ['eval 'instantiate]
                                  (define syntax-literals-instance (instance-data-syntax-literals-instance
                                                                    (unbox data-box)))
 
                                  ;; create portal-syntax bindings
-                                 (define phase-portal-stxes (hash-ref portal-stxes (sub1 phase-level) #hasheq()))
-                                 (unless (zero? (hash-count phase-portal-stxes))
-                                   (define get-syntax-literal! (instance-variable-value syntax-literals-instance get-syntax-literal!-id))
-                                   (for ([(key pos) (in-hash phase-portal-stxes)])
-                                     (when (symbol? key)
-                                       (namespace-set-transformer! ns (sub1 phase-level) key (portal-syntax get-syntax-literal! pos)))))
+                                 (define (install-portal-syntaxes!)
+                                   (define phase-portal-stxes (hash-ref portal-stxes (sub1 phase-level) #hasheq()))
+                                   (unless (zero? (hash-count phase-portal-stxes))
+                                     (define get-syntax-literal! (instance-variable-value syntax-literals-instance get-syntax-literal!-id))
+                                     (for ([(key pos) (in-hash phase-portal-stxes)])
+                                       (when (symbol? key)
+                                         (namespace-set-transformer! ns (sub1 phase-level) key (portal-syntax get-syntax-literal! pos))))))
                                  
-                                 (define phase-linklet (hash-ref phases-h phase-level #f))                                 
+                                 (define phase-linklet (hash-ref phases-h phase-level #f))
+                                 (unless phase-linklet
+                                   (install-portal-syntaxes!))
                                  (when phase-linklet
                                    (define module-uses (hash-ref phase-to-link-modules phase-level))
                                    (define-values (import-module-instances import-instances)
@@ -234,30 +247,16 @@
                                                           (namespace->instance ns phase-level)))
 
                                    (cond
-                                    [(zero-phase? phase-level)
-                                     (cond
-                                      [(zero-phase? phase-shift)
-                                       (instantiate-body)]
-                                      [else
-                                       ;; Need to set the current namespace so that it has the
-                                       ;; right phase
-                                       (parameterize ([current-namespace ns])
-                                         (instantiate-body))])]
+                                    [(and shared
+                                          (shared-instance-install! shared ns phase-level import-instances))
+                                     ;; Reusing an existing instantiation, which includes portal syntaxes
+                                     (void)]
                                     [else
-                                     ;; For phase level 1 and up, set the expansion context
-                                     ;; to point back to the module's info:
-                                     (define ns-1 (namespace->namespace-at-phase ns (phase+ phase-shift (sub1 phase-level))))
-                                     (parameterize ([current-namespace ns])
-                                       (parameterize-like
-                                        #:with ([current-expand-context (delay (make-expand-context
-                                                                                ns-1
-                                                                                ;; Turn off on-demand instantiation, because
-                                                                                ;; we're already trying to instantiate modules,
-                                                                                ;; and anything that should be relevant by being
-                                                                                ;; imported here should be instantiated already:
-                                                                                #:skip-visit-available? #t))]
-                                                [current-module-code-inspector insp])
-                                        (instantiate-body)))]))))))
+                                     (log-shared-instance-miss shared ns phase-level import-instances)
+                                     (install-portal-syntaxes!)
+                                     (instantiate-phase-body! phase-level phase-shift ns insp instantiate-body)
+                                     (when shared
+                                       (shared-instance-record! shared ns phase-level import-instances))]))))))
 
        (define declare-name (substitute-module-declare-name default-name))
        
@@ -283,13 +282,55 @@
 
 ;; ----------------------------------------
 
+;; Converts the list form of shareable-instance information to a
+;; phase-level -> sym -> info table
+(define (decode-shareable-knowns l)
+  (for/fold ([ht #hasheqv()]) ([v (in-list l)])
+    (cond
+      [(and (vector? v) (= 4 (vector-length v)))
+       (define phase-level (vector-ref v 0))
+       (hash-set ht phase-level (hash-set (hash-ref ht phase-level #hasheq())
+                                          (vector-ref v 1)
+                                          (vector (vector-ref v 2) (vector-ref v 3))))]
+      [else ht])))
+
+;; ----------------------------------------
+
+(define (instantiate-phase-body! phase-level phase-shift ns insp instantiate-body)
+  (cond
+    [(zero-phase? phase-level)
+     (cond
+       [(zero-phase? phase-shift)
+        (instantiate-body)]
+       [else
+        ;; Need to set the current namespace so that it has the
+        ;; right phase
+        (parameterize ([current-namespace ns])
+          (instantiate-body))])]
+    [else
+     ;; For phase level 1 and up, set the expansion context
+     ;; to point back to the module's info:
+     (define ns-1 (namespace->namespace-at-phase ns (phase+ phase-shift (sub1 phase-level))))
+     (parameterize ([current-namespace ns])
+       (parameterize-like
+        #:with ([current-expand-context (delay (make-expand-context
+                                                ns-1
+                                                ;; Turn off on-demand instantiation, because
+                                                ;; we're already trying to instantiate modules,
+                                                ;; and anything that should be relevant by being
+                                                ;; imported here should be instantiated already:
+                                                #:skip-visit-available? #t))]
+                [current-module-code-inspector insp])
+        (instantiate-body)))]))
+
+;; ----------------------------------------
+
 ;; Value in a declaration's `data-box`:
 (struct instance-data (syntax-literals-instance cache-key))
 
 (define (init-instance-data! data-box cache-key ns
                              syntax-literals-linklet data-instance syntax-literals-data-instance
-                             phase-shift original-self self bulk-binding-registry insp
-                             create-root-expand-context-from-module)
+                             phase-shift original-self self bulk-binding-registry insp)
   (when (not (load-on-demand-enabled))
     (force-syntax-deserialize syntax-literals-data-instance bulk-binding-registry))
   
@@ -311,8 +352,11 @@
                                    inst))
         empty-syntax-literals-instance))
 
-  (set-box! data-box (instance-data syntax-literals-instance cache-key))
-  
+  (set-box! data-box (instance-data syntax-literals-instance cache-key)))
+
+(define (init-root-expand-context! data-box ns phase-shift original-self self
+                                   create-root-expand-context-from-module)
+  (define syntax-literals-instance (instance-data-syntax-literals-instance (unbox data-box)))
   (define get-encoded-root-expand-ctx
     (instance-variable-value syntax-literals-instance 'get-encoded-root-expand-ctx))
   

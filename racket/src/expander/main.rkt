@@ -21,6 +21,7 @@
          (only-in "compile/correlate.rkt"
                   compile-keep-source-locations!)
          "boot/kernel.rkt"
+         (only-in "host/linklet.rkt" primitive-table)
          "boot/read-primitive.rkt"
          "boot/main-primitive.rkt"
          "boot/utils-primitive.rkt"
@@ -29,6 +30,7 @@
          "boot/linklet-primitive.rkt"
          "boot/runtime-primitive.rkt"
          "boot/handler.rkt"
+         (only-in "compile/shareable.rkt" unsafe-assume-shareable/fallback)
          "syntax/api.rkt"
          (only-in "compile/recompile.rkt"
                   compiled-expression-recompile)
@@ -199,14 +201,30 @@
                                           name)
                              #:read-ids (for/set ([name (in-hash-keys read-primitives)])
                                           name))
-     (for ([name (in-list runtime-instances)]
-           #:unless (eq? name '#%kernel))
-       (copy-runtime-module! name
-                             #:namespace ns
-                             #:protected? (or (eq? name '#%foreign)
-                                              (eq? name '#%futures)
-                                              (eq? name '#%unsafe)
-                                              (eq? name '#%terminal))))
+     ;; When bootstrapping with a Racket that does not have the
+     ;; `unsafe-assume-shareable` primitive, '#%unsafe combines runtime
+     ;; primitives with the expander's implementation:
+     (let ([unsafe-needs-assume-shareable?
+             (not (hash-ref (primitive-table '#%unsafe) 'unsafe-assume-shareable #f))])
+       (for ([name (in-list runtime-instances)]
+             #:unless (eq? name '#%kernel))
+         (copy-runtime-module! name
+                               #:to (if (and (eq? name '#%unsafe)
+                                             unsafe-needs-assume-shareable?)
+                                        '#%unsafe-primitive
+                                        name)
+                               #:namespace ns
+                               #:protected? (or (eq? name '#%foreign)
+                                                (eq? name '#%futures)
+                                                (eq? name '#%unsafe)
+                                                (eq? name '#%terminal))))
+       (when unsafe-needs-assume-shareable?
+         (declare-hash-based-module! '#%unsafe-expander (hasheq 'unsafe-assume-shareable unsafe-assume-shareable/fallback)
+                                     #:namespace ns
+                                     #:protected? #t)
+         (declare-reexporting-module! '#%unsafe (list '#%unsafe-primitive
+                                                      '#%unsafe-expander)
+                                      #:namespace ns)))
      (declare-reexporting-module! '#%builtin (list* '#%place-struct
                                                     '#%utils
                                                     '#%boot
