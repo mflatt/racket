@@ -22,6 +22,7 @@
          namespace->module-namespace
          namespace-copy-shifted-requires!
          namespace-install-module-namespace!
+         namespace->module/cross-phase
          namespace-record-module-instance-attached!
          module-force-bulk-binding!
          module-instantiates-at-level?
@@ -242,10 +243,13 @@
     ;; modules when unmarshaling; we don't do this without
     ;; `with-submodules?` to avoid leaking submodules being
     ;; expanded, but see also `bind-all-provides!`
-    (register-bulk-provide! (namespace-bulk-binding-registry ns)
-                            mod-name
-                            (module-self m)
-                            (module-provides m))
+    ((if (module-cross-phase-persistent? m)
+         register-cross-phase-bulk-provide!
+         register-bulk-provide!)
+     (namespace-bulk-binding-registry ns)
+     mod-name
+     (module-self m)
+     (module-provides m))
     ;; Tell resolver that the module is declared
     ((current-module-name-resolver) mod-name #f))
   ;; If this module is already instantiated, re-instantiate it
@@ -303,8 +307,12 @@
     (or (hash-ref (hash-ref (namespace-module-instances ns) 0-phase #hasheq())
                   name
                   #f)
-        (let ([c-ns (or (namespace-root-namespace ns) ns)])
-          (hash-ref (namespace-module-instances c-ns) name #f))
+        ;; A cross-phase persistent instance, which is shared by all
+        ;; namespaces in the place:
+        (cross-phase-instance-ref name)
+        ;; A cross-phase persistent instance for a submodule of a module
+        ;; being expanded, which is local to a namespace:
+        (hash-ref (namespace-module-instances ns) name #f)
         (and complain-on-failure?
              (error 'require
                     (string-append
@@ -319,48 +327,38 @@
       mi))
 
 (define (namespace-install-module-namespace! ns name 0-phase m existing-m-ns run-phase)
-  (define m-ns (struct-copy namespace ns
-                            [mpi (namespace-mpi existing-m-ns)]
-                            [source-name (namespace-source-name existing-m-ns)]
-                            [root-expand-ctx (box (unbox (namespace-root-expand-ctx existing-m-ns)))]
-                            [phase (namespace-phase existing-m-ns)]
-                            [0-phase (namespace-0-phase existing-m-ns)]
-                            [phase-to-namespace (make-small-hasheqv)]
-                            [phase-level-to-definitions (if (module-cross-phase-persistent? m)
-                                                            (namespace-phase-level-to-definitions existing-m-ns)
-                                                            (make-small-hasheqv))]
-                            [declaration-inspector (module-inspector m)]
-                            [inspector (namespace-inspector existing-m-ns)]))
-  (define mi (make-module-instance m-ns m #f))
-  (set-module-instance-attached?! mi #t)
   (cond
-   [(module-cross-phase-persistent? m)
-    (small-hash-set! (namespace-phase-to-namespace m-ns) 0 m-ns)
-    (small-hash-set! (namespace-phase-level-to-definitions m-ns)
-                     0
-                     (namespace->definitions existing-m-ns 0))
-    (small-hash-set! (namespace-phase-to-namespace m-ns) 1 (namespace->namespace-at-phase m-ns 1))
-    (small-hash-set! (namespace-phase-level-to-definitions m-ns)
-                     1
-                     (namespace->definitions existing-m-ns 1))
-    (hash-set! (namespace-module-instances (or (namespace-root-namespace ns) ns))
-               name
-               mi)
-    ;; All phase levels of a cross-phase persistent module are run together
-    (for ([phase-level (in-range (module-min-phase-level m) (add1 (module-max-phase-level m)))])
-      (small-hash-set! (module-instance-phase-level-to-state mi) phase-level 'started))]
-   [else
-    (define run-phase-level (phase- run-phase 0-phase))
-    (small-hash-set! (namespace-phase-to-namespace m-ns) 0-phase m-ns)
-    (small-hash-set! (namespace-phase-level-to-definitions m-ns)
-                     run-phase-level
-                     (namespace->definitions existing-m-ns run-phase-level))
-    (small-hash-set! (module-instance-phase-level-to-state mi) run-phase-level 'started)
-    (define at-phase (or (hash-ref (namespace-module-instances ns) 0-phase #f)
-                         (let ([at-phase (make-hasheq)])
-                           (hash-set! (namespace-module-instances ns) 0-phase at-phase)
-                           at-phase)))
-    (hash-set! at-phase name mi)]))
+    [(module-cross-phase-persistent? m)
+     ;; A cross-phase persistent module has a single instance per place,
+     ;; so it's already shared with the destination
+     (define existing-mi (namespace->module-instance existing-m-ns name 0))
+     (unless existing-mi
+       (error 'namespace-attach-module "internal error: cannot find cross-phase persistent instance: ~s" name))
+     (set-module-instance-attached?! existing-mi #t)]
+    [else
+     (define m-ns (struct-copy namespace ns
+                               [mpi (namespace-mpi existing-m-ns)]
+                               [source-name (namespace-source-name existing-m-ns)]
+                               [root-expand-ctx (box (unbox (namespace-root-expand-ctx existing-m-ns)))]
+                               [phase (namespace-phase existing-m-ns)]
+                               [0-phase (namespace-0-phase existing-m-ns)]
+                               [phase-to-namespace (make-small-hasheqv)]
+                               [phase-level-to-definitions (make-small-hasheqv)]
+                               [declaration-inspector (module-inspector m)]
+                               [inspector (namespace-inspector existing-m-ns)]))
+     (define mi (make-module-instance m-ns m #f))
+     (set-module-instance-attached?! mi #t)
+     (define run-phase-level (phase- run-phase 0-phase))
+     (small-hash-set! (namespace-phase-to-namespace m-ns) 0-phase m-ns)
+     (small-hash-set! (namespace-phase-level-to-definitions m-ns)
+                      run-phase-level
+                      (namespace->definitions existing-m-ns run-phase-level))
+     (small-hash-set! (module-instance-phase-level-to-state mi) run-phase-level 'started)
+     (define at-phase (or (hash-ref (namespace-module-instances ns) 0-phase #f)
+                          (let ([at-phase (make-hasheq)])
+                            (hash-set! (namespace-module-instances ns) 0-phase at-phase)
+                            at-phase)))
+     (hash-set! at-phase name mi)]))
 
 (define (namespace-create-module-instance! ns name 0-phase m mpi)
   (define m-ns (struct-copy namespace ns
@@ -378,7 +376,12 @@
   (small-hash-set! (namespace-phase-to-namespace m-ns) 0-phase m-ns)
   (define mi (make-module-instance m-ns m #f))
   (if (module-cross-phase-persistent? m)
-      (hash-set! (namespace-module-instances ns) name mi)
+      (if (expansion-time-module-name? name)
+          ;; A submodule of a module being expanded: the instance is
+          ;; local to that expansion's namespace, since syntax literals
+          ;; refer to the requesting module path index
+          (hash-set! (namespace-module-instances ns) name mi)
+          (cross-phase-instance-set! name mi))
       (let ([at-phase (or (hash-ref (namespace-module-instances ns) 0-phase #f)
                           (let ([at-phase (make-hasheq)])
                             (hash-set! (namespace-module-instances ns) 0-phase at-phase)
@@ -435,6 +438,41 @@
   (define name (module-path-index-resolve mpi #t))
   (when (and transitive-modules (pair? seen-list))
     (hash-set! transitive-modules name (hash-set (hash-ref transitive-modules name #hasheqv()) instance-phase #t)))
+  (define cross-phase-mi (cross-phase-instance-ref name))
+  (cond
+    [(and cross-phase-mi (module-instance-module cross-phase-mi))
+     ;; A cross-phase persistent instance already exists, possibly created
+     ;; via a different module registry; run it (if needed) in its own
+     ;; namespace, which has the declarations that it needs
+     (run-module-instance! cross-phase-mi (module-instance-namespace cross-phase-mi)
+                           #:run-phase 0
+                           #:skip-run? skip-run?
+                           #:otherwise-available? otherwise-available?
+                           #:seen seen
+                           #:seen-list seen-list
+                           #:recur? recur?
+                           #:minimum-inspector minimum-inspector
+                           #:transitive-record transitive-modules)]
+    [else
+     (namespace-module-instantiate/declared! ns mpi name instance-phase
+                                              #:run-phase run-phase
+                                              #:skip-run? skip-run?
+                                              #:otherwise-available? otherwise-available?
+                                              #:seen seen
+                                              #:seen-list seen-list
+                                              #:recur? recur?
+                                              #:minimum-inspector minimum-inspector
+                                              #:transitive-record transitive-modules)]))
+
+(define (namespace-module-instantiate/declared! ns mpi name instance-phase
+                                                #:run-phase run-phase
+                                                #:skip-run? skip-run?
+                                                #:otherwise-available? otherwise-available?
+                                                #:seen seen
+                                                #:seen-list seen-list
+                                                #:recur? recur?
+                                                #:minimum-inspector minimum-inspector
+                                                #:transitive-record transitive-modules)
   (define m (namespace->module ns name))
   (unless m (raise-unknown-module-error 'instantiate name))
   (define (instantiate! instance-phase run-phase ns #:mpi [mpi mpi])
@@ -453,15 +491,47 @@
   ;; at phase 0 and registered in `ns` as phaseless
   (cond
    [(module-cross-phase-persistent? m)
-    ;; The instance is shared, so it should not refer to `mpi`, which
-    ;; might be relative to some module that is being expanded; that
-    ;; matters for a cross-phase persistent module with syntax literals
-    (instantiate! 0 0 (or (namespace-root-namespace ns) ns)
-                  #:mpi (if (self-free-module-path-index? mpi)
-                            mpi
-                            (module-path-index-join (resolved-module-path->module-path name) #f)))]
+    (define root-ns (or (namespace-root-namespace ns) ns))
+    (cond
+      [(expansion-time-module-name? name)
+       ;; A submodule of a module being expanded; the instance is local to
+       ;; the expansion, so `mpi` (likely relative to the enclosing module)
+       ;; is right
+       (instantiate! 0 0 ns)]
+      [(namespace->module root-ns name)
+       ;; The instance is shared, so it should not refer to `mpi` if
+       ;; that's relative to some module that is being expanded; that
+       ;; matters for a cross-phase persistent module with syntax literals
+       (instantiate! 0 0 root-ns
+                     #:mpi (if (self-free-module-path-index? mpi)
+                               mpi
+                               (module-path-index-join (resolved-module-path->module-path name) #f)))]
+      [(hash-ref (module-registry-declarations (namespace-module-registry ns)) name #f)
+       ;; Declared in `ns`'s registry, which is different from the root
+       ;; namespace's registry; the instance is still shared
+       (instantiate! 0 0 ns
+                     #:mpi (if (self-free-module-path-index? mpi)
+                               mpi
+                               (module-path-index-join (resolved-module-path->module-path name) #f)))]
+      [else
+       ;; A submodule of a module being expanded, which is declared only
+       ;; in `ns`; the instance is local to the expansion, so `mpi`
+       ;; (likely relative to the enclosing module) is right
+       (instantiate! 0 0 ns)])]
    [else
     (instantiate! instance-phase run-phase ns)]))
+
+;; Like `namespace->module`, but also finds a cross-phase persistent module
+;; that has an instance in the place but is not declared in `ns`
+(define (namespace->module/cross-phase ns name)
+  (or (namespace->module ns name)
+      (let ([mi (cross-phase-instance-ref name)])
+        (and mi (module-instance-module mi)))))
+
+;; A module being expanded has a name with an uninterned symbol at its root
+(define (expansion-time-module-name? name)
+  (define r (resolved-module-path-root-name name))
+  (and (symbol? r) (not (symbol-interned? r))))
 
 ;; Does `mpi` stay valid independent of any module being expanded? A
 ;; module path index that is relative to a "self" module path index
@@ -707,7 +777,7 @@
          (loop))))))
 
 (define (namespace-primitive-module-visit! ns name)
-  (define mi (hash-ref (namespace-module-instances ns) (make-resolved-module-path name)))
+  (define mi (namespace->module-instance ns (make-resolved-module-path name) 0))
   (run-module-instance! mi ns #:run-phase 1 #:skip-run? #f #:otherwise-available? #t))
 
 (define (namespace-clear-shifted-requires! ns mod-name)

@@ -202,23 +202,20 @@
 
 ;; Convert a module that is declared `#:unsafe-cross-phase-persistent`
 ;; so that its inside-edge scope is phaseless. The module can have
-;; definitions only at phases 0 and 1, and no transformer definitions
-;; at phase 1 (which would need phase-2 code). Imports are allowed at
-;; any phase except the label phase, since an import does not imply
-;; code at the import's phase. Converting to phaseless merges bindings
-;; at all phases, so check that every module-level binding is the same
-;; after conversion as before; that is, no symbol can be imported or
-;; defined differently at different phases.
+;; definitions and imports at any phase except the label phase (and
+;; all phase levels of the module are instantiated together).
+;; Converting to phaseless merges bindings at all phases, so check
+;; that every module-level binding is the same after conversion as
+;; before; that is, no symbol can be imported or defined differently
+;; at different phases.
 (define (make-module-phaseless! inside-scope r+p defined-syms s)
   (define (check-phase phase id-or-sym what)
-    (unless (or (eqv? phase 0) (eqv? phase 1))
+    (when (label-phase? phase)
       (raise-syntax-error #f
-                          (format (string-append "~a at ~a not allowed in an unsafe cross-phase persistent module\n"
+                          (format (string-append "~a at the label phase not allowed in an unsafe"
+                                                 " cross-phase persistent module\n"
                                                  "  name: ~a")
                                   what
-                                  (cond
-                                    [(not phase) "the label phase"]
-                                    [else (format "phase ~a" phase)])
                                   (if (syntax? id-or-sym) (syntax-e id-or-sym) id-or-sym))
                           s
                           (and (syntax? id-or-sym) id-or-sym))))
@@ -230,22 +227,13 @@
   (requires+provides-for-each-required-id
    r+p
    (lambda (sym phase source get-id)
-     ;; Imports at any phase are allowed, since they don't imply code
-     ;; at that phase, but they are merged with other phases
      (when (label-phase? phase)
        (check-phase phase (get-id) "import"))
      (add-site! sym get-id phase source)))
   (requires+provides-for-each-defined-sym
    r+p
    (lambda (sym phase kind)
-     (check-phase phase sym "definition")
-     (when (and (eqv? phase 1) (eq? kind 'transformer))
-       (raise-syntax-error #f
-                           (format (string-append "macro definition at phase 1 not allowed in an unsafe"
-                                                  " cross-phase persistent module\n"
-                                                  "  name: ~a")
-                                   sym)
-                           s))))
+     (check-phase phase sym "definition")))
   (for* ([(phase ht) (in-hash defined-syms)]
          [(sym id) (in-hash ht)])
     (add-site! (syntax-e id) (lambda () id) phase #f))
@@ -307,13 +295,23 @@
                         s
                         id
                         null
-                        (format "\n  phase of binding: ~a\n  binding at that phase: ~a\n  merged binding: ~a\n  all conflicting names:~a"
+                        (format "\n  phase of binding: ~a\n  binding at that phase: ~a\n  merged binding: ~a\n  all conflicting names:~a\n  binding sites for `~a`:~a"
                                 phase
                                 (describe-binding before-b)
                                 (describe-binding after-b)
                                 (apply string-append
                                        (for/list ([sym (in-list all-names)])
-                                         (format " ~a" sym)))))))
+                                         (format " ~a" sym)))
+                                (syntax-e id)
+                                (apply string-append
+                                       (for/list ([site (in-list sites)]
+                                                  #:when (eq? (syntax-e (vector-ref site 0)) (syntax-e id)))
+                                         (define site-id (vector-ref site 0))
+                                         (format "\n   phase ~a at ~a: ~a"
+                                                 (vector-ref site 1)
+                                                 (let ([loc (syntax-srcloc site-id)])
+                                                   (if (srcloc? loc) (srcloc->string loc) "unknown location"))
+                                                 (describe-binding (vector-ref site 2)))))))))
 
 (define (describe-binding b)
   (cond

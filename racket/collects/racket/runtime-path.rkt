@@ -1,4 +1,5 @@
 #lang racket/base
+(#%declare #:unsafe-cross-phase-persistent)
 
 ;; Library for accessing paths relative to a source file at runtime
 

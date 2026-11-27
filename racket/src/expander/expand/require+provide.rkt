@@ -713,7 +713,7 @@
                (if (hash-ref name-to-phases name #f)
                    all-mpis
                    (cons (cons name mpi) all-mpis)))
-             (define m (namespace->module ns name))
+             (define m (namespace->module/cross-phase ns name))
              (unless m
                (raise-arguments-error 'module
                                       "cannot find module while flattening requires"

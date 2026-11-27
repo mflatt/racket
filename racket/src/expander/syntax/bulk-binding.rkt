@@ -1,5 +1,6 @@
 #lang racket/base
-(require "../compile/serialize-property.rkt"
+(require racket/private/place-local
+         "../compile/serialize-property.rkt"
          "../compile/serialize-state.rkt"
          "binding-table.rkt" ; defines `prop:bulk-binding`
          "binding.rkt"
@@ -12,7 +13,9 @@
 
          make-bulk-binding-registry
          register-bulk-provide!
+         register-cross-phase-bulk-provide!
          registered-bulk-provide?
+         bulk-binding-place-init!
 
          bulk-binding
          
@@ -95,7 +98,10 @@
              (error "namespace mismatch: no bulk-binding registry available:"
                     mod-name))
            (define table (bulk-binding-registry-table (bulk-binding-bulk-binding-registry b)))
-           (define bulk-provide (hash-ref table mod-name #f))
+           (define bulk-provide (or (hash-ref table mod-name #f)
+                                    ;; A cross-phase persistent module's syntax literals
+                                    ;; can be used with a different registry
+                                    (hash-ref cross-phase-bulk-provides mod-name #f)))
            (unless bulk-provide
              (error "namespace mismatch: bulk bindings not found in registry for module:"
                     mod-name))
@@ -215,6 +221,25 @@
   (hash-set! (bulk-binding-registry-table bulk-binding-registry)
              mod-name
              (bulk-provide self provides)))
+
+;; Like `register-bulk-provide!`, but also registers place-wide
+(define (register-cross-phase-bulk-provide! bulk-binding-registry mod-name self provides)
+  (define bp (bulk-provide self provides))
+  (hash-set! (bulk-binding-registry-table bulk-binding-registry)
+             mod-name
+             bp)
+  (hash-set! cross-phase-bulk-provides mod-name bp))
+
+;; A cross-phase persistent module has a single instance in a place,
+;; and the syntax literals of that instance refer to a single bulk-binding
+;; registry, but they can be used for expansion in any namespace; since
+;; a cross-phase persistent module requires only cross-phase persistent
+;; modules, a place-wide table of cross-phase persistent modules' provides
+;; is enough to support those bindings
+(define-place-local cross-phase-bulk-provides (make-hasheq))
+
+(define (bulk-binding-place-init!)
+  (set! cross-phase-bulk-provides (make-hasheq)))
 
 ;; Called when a module is imported to make sure that it's in the
 ;; registry (as opposed to a temporary module instance during

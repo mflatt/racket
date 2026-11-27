@@ -78,16 +78,25 @@
                            (module-path-index-resolve mpi))))
     (define m-ns (hash-ref (hash-ref todo mod-name #hasheqv()) phase missing))
 
-    (when (eq? missing m-ns)
-      ;; If module instance is available, can use its shifted requires:
-      (define mi (namespace->module-instance src-namespace mod-name phase))
-      (define m (if mi
-                    (module-instance-module mi)
-                    (namespace->module src-namespace mod-name)))
-      (unless m
-        (raise-arguments-error who
-                               "module not declared (in the source namespace)"
-                               "module name" mod-name))
+    ;; If module instance is available, can use its shifted requires;
+    ;; a cross-phase persistent instance can come from a different module
+    ;; registry, though, so prefer the declaration in the source namespace
+    (define mi (and (eq? missing m-ns)
+                    (namespace->module-instance src-namespace mod-name phase)))
+    (define m (and (eq? missing m-ns)
+                   (or (namespace->module src-namespace mod-name)
+                       (and mi (module-instance-module mi)))))
+    (when (and (eq? missing m-ns)
+               (not m)
+               (not (label-phase? phase)))
+      (raise-arguments-error who
+                             "module not declared (in the source namespace)"
+                             "module name" mod-name))
+
+    ;; A submodule (attached at the label phase) might not be declared in
+    ;; the source namespace when its enclosing module's declaration came
+    ;; from a cross-phase persistent instance; skip it in that case
+    (when (and (eq? missing m-ns) m)
 
       (cond
        [(and (module-cross-phase-persistent? m)
@@ -194,7 +203,10 @@
 
   ;; Perform decided transfers
   (for ([(mod-name phases) (in-hash todo)])
-    (define m (namespace->module src-namespace mod-name))
+    (define m (or (namespace->module src-namespace mod-name)
+                  ;; a cross-phase persistent instance can supply the declaration:
+                  (let ([mi (namespace->module-instance src-namespace mod-name 0)])
+                    (and mi (module-instance-module mi)))))
     (module-force-bulk-binding! m src-namespace)
     (unless (eq? m (namespace->module dest-namespace mod-name))
       (namespace-copy-shifted-requires! dest-namespace src-namespace mod-name)
