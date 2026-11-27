@@ -10,7 +10,6 @@
          "../expand/root-expand-context.rkt"
          "../expand/portal-syntax.rkt"
          "../host/linklet.rkt"
-         (only-in "../eval/collection.rkt" collection-file-path)
          "namespace.rkt"
          "provided.rkt"
          "registry.rkt"
@@ -488,13 +487,6 @@
                              (or cross-phase-all-levels?
                                  (and run-phase-level
                                       (<= 1 run-phase-level (module-max-phase-level m))))))
-    (define (self-free mpi)
-      ;; The instance is shared, so it should not refer to `mpi` if
-      ;; that's relative to some module that is being expanded; that
-      ;; matters for a cross-phase persistent module with syntax literals
-      (if (self-free-module-path-index? mpi)
-          mpi
-          (module-path-index-join (resolved-module-path->stable-module-path name ns) #f)))
     (define mi
       (cond
         [(or (expansion-time-module-name? name)
@@ -508,7 +500,10 @@
          ;; but run it with the requesting namespace, so that other modules
          ;; are made available there
          (instantiate! 0 0 (or (namespace-root-namespace ns) ns)
-                       #:mpi (self-free mpi)
+                       ;; The instance is shared, so it should not refer to `mpi` if
+                       ;; that's relative to some module that is being expanded; that
+                       ;; matters for a cross-phase persistent module with syntax literals
+                       #:mpi (module-path-index->self-free mpi name)
                        #:run-ns ns
                        #:all-levels? all-levels?)]))
     ;; Make phase levels other than 0 available in the requesting
@@ -538,96 +533,40 @@
          (run-module-instance! mi ns #:run-phase 0 #:skip-run? #f #:otherwise-available? #f
                                #:all-levels? #t))))))
 
-;; Converts a resolved module path to a module path that does not
-;; depend on any module being expanded. When possible, the result uses a
-;; collection-based path instead of a filesystem path, since a module
-;; path index for a shared instance can end up in other modules' compiled
-;; code (via syntax literals), and a filesystem path there would be
-;; either absolute or relative to the compiled module's directory
-(define (resolved-module-path->stable-module-path name ns)
-  (define n (resolved-module-path-name name))
-  (define p (if (pair? n) (car n) n))
-  (define lib-mp (and (path? p)
-                      (path->collection-module-path
-                       p
-                       (module-registry-collection-prefixes (namespace-module-registry ns)))))
-  (cond
-    [(not lib-mp) (resolved-module-path->module-path name)]
-    [(pair? n) `(submod ,lib-mp ,@(cdr n))]
-    [else lib-mp]))
-
-;; Finds a `lib` module path that refers to `p`, if any, by trying
-;; successively longer suffixes of `p` as collection-based paths; a
-;; successful result's prefix is cached for the directory, since other
-;; modules in the same directory are likely to need the same prefix
-(define (path->collection-module-path p prefixes)
-  (define (try str)
-    ;; `str` has the form "coll/.../file"; check it the same way that
-    ;; the module name resolver would, but without raising an exception
-    ;; for a collection that doesn't exist
-    (define mp `(lib ,str))
-    (and (module-path? mp)
-         (let* ([elems (split-on-slash str)]
-                [rev-elems (reverse elems)]
-                [r (with-handlers ([exn:fail? (lambda (exn) #f)])
-                     (collection-file-path (lambda (s) #f) #t
-                                           (car rev-elems)
-                                           (car elems)
-                                           (cdr (reverse (cdr rev-elems)))))])
-           (and r
-                (equal? (simplify-path (path->complete-path r)) p)
-                mp))))
-  (define-values (dir file-elem dir?) (split-path p))
-  (define file-str (and (path? file-elem) (path->string file-elem)))
-  (define cached-prefix (and file-str (path? dir) (hash-ref prefixes dir #f)))
-  (or (and cached-prefix
-           (try (string-append cached-prefix "/" file-str)))
-      (and file-str
-           (path? dir)
-           (let ([dir-elems
-                  (let loop ([p dir] [accum null])
-                    (define-values (base elem dir?) (split-path p))
-                    (define str (and (path? elem) (path->string elem)))
-                    (cond
-                      [(not str) accum]
-                      [(path? base) (loop base (cons str accum))]
-                      [else (cons str accum)]))])
-             (let loop ([k 1] [rev-dir-elems (reverse dir-elems)] [prefix #f])
-               (cond
-                 [(or (k . > . 7) (null? rev-dir-elems)) #f]
-                 [else
-                  (define new-prefix (if prefix
-                                         (string-append (car rev-dir-elems) "/" prefix)
-                                         (car rev-dir-elems)))
-                  (define mp (try (string-append new-prefix "/" file-str)))
-                  (cond
-                    [mp
-                     (hash-set! prefixes dir new-prefix)
-                     mp]
-                    [else (loop (add1 k) (cdr rev-dir-elems) new-prefix)])]))))))
-
-(define (split-on-slash str)
-  (let loop ([start 0] [i 0])
-    (cond
-      [(= i (string-length str)) (list (substring str start i))]
-      [(char=? #\/ (string-ref str i)) (cons (substring str start i) (loop (add1 i) (add1 i)))]
-      [else (loop start (add1 i))])))
-
 ;; A module being expanded has a name with an uninterned symbol at its root
 (define (expansion-time-module-name? name)
   (define r (resolved-module-path-root-name name))
   (and (symbol? r) (not (symbol-interned? r))))
 
-;; Does `mpi` stay valid independent of any module being expanded? A
-;; module path index that is relative to a "self" module path index
-;; (which has no path) is specific to an expansion or instantiation.
-(define (self-free-module-path-index? mpi)
-  (let loop ([mpi mpi])
+;; Returns a module path index that resolves the same as `mpi` but
+;; does not depend on any module being expanded. A module path index
+;; that is relative to a "self" module path index (which has no path)
+;; is specific to an expansion or instantiation, but a chain can be cut
+;; at a non-relative module path, since its base doesn't matter; if the
+;; chain is relative all the way to a "self", use the resolved name
+(define (module-path-index->self-free mpi name)
+  (define (loop mpi)
     (define-values (path base) (module-path-index-split mpi))
     (cond
-      [(not path) #f]
-      [(module-path-index? base) (loop base)]
-      [else #t])))
+      [(not path) #f] ; a "self" module path index
+      [(not (module-path-index? base)) mpi]
+      [else
+       (define new-base (loop base))
+       (cond
+         [(eq? new-base base) mpi]
+         [(not (relative-module-path? path)) (module-path-index-join path #f)]
+         [(not new-base) #f]
+         [else (module-path-index-join path new-base)])]))
+  (or (loop mpi)
+      (module-path-index-join (resolved-module-path->module-path name) #f)))
+
+(define (relative-module-path? path)
+  (cond
+    [(string? path) #t]
+    [(path? path) (relative-path? path)]
+    [(and (pair? path) (eq? 'file (car path))) (relative-path? (cadr path))]
+    [(and (pair? path) (eq? 'submod (car path))) (relative-module-path? (cadr path))]
+    [else #f]))
 
 (define (namespace-module-visit! ns mpi instance-phase #:visit-phase [visit-phase (namespace-phase ns)]
                                  #:transitive-record [transitive-modules #f])

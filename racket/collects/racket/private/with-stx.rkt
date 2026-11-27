@@ -72,16 +72,11 @@
 
   ;; The counter is local to a module expansion when possible, since
   ;; this module's instance is shared (cross-phase persistent):
-  (-define counter 0)
   (-define counter-key (gensym 'generate-temporaries))
   (-define (next-counter!)
-    (if (syntax-transforming?)
-        (let ([n (add1 (syntax-local-state-ref counter-key 0))])
-          (syntax-local-state-set! counter-key n)
-          n)
-        (begin
-          (set! counter (add1 counter))
-          counter)))
+    (let ([n (add1 (syntax-local-state-ref counter-key 0))])
+      (syntax-local-state-set! counter-key n)
+      n))
   (-define (append-number s)
     (string->symbol (format "~a~s" s (next-counter!))))
 

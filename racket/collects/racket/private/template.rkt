@@ -510,16 +510,11 @@
 
   ;; The counter is local to a module expansion when possible, since
   ;; this module's instance is shared (cross-phase persistent):
-  (define gentemp-counter 0)
   (define gentemp-counter-key (gensym 'gentemp))
   (define (next-gentemp-counter!)
-    (if (syntax-transforming?)
-        (let ([n (add1 (syntax-local-state-ref gentemp-counter-key 0))])
-          (syntax-local-state-set! gentemp-counter-key n)
-          n)
-        (begin
-          (set! gentemp-counter (add1 gentemp-counter))
-          gentemp-counter)))
+    (let ([n (add1 (syntax-local-state-ref gentemp-counter-key 0))])
+      (syntax-local-state-set! gentemp-counter-key n)
+      n))
   (define (gentemp)
     ((make-syntax-introducer)
      (datum->syntax #f (string->symbol (format "pv_~s" (next-gentemp-counter!))))))

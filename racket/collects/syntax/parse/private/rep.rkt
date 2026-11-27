@@ -370,17 +370,10 @@
 ;; Like gensym, but with deterministic name from compilation-local counter.
 ;; The counter is local to a module expansion when possible, since this
 ;; module's instance is shared (cross-phase persistent):
-(define gensym*-counter 0)
 (define gensym*-counter-key (gensym 'gensym*-counter))
 (define (gensym*)
-  (define n (cond
-              [(syntax-transforming?)
-               (define n (add1 (syntax-local-state-ref gensym*-counter-key 0)))
-               (syntax-local-state-set! gensym*-counter-key n)
-               n]
-              [else
-               (set! gensym*-counter (add1 gensym*-counter))
-               gensym*-counter]))
+  (define n (add1 (syntax-local-state-ref gensym*-counter-key 0)))
+  (syntax-local-state-set! gensym*-counter-key n)
   (string->uninterned-symbol (format "group~a" n)))
 
 

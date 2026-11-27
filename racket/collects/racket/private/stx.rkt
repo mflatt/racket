@@ -204,16 +204,11 @@
   ;; (cross-phase persistent):
   (define-values (make-stx-id-counter)
     (lambda (prefix)
-      (let-values ([(counter) 0]
-                   [(key) (gensym prefix)])
+      (let-values ([(key) (gensym prefix)])
         (lambda ()
-          (let-values ([(n) (if (syntax-transforming?)
-                                (let-values ([(n) (add1 (syntax-local-state-ref key 0))])
-                                  (syntax-local-state-set! key n)
-                                  n)
-                                (begin
-                                  (set! counter (add1 counter))
-                                  counter))])
+          (let-values ([(n) (let-values ([(n) (add1 (syntax-local-state-ref key 0))])
+                              (syntax-local-state-set! key n)
+                              n)])
             (string->uninterned-symbol (format "~a~a" prefix n)))))))
 
   ; (raise-syntax-error-if condition msg expr [sub-expr] [extra-sources])

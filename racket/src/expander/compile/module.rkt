@@ -23,6 +23,7 @@
          "compiled-in-memory.rkt"
          "linklet.rkt"
          "correlated-linklet.rkt"
+         "module-path-rewrite.rkt"
          "../eval/reflect.rkt"
          "../eval/reflect-name.rkt")
 
@@ -110,7 +111,12 @@
    
    (define empty-result-for-module->namespace? #f)
 
-   (define mpis (make-module-path-index-table))
+   ;; References to shared instances can be rooted at a filesystem path;
+   ;; record them relative to `self`, instead, when possible
+   (define mpis (make-module-path-index-table
+                 #:rewrite (make-module-path-index-rewriter self
+                                                            requires
+                                                            (compile-context-namespace cctx))))
    
    (define body-cctx (struct-copy compile-context cctx
                                   [phase 0]

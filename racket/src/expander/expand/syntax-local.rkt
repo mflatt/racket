@@ -1,5 +1,6 @@
 #lang racket/base
-(require "../common/set.rkt"
+(require racket/private/place-local
+         "../common/set.rkt"
          "../common/scope-set.rkt"
          "../common/struct-star.rkt"
          "../syntax/syntax.rkt"
@@ -23,6 +24,7 @@
          "definition-context.rkt"
          "../common/module-path.rkt"
          "../namespace/namespace.rkt"
+         (only-in (submod "../namespace/namespace.rkt" for-module) namespace-root-expand-ctx)
          "../namespace/module.rkt"
          "../common/contract.rkt")
 
@@ -52,6 +54,7 @@
 
          syntax-local-state-ref
          syntax-local-state-set!
+         syntax-local-state-place-init!
          
          syntax-local-lift-module
          
@@ -283,14 +286,39 @@
 ;; State that is local to the current module expansion (or top-level
 ;; namespace), which is useful for compile-time state in a module
 ;; that is cross-phase persistent, since such a module's compile-time
-;; instance is not created fresh for each module expansion
+;; instance is not created fresh for each module expansion. When not
+;; expanding, the state is associated with the current namespace,
+;; using the same table as top-level expansion in that namespace.
 
 (define none (gensym 'none))
 
+(define-place-local namespace-local-states (make-weak-hasheq))
+
+(define (syntax-local-state-place-init!)
+  (set! namespace-local-states (make-weak-hasheq)))
+
+(define (current-local-state)
+  (define ctx (get-current-expand-context #:fail-ok? #t))
+  (cond
+    [ctx (root-expand-context-local-state ctx)]
+    [else
+     (define ns (current-namespace))
+     (define root-ctx (namespace-get-root-expand-ctx ns))
+     (cond
+       [root-ctx (root-expand-context-local-state root-ctx)]
+       [else
+        ;; A module instance's namespace might not have a root
+        ;; expand context, yet; key on the box that holds it, which
+        ;; is shared by the namespace's phase-specific variants
+        (define key (namespace-root-expand-ctx ns))
+        (or (hash-ref namespace-local-states key #f)
+            (let ([ht (make-hasheq)])
+              (hash-set! namespace-local-states key ht)
+              ht))])]))
+
 (define/who (syntax-local-state-ref key [failure-result none])
   (check who symbol? key)
-  (define ctx (get-current-expand-context who))
-  (define v (hash-ref (root-expand-context-local-state ctx) key none))
+  (define v (hash-ref (current-local-state) key none))
   (cond
     [(not (eq? v none)) v]
     [(eq? failure-result none)
@@ -300,8 +328,7 @@
 
 (define/who (syntax-local-state-set! key val)
   (check who symbol? key)
-  (define ctx (get-current-expand-context who))
-  (hash-set! (root-expand-context-local-state ctx) key val))
+  (hash-set! (current-local-state) key val))
 
 ;; ----------------------------------------
 

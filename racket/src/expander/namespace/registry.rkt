@@ -6,7 +6,6 @@
 
 (struct module-registry (declarations  ; resolved-module-path -> module
                          cross-phase-instances ; resolved-module-path -> module-instance
-                         collection-prefixes ; directory path -> collection string; see "module.rkt"
                          lock-box))    ; reentrant lock to guard registry for use by on-demand visits
 
 ;; A cross-phase persistent module has a single instance per registry,
@@ -14,7 +13,7 @@
 ;; instance can be shared with other registries by `namespace-attach-module`
 
 (define (make-module-registry)
-  (module-registry (make-hasheq) (make-hasheq) (make-hash) (box #f)))
+  (module-registry (make-hasheq) (make-hasheq) (box #f)))
 
 (define (registry-call-with-lock r proc)
   (define lock-box (module-registry-lock-box r))
