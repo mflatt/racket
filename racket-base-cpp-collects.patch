@@ -1,0 +1,913 @@
+diff --git a/racket/collects/racket/base.rkt b/racket/collects/racket/base.rkt
+index 1d2d8f47c1..f609610550 100644
+--- a/racket/collects/racket/base.rkt
++++ b/racket/collects/racket/base.rkt
+@@ -1,4 +1,5 @@
+ (module base "private/base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   (provide (all-from-out "private/base.rkt"))
+ 
+diff --git a/racket/collects/racket/phase+space.rkt b/racket/collects/racket/phase+space.rkt
+index 59e3c11431..0cfa07a88b 100644
+--- a/racket/collects/racket/phase+space.rkt
++++ b/racket/collects/racket/phase+space.rkt
+@@ -1,4 +1,5 @@
+ (module phase+space '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "private/core-syntax.rkt")
+   
+   (#%provide phase?
+diff --git a/racket/collects/racket/private/base.rkt b/racket/collects/racket/private/base.rkt
+index 5af36dc359..1425b7b468 100644
+--- a/racket/collects/racket/private/base.rkt
++++ b/racket/collects/racket/private/base.rkt
+@@ -1,4 +1,5 @@
+ (module base "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%declare #:flatten-requires)
+ 
+   (#%require "hash.rkt"
+diff --git a/racket/collects/racket/private/case.rkt b/racket/collects/racket/private/case.rkt
+index f47e1f29b0..d98707e133 100644
+--- a/racket/collects/racket/private/case.rkt
++++ b/racket/collects/racket/private/case.rkt
+@@ -3,6 +3,7 @@
+ ;;       [http://scheme2006.cs.uchicago.edu/07-clinger.pdf]
+ 
+ (module case '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require '#%paramz '#%unsafe "core-syntax.rkt" "fixnum.rkt"
+              (for-syntax '#%kernel "core-syntax.rkt"
+                          "stxcase-scheme.rkt"
+diff --git a/racket/collects/racket/private/cert.rkt b/racket/collects/racket/private/cert.rkt
+index d49ac206de..dafe76b998 100644
+--- a/racket/collects/racket/private/cert.rkt
++++ b/racket/collects/racket/private/cert.rkt
+@@ -1,4 +1,5 @@
+ (module base "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   ;; Backward compatibility
+   (#%provide syntax-recertify
+diff --git a/racket/collects/racket/private/collect.rkt b/racket/collects/racket/private/collect.rkt
+index 685862e5d1..1c865a1d3e 100644
+--- a/racket/collects/racket/private/collect.rkt
++++ b/racket/collects/racket/private/collect.rkt
+@@ -1,4 +1,5 @@
+ (module collect '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              "path.rkt"
+              "kw.rkt"
+diff --git a/racket/collects/racket/private/core-syntax.rkt b/racket/collects/racket/private/core-syntax.rkt
+index caa47ee4f5..7313b75ac2 100644
+--- a/racket/collects/racket/private/core-syntax.rkt
++++ b/racket/collects/racket/private/core-syntax.rkt
+@@ -1,4 +1,5 @@
+ (module core-syntax '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   ; ======================================================================
+   ; Many of the base syntactic forms of Racket-- things like `and`, `let`,
+diff --git a/racket/collects/racket/private/define-struct.rkt b/racket/collects/racket/private/define-struct.rkt
+index d28bf4f4b9..39bbb379de 100644
+--- a/racket/collects/racket/private/define-struct.rkt
++++ b/racket/collects/racket/private/define-struct.rkt
+@@ -2,6 +2,7 @@
+ ;;  (planet "struct.ss" ("ryanc" "macros.plt" 1 0)))
+ 
+ (module define-struct '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "../stxparam.rkt"
+              "generic-methods.rkt"
+              (for-syntax '#%kernel "core-syntax.rkt"
+diff --git a/racket/collects/racket/private/ellipses.rkt b/racket/collects/racket/private/ellipses.rkt
+index 3a7196a7e4..979776a77f 100644
+--- a/racket/collects/racket/private/ellipses.rkt
++++ b/racket/collects/racket/private/ellipses.rkt
+@@ -1,4 +1,5 @@
+ (module ellipses '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require (for-syntax '#%kernel))
+ 
+   (#%provide ... _ ~? ~@)
+diff --git a/racket/collects/racket/private/executable-path.rkt b/racket/collects/racket/private/executable-path.rkt
+index 7b82dd7823..0eeac8b544 100644
+--- a/racket/collects/racket/private/executable-path.rkt
++++ b/racket/collects/racket/private/executable-path.rkt
+@@ -1,4 +1,5 @@
+ (module path-list '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              "path.rkt"
+              "path-list.rkt")
+diff --git a/racket/collects/racket/private/for.rkt b/racket/collects/racket/private/for.rkt
+index 8f3b02e423..6c76ba478c 100644
+--- a/racket/collects/racket/private/for.rkt
++++ b/racket/collects/racket/private/for.rkt
+@@ -1,4 +1,5 @@
+ (module for '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   (#%require "misc.rkt"
+              "core-syntax.rkt"
+@@ -9,7 +10,8 @@
+              "promise.rkt"
+              '#%unsafe
+              '#%flfxnum
+-             (for-syntax '#%kernel
++             (for-syntax (all-except '#%kernel raise-argument-error raise-arguments-error raise-range-error)
++                         (rename '#%kernel kernel:raise-argument-error raise-argument-error)
+                          "stx.rkt"
+                          "qqstx.rkt"
+                          "core-syntax.rkt"
+@@ -155,13 +157,13 @@
+       (unless (and (procedure? proc1)
+                    (or (procedure-arity-includes? proc1 1)
+                        (procedure-arity-includes? proc1 0)))
+-        (raise-argument-error 'define-sequence-syntax
++        (kernel:raise-argument-error 'define-sequence-syntax
+                               "(or/c (procedure-arity-includes/c 0) (procedure-arity-includes/c 1))"
+                               0
+                               proc1 proc2))
+       (unless (and (procedure? proc2)
+                    (procedure-arity-includes? proc2 1))
+-        (raise-argument-error 'define-sequence-syntax
++        (kernel:raise-argument-error 'define-sequence-syntax
+                           "(procedure-arity-includes/c 1)"
+                           1
+                           proc1 proc2))
+@@ -454,7 +456,7 @@
+     (define (create-splicing-for-clause-transformer proc)
+       (unless (and (procedure? proc)
+                    (procedure-arity-includes? proc 1))
+-        (raise-argument-error 'define-splicing-for-clause-syntax
++        (kernel:raise-argument-error 'define-splicing-for-clause-syntax
+                               "(procedure-arity-includes/c 1)"
+                               proc))
+       (make-splicing-for-clause-transformer proc)))
+@@ -467,7 +469,7 @@
+ 
+   (define-for-syntax (syntax-local-splicing-for-clause-introduce stx)
+     (unless (syntax? stx)
+-      (raise-argument-error 'syntax-local-splicing-for-clause-introduce "syntax?" stx))
++      (kernel:raise-argument-error 'syntax-local-splicing-for-clause-introduce "syntax?" stx))
+     (syntax-local-introduce stx))
+ 
+   (define-for-syntax (expand-splicing-clause orig-form form)
+diff --git a/racket/collects/racket/private/generic-interfaces.rkt b/racket/collects/racket/private/generic-interfaces.rkt
+index 008c4aa161..6e2320f799 100644
+--- a/racket/collects/racket/private/generic-interfaces.rkt
++++ b/racket/collects/racket/private/generic-interfaces.rkt
+@@ -1,4 +1,5 @@
+ (module generic-interfaces "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   ;; Defines (forgeries of) generic interfaces that correspond to struct
+   ;; properties that come from racket/base.
+@@ -6,7 +7,7 @@
+   ;; `define-generics' to build these generic interfaces. Thus we must
+   ;; forge them.
+ 
+-  (#%require (for-syntax '#%kernel) '#%unsafe "generic-methods.rkt")
++  (#%require (for-syntax "pre-base.rkt") '#%unsafe "generic-methods.rkt")
+ 
+   (#%provide gen:equal+hash gen:equal-mode+hash gen:custom-write)
+ 
+diff --git a/racket/collects/racket/private/generic-methods.rkt b/racket/collects/racket/private/generic-methods.rkt
+index 668f7e7edc..a832cf8c9f 100644
+--- a/racket/collects/racket/private/generic-methods.rkt
++++ b/racket/collects/racket/private/generic-methods.rkt
+@@ -1,4 +1,5 @@
+ (module generic-methods '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   (#%require (for-syntax '#%kernel "core-syntax.rkt"
+                          "stx.rkt" "stxcase-scheme.rkt")
+diff --git a/racket/collects/racket/private/hash.rkt b/racket/collects/racket/private/hash.rkt
+index ab162866a0..fd1f2fd23f 100644
+--- a/racket/collects/racket/private/hash.rkt
++++ b/racket/collects/racket/private/hash.rkt
+@@ -1,4 +1,5 @@
+ (module hash "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (require '#%unsafe
+            (for-syntax "ellipses.rkt"))
+ 
+diff --git a/racket/collects/racket/private/immediate-default.rkt b/racket/collects/racket/private/immediate-default.rkt
+index a7848e0f31..bcf84049ba 100644
+--- a/racket/collects/racket/private/immediate-default.rkt
++++ b/racket/collects/racket/private/immediate-default.rkt
+@@ -1,4 +1,5 @@
+ (module kw '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              "stxcase-scheme.rkt"
+              (for-template '#%kernel))
+diff --git a/racket/collects/racket/private/kernstruct.rkt b/racket/collects/racket/private/kernstruct.rkt
+index d9d883b8a2..030bd2356f 100644
+--- a/racket/collects/racket/private/kernstruct.rkt
++++ b/racket/collects/racket/private/kernstruct.rkt
+@@ -2,7 +2,8 @@
+ ;;----------------------------------------------------------------------
+ ;; record for static info produced by structs defined in c
+ (module kernstruct '#%kernel
+-  (#%require (for-syntax '#%kernel))
++  (#%declare #:unsafe-cross-phase-persistent)
++  (#%require (for-syntax (all-except '#%kernel exn:break exn:fail:syntax:unbound exn:fail:syntax date* exn:fail:network exn:fail:filesystem:version arity-at-least exn:fail:read:eof exn:fail:filesystem:errno exn:fail:contract:continuation exn:fail:read exn:fail:read:non-char exn:fail:contract:arity exn:break:hang-up exn:fail exn:fail:filesystem:missing-module exn:fail:syntax:missing-module exn:fail:contract exn:fail:filesystem:exists exn:fail:network:errno make-exn:fail:syntax exn:fail:contract:divide-by-zero make-exn:fail:syntax:missing-module exn:fail:contract:non-fixnum-result exn:fail:out-of-memory make-exn:fail:syntax:unbound make-exn:fail:filesystem:missing-module exn:fail:user exn:break:terminate exn:fail:unsupported srcloc date exn:fail:contract:variable exn exn:fail:filesystem)))
+   (#%require "core-syntax.rkt")
+   (#%require (for-syntax "struct-info.rkt"))
+   (#%provide (all-defined))
+diff --git a/racket/collects/racket/private/kw-file.rkt b/racket/collects/racket/private/kw-file.rkt
+index 15473e06bb..3215e7b19f 100644
+--- a/racket/collects/racket/private/kw-file.rkt
++++ b/racket/collects/racket/private/kw-file.rkt
+@@ -1,4 +1,5 @@
+ (module kw-file "pre-base.rkt" 
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   (require (prefix-in k: "pre-base.rkt")
+            "sort.rkt")
+diff --git a/racket/collects/racket/private/kw-syntax-binding.rkt b/racket/collects/racket/private/kw-syntax-binding.rkt
+index 8db66fd28c..d1fb2fc383 100644
+--- a/racket/collects/racket/private/kw-syntax-binding.rkt
++++ b/racket/collects/racket/private/kw-syntax-binding.rkt
+@@ -1,4 +1,5 @@
+ (module kw-syntax-binding "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (require (prefix-in k: '#%kernel))
+ 
+   (provide syntax-binding-set-extend)
+diff --git a/racket/collects/racket/private/kw-syntax-serialize.rkt b/racket/collects/racket/private/kw-syntax-serialize.rkt
+index c9059bcc29..3dbea06bd7 100644
+--- a/racket/collects/racket/private/kw-syntax-serialize.rkt
++++ b/racket/collects/racket/private/kw-syntax-serialize.rkt
+@@ -1,4 +1,5 @@
+ (module kw-syntax-binding "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (require (prefix-in k: '#%kernel))
+ 
+   (provide syntax-serialize
+diff --git a/racket/collects/racket/private/kw-thread.rkt b/racket/collects/racket/private/kw-thread.rkt
+index 3c0c113692..24f6de3fe4 100644
+--- a/racket/collects/racket/private/kw-thread.rkt
++++ b/racket/collects/racket/private/kw-thread.rkt
+@@ -1,4 +1,5 @@
+ (module kw-thread "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (require (prefix-in k: '#%kernel)
+            '#%futures)
+   
+diff --git a/racket/collects/racket/private/kw.rkt b/racket/collects/racket/private/kw.rkt
+index 9c2d6088cb..e64f6b1be1 100644
+--- a/racket/collects/racket/private/kw.rkt
++++ b/racket/collects/racket/private/kw.rkt
+@@ -1,4 +1,5 @@
+ (module kw '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              "more-scheme.rkt"
+              (only '#%unsafe
+@@ -16,11 +17,8 @@
+                          "qqstx.rkt"
+                          "sort.rkt"
+                          "kw-prop-key.rkt"
+-                         "immediate-default.rkt")
+-             (for-meta 2 '#%kernel
+-                       "core-syntax.rkt"
+-                       "stxcase-scheme.rkt"
+-                       "qqstx.rkt"))
++                         "immediate-default.rkt"
++                         "kw-stxloc.rkt"))
+ 
+   (#%provide new-lambda
+              (rename new-lambda new-λ)
+@@ -437,20 +435,6 @@
+                      ;; void hides binding name
+                      (void)))
+ 
+-  ;; Similar to the above, when we copy source locations from an input
+-  ;; expression, we need to ensure the source location is copied even if there
+-  ;; is no source location on the input, but (quasi)syntax/loc doesn’t copy
+-  ;; the source location if it is #f
+-  (begin-for-syntax
+-    (define-syntaxes (syntax/loc/always quasisyntax/loc/always)
+-      (let ([mk (lambda (syntax-id)
+-                  (lambda (stx)
+-                    (syntax-case stx ()
+-                      [(_ src-expr template)
+-                       #`(let ([result (#,syntax-id template)])
+-                           (datum->syntax result (syntax-e result) src-expr result))])))])
+-        (values (mk #'syntax) (mk #'quasisyntax)))))
+-
+   ;; ----------------------------------------
+ 
+   (define make-keyword-procedure
+diff --git a/racket/collects/racket/private/letstx-scheme.rkt b/racket/collects/racket/private/letstx-scheme.rkt
+index c037aba6cc..6da95e00f8 100644
+--- a/racket/collects/racket/private/letstx-scheme.rkt
++++ b/racket/collects/racket/private/letstx-scheme.rkt
+@@ -3,6 +3,7 @@
+ ;; #%stxcase-scheme: adds let-syntax, letrec-syntax, etc.
+ 
+ (module letstx-scheme '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (for-syntax '#%kernel "stxcase.rkt" 
+                          "with-stx.rkt" "stxloc.rkt"))
+diff --git a/racket/collects/racket/private/list.rkt b/racket/collects/racket/private/list.rkt
+index f8528de947..93d3b08a8d 100644
+--- a/racket/collects/racket/private/list.rkt
++++ b/racket/collects/racket/private/list.rkt
+@@ -1,4 +1,5 @@
+ (module list "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (require (rename-in "pico.rkt" [alt-reverse reverse]))
+ 
+   (provide foldl
+diff --git a/racket/collects/racket/private/logger.rkt b/racket/collects/racket/private/logger.rkt
+index e393add3e1..4349eda1c5 100644
+--- a/racket/collects/racket/private/logger.rkt
++++ b/racket/collects/racket/private/logger.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module logger '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (for-syntax '#%kernel "stx.rkt" "core-syntax.rkt"
+                          "stxcase-scheme.rkt"))
+diff --git a/racket/collects/racket/private/map.rkt b/racket/collects/racket/private/map.rkt
+index ec7e799603..f4bbb63b0f 100644
+--- a/racket/collects/racket/private/map.rkt
++++ b/racket/collects/racket/private/map.rkt
+@@ -3,6 +3,7 @@
+ ;;  but the JIT generates faster code, especially for the common cases.
+ 
+ (module map '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt"
+              "performance-hint.rkt"
+              "kw.rkt"
+diff --git a/racket/collects/racket/private/misc.rkt b/racket/collects/racket/private/misc.rkt
+index 6df973867f..e67af18fce 100644
+--- a/racket/collects/racket/private/misc.rkt
++++ b/racket/collects/racket/private/misc.rkt
+@@ -3,6 +3,7 @@
+ ;; #%misc : file utilities, etc. - remaining functions
+ 
+ (module misc '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "path.rkt" "old-path.rkt"
+              "path-list.rkt" "executable-path.rkt"
+              "reading-param.rkt" "../repl.rkt"
+diff --git a/racket/collects/racket/private/modbeg.rkt b/racket/collects/racket/private/modbeg.rkt
+index 72e7c3fe09..5f17be6d37 100644
+--- a/racket/collects/racket/private/modbeg.rkt
++++ b/racket/collects/racket/private/modbeg.rkt
+@@ -2,6 +2,7 @@
+ ;;  `print-value'.
+ 
+ (module modbeg '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require syntax/wrap-modbeg
+              (for-syntax '#%kernel))
+ 
+diff --git a/racket/collects/racket/private/more-scheme.rkt b/racket/collects/racket/private/more-scheme.rkt
+index 76bc016491..f2578913dd 100644
+--- a/racket/collects/racket/private/more-scheme.rkt
++++ b/racket/collects/racket/private/more-scheme.rkt
+@@ -3,6 +3,7 @@
+ ;; more-scheme : case, do, etc. - remaining syntax
+ 
+ (module more-scheme '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" '#%paramz "case.rkt" "logger.rkt"
+              (for-syntax '#%kernel "stx.rkt" "core-syntax.rkt" "stxcase-scheme.rkt" "qqstx.rkt"))
+ 
+diff --git a/racket/collects/racket/private/name.rkt b/racket/collects/racket/private/name.rkt
+index 0cc762a060..fcbbc2f6c7 100644
+--- a/racket/collects/racket/private/name.rkt
++++ b/racket/collects/racket/private/name.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module name '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt")
+   (#%provide syntax-local-infer-name
+              simplify-inferred-name)
+diff --git a/racket/collects/racket/private/namespace.rkt b/racket/collects/racket/private/namespace.rkt
+index 955951f6cb..fef71de9ec 100644
+--- a/racket/collects/racket/private/namespace.rkt
++++ b/racket/collects/racket/private/namespace.rkt
+@@ -1,5 +1,6 @@
+ (module namespace "pre-base.rkt"
+-  (require (for-syntax '#%kernel "core-syntax.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
++  (require (for-syntax "pre-base.rkt"
+                        "stx.rkt" "stxcase-scheme.rkt"
+                        "stxloc.rkt"))
+ 
+@@ -16,8 +17,12 @@
+ 
+   (define (make-base-empty-namespace)
+     (let* ([this-ns (variable-reference->empty-namespace orig-varref)]
+-           [ns (parameterize ([current-namespace this-ns]) ; ensures correct phase
+-                 (make-empty-namespace))])
++           ;; This module is cross-phase persistent, so `this-ns` is always
++           ;; at phase 0, and it doesn't reflect the phase of the caller;
++           ;; use the current namespace's phase, instead. Attaching
++           ;; 'racket/base works across phases, since it's cross-phase
++           ;; persistent.
++           [ns (make-empty-namespace)])
+       (namespace-call-with-registry-lock
+        this-ns
+        (lambda ()
+diff --git a/racket/collects/racket/private/norm-define.rkt b/racket/collects/racket/private/norm-define.rkt
+index 7bea4f680e..7cff9f95f0 100644
+--- a/racket/collects/racket/private/norm-define.rkt
++++ b/racket/collects/racket/private/norm-define.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module norm-define '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "core-syntax.rkt" "stxcase-scheme.rkt"
+              "stx.rkt" "qqstx.rkt")
+ 
+diff --git a/racket/collects/racket/private/old-path.rkt b/racket/collects/racket/private/old-path.rkt
+index d7849b2dda..efbbeb3bb7 100644
+--- a/racket/collects/racket/private/old-path.rkt
++++ b/racket/collects/racket/private/old-path.rkt
+@@ -2,6 +2,7 @@
+ ;; `path-add-extension` that do the wrong thing with
+ ;; file names that start "."
+ (module path '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax))
+diff --git a/racket/collects/racket/private/path-list.rkt b/racket/collects/racket/private/path-list.rkt
+index 2edcfe540c..3ab6d9a191 100644
+--- a/racket/collects/racket/private/path-list.rkt
++++ b/racket/collects/racket/private/path-list.rkt
+@@ -1,4 +1,5 @@
+ (module path-list '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax))
+diff --git a/racket/collects/racket/private/path.rkt b/racket/collects/racket/private/path.rkt
+index 7a0dd6d27e..9e7c1e393c 100644
+--- a/racket/collects/racket/private/path.rkt
++++ b/racket/collects/racket/private/path.rkt
+@@ -1,4 +1,5 @@
+ (module path '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax))
+diff --git a/racket/collects/racket/private/performance-hint.rkt b/racket/collects/racket/private/performance-hint.rkt
+index 2753b35140..6386cefa38 100644
+--- a/racket/collects/racket/private/performance-hint.rkt
++++ b/racket/collects/racket/private/performance-hint.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module inline '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require (for-syntax '#%kernel))
+   (#%provide begin-encourage-inline)
+ 
+diff --git a/racket/collects/racket/private/pre-base.rkt b/racket/collects/racket/private/pre-base.rkt
+index 0cf5148667..9e1c5daea4 100644
+--- a/racket/collects/racket/private/pre-base.rkt
++++ b/racket/collects/racket/private/pre-base.rkt
+@@ -1,7 +1,13 @@
+ ;; A sane "core" for finishing up the "racket/base" library
+ 
+ (module pre-base '#%kernel
+-  (#%require (for-syntax '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
++  (#%require (for-syntax (all-except '#%kernel
++                                     ;; bound at phase 0 by "map.rkt":
++                                     map for-each andmap ormap
++                                     ;; bound at phase 0 by "kernstruct.rkt":
++                                     exn:break exn:fail:syntax:unbound exn:fail:syntax date* exn:fail:network exn:fail:filesystem:version arity-at-least exn:fail:read:eof exn:fail:filesystem:errno exn:fail:contract:continuation exn:fail:read exn:fail:read:non-char exn:fail:contract:arity exn:break:hang-up exn:fail exn:fail:filesystem:missing-module exn:fail:syntax:missing-module exn:fail:contract exn:fail:filesystem:exists exn:fail:network:errno make-exn:fail:syntax exn:fail:contract:divide-by-zero make-exn:fail:syntax:missing-module exn:fail:contract:non-fixnum-result exn:fail:out-of-memory make-exn:fail:syntax:unbound make-exn:fail:filesystem:missing-module exn:fail:user exn:break:terminate exn:fail:unsupported srcloc date exn:fail:contract:variable exn exn:fail:filesystem)
++                         "map.rkt"
+                          "stx.rkt"
+                          "core-syntax.rkt"))
+   (#%require "more-scheme.rkt"
+diff --git a/racket/collects/racket/private/print-value-columns.rkt b/racket/collects/racket/private/print-value-columns.rkt
+index 500be2ba2f..e1a11081a0 100644
+--- a/racket/collects/racket/private/print-value-columns.rkt
++++ b/racket/collects/racket/private/print-value-columns.rkt
+@@ -1,4 +1,5 @@
+ (module print-value-columns "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%provide print-value-columns)
+   
+   (define print-value-columns
+diff --git a/racket/collects/racket/private/promise.rkt b/racket/collects/racket/private/promise.rkt
+index 97695810bb..021908fd4f 100644
+--- a/racket/collects/racket/private/promise.rkt
++++ b/racket/collects/racket/private/promise.rkt
+@@ -12,6 +12,7 @@
+ ;; definitions. See "racket/private/for-compatibility-lib.rkt" for an example.
+ 
+ (module promise '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+ (#%require "core-syntax.rkt"
+            "more-scheme.rkt"
+            (rename "define-struct.rkt" define-struct define-struct*)
+@@ -219,6 +220,7 @@
+ ;; (with simple keyword matching: keywords is an alist with default exprs)
+ (begin-for-syntax
+   (struct delayer (maker keywords)
++    #:omit-define-syntaxes
+     #:property prop:procedure
+     (lambda (self stx)
+       (define keywords (delayer-keywords self))
+diff --git a/racket/collects/racket/private/qqstx.rkt b/racket/collects/racket/private/qqstx.rkt
+index 90c70c2f29..bd7aef2377 100644
+--- a/racket/collects/racket/private/qqstx.rkt
++++ b/racket/collects/racket/private/qqstx.rkt
+@@ -2,6 +2,7 @@
+ ;; #%qqstx : quasisyntax
+ 
+ (module qqstx '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "stxcase-scheme.rkt" "stx.rkt" "template.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax)
+diff --git a/racket/collects/racket/private/reqprov.rkt b/racket/collects/racket/private/reqprov.rkt
+index 2130a6f928..5fc9e9218d 100644
+--- a/racket/collects/racket/private/reqprov.rkt
++++ b/racket/collects/racket/private/reqprov.rkt
+@@ -1,4 +1,5 @@
+ (module reqprov '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (for-syntax '#%kernel
+                          "stx.rkt" "stxcase-scheme.rkt" "core-syntax.rkt"
+diff --git a/racket/collects/racket/private/require-lift.rkt b/racket/collects/racket/private/require-lift.rkt
+index 4d64e07a13..6e52e2c82a 100644
+--- a/racket/collects/racket/private/require-lift.rkt
++++ b/racket/collects/racket/private/require-lift.rkt
+@@ -1,4 +1,5 @@
+ (module require-transform '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt")
+ 
+   (#%provide syntax-local-lift-require-definition-param)
+diff --git a/racket/collects/racket/private/sc.rkt b/racket/collects/racket/private/sc.rkt
+index 19941122cb..5bf5700b2c 100644
+--- a/racket/collects/racket/private/sc.rkt
++++ b/racket/collects/racket/private/sc.rkt
+@@ -3,6 +3,7 @@
+ ;; based on Shriram's pattern matcher for Zodiac
+ 
+ (module sc '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "stx.rkt" "core-syntax.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax)
+diff --git a/racket/collects/racket/private/sort.rkt b/racket/collects/racket/private/sort.rkt
+index be8dda889d..0f1f4d1223 100644
+--- a/racket/collects/racket/private/sort.rkt
++++ b/racket/collects/racket/private/sort.rkt
+@@ -1,4 +1,5 @@
+ (module sort '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+ (#%require "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt" (for-syntax "stxcase-scheme.rkt"))
+ 
+diff --git a/racket/collects/racket/private/string.rkt b/racket/collects/racket/private/string.rkt
+index f7c1a6456e..7634921444 100644
+--- a/racket/collects/racket/private/string.rkt
++++ b/racket/collects/racket/private/string.rkt
+@@ -1,4 +1,5 @@
+ (module string "pre-base.rkt"
++  (#%declare #:unsafe-cross-phase-persistent)
+ 
+   (provide real->decimal-string
+            regexp-quote
+diff --git a/racket/collects/racket/private/struct-info.rkt b/racket/collects/racket/private/struct-info.rkt
+index 73201c21b3..2e288088f1 100644
+--- a/racket/collects/racket/private/struct-info.rkt
++++ b/racket/collects/racket/private/struct-info.rkt
+@@ -3,6 +3,7 @@
+ ;; record for static info produced by `define-struct'
+ 
+ (module struct-info '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt")
+ 
+   (#%provide make-struct-info
+diff --git a/racket/collects/racket/private/struct-util.rkt b/racket/collects/racket/private/struct-util.rkt
+index 36ec6f8265..129a51d22a 100644
+--- a/racket/collects/racket/private/struct-util.rkt
++++ b/racket/collects/racket/private/struct-util.rkt
+@@ -1,4 +1,5 @@
+ (module struct-util '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt")
+ 
+   (#%provide predicate->struct-name)
+diff --git a/racket/collects/racket/private/struct.rkt b/racket/collects/racket/private/struct.rkt
+index a42ec68cc0..c04a7498c5 100644
+--- a/racket/collects/racket/private/struct.rkt
++++ b/racket/collects/racket/private/struct.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module struct '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              "define-struct.rkt"
+              (for-syntax '#%kernel "core-syntax.rkt"
+diff --git a/racket/collects/racket/private/stx.rkt b/racket/collects/racket/private/stx.rkt
+index 961d7539a8..ec3db61483 100644
+--- a/racket/collects/racket/private/stx.rkt
++++ b/racket/collects/racket/private/stx.rkt
+@@ -199,12 +199,22 @@
+ 
+   ; Used to generate identifiers in low-level macros which need a variable number
+   ; of temporaries
++  ;; The counter is local to a module expansion when possible, since
++  ;; a counter is likely created in a module whose instance is shared
++  ;; (cross-phase persistent):
+   (define-values (make-stx-id-counter)
+     (lambda (prefix)
+-      (let-values ([(counter) 0])
++      (let-values ([(counter) 0]
++                   [(key) (gensym prefix)])
+         (lambda ()
+-          (set! counter (add1 counter))
+-          (string->uninterned-symbol (format "~a~a" prefix counter))))))
++          (let-values ([(n) (if (syntax-transforming?)
++                                (let-values ([(n) (add1 (syntax-local-state-ref key 0))])
++                                  (syntax-local-state-set! key n)
++                                  n)
++                                (begin
++                                  (set! counter (add1 counter))
++                                  counter))])
++            (string->uninterned-symbol (format "~a~a" prefix n)))))))
+ 
+   ; (raise-syntax-error-if condition msg expr [sub-expr] [extra-sources])
+   ;   condition     : any/c                     (used for true/false)
+diff --git a/racket/collects/racket/private/stxcase-scheme.rkt b/racket/collects/racket/private/stxcase-scheme.rkt
+index 17285bb85d..38fa5a9051 100644
+--- a/racket/collects/racket/private/stxcase-scheme.rkt
++++ b/racket/collects/racket/private/stxcase-scheme.rkt
+@@ -4,6 +4,7 @@
+ ;;  check-duplicate-identifier, and assembles everything we have so far
+ 
+ (module stxcase-scheme '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "stx.rkt" "stxcase.rkt" "with-stx.rkt" "stxloc.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax)
+diff --git a/racket/collects/racket/private/stxcase.rkt b/racket/collects/racket/private/stxcase.rkt
+index 8f4bd69481..be24493854 100644
+--- a/racket/collects/racket/private/stxcase.rkt
++++ b/racket/collects/racket/private/stxcase.rkt
+@@ -2,6 +2,7 @@
+ ;; syntax-case and syntax
+ 
+ (module stxcase '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "stx.rkt" "core-syntax.rkt" '#%paramz '#%unsafe
+              "ellipses.rkt"
+              (rename "core-syntax.rkt" -define define)
+diff --git a/racket/collects/racket/private/stxloc.rkt b/racket/collects/racket/private/stxloc.rkt
+index 27b5d08599..b672a131a5 100644
+--- a/racket/collects/racket/private/stxloc.rkt
++++ b/racket/collects/racket/private/stxloc.rkt
+@@ -3,6 +3,7 @@
+ ;; syntax/loc
+ 
+ (module stxloc '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "stxcase.rkt" "core-syntax.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax)
+diff --git a/racket/collects/racket/private/stxparam.rkt b/racket/collects/racket/private/stxparam.rkt
+index 8fd9dd8fa8..8786976acc 100644
+--- a/racket/collects/racket/private/stxparam.rkt
++++ b/racket/collects/racket/private/stxparam.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module stxparam '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt"
+              (for-syntax '#%kernel 
+                          "stx.rkt" "stxcase-scheme.rkt" 
+diff --git a/racket/collects/racket/private/stxparamkey.rkt b/racket/collects/racket/private/stxparamkey.rkt
+index 40a485e62f..259d6c3dab 100644
+--- a/racket/collects/racket/private/stxparamkey.rkt
++++ b/racket/collects/racket/private/stxparamkey.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module stxparamkey '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt" "core-syntax.rkt"
+              "stxcase.rkt" "stxloc.rkt" "with-stx.rkt"
+              (only '#%unsafe unsafe-root-continuation-prompt-tag)
+diff --git a/racket/collects/racket/private/submodule.rkt b/racket/collects/racket/private/submodule.rkt
+index b9e984bc66..46f4cbcae3 100644
+--- a/racket/collects/racket/private/submodule.rkt
++++ b/racket/collects/racket/private/submodule.rkt
+@@ -1,4 +1,5 @@
+ (module submodule '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require (for-syntax '#%kernel
+                          "stxcase-scheme.rkt"
+                          "more-scheme.rkt"
+@@ -38,13 +39,21 @@
+                              stx)])))
+ 
+   (begin-for-syntax
+-   ;; The following table is newly instantiated for each module
+-   ;; expansion that uses `module+', so it is effectively
+-   ;; module-local:
+-   (define-values (submodule->stxs-box) (make-weak-hash))
++   ;; The table mapping submodule names to accumulated bodies is
++   ;; local to the enclosing module's expansion, since this module's
++   ;; instance is shared (cross-phase persistent):
++   (define-values (submodule->stxs-box-key) (gensym 'module+))
++   (define-values (get-submodule->stxs-box)
++     (lambda ()
++       (let-values ([(ht) (syntax-local-state-ref submodule->stxs-box-key #f)])
++         (if ht
++             ht
++             (let-values ([(ht) (make-hasheq)])
++               (syntax-local-state-set! submodule->stxs-box-key ht)
++               ht)))))
+    (define-values (get-stxs-box)
+      (lambda (form-stx the-submodule-stx lift?)
+-       (hash-ref! submodule->stxs-box (syntax-e the-submodule-stx)
++       (hash-ref! (get-submodule->stxs-box) (syntax-e the-submodule-stx)
+                   (lambda ()
+                     (when lift?
+                       (syntax-local-lift-module-end-declaration
+diff --git a/racket/collects/racket/private/template.rkt b/racket/collects/racket/private/template.rkt
+index 1ba81fc420..52fdeea5f1 100644
+--- a/racket/collects/racket/private/template.rkt
++++ b/racket/collects/racket/private/template.rkt
+@@ -1,4 +1,5 @@
+ (module template '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+ (#%require "stx.rkt" "core-syntax.rkt" "performance-hint.rkt"
+            "ellipses.rkt"
+            (for-syntax "stx.rkt" "core-syntax.rkt"
+@@ -507,11 +508,21 @@
+       (map (lambda (loc) (datum->syntax id (string->symbol (substring id-string 0 loc))))
+            dot-locations)))
+ 
++  ;; The counter is local to a module expansion when possible, since
++  ;; this module's instance is shared (cross-phase persistent):
+   (define gentemp-counter 0)
++  (define gentemp-counter-key (gensym 'gentemp))
++  (define (next-gentemp-counter!)
++    (if (syntax-transforming?)
++        (let ([n (add1 (syntax-local-state-ref gentemp-counter-key 0))])
++          (syntax-local-state-set! gentemp-counter-key n)
++          n)
++        (begin
++          (set! gentemp-counter (add1 gentemp-counter))
++          gentemp-counter)))
+   (define (gentemp)
+-    (set! gentemp-counter (add1 gentemp-counter))
+     ((make-syntax-introducer)
+-     (datum->syntax #f (string->symbol (format "pv_~s" gentemp-counter)))))
++     (datum->syntax #f (string->symbol (format "pv_~s" (next-gentemp-counter!))))))
+ 
+   (define (stx-drop n x)
+     (if (zero? n) x (stx-drop (sub1 n) (stx-cdr x))))
+diff --git a/racket/collects/racket/private/top-int.rkt b/racket/collects/racket/private/top-int.rkt
+index e9e407edcb..0b463c183e 100644
+--- a/racket/collects/racket/private/top-int.rkt
++++ b/racket/collects/racket/private/top-int.rkt
+@@ -1,4 +1,5 @@
+ (module top-int '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require (for-syntax '#%kernel))
+ 
+   (#%provide #%top-interaction)
+diff --git a/racket/collects/racket/private/with-stx.rkt b/racket/collects/racket/private/with-stx.rkt
+index c61dbc188e..3ea0d6ab03 100644
+--- a/racket/collects/racket/private/with-stx.rkt
++++ b/racket/collects/racket/private/with-stx.rkt
+@@ -2,6 +2,7 @@
+ ;; with-syntax, generate-temporaries
+ 
+ (module with-stx '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "stx.rkt" "core-syntax.rkt" "stxcase.rkt"
+              (rename "core-syntax.rkt" -define define)
+              (rename "core-syntax.rkt" -define-syntax define-syntax)
+@@ -69,10 +70,20 @@
+   (-define-syntax with-syntax (lambda (stx) (gen-with-syntax stx #f)))
+   (-define-syntax with-datum (lambda (stx) (gen-with-syntax stx #t)))
+ 
++  ;; The counter is local to a module expansion when possible, since
++  ;; this module's instance is shared (cross-phase persistent):
+   (-define counter 0)
++  (-define counter-key (gensym 'generate-temporaries))
++  (-define (next-counter!)
++    (if (syntax-transforming?)
++        (let ([n (add1 (syntax-local-state-ref counter-key 0))])
++          (syntax-local-state-set! counter-key n)
++          n)
++        (begin
++          (set! counter (add1 counter))
++          counter)))
+   (-define (append-number s)
+-    (set! counter (add1 counter))
+-    (string->symbol (format "~a~s" s counter)))
++    (string->symbol (format "~a~s" s (next-counter!))))
+ 
+   (-define (generate-temporaries sl)
+     (unless (stx-list? sl)
+diff --git a/racket/collects/racket/provide-transform.rkt b/racket/collects/racket/provide-transform.rkt
+index e89cb523ce..47cc4d52c2 100644
+--- a/racket/collects/racket/provide-transform.rkt
++++ b/racket/collects/racket/provide-transform.rkt
+@@ -1,4 +1,5 @@
+ (module provide-transform '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "private/stxcase-scheme.rkt"
+              "private/stx.rkt"
+              "private/define-struct.rkt"
+diff --git a/racket/collects/racket/require-transform.rkt b/racket/collects/racket/require-transform.rkt
+index 6875f99a06..8c2cd1ea9e 100644
+--- a/racket/collects/racket/require-transform.rkt
++++ b/racket/collects/racket/require-transform.rkt
+@@ -1,4 +1,5 @@
+ (module require-transform '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "private/stxcase-scheme.rkt"
+              "private/stx.rkt"
+              "private/define-struct.rkt"
+diff --git a/racket/collects/racket/stxparam-exptime.rkt b/racket/collects/racket/stxparam-exptime.rkt
+index 2b607a8b61..3ed6bca30c 100644
+--- a/racket/collects/racket/stxparam-exptime.rkt
++++ b/racket/collects/racket/stxparam-exptime.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module stxparam-exptime '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "private/stxcase-scheme.rkt"
+              "private/core-syntax.rkt"
+              "private/stxparamkey.rkt")
+diff --git a/racket/collects/racket/stxparam.rkt b/racket/collects/racket/stxparam.rkt
+index 521bd9e0eb..d0910c2871 100644
+--- a/racket/collects/racket/stxparam.rkt
++++ b/racket/collects/racket/stxparam.rkt
+@@ -1,5 +1,6 @@
+ 
+ (module stxparam '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require "private/letstx-scheme.rkt"
+              "private/core-syntax.rkt"
+              "private/stxparam.rkt"
+diff --git a/racket/collects/syntax/wrap-modbeg.rkt b/racket/collects/syntax/wrap-modbeg.rkt
+index 55c1499e60..63ebe46552 100644
+--- a/racket/collects/syntax/wrap-modbeg.rkt
++++ b/racket/collects/syntax/wrap-modbeg.rkt
+@@ -2,6 +2,7 @@
+ ;;  given form:
+ 
+ (module modbeg '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
+   (#%require (for-syntax '#%kernel))
+ 
+   (#%provide (for-syntax (protect make-wrapping-module-begin)))
+diff --git a/racket/collects/racket/private/kw-stxloc.rkt b/racket/collects/racket/private/kw-stxloc.rkt
+new file mode 100644
+index 0000000000..3ee394f9c7
+--- /dev/null
++++ b/racket/collects/racket/private/kw-stxloc.rkt
+@@ -0,0 +1,24 @@
++;; Like `syntax/loc` and `quasisyntax/loc`, but ensure that the
++;; source location is copied even if there is no source location on
++;; the input (as `(quasi)syntax/loc` doesn't copy a #f source
++;; location); used by "kw.rkt"
++(module kw-stxloc '#%kernel
++  (#%declare #:unsafe-cross-phase-persistent)
++  (#%require "core-syntax.rkt"
++             "stxcase-scheme.rkt"
++             "qqstx.rkt"
++             (for-syntax '#%kernel
++                         "core-syntax.rkt"
++                         "stxcase-scheme.rkt"
++                         "qqstx.rkt"))
++
++  (#%provide syntax/loc/always quasisyntax/loc/always)
++
++  (define-syntaxes (syntax/loc/always quasisyntax/loc/always)
++    (let ([mk (lambda (syntax-id)
++                (lambda (stx)
++                  (syntax-case stx ()
++                    [(_ src-expr template)
++                     #`(let ([result (#,syntax-id template)])
++                         (datum->syntax result (syntax-e result) src-expr result))])))])
++      (values (mk #'syntax) (mk #'quasisyntax)))))

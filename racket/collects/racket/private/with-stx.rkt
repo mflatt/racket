@@ -2,6 +2,7 @@
 ;; with-syntax, generate-temporaries
 
 (module with-stx '#%kernel
+  (#%declare #:unsafe-cross-phase-persistent)
   (#%require "stx.rkt" "core-syntax.rkt" "stxcase.rkt"
              (rename "core-syntax.rkt" -define define)
              (rename "core-syntax.rkt" -define-syntax define-syntax)
@@ -69,10 +70,20 @@
   (-define-syntax with-syntax (lambda (stx) (gen-with-syntax stx #f)))
   (-define-syntax with-datum (lambda (stx) (gen-with-syntax stx #t)))
 
+  ;; The counter is local to a module expansion when possible, since
+  ;; this module's instance is shared (cross-phase persistent):
   (-define counter 0)
+  (-define counter-key (gensym 'generate-temporaries))
+  (-define (next-counter!)
+    (if (syntax-transforming?)
+        (let ([n (add1 (syntax-local-state-ref counter-key 0))])
+          (syntax-local-state-set! counter-key n)
+          n)
+        (begin
+          (set! counter (add1 counter))
+          counter)))
   (-define (append-number s)
-    (set! counter (add1 counter))
-    (string->symbol (format "~a~s" s counter)))
+    (string->symbol (format "~a~s" s (next-counter!))))
 
   (-define (generate-temporaries sl)
     (unless (stx-list? sl)

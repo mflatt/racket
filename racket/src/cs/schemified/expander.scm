@@ -107,6 +107,7 @@
 (define kw2129 (string->keyword "scope"))
 (define kw2535 (string->keyword "scope+kind"))
 (define kw2241 (string->keyword "interned-scope"))
+(define kw3123 (string->keyword "phaseless-multi-scope"))
 (define kw2645 (string->keyword "multi-scope"))
 (define kw2073 (string->keyword "representative-scope-fill!"))
 (define kw2600 (string->keyword "representative-scope"))
@@ -136,16 +137,16 @@
 (define kw2531 (string->keyword "set-box!"))
 (define kw3046 (string->keyword "set-vector!"))
 (define kw2194 (string->keyword "set-hash!"))
-(define hash2424
+(define hash2134
   (hasheq
    kw2525
    '10
    kw2762
-   '29
+   '30
    kw2882
-   '31
+   '32
    kw2707
-   '24
+   '25
    kw2607
    '3
    kw2821
@@ -165,27 +166,29 @@
    kw2241
    '20
    kw2335
-   '30
+   '31
    kw2802
    '12
    kw2677
-   '28
+   '29
    kw2804
-   '26
+   '27
    kw3163
    '9
    kw2645
    '21
+   kw3123
+   '22
    kw2931
    '17
    kw2897
-   '32
+   '33
    kw2626
    '8
    kw2603
    '1
    kw2600
-   '25
+   '26
    kw2129
    '18
    kw2535
@@ -199,9 +202,9 @@
    kw2333
    '15
    kw2201
-   '22
+   '23
    kw2755
-   '27
+   '28
    kw2496
    '7
    kw2641
@@ -209,7 +212,7 @@
    kw2226
    '6
    kw2169
-   '23
+   '24
    kw2967
    '12))
 (define hash2804
@@ -280,6 +283,7 @@
    'void
    '4))
 (define kw2208 (string->keyword "cross-phase-persistent"))
+(define kw2747 (string->keyword "unsafe-cross-phase-persistent"))
 (define kw2910 (string->keyword "empty-namespace"))
 (define kw2838 (string->keyword "unsafe"))
 (define kw3274 (string->keyword "unlimited-compile"))
@@ -517,20 +521,22 @@
    '7))
 (define kw1701 (string->keyword "realm"))
 (define kw2160 (string->keyword "flatten-requires"))
-(define kws2866
+(define kws2217
   (cons
    (string->keyword "cross-phase-persistent")
    (cons
-    (string->keyword "empty-namespace")
+    (string->keyword "unsafe-cross-phase-persistent")
     (cons
-     (string->keyword "unsafe")
+     (string->keyword "empty-namespace")
      (cons
-      (string->keyword "unlimited-compile")
+      (string->keyword "unsafe")
       (cons
-       (string->keyword "realm")
+       (string->keyword "unlimited-compile")
        (cons
-        (string->keyword "require=define")
-        (cons (string->keyword "flatten-requires") '()))))))))
+        (string->keyword "realm")
+        (cons
+         (string->keyword "require=define")
+         (cons (string->keyword "flatten-requires") '())))))))))
 (define kw2362 (string->keyword "require=define"))
 (define qq-append
   (lambda (a_0 b_0)
@@ -7203,7 +7209,7 @@
    #f
    |#%system-inspector|))
 (define effect_2528 (finish_2167 struct:scope-set))
-(define scope-set2.1
+(define scope-set6.1
   (|#%name|
    scope-set
    (record-constructor
@@ -7215,10 +7221,10 @@
   (|#%name| scope-set-count (record-accessor struct:scope-set 1)))
 (define scope-set-code
   (|#%name| scope-set-code (record-accessor struct:scope-set 2)))
-(define empty-scope-set (scope-set2.1 null 0 0))
+(define empty-scope-set (scope-set6.1 null 0 0))
 (define make-scope-set
   (lambda (l_0 count_0 code_0)
-    (if (null? l_0) empty-scope-set (scope-set2.1 l_0 count_0 code_0))))
+    (if (null? l_0) empty-scope-set (scope-set6.1 l_0 count_0 code_0))))
 (define scope-set-empty? (lambda (s_0) (null? (scope-set-elems s_0))))
 (define scope-set-max
   (lambda (s_0)
@@ -7264,7 +7270,7 @@
   (lambda (s_0 sc_0 l_0 p_0)
     (let ((app_0 (prefix-onto l_0 p_0 (cons sc_0 p_0))))
       (let ((app_1 (fx+ (scope-set-count s_0) 1)))
-        (scope-set2.1
+        (scope-set6.1
          app_0
          app_1
          (fxxor (scope-set-code s_0) (scope-base-key sc_0)))))))
@@ -7276,7 +7282,7 @@
           (let ((count_1 count_0) (l_2 l_1))
             (if (null? l_2)
               empty-scope-set
-              (scope-set2.1 l_2 count_1 code_0))))))))
+              (scope-set6.1 l_2 count_1 code_0))))))))
 (define scope-set-add
   (lambda (s_0 sc_0)
     (let ((l_0 (scope-set-elems s_0)))
@@ -7502,10 +7508,10 @@
         (if (sorted?_0 scs_0)
           scs_0
           (remove-adjacent-duplicates_0
-           (let ((temp6_0
+           (let ((temp10_0
                   (lambda (a_0 b_0)
                     (> (scope-base-id a_0) (scope-base-id b_0)))))
-             (sort.1 #f #f scs_0 temp6_0))))
+             (sort.1 #f #f scs_0 temp10_0))))
         op_0)))))
 (define scope-ops-update
   (lambda (ops_0 sc_0 op_0)
@@ -7627,7 +7633,7 @@
                       (let ((count_2 count_1))
                         (if (null? new-l_0)
                           empty-scope-set
-                          (scope-set2.1 new-l_0 count_2 code_1))))))))))))))
+                          (scope-set6.1 new-l_0 count_2 code_1))))))))))))))
 (define root-tag (unsafe-root-continuation-prompt-tag))
 (define default-val.1$2 #f)
 (define current-module-code-inspector
@@ -9835,10 +9841,10 @@
    (lambda (shadow-except4_0 bt6_0 scopes7_0 bulk8_0)
      (if (table-with-bulk-bindings? bt6_0)
        (let ((new-syms_0
-              (let ((temp47_0 (table-with-bulk-bindings-syms bt6_0)))
+              (let ((temp51_0 (table-with-bulk-bindings-syms bt6_0)))
                 (remove-matching-bindings.1
                  shadow-except4_0
-                 temp47_0
+                 temp51_0
                  scopes7_0
                  bulk8_0))))
          (let ((new-syms/serialize_0
@@ -9846,11 +9852,11 @@
                      (table-with-bulk-bindings-syms bt6_0)
                      (table-with-bulk-bindings-syms/serialize bt6_0))
                   new-syms_0
-                  (let ((temp51_0
+                  (let ((temp55_0
                          (table-with-bulk-bindings-syms/serialize bt6_0)))
                     (remove-matching-bindings.1
                      shadow-except4_0
-                     temp51_0
+                     temp55_0
                      scopes7_0
                      bulk8_0)))))
            (table-with-bulk-bindings1.1
@@ -9859,8 +9865,8 @@
             (cons
              (bulk-binding-at2.1 scopes7_0 bulk8_0)
              (table-with-bulk-bindings-bulk-bindings bt6_0)))))
-       (let ((temp55_0 (table-with-bulk-bindings1.1 bt6_0 bt6_0 null)))
-         (binding-table-add-bulk.1 #f temp55_0 scopes7_0 bulk8_0))))))
+       (let ((temp59_0 (table-with-bulk-bindings1.1 bt6_0 bt6_0 null)))
+         (binding-table-add-bulk.1 #f temp59_0 scopes7_0 bulk8_0))))))
 (define remove-matching-bindings.1
   (|#%name|
    remove-matching-bindings
@@ -9960,308 +9966,345 @@
   (|#%name|
    binding-table-symbols
    (lambda (exactly?24_0
+            normalize25_0
             only-interned?23_0
-            table27_0
-            scs28_0
-            s29_0
-            extra-shifts30_0)
-     (call-with-values
-      (lambda ()
-        (if (hash? table27_0)
-          (values table27_0 null)
-          (values
-           (table-with-bulk-bindings-syms table27_0)
-           (table-with-bulk-bindings-bulk-bindings table27_0))))
-      (lambda (ht_0 bulk-bindings_0)
-        (let ((app_0
-               (let ((table_0 hash2610))
-                 (let ((table_1 table_0))
-                   (letrec*
-                    ((for-loop_0
-                      (|#%name|
-                       for-loop
-                       (lambda (table_2 i_0)
-                         (if i_0
-                           (call-with-values
-                            (lambda () (hash-iterate-key+value ht_0 i_0))
-                            (lambda (sym_0 at-sym_0)
-                              (let ((table_3
-                                     (if (let ((or-part_0
-                                                (not only-interned?23_0)))
-                                           (if or-part_0
-                                             or-part_0
-                                             (symbol-interned? sym_0)))
-                                       (if (letrec*
-                                            ((for-loop_1
-                                              (|#%name|
-                                               for-loop
-                                               (lambda (result_0 i_1)
-                                                 (if i_1
-                                                   (let ((an-scs_0
-                                                          (hash-iterate-key
-                                                           at-sym_0
-                                                           i_1)))
-                                                     (let ((result_1
-                                                            (let ((result_1
-                                                                   (if exactly?24_0
-                                                                     (scope-set=?
-                                                                      an-scs_0
-                                                                      scs28_0)
-                                                                     (scope-set-subset?
-                                                                      an-scs_0
-                                                                      scs28_0))))
-                                                              (values
-                                                               result_1))))
-                                                       (if (if (not
-                                                                (let ((x_0
-                                                                       (list
-                                                                        an-scs_0)))
-                                                                  result_1))
-                                                             #t
-                                                             #f)
-                                                         (for-loop_1
-                                                          result_1
-                                                          (hash-iterate-next
-                                                           at-sym_0
-                                                           i_1))
-                                                         result_1)))
-                                                   result_0)))))
-                                            (for-loop_1
-                                             #f
-                                             (hash-iterate-first at-sym_0)))
-                                         (let ((table_3
-                                                (hash-set table_2 sym_0 #t)))
-                                           (values table_3))
-                                         table_2)
-                                       table_2)))
-                                (for-loop_0
-                                 table_3
-                                 (hash-iterate-next ht_0 i_0)))))
-                           table_2)))))
-                    (for-loop_0 table_1 (hash-iterate-first ht_0)))))))
-          (set-union
-           app_0
-           (let ((table_0 hash2610))
-             (let ((table_1 table_0))
-               (letrec*
-                ((for-loop_0
-                  (|#%name|
-                   for-loop
-                   (lambda (table_2 lst_0)
-                     (if (pair? lst_0)
-                       (let ((bba_0 (unsafe-car lst_0)))
-                         (let ((rest_0 (unsafe-cdr lst_0)))
-                           (let ((table_3
-                                  (if (if exactly?24_0
-                                        (scope-set=?
-                                         (bulk-binding-at-scopes bba_0)
-                                         scs28_0)
-                                        (scope-set-subset?
-                                         (bulk-binding-at-scopes bba_0)
-                                         scs28_0))
-                                    (let ((ht_1
-                                           (bulk-binding-symbols
-                                            (bulk-binding-at-bulk bba_0)
-                                            s29_0
-                                            extra-shifts30_0)))
-                                      (letrec*
-                                       ((for-loop_1
-                                         (|#%name|
-                                          for-loop
-                                          (lambda (table_3 i_0)
-                                            (if i_0
-                                              (let ((sym_0
-                                                     (hash-iterate-key
-                                                      ht_1
-                                                      i_0)))
-                                                (let ((table_4
-                                                       (if (let ((or-part_0
-                                                                  (not
-                                                                   only-interned?23_0)))
-                                                             (if or-part_0
-                                                               or-part_0
-                                                               (symbol-interned?
-                                                                sym_0)))
-                                                         (let ((table_4
-                                                                (hash-set
-                                                                 table_3
-                                                                 sym_0
-                                                                 #t)))
-                                                           (values table_4))
-                                                         table_3)))
-                                                  (for-loop_1
-                                                   table_4
-                                                   (hash-iterate-next
-                                                    ht_1
-                                                    i_0))))
-                                              table_3)))))
-                                       (for-loop_1
-                                        table_2
-                                        (hash-iterate-first ht_1))))
-                                    table_2)))
-                             (for-loop_0 table_3 rest_0))))
-                       table_2)))))
-                (for-loop_0 table_1 bulk-bindings_0)))))))))))
-(define binding-table-interned-scope-keys.1
-  (|#%name|
-   binding-table-interned-scope-keys
-   (lambda (exactly?32_0
-            table34_0
-            scs35_0
-            sym36_0
-            s37_0
-            extra-shifts38_0
-            interned-scope?39_0
-            interned-scope-key40_0)
-     (call-with-values
-      (lambda ()
-        (if (hash? table34_0)
-          (values table34_0 null)
-          (values
-           (table-with-bulk-bindings-syms table34_0)
-           (table-with-bulk-bindings-bulk-bindings table34_0))))
-      (lambda (ht_0 bulk-bindings_0)
-        (let ((app_0
-               (let ((table_0 hash2610))
-                 (let ((table_1 table_0))
-                   (let ((ht_1 (hash-ref ht_0 sym36_0 hash2610)))
+            table29_0
+            scs30_0
+            s31_0
+            extra-shifts32_0)
+     (let ((normalize_0
+            (if (eq? normalize25_0 unsafe-undefined) values normalize25_0)))
+       (call-with-values
+        (lambda ()
+          (if (hash? table29_0)
+            (values table29_0 null)
+            (values
+             (table-with-bulk-bindings-syms table29_0)
+             (table-with-bulk-bindings-bulk-bindings table29_0))))
+        (lambda (ht_0 bulk-bindings_0)
+          (let ((app_0
+                 (let ((table_0 hash2610))
+                   (let ((table_1 table_0))
                      (letrec*
                       ((for-loop_0
                         (|#%name|
                          for-loop
                          (lambda (table_2 i_0)
                            (if i_0
-                             (let ((an-scs_0 (hash-iterate-key ht_1 i_0)))
-                               (let ((table_3
-                                      (let ((lst_0 (scope-set-elems an-scs_0)))
-                                        (letrec*
-                                         ((for-loop_1
-                                           (|#%name|
-                                            for-loop
-                                            (lambda (table_3 lst_1)
-                                              (if (pair? lst_1)
-                                                (let ((sc_0
-                                                       (unsafe-car lst_1)))
-                                                  (let ((rest_0
-                                                         (unsafe-cdr lst_1)))
-                                                    (let ((table_4
-                                                           (if (if (|#%app|
-                                                                    interned-scope?39_0
-                                                                    sc_0)
-                                                                 (if (not
-                                                                      (scope-set-member?
-                                                                       scs35_0
-                                                                       sc_0))
-                                                                   (if exactly?32_0
-                                                                     (scope-set=?
-                                                                      an-scs_0
-                                                                      (scope-set-add
-                                                                       scs35_0
-                                                                       sc_0))
-                                                                     (scope-set-subset?
-                                                                      an-scs_0
-                                                                      (scope-set-add
-                                                                       scs35_0
-                                                                       sc_0)))
-                                                                   #f)
-                                                                 #f)
-                                                             (let ((table_4
-                                                                    (let ((key_0
-                                                                           (|#%app|
-                                                                            interned-scope-key40_0
-                                                                            sc_0)))
-                                                                      (hash-set
-                                                                       table_3
-                                                                       key_0
-                                                                       #t))))
-                                                               (values
-                                                                table_4))
-                                                             table_3)))
-                                                      (for-loop_1
-                                                       table_4
-                                                       rest_0))))
-                                                table_3)))))
-                                         (for-loop_1 table_2 lst_0)))))
-                                 (for-loop_0
-                                  table_3
-                                  (hash-iterate-next ht_1 i_0))))
+                             (call-with-values
+                              (lambda () (hash-iterate-key+value ht_0 i_0))
+                              (lambda (sym_0 at-sym_0)
+                                (let ((table_3
+                                       (if (let ((or-part_0
+                                                  (not only-interned?23_0)))
+                                             (if or-part_0
+                                               or-part_0
+                                               (symbol-interned? sym_0)))
+                                         (if (letrec*
+                                              ((for-loop_1
+                                                (|#%name|
+                                                 for-loop
+                                                 (lambda (result_0 i_1)
+                                                   (if i_1
+                                                     (let ((raw-an-scs_0
+                                                            (hash-iterate-key
+                                                             at-sym_0
+                                                             i_1)))
+                                                       (let ((result_1
+                                                              (let ((result_1
+                                                                     (let ((an-scs_0
+                                                                            (|#%app|
+                                                                             normalize_0
+                                                                             raw-an-scs_0)))
+                                                                       (if exactly?24_0
+                                                                         (scope-set=?
+                                                                          an-scs_0
+                                                                          scs30_0)
+                                                                         (scope-set-subset?
+                                                                          an-scs_0
+                                                                          scs30_0)))))
+                                                                (values
+                                                                 result_1))))
+                                                         (if (if (not
+                                                                  (let ((x_0
+                                                                         (list
+                                                                          raw-an-scs_0)))
+                                                                    result_1))
+                                                               #t
+                                                               #f)
+                                                           (for-loop_1
+                                                            result_1
+                                                            (hash-iterate-next
+                                                             at-sym_0
+                                                             i_1))
+                                                           result_1)))
+                                                     result_0)))))
+                                              (for-loop_1
+                                               #f
+                                               (hash-iterate-first at-sym_0)))
+                                           (let ((table_3
+                                                  (hash-set table_2 sym_0 #t)))
+                                             (values table_3))
+                                           table_2)
+                                         table_2)))
+                                  (for-loop_0
+                                   table_3
+                                   (hash-iterate-next ht_0 i_0)))))
                              table_2)))))
-                      (for-loop_0 table_1 (hash-iterate-first ht_1))))))))
-          (set-union
-           app_0
-           (let ((table_0 hash2610))
-             (let ((table_1 table_0))
-               (letrec*
-                ((for-loop_0
-                  (|#%name|
-                   for-loop
-                   (lambda (table_2 lst_0)
-                     (if (pair? lst_0)
-                       (let ((bba_0 (unsafe-car lst_0)))
-                         (let ((rest_0 (unsafe-cdr lst_0)))
-                           (let ((table_3
-                                  (if (hash-ref
-                                       (bulk-binding-symbols
-                                        (bulk-binding-at-bulk bba_0)
-                                        s37_0
-                                        extra-shifts38_0)
-                                       sym36_0
-                                       #f)
-                                    (let ((an-scs_0
-                                           (bulk-binding-at-scopes bba_0)))
-                                      (let ((lst_1 (scope-set-elems an-scs_0)))
+                      (for-loop_0 table_1 (hash-iterate-first ht_0)))))))
+            (set-union
+             app_0
+             (let ((table_0 hash2610))
+               (let ((table_1 table_0))
+                 (letrec*
+                  ((for-loop_0
+                    (|#%name|
+                     for-loop
+                     (lambda (table_2 lst_0)
+                       (if (pair? lst_0)
+                         (let ((bba_0 (unsafe-car lst_0)))
+                           (let ((rest_0 (unsafe-cdr lst_0)))
+                             (let ((table_3
+                                    (if (let ((an-scs_0
+                                               (|#%app|
+                                                normalize_0
+                                                (bulk-binding-at-scopes
+                                                 bba_0))))
+                                          (if exactly?24_0
+                                            (scope-set=? an-scs_0 scs30_0)
+                                            (scope-set-subset?
+                                             an-scs_0
+                                             scs30_0)))
+                                      (let ((ht_1
+                                             (bulk-binding-symbols
+                                              (bulk-binding-at-bulk bba_0)
+                                              s31_0
+                                              extra-shifts32_0)))
                                         (letrec*
                                          ((for-loop_1
                                            (|#%name|
                                             for-loop
-                                            (lambda (table_3 lst_2)
-                                              (if (pair? lst_2)
-                                                (let ((sc_0
-                                                       (unsafe-car lst_2)))
-                                                  (let ((rest_1
-                                                         (unsafe-cdr lst_2)))
-                                                    (let ((table_4
-                                                           (if (if (|#%app|
-                                                                    interned-scope?39_0
-                                                                    sc_0)
-                                                                 (if (not
-                                                                      (scope-set-member?
-                                                                       scs35_0
-                                                                       sc_0))
-                                                                   (if exactly?32_0
-                                                                     (scope-set=?
-                                                                      an-scs_0
-                                                                      (scope-set-add
-                                                                       scs35_0
-                                                                       sc_0))
-                                                                     (scope-set-subset?
-                                                                      an-scs_0
-                                                                      (scope-set-add
-                                                                       scs35_0
-                                                                       sc_0)))
-                                                                   #f)
-                                                                 #f)
-                                                             (let ((table_4
-                                                                    (let ((key_0
-                                                                           (|#%app|
-                                                                            interned-scope-key40_0
-                                                                            sc_0)))
-                                                                      (hash-set
-                                                                       table_3
-                                                                       key_0
-                                                                       #t))))
-                                                               (values
-                                                                table_4))
-                                                             table_3)))
-                                                      (for-loop_1
-                                                       table_4
-                                                       rest_1))))
+                                            (lambda (table_3 i_0)
+                                              (if i_0
+                                                (let ((sym_0
+                                                       (hash-iterate-key
+                                                        ht_1
+                                                        i_0)))
+                                                  (let ((table_4
+                                                         (if (let ((or-part_0
+                                                                    (not
+                                                                     only-interned?23_0)))
+                                                               (if or-part_0
+                                                                 or-part_0
+                                                                 (symbol-interned?
+                                                                  sym_0)))
+                                                           (let ((table_4
+                                                                  (hash-set
+                                                                   table_3
+                                                                   sym_0
+                                                                   #t)))
+                                                             (values table_4))
+                                                           table_3)))
+                                                    (for-loop_1
+                                                     table_4
+                                                     (hash-iterate-next
+                                                      ht_1
+                                                      i_0))))
                                                 table_3)))))
-                                         (for-loop_1 table_2 lst_1))))
-                                    table_2)))
-                             (for-loop_0 table_3 rest_0))))
-                       table_2)))))
-                (for-loop_0 table_1 bulk-bindings_0)))))))))))
+                                         (for-loop_1
+                                          table_2
+                                          (hash-iterate-first ht_1))))
+                                      table_2)))
+                               (for-loop_0 table_3 rest_0))))
+                         table_2)))))
+                  (for-loop_0 table_1 bulk-bindings_0))))))))))))
+(define binding-table-interned-scope-keys.1
+  (|#%name|
+   binding-table-interned-scope-keys
+   (lambda (exactly?34_0
+            normalize35_0
+            table38_0
+            scs39_0
+            sym40_0
+            s41_0
+            extra-shifts42_0
+            interned-scope?43_0
+            interned-scope-key44_0)
+     (let ((normalize_0
+            (if (eq? normalize35_0 unsafe-undefined) values normalize35_0)))
+       (call-with-values
+        (lambda ()
+          (if (hash? table38_0)
+            (values table38_0 null)
+            (values
+             (table-with-bulk-bindings-syms table38_0)
+             (table-with-bulk-bindings-bulk-bindings table38_0))))
+        (lambda (ht_0 bulk-bindings_0)
+          (let ((app_0
+                 (let ((table_0 hash2610))
+                   (let ((table_1 table_0))
+                     (let ((ht_1 (hash-ref ht_0 sym40_0 hash2610)))
+                       (letrec*
+                        ((for-loop_0
+                          (|#%name|
+                           for-loop
+                           (lambda (table_2 i_0)
+                             (if i_0
+                               (let ((raw-an-scs_0
+                                      (hash-iterate-key ht_1 i_0)))
+                                 (let ((table_3
+                                        (let ((id*_0
+                                               (|#%app|
+                                                normalize_0
+                                                raw-an-scs_0)))
+                                          (letrec*
+                                           ((for-loop_1
+                                             (|#%name|
+                                              for-loop
+                                              (lambda (table_3)
+                                                (let ((table_4
+                                                       (let ((lst_0
+                                                              (scope-set-elems
+                                                               id*_0)))
+                                                         (letrec*
+                                                          ((for-loop_2
+                                                            (|#%name|
+                                                             for-loop
+                                                             (lambda (table_4
+                                                                      lst_1)
+                                                               (if (pair?
+                                                                    lst_1)
+                                                                 (let ((sc_0
+                                                                        (unsafe-car
+                                                                         lst_1)))
+                                                                   (let ((rest_0
+                                                                          (unsafe-cdr
+                                                                           lst_1)))
+                                                                     (let ((table_5
+                                                                            (if (if (|#%app|
+                                                                                     interned-scope?43_0
+                                                                                     sc_0)
+                                                                                  (if (not
+                                                                                       (scope-set-member?
+                                                                                        scs39_0
+                                                                                        sc_0))
+                                                                                    (if exactly?34_0
+                                                                                      (scope-set=?
+                                                                                       id*_0
+                                                                                       (scope-set-add
+                                                                                        scs39_0
+                                                                                        sc_0))
+                                                                                      (scope-set-subset?
+                                                                                       id*_0
+                                                                                       (scope-set-add
+                                                                                        scs39_0
+                                                                                        sc_0)))
+                                                                                    #f)
+                                                                                  #f)
+                                                                              (let ((table_5
+                                                                                     (let ((key_0
+                                                                                            (|#%app|
+                                                                                             interned-scope-key44_0
+                                                                                             sc_0)))
+                                                                                       (hash-set
+                                                                                        table_4
+                                                                                        key_0
+                                                                                        #t))))
+                                                                                (values
+                                                                                 table_5))
+                                                                              table_4)))
+                                                                       (for-loop_2
+                                                                        table_5
+                                                                        rest_0))))
+                                                                 table_4)))))
+                                                          (for-loop_2
+                                                           table_3
+                                                           lst_0)))))
+                                                  table_4)))))
+                                           (for-loop_1 table_2)))))
+                                   (for-loop_0
+                                    table_3
+                                    (hash-iterate-next ht_1 i_0))))
+                               table_2)))))
+                        (for-loop_0 table_1 (hash-iterate-first ht_1))))))))
+            (set-union
+             app_0
+             (let ((table_0 hash2610))
+               (let ((table_1 table_0))
+                 (letrec*
+                  ((for-loop_0
+                    (|#%name|
+                     for-loop
+                     (lambda (table_2 lst_0)
+                       (if (pair? lst_0)
+                         (let ((bba_0 (unsafe-car lst_0)))
+                           (let ((rest_0 (unsafe-cdr lst_0)))
+                             (let ((table_3
+                                    (if (hash-ref
+                                         (bulk-binding-symbols
+                                          (bulk-binding-at-bulk bba_0)
+                                          s41_0
+                                          extra-shifts42_0)
+                                         sym40_0
+                                         #f)
+                                      (let ((an-scs_0
+                                             (|#%app|
+                                              normalize_0
+                                              (bulk-binding-at-scopes bba_0))))
+                                        (let ((lst_1
+                                               (scope-set-elems an-scs_0)))
+                                          (letrec*
+                                           ((for-loop_1
+                                             (|#%name|
+                                              for-loop
+                                              (lambda (table_3 lst_2)
+                                                (if (pair? lst_2)
+                                                  (let ((sc_0
+                                                         (unsafe-car lst_2)))
+                                                    (let ((rest_1
+                                                           (unsafe-cdr lst_2)))
+                                                      (let ((table_4
+                                                             (if (if (|#%app|
+                                                                      interned-scope?43_0
+                                                                      sc_0)
+                                                                   (if (not
+                                                                        (scope-set-member?
+                                                                         scs39_0
+                                                                         sc_0))
+                                                                     (if exactly?34_0
+                                                                       (scope-set=?
+                                                                        an-scs_0
+                                                                        (scope-set-add
+                                                                         scs39_0
+                                                                         sc_0))
+                                                                       (scope-set-subset?
+                                                                        an-scs_0
+                                                                        (scope-set-add
+                                                                         scs39_0
+                                                                         sc_0)))
+                                                                     #f)
+                                                                   #f)
+                                                               (let ((table_4
+                                                                      (let ((key_0
+                                                                             (|#%app|
+                                                                              interned-scope-key44_0
+                                                                              sc_0)))
+                                                                        (hash-set
+                                                                         table_3
+                                                                         key_0
+                                                                         #t))))
+                                                                 (values
+                                                                  table_4))
+                                                               table_3)))
+                                                        (for-loop_1
+                                                         table_4
+                                                         rest_1))))
+                                                  table_3)))))
+                                           (for-loop_1 table_2 lst_1))))
+                                      table_2)))
+                               (for-loop_0 table_3 rest_0))))
+                         table_2)))))
+                  (for-loop_0 table_1 bulk-bindings_0))))))))))))
 (define scope-set-all-in?
   (lambda (scs_0 ht_0)
     (let ((lst_0 (scope-set-elems scs_0)))
@@ -10403,13 +10446,13 @@
                                                       (cons
                                                        (if (bulk-binding-at?
                                                             bba_0)
-                                                         (let ((scopes68_0
+                                                         (let ((scopes72_0
                                                                 (intern-scopes
                                                                  (bulk-binding-at-scopes
                                                                   bba_0)
                                                                  state_0)))
                                                            (bulk-binding-at2.1
-                                                            scopes68_0
+                                                            scopes72_0
                                                             (bulk-binding-at-bulk
                                                              bba_0)))
                                                          (raise-argument-error
@@ -11263,10 +11306,10 @@
   (|#%name| interned-scope? (record-predicate struct:interned-scope)))
 (define interned-scope-key
   (|#%name| interned-scope-key (record-accessor struct:interned-scope 0)))
-(define finish_2681
+(define finish_2922
   (make-struct-type-install-properties
    '(multi-scope)
-   5
+   6
    0
    #f
    (list
@@ -11303,7 +11346,10 @@
      prop:serialize
      (lambda (ms_0 ser-push!_0 state_0)
        (begin
-         (|#%app| ser-push!_0 'tag kw2645)
+         (|#%app|
+          ser-push!_0
+          'tag
+          (if (multi-scope-phaseless ms_0) kw3123 kw2645))
          (begin
            (|#%app| ser-push!_0 (multi-scope-name ms_0))
            (let ((multi-scope-tables_0
@@ -11382,13 +11428,13 @@
    (|#%nongenerative-uid| multi-scope)
    #t
    #f
-   '(5 . 0)
+   '(6 . 32)
    'make-struct-type
-   (finish_2681 'proc)
-   (finish_2681 'arity)
+   (finish_2922 'proc)
+   (finish_2922 'arity)
    #f
    |#%system-inspector|))
-(define effect_1895 (finish_2681 struct:multi-scope))
+(define effect_1895 (finish_2922 struct:multi-scope))
 (define multi-scope3.1
   (|#%name|
    multi-scope
@@ -11406,12 +11452,107 @@
   (|#%name| multi-scope-shifted (record-accessor struct:multi-scope 3)))
 (define multi-scope-label-shifted
   (|#%name| multi-scope-label-shifted (record-accessor struct:multi-scope 4)))
+(define multi-scope-phaseless
+  (|#%name| multi-scope-phaseless (record-accessor struct:multi-scope 5)))
+(define set-multi-scope-phaseless!
+  (|#%name| set-multi-scope-phaseless! (record-mutator struct:multi-scope 5)))
 (define deserialize-multi-scope
   (lambda (name_0 scopes_0)
     (let ((app_0 (new-deserialize-scope-id!)))
       (let ((app_1 (box scopes_0)))
         (let ((app_2 (box (hasheqv))))
-          (multi-scope3.1 app_0 name_0 app_1 app_2 (box (hash))))))))
+          (multi-scope3.1 app_0 name_0 app_1 app_2 (box (hash)) #f))))))
+(define deserialize-phaseless-multi-scope
+  (lambda (name_0 scopes_0)
+    (let ((ms_0 (deserialize-multi-scope name_0 scopes_0)))
+      (begin
+        (set-multi-scope-phaseless!
+         ms_0
+         (multi-scope-non-canonical-representatives ms_0))
+        ms_0))))
+(define multi-scope-canonical-representative
+  (lambda (ms_0) (multi-scope-to-scope-at-phase ms_0 0)))
+(define multi-scope-non-canonical-representatives
+  (lambda (ms_0)
+    (reverse$1
+     (let ((ht_0 (unbox (multi-scope-scopes ms_0))))
+       (letrec*
+        ((for-loop_0
+          (|#%name|
+           for-loop
+           (lambda (fold-var_0 i_0)
+             (if i_0
+               (call-with-values
+                (lambda () (hash-iterate-key+value ht_0 i_0))
+                (lambda (phase_0 sc_0)
+                  (let ((fold-var_1
+                         (if (eqv? phase_0 0)
+                           fold-var_0
+                           (let ((fold-var_1 (cons sc_0 fold-var_0)))
+                             (values fold-var_1)))))
+                    (for-loop_0 fold-var_1 (hash-iterate-next ht_0 i_0)))))
+               fold-var_0)))))
+        (for-loop_0 null (hash-iterate-first ht_0)))))))
+(define make-shifted-multi-scope-phaseless!
+  (lambda (sms_0)
+    (let ((ms_0 (shifted-multi-scope-multi-scope sms_0)))
+      (begin
+        (multi-scope-to-scope-at-phase ms_0 0)
+        (set-multi-scope-phaseless!
+         ms_0
+         (multi-scope-non-canonical-representatives ms_0))
+        (clear-resolve-cache!)))))
+(define phaseless-representatives
+  (lambda (smss_0)
+    (letrec*
+     ((for-loop_0
+       (|#%name|
+        for-loop
+        (lambda (reps_0 i_0)
+          (if i_0
+            (let ((sms_0 (unsafe-immutable-hash-iterate-key smss_0 i_0)))
+              (let ((reps_1
+                     (let ((reps_1
+                            (let ((l_0
+                                   (multi-scope-phaseless
+                                    (shifted-multi-scope-multi-scope sms_0))))
+                              (if (pair? l_0) (append l_0 reps_0) reps_0))))
+                       (values reps_1))))
+                (for-loop_0
+                 reps_1
+                 (unsafe-immutable-hash-iterate-next smss_0 i_0))))
+            reps_0)))))
+     (for-loop_0 null (unsafe-immutable-hash-iterate-first smss_0)))))
+(define phaseless-normalize-scopes
+  (lambda (scs_0 pl-reps_0)
+    (if (let ((or-part_0 (not scs_0)))
+          (if or-part_0 or-part_0 (null? pl-reps_0)))
+      scs_0
+      (letrec*
+       ((for-loop_0
+         (|#%name|
+          for-loop
+          (lambda (scs_1 lst_0)
+            (if (pair? lst_0)
+              (let ((rep_0 (unsafe-car lst_0)))
+                (let ((rest_0 (unsafe-cdr lst_0)))
+                  (let ((scs_2
+                         (let ((scs_2
+                                (if (scope-set-member? scs_1 rep_0)
+                                  (let ((app_0 (scope-set-remove scs_1 rep_0)))
+                                    (scope-set-add
+                                     app_0
+                                     (let ((ms_0
+                                            (representative-scope-owner
+                                             rep_0)))
+                                       (multi-scope-to-scope-at-phase
+                                        ms_0
+                                        0))))
+                                  scs_1)))
+                           (values scs_2))))
+                    (for-loop_0 scs_2 rest_0))))
+              scs_1)))))
+       (for-loop_0 scs_0 pl-reps_0)))))
 (define finish_2594
   (make-struct-type-install-properties
    '(representative-scope)
@@ -11839,7 +11980,8 @@
                     name7_0
                     app_1
                     app_2
-                    (box (hash)))))))))))
+                    (box (hash))
+                    #f)))))))))
     (case-lambda
      (() (new-multi-scope_0 #f))
      ((name7_0) (new-multi-scope_0 name7_0)))))
@@ -13106,27 +13248,30 @@
   (lambda (sms_0 delta_0)
     (if (eq? delta_0 0)
       sms_0
-      (if (not delta_0)
-        (if (shifted-to-label-phase? (shifted-multi-scope-phase sms_0))
-          #f
-          (let ((app_0
-                 (shifted-to-label-phase6.1
-                  (phase- 0 (shifted-multi-scope-phase sms_0)))))
-            (intern-shifted-multi-scope
-             app_0
-             (shifted-multi-scope-multi-scope sms_0))))
-        (if (shifted-to-label-phase? (shifted-multi-scope-phase sms_0))
-          (let ((from_0
-                 (shifted-to-label-phase-from
-                  (shifted-multi-scope-phase sms_0))))
-            (let ((app_0 (shifted-to-label-phase6.1 (phase+ delta_0 from_0))))
+      (if (multi-scope-phaseless (shifted-multi-scope-multi-scope sms_0))
+        sms_0
+        (if (not delta_0)
+          (if (shifted-to-label-phase? (shifted-multi-scope-phase sms_0))
+            #f
+            (let ((app_0
+                   (shifted-to-label-phase6.1
+                    (phase- 0 (shifted-multi-scope-phase sms_0)))))
               (intern-shifted-multi-scope
                app_0
                (shifted-multi-scope-multi-scope sms_0))))
-          (let ((app_0 (phase+ delta_0 (shifted-multi-scope-phase sms_0))))
-            (intern-shifted-multi-scope
-             app_0
-             (shifted-multi-scope-multi-scope sms_0))))))))
+          (if (shifted-to-label-phase? (shifted-multi-scope-phase sms_0))
+            (let ((from_0
+                   (shifted-to-label-phase-from
+                    (shifted-multi-scope-phase sms_0))))
+              (let ((app_0
+                     (shifted-to-label-phase6.1 (phase+ delta_0 from_0))))
+                (intern-shifted-multi-scope
+                 app_0
+                 (shifted-multi-scope-multi-scope sms_0))))
+            (let ((app_0 (phase+ delta_0 (shifted-multi-scope-phase sms_0))))
+              (intern-shifted-multi-scope
+               app_0
+               (shifted-multi-scope-multi-scope sms_0)))))))))
 (define syntax-shift-phase-level$1
   (|#%name|
    syntax-shift-phase-level
@@ -13611,485 +13756,794 @@
                           (representatives-at-phase
                            (fallback-first smss_0)
                            phase34_0)))
-                     (let ((lst_0 (scope-set-elems scs_0)))
-                       (call-with-values
-                        (lambda ()
-                          (letrec*
-                           ((for-loop_0
-                             (|#%name|
-                              for-loop
-                              (lambda (best-scopes_0 best-binding_0 lst_1)
-                                (if (pair? lst_1)
-                                  (let ((sc_0 (unsafe-car lst_1)))
-                                    (let ((rest_0 (unsafe-cdr lst_1)))
-                                      (let ((table_0
-                                             (scope-binding-table sc_0)))
-                                        (call-with-values
-                                         (lambda ()
-                                           (call-with-values
-                                            (lambda ()
-                                              (if (hash? table_0)
-                                                (values
-                                                 (hash-ref
-                                                  table_0
-                                                  sym_0
-                                                  hash2725)
-                                                 null)
-                                                (let ((app_0
-                                                       (hash-ref
-                                                        (table-with-bulk-bindings-syms
-                                                         table_0)
-                                                        sym_0
-                                                        hash2725)))
+                     (let ((pl-reps_0
+                            (phaseless-representatives
+                             (fallback-first smss_0))))
+                       (let ((lst_0 (scope-set-elems scs_0)))
+                         (call-with-values
+                          (lambda ()
+                            (letrec*
+                             ((for-loop_0
+                               (|#%name|
+                                for-loop
+                                (lambda (best-scopes_0 best-binding_0 lst_1)
+                                  (if (pair? lst_1)
+                                    (let ((sc_0 (unsafe-car lst_1)))
+                                      (let ((rest_0 (unsafe-cdr lst_1)))
+                                        (let ((table_0
+                                               (scope-binding-table sc_0)))
+                                          (call-with-values
+                                           (lambda ()
+                                             (call-with-values
+                                              (lambda ()
+                                                (if (hash? table_0)
                                                   (values
-                                                   app_0
-                                                   (table-with-bulk-bindings-bulk-bindings
-                                                    table_0)))))
-                                            (lambda (ht_0 bulk-bindings_0)
-                                              (let ((s_0 s33_0))
-                                                (let ((extra-shifts_0
-                                                       extra-shifts28_0))
-                                                  (let ((s_1 s_0)
-                                                        (ht_1 ht_0)
-                                                        (bulk-bindings_1
-                                                         bulk-bindings_0))
-                                                    (begin
-                                                      #t
-                                                      (letrec*
-                                                       ((for-loop_1
-                                                         (|#%name|
-                                                          for-loop
-                                                          (lambda (best-scopes_1
-                                                                   best-binding_1
-                                                                   i_0)
-                                                            (if (not
-                                                                 (null? i_0))
-                                                              (let ((b-scopes_0
-                                                                     (if (pair?
-                                                                          i_0)
-                                                                       (bulk-binding-at-scopes
-                                                                        (car
-                                                                         i_0))
-                                                                       (hash-iterate-key
-                                                                        ht_1
-                                                                        i_0))))
-                                                                (let ((binding_0
+                                                   (hash-ref
+                                                    table_0
+                                                    sym_0
+                                                    hash2725)
+                                                   null)
+                                                  (let ((app_0
+                                                         (hash-ref
+                                                          (table-with-bulk-bindings-syms
+                                                           table_0)
+                                                          sym_0
+                                                          hash2725)))
+                                                    (values
+                                                     app_0
+                                                     (table-with-bulk-bindings-bulk-bindings
+                                                      table_0)))))
+                                              (lambda (ht_0 bulk-bindings_0)
+                                                (let ((s_0 s33_0))
+                                                  (let ((extra-shifts_0
+                                                         extra-shifts28_0))
+                                                    (let ((s_1 s_0)
+                                                          (ht_1 ht_0)
+                                                          (bulk-bindings_1
+                                                           bulk-bindings_0))
+                                                      (begin
+                                                        #t
+                                                        (letrec*
+                                                         ((for-loop_1
+                                                           (|#%name|
+                                                            for-loop
+                                                            (lambda (best-scopes_1
+                                                                     best-binding_1
+                                                                     i_0)
+                                                              (if (not
+                                                                   (null? i_0))
+                                                                (let ((raw-b-scopes_0
                                                                        (if (pair?
                                                                             i_0)
-                                                                         (let ((bulk_0
-                                                                                (bulk-binding-at-bulk
-                                                                                 (car
-                                                                                  i_0))))
-                                                                           (let ((b-info_0
-                                                                                  (if (symbol-interned?
-                                                                                       sym_0)
-                                                                                    (hash-ref
-                                                                                     (bulk-binding-symbols
-                                                                                      bulk_0
-                                                                                      s_1
-                                                                                      extra-shifts_0)
-                                                                                     sym_0
-                                                                                     #f)
-                                                                                    #f)))
-                                                                             (if b-info_0
-                                                                               (|#%app|
-                                                                                (bulk-binding-class-create
-                                                                                 (bulk-binding-ref
-                                                                                  bulk_0))
-                                                                                bulk_0
-                                                                                b-info_0
-                                                                                sym_0)
-                                                                               #f)))
-                                                                         (hash-iterate-value
+                                                                         (bulk-binding-at-scopes
+                                                                          (car
+                                                                           i_0))
+                                                                         (hash-iterate-key
                                                                           ht_1
                                                                           i_0))))
-                                                                  (let ((b-scopes_1
-                                                                         b-scopes_0))
-                                                                    (call-with-values
-                                                                     (lambda ()
-                                                                       (if (if b-scopes_1
-                                                                             (if binding_0
-                                                                               (scope-set-subset-of-union?
-                                                                                b-scopes_1
-                                                                                scs_0
-                                                                                reps_0)
-                                                                               #f)
-                                                                             #f)
-                                                                         (call-with-values
-                                                                          (lambda ()
-                                                                            (if (pair?
-                                                                                 best-scopes_1)
-                                                                              (if (letrec*
-                                                                                   ((for-loop_2
-                                                                                     (|#%name|
-                                                                                      for-loop
-                                                                                      (lambda (result_0
-                                                                                               lst_2)
-                                                                                        (if (pair?
-                                                                                             lst_2)
-                                                                                          (let ((amb-scopes_0
-                                                                                                 (unsafe-car
-                                                                                                  lst_2)))
-                                                                                            (let ((rest_1
-                                                                                                   (unsafe-cdr
-                                                                                                    lst_2)))
-                                                                                              (let ((result_1
-                                                                                                     (let ((result_1
-                                                                                                            (scope-set-subset?
-                                                                                                             amb-scopes_0
-                                                                                                             b-scopes_1)))
-                                                                                                       (values
-                                                                                                        result_1))))
-                                                                                                (if (if (not
-                                                                                                         (let ((x_0
-                                                                                                                (list
-                                                                                                                 amb-scopes_0)))
-                                                                                                           (not
-                                                                                                            result_1)))
-                                                                                                      #t
-                                                                                                      #f)
-                                                                                                  (for-loop_2
-                                                                                                   result_1
-                                                                                                   rest_1)
-                                                                                                  result_1))))
-                                                                                          result_0)))))
-                                                                                   (for-loop_2
-                                                                                    #t
-                                                                                    best-scopes_1))
-                                                                                (values
-                                                                                 b-scopes_1
-                                                                                 binding_0)
-                                                                                (values
-                                                                                 (cons
-                                                                                  b-scopes_1
-                                                                                  best-scopes_1)
-                                                                                 #f))
-                                                                              (if (not
-                                                                                   best-scopes_1)
-                                                                                (values
-                                                                                 b-scopes_1
-                                                                                 binding_0)
-                                                                                (if (scope-set-subset?
-                                                                                     b-scopes_1
-                                                                                     best-scopes_1)
-                                                                                  (values
-                                                                                   best-scopes_1
-                                                                                   best-binding_1)
-                                                                                  (if (scope-set-subset?
-                                                                                       best-scopes_1
-                                                                                       b-scopes_1)
+                                                                  (let ((binding_0
+                                                                         (if (pair?
+                                                                              i_0)
+                                                                           (let ((bulk_0
+                                                                                  (bulk-binding-at-bulk
+                                                                                   (car
+                                                                                    i_0))))
+                                                                             (let ((b-info_0
+                                                                                    (if (symbol-interned?
+                                                                                         sym_0)
+                                                                                      (hash-ref
+                                                                                       (bulk-binding-symbols
+                                                                                        bulk_0
+                                                                                        s_1
+                                                                                        extra-shifts_0)
+                                                                                       sym_0
+                                                                                       #f)
+                                                                                      #f)))
+                                                                               (if b-info_0
+                                                                                 (|#%app|
+                                                                                  (bulk-binding-class-create
+                                                                                   (bulk-binding-ref
+                                                                                    bulk_0))
+                                                                                  bulk_0
+                                                                                  b-info_0
+                                                                                  sym_0)
+                                                                                 #f)))
+                                                                           (hash-iterate-value
+                                                                            ht_1
+                                                                            i_0))))
+                                                                    (let ((raw-b-scopes_1
+                                                                           raw-b-scopes_0))
+                                                                      (let ((id*_0
+                                                                             (if (null?
+                                                                                  pl-reps_0)
+                                                                               raw-b-scopes_1
+                                                                               (phaseless-normalize-scopes
+                                                                                raw-b-scopes_1
+                                                                                pl-reps_0))))
+                                                                        (call-with-values
+                                                                         (lambda ()
+                                                                           (letrec*
+                                                                            ((for-loop_2
+                                                                              (|#%name|
+                                                                               for-loop
+                                                                               (lambda (best-scopes_2
+                                                                                        best-binding_2)
+                                                                                 (call-with-values
+                                                                                  (lambda ()
+                                                                                    (if (if id*_0
+                                                                                          (if binding_0
+                                                                                            (scope-set-subset-of-union?
+                                                                                             id*_0
+                                                                                             scs_0
+                                                                                             reps_0)
+                                                                                            #f)
+                                                                                          #f)
+                                                                                      (call-with-values
+                                                                                       (lambda ()
+                                                                                         (if (pair?
+                                                                                              best-scopes_2)
+                                                                                           (if (letrec*
+                                                                                                ((for-loop_3
+                                                                                                  (|#%name|
+                                                                                                   for-loop
+                                                                                                   (lambda (result_0
+                                                                                                            lst_2)
+                                                                                                     (if (pair?
+                                                                                                          lst_2)
+                                                                                                       (let ((amb-scopes_0
+                                                                                                              (unsafe-car
+                                                                                                               lst_2)))
+                                                                                                         (let ((rest_1
+                                                                                                                (unsafe-cdr
+                                                                                                                 lst_2)))
+                                                                                                           (let ((result_1
+                                                                                                                  (let ((result_1
+                                                                                                                         (scope-set-subset?
+                                                                                                                          amb-scopes_0
+                                                                                                                          id*_0)))
+                                                                                                                    (values
+                                                                                                                     result_1))))
+                                                                                                             (if (if (not
+                                                                                                                      (let ((x_0
+                                                                                                                             (list
+                                                                                                                              amb-scopes_0)))
+                                                                                                                        (not
+                                                                                                                         result_1)))
+                                                                                                                   #t
+                                                                                                                   #f)
+                                                                                                               (for-loop_3
+                                                                                                                result_1
+                                                                                                                rest_1)
+                                                                                                               result_1))))
+                                                                                                       result_0)))))
+                                                                                                (for-loop_3
+                                                                                                 #t
+                                                                                                 best-scopes_2))
+                                                                                             (values
+                                                                                              id*_0
+                                                                                              binding_0)
+                                                                                             (values
+                                                                                              (cons
+                                                                                               id*_0
+                                                                                               best-scopes_2)
+                                                                                              #f))
+                                                                                           (if (not
+                                                                                                best-scopes_2)
+                                                                                             (values
+                                                                                              id*_0
+                                                                                              binding_0)
+                                                                                             (if (scope-set-subset?
+                                                                                                  id*_0
+                                                                                                  best-scopes_2)
+                                                                                               (values
+                                                                                                best-scopes_2
+                                                                                                best-binding_2)
+                                                                                               (if (scope-set-subset?
+                                                                                                    best-scopes_2
+                                                                                                    id*_0)
+                                                                                                 (values
+                                                                                                  id*_0
+                                                                                                  binding_0)
+                                                                                                 (values
+                                                                                                  (list
+                                                                                                   best-scopes_2
+                                                                                                   id*_0)
+                                                                                                  #f))))))
+                                                                                       (lambda (best-scopes_3
+                                                                                                best-binding_3)
+                                                                                         (values
+                                                                                          best-scopes_3
+                                                                                          best-binding_3)))
+                                                                                      (values
+                                                                                       best-scopes_2
+                                                                                       best-binding_2)))
+                                                                                  (lambda (best-scopes_3
+                                                                                           best-binding_3)
                                                                                     (values
-                                                                                     b-scopes_1
-                                                                                     binding_0)
-                                                                                    (values
-                                                                                     (list
-                                                                                      best-scopes_1
-                                                                                      b-scopes_1)
-                                                                                     #f))))))
-                                                                          (lambda (best-scopes_2
-                                                                                   best-binding_2)
-                                                                            (values
-                                                                             best-scopes_2
-                                                                             best-binding_2)))
-                                                                         (values
-                                                                          best-scopes_1
-                                                                          best-binding_1)))
-                                                                     (lambda (best-scopes_2
-                                                                              best-binding_2)
-                                                                       (for-loop_1
-                                                                        best-scopes_2
-                                                                        best-binding_2
-                                                                        (if (pair?
-                                                                             i_0)
-                                                                          (cdr
-                                                                           i_0)
-                                                                          (let ((or-part_0
-                                                                                 (hash-iterate-next
-                                                                                  ht_1
-                                                                                  i_0)))
-                                                                            (if or-part_0
-                                                                              or-part_0
-                                                                              bulk-bindings_1)))))))))
-                                                              (values
-                                                               best-scopes_1
-                                                               best-binding_1))))))
-                                                       (for-loop_1
-                                                        best-scopes_0
-                                                        best-binding_0
-                                                        (let ((or-part_0
-                                                               (hash-iterate-first
-                                                                ht_1)))
-                                                          (if or-part_0
-                                                            or-part_0
-                                                            bulk-bindings_1)))))))))))
-                                         (lambda (best-scopes_1 best-binding_1)
-                                           (for-loop_0
-                                            best-scopes_1
-                                            best-binding_1
-                                            rest_0))))))
-                                  (values best-scopes_0 best-binding_0))))))
-                           (for-loop_0 #f #f lst_0)))
-                        (lambda (best-scopes0_0 best-binding0_0)
-                          (call-with-values
-                           (lambda ()
-                             (letrec*
-                              ((for-loop_0
-                                (|#%name|
-                                 for-loop
-                                 (lambda (best-scopes_0 best-binding_0 lst_1)
-                                   (if (pair? lst_1)
-                                     (let ((sc_0 (unsafe-car lst_1)))
-                                       (let ((rest_0 (unsafe-cdr lst_1)))
-                                         (let ((table_0
-                                                (scope-binding-table sc_0)))
-                                           (call-with-values
-                                            (lambda ()
-                                              (call-with-values
-                                               (lambda ()
-                                                 (if (hash? table_0)
-                                                   (values
-                                                    (hash-ref
-                                                     table_0
-                                                     sym_0
-                                                     hash2725)
-                                                    null)
-                                                   (let ((app_0
-                                                          (hash-ref
-                                                           (table-with-bulk-bindings-syms
-                                                            table_0)
-                                                           sym_0
-                                                           hash2725)))
-                                                     (values
-                                                      app_0
-                                                      (table-with-bulk-bindings-bulk-bindings
-                                                       table_0)))))
-                                               (lambda (ht_0 bulk-bindings_0)
-                                                 (let ((s_0 s33_0))
-                                                   (let ((extra-shifts_0
-                                                          extra-shifts28_0))
-                                                     (let ((s_1 s_0)
-                                                           (ht_1 ht_0)
-                                                           (bulk-bindings_1
-                                                            bulk-bindings_0))
-                                                       (begin
-                                                         #t
-                                                         (letrec*
-                                                          ((for-loop_1
-                                                            (|#%name|
-                                                             for-loop
-                                                             (lambda (best-scopes_1
-                                                                      best-binding_1
-                                                                      i_0)
-                                                               (if (not
-                                                                    (null?
-                                                                     i_0))
-                                                                 (let ((b-scopes_0
-                                                                        (if (pair?
-                                                                             i_0)
-                                                                          (bulk-binding-at-scopes
-                                                                           (car
-                                                                            i_0))
-                                                                          (hash-iterate-key
-                                                                           ht_1
-                                                                           i_0))))
-                                                                   (let ((binding_0
-                                                                          (if (pair?
-                                                                               i_0)
-                                                                            (let ((bulk_0
-                                                                                   (bulk-binding-at-bulk
-                                                                                    (car
-                                                                                     i_0))))
-                                                                              (let ((b-info_0
-                                                                                     (if (symbol-interned?
-                                                                                          sym_0)
-                                                                                       (hash-ref
-                                                                                        (bulk-binding-symbols
-                                                                                         bulk_0
-                                                                                         s_1
-                                                                                         extra-shifts_0)
-                                                                                        sym_0
-                                                                                        #f)
-                                                                                       #f)))
-                                                                                (if b-info_0
-                                                                                  (|#%app|
-                                                                                   (bulk-binding-class-create
-                                                                                    (bulk-binding-ref
-                                                                                     bulk_0))
-                                                                                   bulk_0
-                                                                                   b-info_0
-                                                                                   sym_0)
-                                                                                  #f)))
-                                                                            (hash-iterate-value
-                                                                             ht_1
-                                                                             i_0))))
-                                                                     (let ((b-scopes_1
-                                                                            b-scopes_0))
-                                                                       (call-with-values
-                                                                        (lambda ()
-                                                                          (if (if b-scopes_1
-                                                                                (if binding_0
-                                                                                  (scope-set-subset-of-union?
-                                                                                   b-scopes_1
-                                                                                   scs_0
-                                                                                   reps_0)
-                                                                                  #f)
-                                                                                #f)
-                                                                            (call-with-values
-                                                                             (lambda ()
-                                                                               (if (pair?
-                                                                                    best-scopes_1)
-                                                                                 (if (letrec*
-                                                                                      ((for-loop_2
-                                                                                        (|#%name|
-                                                                                         for-loop
-                                                                                         (lambda (result_0
-                                                                                                  lst_2)
-                                                                                           (if (pair?
-                                                                                                lst_2)
-                                                                                             (let ((amb-scopes_0
-                                                                                                    (unsafe-car
-                                                                                                     lst_2)))
-                                                                                               (let ((rest_1
-                                                                                                      (unsafe-cdr
-                                                                                                       lst_2)))
-                                                                                                 (let ((result_1
-                                                                                                        (let ((result_1
-                                                                                                               (scope-set-subset?
-                                                                                                                amb-scopes_0
-                                                                                                                b-scopes_1)))
-                                                                                                          (values
-                                                                                                           result_1))))
-                                                                                                   (if (if (not
-                                                                                                            (let ((x_0
-                                                                                                                   (list
-                                                                                                                    amb-scopes_0)))
-                                                                                                              (not
-                                                                                                               result_1)))
-                                                                                                         #t
-                                                                                                         #f)
-                                                                                                     (for-loop_2
-                                                                                                      result_1
-                                                                                                      rest_1)
-                                                                                                     result_1))))
-                                                                                             result_0)))))
-                                                                                      (for-loop_2
-                                                                                       #t
-                                                                                       best-scopes_1))
-                                                                                   (values
-                                                                                    b-scopes_1
-                                                                                    binding_0)
-                                                                                   (values
-                                                                                    (cons
-                                                                                     b-scopes_1
-                                                                                     best-scopes_1)
-                                                                                    #f))
-                                                                                 (if (not
-                                                                                      best-scopes_1)
-                                                                                   (values
-                                                                                    b-scopes_1
-                                                                                    binding_0)
-                                                                                   (if (scope-set-subset?
-                                                                                        b-scopes_1
-                                                                                        best-scopes_1)
-                                                                                     (values
-                                                                                      best-scopes_1
-                                                                                      best-binding_1)
-                                                                                     (if (scope-set-subset?
-                                                                                          best-scopes_1
-                                                                                          b-scopes_1)
-                                                                                       (values
-                                                                                        b-scopes_1
-                                                                                        binding_0)
-                                                                                       (values
-                                                                                        (list
-                                                                                         best-scopes_1
-                                                                                         b-scopes_1)
-                                                                                        #f))))))
-                                                                             (lambda (best-scopes_2
-                                                                                      best-binding_2)
-                                                                               (values
-                                                                                best-scopes_2
-                                                                                best-binding_2)))
-                                                                            (values
+                                                                                     best-scopes_3
+                                                                                     best-binding_3)))))))
+                                                                            (for-loop_2
                                                                              best-scopes_1
                                                                              best-binding_1)))
-                                                                        (lambda (best-scopes_2
-                                                                                 best-binding_2)
-                                                                          (for-loop_1
-                                                                           best-scopes_2
-                                                                           best-binding_2
-                                                                           (if (pair?
-                                                                                i_0)
-                                                                             (cdr
-                                                                              i_0)
-                                                                             (let ((or-part_0
-                                                                                    (hash-iterate-next
-                                                                                     ht_1
-                                                                                     i_0)))
-                                                                               (if or-part_0
-                                                                                 or-part_0
-                                                                                 bulk-bindings_1)))))))))
-                                                                 (values
-                                                                  best-scopes_1
-                                                                  best-binding_1))))))
-                                                          (for-loop_1
-                                                           best-scopes_0
-                                                           best-binding_0
-                                                           (let ((or-part_0
-                                                                  (hash-iterate-first
-                                                                   ht_1)))
-                                                             (if or-part_0
-                                                               or-part_0
-                                                               bulk-bindings_1)))))))))))
-                                            (lambda (best-scopes_1
-                                                     best-binding_1)
-                                              (for-loop_0
-                                               best-scopes_1
-                                               best-binding_1
-                                               rest_0))))))
-                                     (values best-scopes_0 best-binding_0))))))
-                              (for-loop_0
-                               best-scopes0_0
-                               best-binding0_0
-                               reps_0)))
-                           (lambda (best-scopes_0 best-binding_0)
-                             (if (pair? best-scopes_0)
-                               (if (fallback? smss_0)
-                                 (fallback-loop_0 (fallback-rest smss_0))
-                                 ambiguous-value25_0)
-                               (if best-scopes_0
-                                 (begin
-                                   (resolve-cache-set!
-                                    sym_0
-                                    phase34_0
-                                    scs_0
-                                    (fallback-first smss_0)
-                                    best-binding_0)
-                                   (if (let ((or-part_0 (not exactly?26_0)))
-                                         (if or-part_0
-                                           or-part_0
-                                           (let ((app_0
-                                                  (+
-                                                   (scope-set-count scs_0)
-                                                   (length reps_0))))
-                                             (eqv?
-                                              app_0
-                                              (scope-set-count
-                                               best-scopes_0)))))
-                                     (if get-scopes?27_0
-                                       best-scopes_0
-                                       best-binding_0)
-                                     #f))
-                                 (begin
-                                   (resolve-cache-set!
-                                    sym_0
-                                    phase34_0
-                                    scs_0
-                                    (fallback-first smss_0)
-                                    kw2450)
-                                   (if (fallback? smss_0)
-                                     (fallback-loop_0 (fallback-rest smss_0))
-                                     #f))))))))))))))))
+                                                                         (lambda (best-scopes_2
+                                                                                  best-binding_2)
+                                                                           (for-loop_1
+                                                                            best-scopes_2
+                                                                            best-binding_2
+                                                                            (if (pair?
+                                                                                 i_0)
+                                                                              (cdr
+                                                                               i_0)
+                                                                              (let ((or-part_0
+                                                                                     (hash-iterate-next
+                                                                                      ht_1
+                                                                                      i_0)))
+                                                                                (if or-part_0
+                                                                                  or-part_0
+                                                                                  bulk-bindings_1))))))))))
+                                                                (values
+                                                                 best-scopes_1
+                                                                 best-binding_1))))))
+                                                         (for-loop_1
+                                                          best-scopes_0
+                                                          best-binding_0
+                                                          (let ((or-part_0
+                                                                 (hash-iterate-first
+                                                                  ht_1)))
+                                                            (if or-part_0
+                                                              or-part_0
+                                                              bulk-bindings_1)))))))))))
+                                           (lambda (best-scopes_1
+                                                    best-binding_1)
+                                             (for-loop_0
+                                              best-scopes_1
+                                              best-binding_1
+                                              rest_0))))))
+                                    (values best-scopes_0 best-binding_0))))))
+                             (for-loop_0 #f #f lst_0)))
+                          (lambda (best-scopes0_0 best-binding0_0)
+                            (call-with-values
+                             (lambda ()
+                               (letrec*
+                                ((for-loop_0
+                                  (|#%name|
+                                   for-loop
+                                   (lambda (best-scopes_0 best-binding_0 lst_1)
+                                     (if (pair? lst_1)
+                                       (let ((sc_0 (unsafe-car lst_1)))
+                                         (let ((rest_0 (unsafe-cdr lst_1)))
+                                           (let ((table_0
+                                                  (scope-binding-table sc_0)))
+                                             (call-with-values
+                                              (lambda ()
+                                                (call-with-values
+                                                 (lambda ()
+                                                   (if (hash? table_0)
+                                                     (values
+                                                      (hash-ref
+                                                       table_0
+                                                       sym_0
+                                                       hash2725)
+                                                      null)
+                                                     (let ((app_0
+                                                            (hash-ref
+                                                             (table-with-bulk-bindings-syms
+                                                              table_0)
+                                                             sym_0
+                                                             hash2725)))
+                                                       (values
+                                                        app_0
+                                                        (table-with-bulk-bindings-bulk-bindings
+                                                         table_0)))))
+                                                 (lambda (ht_0 bulk-bindings_0)
+                                                   (let ((s_0 s33_0))
+                                                     (let ((extra-shifts_0
+                                                            extra-shifts28_0))
+                                                       (let ((s_1 s_0)
+                                                             (ht_1 ht_0)
+                                                             (bulk-bindings_1
+                                                              bulk-bindings_0))
+                                                         (begin
+                                                           #t
+                                                           (letrec*
+                                                            ((for-loop_1
+                                                              (|#%name|
+                                                               for-loop
+                                                               (lambda (best-scopes_1
+                                                                        best-binding_1
+                                                                        i_0)
+                                                                 (if (not
+                                                                      (null?
+                                                                       i_0))
+                                                                   (let ((raw-b-scopes_0
+                                                                          (if (pair?
+                                                                               i_0)
+                                                                            (bulk-binding-at-scopes
+                                                                             (car
+                                                                              i_0))
+                                                                            (hash-iterate-key
+                                                                             ht_1
+                                                                             i_0))))
+                                                                     (let ((binding_0
+                                                                            (if (pair?
+                                                                                 i_0)
+                                                                              (let ((bulk_0
+                                                                                     (bulk-binding-at-bulk
+                                                                                      (car
+                                                                                       i_0))))
+                                                                                (let ((b-info_0
+                                                                                       (if (symbol-interned?
+                                                                                            sym_0)
+                                                                                         (hash-ref
+                                                                                          (bulk-binding-symbols
+                                                                                           bulk_0
+                                                                                           s_1
+                                                                                           extra-shifts_0)
+                                                                                          sym_0
+                                                                                          #f)
+                                                                                         #f)))
+                                                                                  (if b-info_0
+                                                                                    (|#%app|
+                                                                                     (bulk-binding-class-create
+                                                                                      (bulk-binding-ref
+                                                                                       bulk_0))
+                                                                                     bulk_0
+                                                                                     b-info_0
+                                                                                     sym_0)
+                                                                                    #f)))
+                                                                              (hash-iterate-value
+                                                                               ht_1
+                                                                               i_0))))
+                                                                       (let ((raw-b-scopes_1
+                                                                              raw-b-scopes_0))
+                                                                         (let ((id*_0
+                                                                                (if (null?
+                                                                                     pl-reps_0)
+                                                                                  raw-b-scopes_1
+                                                                                  (phaseless-normalize-scopes
+                                                                                   raw-b-scopes_1
+                                                                                   pl-reps_0))))
+                                                                           (call-with-values
+                                                                            (lambda ()
+                                                                              (letrec*
+                                                                               ((for-loop_2
+                                                                                 (|#%name|
+                                                                                  for-loop
+                                                                                  (lambda (best-scopes_2
+                                                                                           best-binding_2)
+                                                                                    (call-with-values
+                                                                                     (lambda ()
+                                                                                       (if (if id*_0
+                                                                                             (if binding_0
+                                                                                               (scope-set-subset-of-union?
+                                                                                                id*_0
+                                                                                                scs_0
+                                                                                                reps_0)
+                                                                                               #f)
+                                                                                             #f)
+                                                                                         (call-with-values
+                                                                                          (lambda ()
+                                                                                            (if (pair?
+                                                                                                 best-scopes_2)
+                                                                                              (if (letrec*
+                                                                                                   ((for-loop_3
+                                                                                                     (|#%name|
+                                                                                                      for-loop
+                                                                                                      (lambda (result_0
+                                                                                                               lst_2)
+                                                                                                        (if (pair?
+                                                                                                             lst_2)
+                                                                                                          (let ((amb-scopes_0
+                                                                                                                 (unsafe-car
+                                                                                                                  lst_2)))
+                                                                                                            (let ((rest_1
+                                                                                                                   (unsafe-cdr
+                                                                                                                    lst_2)))
+                                                                                                              (let ((result_1
+                                                                                                                     (let ((result_1
+                                                                                                                            (scope-set-subset?
+                                                                                                                             amb-scopes_0
+                                                                                                                             id*_0)))
+                                                                                                                       (values
+                                                                                                                        result_1))))
+                                                                                                                (if (if (not
+                                                                                                                         (let ((x_0
+                                                                                                                                (list
+                                                                                                                                 amb-scopes_0)))
+                                                                                                                           (not
+                                                                                                                            result_1)))
+                                                                                                                      #t
+                                                                                                                      #f)
+                                                                                                                  (for-loop_3
+                                                                                                                   result_1
+                                                                                                                   rest_1)
+                                                                                                                  result_1))))
+                                                                                                          result_0)))))
+                                                                                                   (for-loop_3
+                                                                                                    #t
+                                                                                                    best-scopes_2))
+                                                                                                (values
+                                                                                                 id*_0
+                                                                                                 binding_0)
+                                                                                                (values
+                                                                                                 (cons
+                                                                                                  id*_0
+                                                                                                  best-scopes_2)
+                                                                                                 #f))
+                                                                                              (if (not
+                                                                                                   best-scopes_2)
+                                                                                                (values
+                                                                                                 id*_0
+                                                                                                 binding_0)
+                                                                                                (if (scope-set-subset?
+                                                                                                     id*_0
+                                                                                                     best-scopes_2)
+                                                                                                  (values
+                                                                                                   best-scopes_2
+                                                                                                   best-binding_2)
+                                                                                                  (if (scope-set-subset?
+                                                                                                       best-scopes_2
+                                                                                                       id*_0)
+                                                                                                    (values
+                                                                                                     id*_0
+                                                                                                     binding_0)
+                                                                                                    (values
+                                                                                                     (list
+                                                                                                      best-scopes_2
+                                                                                                      id*_0)
+                                                                                                     #f))))))
+                                                                                          (lambda (best-scopes_3
+                                                                                                   best-binding_3)
+                                                                                            (values
+                                                                                             best-scopes_3
+                                                                                             best-binding_3)))
+                                                                                         (values
+                                                                                          best-scopes_2
+                                                                                          best-binding_2)))
+                                                                                     (lambda (best-scopes_3
+                                                                                              best-binding_3)
+                                                                                       (values
+                                                                                        best-scopes_3
+                                                                                        best-binding_3)))))))
+                                                                               (for-loop_2
+                                                                                best-scopes_1
+                                                                                best-binding_1)))
+                                                                            (lambda (best-scopes_2
+                                                                                     best-binding_2)
+                                                                              (for-loop_1
+                                                                               best-scopes_2
+                                                                               best-binding_2
+                                                                               (if (pair?
+                                                                                    i_0)
+                                                                                 (cdr
+                                                                                  i_0)
+                                                                                 (let ((or-part_0
+                                                                                        (hash-iterate-next
+                                                                                         ht_1
+                                                                                         i_0)))
+                                                                                   (if or-part_0
+                                                                                     or-part_0
+                                                                                     bulk-bindings_1))))))))))
+                                                                   (values
+                                                                    best-scopes_1
+                                                                    best-binding_1))))))
+                                                            (for-loop_1
+                                                             best-scopes_0
+                                                             best-binding_0
+                                                             (let ((or-part_0
+                                                                    (hash-iterate-first
+                                                                     ht_1)))
+                                                               (if or-part_0
+                                                                 or-part_0
+                                                                 bulk-bindings_1)))))))))))
+                                              (lambda (best-scopes_1
+                                                       best-binding_1)
+                                                (for-loop_0
+                                                 best-scopes_1
+                                                 best-binding_1
+                                                 rest_0))))))
+                                       (values
+                                        best-scopes_0
+                                        best-binding_0))))))
+                                (for-loop_0
+                                 best-scopes0_0
+                                 best-binding0_0
+                                 reps_0)))
+                             (lambda (best-scopes1_0 best-binding1_0)
+                               (call-with-values
+                                (lambda ()
+                                  (if (null? pl-reps_0)
+                                    (values best-scopes1_0 best-binding1_0)
+                                    (letrec*
+                                     ((for-loop_0
+                                       (|#%name|
+                                        for-loop
+                                        (lambda (best-scopes_0
+                                                 best-binding_0
+                                                 lst_1)
+                                          (if (pair? lst_1)
+                                            (let ((sc_0 (unsafe-car lst_1)))
+                                              (let ((rest_0
+                                                     (unsafe-cdr lst_1)))
+                                                (let ((table_0
+                                                       (scope-binding-table
+                                                        sc_0)))
+                                                  (call-with-values
+                                                   (lambda ()
+                                                     (call-with-values
+                                                      (lambda ()
+                                                        (if (hash? table_0)
+                                                          (values
+                                                           (hash-ref
+                                                            table_0
+                                                            sym_0
+                                                            hash2725)
+                                                           null)
+                                                          (let ((app_0
+                                                                 (hash-ref
+                                                                  (table-with-bulk-bindings-syms
+                                                                   table_0)
+                                                                  sym_0
+                                                                  hash2725)))
+                                                            (values
+                                                             app_0
+                                                             (table-with-bulk-bindings-bulk-bindings
+                                                              table_0)))))
+                                                      (lambda (ht_0
+                                                               bulk-bindings_0)
+                                                        (let ((s_0 s33_0))
+                                                          (let ((extra-shifts_0
+                                                                 extra-shifts28_0))
+                                                            (let ((s_1 s_0)
+                                                                  (ht_1 ht_0)
+                                                                  (bulk-bindings_1
+                                                                   bulk-bindings_0))
+                                                              (begin
+                                                                #t
+                                                                (letrec*
+                                                                 ((for-loop_1
+                                                                   (|#%name|
+                                                                    for-loop
+                                                                    (lambda (best-scopes_1
+                                                                             best-binding_1
+                                                                             i_0)
+                                                                      (if (not
+                                                                           (null?
+                                                                            i_0))
+                                                                        (let ((raw-b-scopes_0
+                                                                               (if (pair?
+                                                                                    i_0)
+                                                                                 (bulk-binding-at-scopes
+                                                                                  (car
+                                                                                   i_0))
+                                                                                 (hash-iterate-key
+                                                                                  ht_1
+                                                                                  i_0))))
+                                                                          (let ((binding_0
+                                                                                 (if (pair?
+                                                                                      i_0)
+                                                                                   (let ((bulk_0
+                                                                                          (bulk-binding-at-bulk
+                                                                                           (car
+                                                                                            i_0))))
+                                                                                     (let ((b-info_0
+                                                                                            (if (symbol-interned?
+                                                                                                 sym_0)
+                                                                                              (hash-ref
+                                                                                               (bulk-binding-symbols
+                                                                                                bulk_0
+                                                                                                s_1
+                                                                                                extra-shifts_0)
+                                                                                               sym_0
+                                                                                               #f)
+                                                                                              #f)))
+                                                                                       (if b-info_0
+                                                                                         (|#%app|
+                                                                                          (bulk-binding-class-create
+                                                                                           (bulk-binding-ref
+                                                                                            bulk_0))
+                                                                                          bulk_0
+                                                                                          b-info_0
+                                                                                          sym_0)
+                                                                                         #f)))
+                                                                                   (hash-iterate-value
+                                                                                    ht_1
+                                                                                    i_0))))
+                                                                            (let ((raw-b-scopes_1
+                                                                                   raw-b-scopes_0))
+                                                                              (let ((id*_0
+                                                                                     (if (null?
+                                                                                          pl-reps_0)
+                                                                                       raw-b-scopes_1
+                                                                                       (phaseless-normalize-scopes
+                                                                                        raw-b-scopes_1
+                                                                                        pl-reps_0))))
+                                                                                (call-with-values
+                                                                                 (lambda ()
+                                                                                   (letrec*
+                                                                                    ((for-loop_2
+                                                                                      (|#%name|
+                                                                                       for-loop
+                                                                                       (lambda (best-scopes_2
+                                                                                                best-binding_2)
+                                                                                         (call-with-values
+                                                                                          (lambda ()
+                                                                                            (if (if id*_0
+                                                                                                  (if binding_0
+                                                                                                    (scope-set-subset-of-union?
+                                                                                                     id*_0
+                                                                                                     scs_0
+                                                                                                     reps_0)
+                                                                                                    #f)
+                                                                                                  #f)
+                                                                                              (call-with-values
+                                                                                               (lambda ()
+                                                                                                 (if (pair?
+                                                                                                      best-scopes_2)
+                                                                                                   (if (letrec*
+                                                                                                        ((for-loop_3
+                                                                                                          (|#%name|
+                                                                                                           for-loop
+                                                                                                           (lambda (result_0
+                                                                                                                    lst_2)
+                                                                                                             (if (pair?
+                                                                                                                  lst_2)
+                                                                                                               (let ((amb-scopes_0
+                                                                                                                      (unsafe-car
+                                                                                                                       lst_2)))
+                                                                                                                 (let ((rest_1
+                                                                                                                        (unsafe-cdr
+                                                                                                                         lst_2)))
+                                                                                                                   (let ((result_1
+                                                                                                                          (let ((result_1
+                                                                                                                                 (scope-set-subset?
+                                                                                                                                  amb-scopes_0
+                                                                                                                                  id*_0)))
+                                                                                                                            (values
+                                                                                                                             result_1))))
+                                                                                                                     (if (if (not
+                                                                                                                              (let ((x_0
+                                                                                                                                     (list
+                                                                                                                                      amb-scopes_0)))
+                                                                                                                                (not
+                                                                                                                                 result_1)))
+                                                                                                                           #t
+                                                                                                                           #f)
+                                                                                                                       (for-loop_3
+                                                                                                                        result_1
+                                                                                                                        rest_1)
+                                                                                                                       result_1))))
+                                                                                                               result_0)))))
+                                                                                                        (for-loop_3
+                                                                                                         #t
+                                                                                                         best-scopes_2))
+                                                                                                     (values
+                                                                                                      id*_0
+                                                                                                      binding_0)
+                                                                                                     (values
+                                                                                                      (cons
+                                                                                                       id*_0
+                                                                                                       best-scopes_2)
+                                                                                                      #f))
+                                                                                                   (if (not
+                                                                                                        best-scopes_2)
+                                                                                                     (values
+                                                                                                      id*_0
+                                                                                                      binding_0)
+                                                                                                     (if (scope-set-subset?
+                                                                                                          id*_0
+                                                                                                          best-scopes_2)
+                                                                                                       (values
+                                                                                                        best-scopes_2
+                                                                                                        best-binding_2)
+                                                                                                       (if (scope-set-subset?
+                                                                                                            best-scopes_2
+                                                                                                            id*_0)
+                                                                                                         (values
+                                                                                                          id*_0
+                                                                                                          binding_0)
+                                                                                                         (values
+                                                                                                          (list
+                                                                                                           best-scopes_2
+                                                                                                           id*_0)
+                                                                                                          #f))))))
+                                                                                               (lambda (best-scopes_3
+                                                                                                        best-binding_3)
+                                                                                                 (values
+                                                                                                  best-scopes_3
+                                                                                                  best-binding_3)))
+                                                                                              (values
+                                                                                               best-scopes_2
+                                                                                               best-binding_2)))
+                                                                                          (lambda (best-scopes_3
+                                                                                                   best-binding_3)
+                                                                                            (values
+                                                                                             best-scopes_3
+                                                                                             best-binding_3)))))))
+                                                                                    (for-loop_2
+                                                                                     best-scopes_1
+                                                                                     best-binding_1)))
+                                                                                 (lambda (best-scopes_2
+                                                                                          best-binding_2)
+                                                                                   (for-loop_1
+                                                                                    best-scopes_2
+                                                                                    best-binding_2
+                                                                                    (if (pair?
+                                                                                         i_0)
+                                                                                      (cdr
+                                                                                       i_0)
+                                                                                      (let ((or-part_0
+                                                                                             (hash-iterate-next
+                                                                                              ht_1
+                                                                                              i_0)))
+                                                                                        (if or-part_0
+                                                                                          or-part_0
+                                                                                          bulk-bindings_1))))))))))
+                                                                        (values
+                                                                         best-scopes_1
+                                                                         best-binding_1))))))
+                                                                 (for-loop_1
+                                                                  best-scopes_0
+                                                                  best-binding_0
+                                                                  (let ((or-part_0
+                                                                         (hash-iterate-first
+                                                                          ht_1)))
+                                                                    (if or-part_0
+                                                                      or-part_0
+                                                                      bulk-bindings_1)))))))))))
+                                                   (lambda (best-scopes_1
+                                                            best-binding_1)
+                                                     (for-loop_0
+                                                      best-scopes_1
+                                                      best-binding_1
+                                                      rest_0))))))
+                                            (values
+                                             best-scopes_0
+                                             best-binding_0))))))
+                                     (for-loop_0
+                                      best-scopes1_0
+                                      best-binding1_0
+                                      pl-reps_0))))
+                                (lambda (best-scopes_0 best-binding_0)
+                                  (if (pair? best-scopes_0)
+                                    (if (fallback? smss_0)
+                                      (fallback-loop_0 (fallback-rest smss_0))
+                                      ambiguous-value25_0)
+                                    (if best-scopes_0
+                                      (begin
+                                        (resolve-cache-set!
+                                         sym_0
+                                         phase34_0
+                                         scs_0
+                                         (fallback-first smss_0)
+                                         best-binding_0)
+                                        (if (let ((or-part_0
+                                                   (not exactly?26_0)))
+                                              (if or-part_0
+                                                or-part_0
+                                                (let ((app_0
+                                                       (+
+                                                        (scope-set-count scs_0)
+                                                        (length reps_0))))
+                                                  (eqv?
+                                                   app_0
+                                                   (scope-set-count
+                                                    best-scopes_0)))))
+                                          (if get-scopes?27_0
+                                            best-scopes_0
+                                            best-binding_0)
+                                          #f))
+                                      (begin
+                                        (resolve-cache-set!
+                                         sym_0
+                                         phase34_0
+                                         scs_0
+                                         (fallback-first smss_0)
+                                         kw2450)
+                                        (if (fallback? smss_0)
+                                          (fallback-loop_0
+                                           (fallback-rest smss_0))
+                                          #f)))))))))))))))))))
           (fallback-loop_0 (syntax-shifted-multi-scopes s33_0))))))))
 (define representatives-at-phase
   (lambda (smss_0 phase_0)
@@ -14108,18 +14562,23 @@
                               (shifted-to-label-phase?
                                (shifted-multi-scope-phase sms_0)))))
                        (let ((reps_1
-                              (let ((rep_0
-                                     (multi-scope-to-scope-at-phase
-                                      (shifted-multi-scope-multi-scope sms_0)
-                                      (let ((ph_0
-                                             (shifted-multi-scope-phase
-                                              sms_0)))
-                                        (if (shifted-to-label-phase? ph_0)
-                                          (shifted-to-label-phase-from ph_0)
-                                          (phase- ph_0 phase_0))))))
-                                (if (memq rep_0 reps_0)
-                                  reps_0
-                                  (cons rep_0 reps_0)))))
+                              (let ((ms_0
+                                     (shifted-multi-scope-multi-scope sms_0)))
+                                (let ((rep_0
+                                       (if (multi-scope-phaseless ms_0)
+                                         (multi-scope-to-scope-at-phase ms_0 0)
+                                         (multi-scope-to-scope-at-phase
+                                          ms_0
+                                          (let ((ph_0
+                                                 (shifted-multi-scope-phase
+                                                  sms_0)))
+                                            (if (shifted-to-label-phase? ph_0)
+                                              (shifted-to-label-phase-from
+                                               ph_0)
+                                              (phase- ph_0 phase_0)))))))
+                                  (if (memq rep_0 reps_0)
+                                    reps_0
+                                    (cons rep_0 reps_0))))))
                          (values reps_1))
                        reps_0)))
                 (for-loop_0
@@ -15617,16 +16076,16 @@
   (|#%name|
    root-expand-context-frame-id
    (record-accessor struct:root-expand-context/outer 3)))
-(define finish_2837
+(define finish_2290
   (make-struct-type-install-properties
    '(root-expand-context/inner)
-   7
+   8
    0
    #f
    (list (cons prop:authentic #t))
    (current-inspector)
    #f
-   '(0 1 2 3 4 5 6)
+   '(0 1 2 3 4 5 6 7)
    #f
    'root-expand-context/inner))
 (define struct:root-expand-context/inner
@@ -15637,13 +16096,13 @@
    (|#%nongenerative-uid| root-expand-context/inner)
    #f
    #f
-   '(7 . 0)
+   '(8 . 0)
    'make-struct-type
    #f
    #f
    #f
    |#%system-inspector|))
-(define effect_2880 (finish_2837 struct:root-expand-context/inner))
+(define effect_2880 (finish_2290 struct:root-expand-context/inner))
 (define root-expand-context/inner2.1
   (|#%name|
    root-expand-context/inner
@@ -15684,6 +16143,10 @@
   (|#%name|
    root-expand-context/inner-lift-key
    (record-accessor struct:root-expand-context/inner 6)))
+(define root-expand-context/inner-local-state
+  (|#%name|
+   root-expand-context/inner-local-state
+   (record-accessor struct:root-expand-context/inner 7)))
 (define root-expand-context/make
   (lambda (self-mpi_0
            module-scopes_0
@@ -15694,7 +16157,8 @@
            defined-syms_0
            frame-id_0
            counter_0
-           lift-key_0)
+           lift-key_0
+           local-state_0)
     (root-expand-context/outer1.1
      (root-expand-context/inner2.1
       self-mpi_0
@@ -15703,7 +16167,8 @@
       all-scopes-stx_0
       defined-syms_0
       counter_0
-      lift-key_0)
+      lift-key_0
+      local-state_0)
      post-expansion_0
      use-site-scopes_0
      frame-id_0)))
@@ -15739,6 +16204,10 @@
 (define root-expand-context-lift-key
   (lambda (v_0)
     (root-expand-context/inner-lift-key
+     (root-expand-context/outer-inner v_0))))
+(define root-expand-context-local-state
+  (lambda (v_0)
+    (root-expand-context/inner-local-state
      (root-expand-context/outer-inner v_0))))
 (define make-root-expand-context.1
   (|#%name|
@@ -15777,24 +16246,28 @@
                    (let ((frame-id_0 (string->uninterned-symbol "root-frame")))
                      (let ((counter_0 (box 0)))
                        (let ((lift-key_0 (generate-lift-key)))
-                         (let ((counter_1 counter_0)
-                               (frame-id_1 frame-id_0)
-                               (defined-syms_1 defined-syms_0)
-                               (use-site-scopes_1 use-site-scopes_0)
-                               (all-scopes-stx_1 all-scopes-stx_0)
-                               (top-level-bind-scope_1 top-level-bind-scope_0))
-                           (root-expand-context/outer1.1
-                            (root-expand-context/inner2.1
-                             self-mpi3_0
-                             module-scopes_0
-                             top-level-bind-scope_1
-                             all-scopes-stx_1
-                             defined-syms_1
-                             counter_1
-                             lift-key_0)
-                            post-expansion-scope_0
-                            use-site-scopes_1
-                            frame-id_1)))))))))))))))
+                         (let ((local-state_0 (make-hasheq)))
+                           (let ((lift-key_1 lift-key_0)
+                                 (counter_1 counter_0)
+                                 (frame-id_1 frame-id_0)
+                                 (defined-syms_1 defined-syms_0)
+                                 (use-site-scopes_1 use-site-scopes_0)
+                                 (all-scopes-stx_1 all-scopes-stx_0)
+                                 (top-level-bind-scope_1
+                                  top-level-bind-scope_0))
+                             (root-expand-context/outer1.1
+                              (root-expand-context/inner2.1
+                               self-mpi3_0
+                               module-scopes_0
+                               top-level-bind-scope_1
+                               all-scopes-stx_1
+                               defined-syms_1
+                               counter_1
+                               lift-key_1
+                               local-state_0)
+                              post-expansion-scope_0
+                              use-site-scopes_1
+                              frame-id_1))))))))))))))))
 (define apply-post-expansion
   (lambda (pe_0 s_0)
     (if (not pe_0)
@@ -15934,26 +16407,30 @@
                       (let ((counter_0
                              (box (syntax-e$1 (vector-ref vec_0 6)))))
                         (let ((lift-key_0 (generate-lift-key)))
-                          (let ((counter_1 counter_0)
-                                (frame-id_1 frame-id_0)
-                                (defined-syms_1 defined-syms_0)
-                                (use-site-scopes_1 use-site-scopes_0)
-                                (all-scopes-stx_1 all-scopes-stx_0)
-                                (top-level-bind-scope_1 top-level-bind-scope_0)
-                                (post-expansion_1 post-expansion_0)
-                                (module-scopes_1 module-scopes_0))
-                            (root-expand-context/outer1.1
-                             (root-expand-context/inner2.1
-                              self_0
-                              module-scopes_1
-                              top-level-bind-scope_1
-                              all-scopes-stx_1
-                              defined-syms_1
-                              counter_1
-                              lift-key_0)
-                             post-expansion_1
-                             use-site-scopes_1
-                             frame-id_1)))))))))))))))
+                          (let ((local-state_0 (make-hasheq)))
+                            (let ((lift-key_1 lift-key_0)
+                                  (counter_1 counter_0)
+                                  (frame-id_1 frame-id_0)
+                                  (defined-syms_1 defined-syms_0)
+                                  (use-site-scopes_1 use-site-scopes_0)
+                                  (all-scopes-stx_1 all-scopes-stx_0)
+                                  (top-level-bind-scope_1
+                                   top-level-bind-scope_0)
+                                  (post-expansion_1 post-expansion_0)
+                                  (module-scopes_1 module-scopes_0))
+                              (root-expand-context/outer1.1
+                               (root-expand-context/inner2.1
+                                self_0
+                                module-scopes_1
+                                top-level-bind-scope_1
+                                all-scopes-stx_1
+                                defined-syms_1
+                                counter_1
+                                lift-key_1
+                                local-state_0)
+                               post-expansion_1
+                               use-site-scopes_1
+                               frame-id_1))))))))))))))))
 (define defined-syms-hash?
   (lambda (v_0)
     (letrec*
@@ -17514,7 +17991,7 @@
                   (max 3 len_0)))
                (format "~.s" (->datum v_0)))
               (format "~s" (->datum v_0))))))))))
-(define finish_2922
+(define finish_2923
   (make-struct-type-install-properties
    '(module-use)
    2
@@ -17568,11 +18045,11 @@
    #f
    '(2 . 0)
    'make-struct-type
-   (finish_2922 'proc)
-   (finish_2922 'arity)
+   (finish_2923 'proc)
+   (finish_2923 'arity)
    #f
    |#%system-inspector|))
-(define effect_2097 (finish_2922 struct:module-use))
+(define effect_2097 (finish_2923 struct:module-use))
 (define module-use1.1
   (|#%name|
    module-use
@@ -18385,10 +18862,26 @@
                   (if or-part_0 or-part_0 ns_0)))
                name_0
                mi_0)
-              (let ((small-ht_0 (module-instance-phase-level-to-state mi_0)))
-                (set-box!
-                 small-ht_0
-                 (hash-set (unbox small-ht_0) 0 'started))))
+              (let ((start_0 (module-min-phase-level m_0)))
+                (let ((end_0 (add1 (module-max-phase-level m_0))))
+                  (let ((start_1 start_0))
+                    (letrec*
+                     ((for-loop_0
+                       (|#%name|
+                        for-loop
+                        (lambda (pos_0)
+                          (if (< pos_0 end_0)
+                            (begin
+                              (let ((small-ht_0
+                                     (module-instance-phase-level-to-state
+                                      mi_0)))
+                                (set-box!
+                                 small-ht_0
+                                 (hash-set (unbox small-ht_0) pos_0 'started)))
+                              (for-loop_0 (+ pos_0 1)))
+                            (values))))))
+                     (for-loop_0 start_1)))))
+              (void))
             (let ((run-phase-level_0 (phase- run-phase_0 0-phase_0)))
               (begin
                 (let ((small-ht_0 (namespace-phase-to-namespace m-ns_0)))
@@ -18602,45 +19095,74 @@
                  (let ((instantiate!_0
                         (|#%name|
                          instantiate!
-                         (lambda (instance-phase_0 run-phase_1 ns_0)
-                           (let ((mi_0
-                                  (let ((or-part_0
-                                         (namespace->module-instance.1
-                                          #f
-                                          #f
-                                          void
-                                          ns_0
-                                          name_0
-                                          instance-phase_0)))
-                                    (if or-part_0
-                                      or-part_0
-                                      (namespace-create-module-instance!
-                                       ns_0
-                                       name_0
-                                       instance-phase_0
-                                       m_0
-                                       mpi102_0)))))
-                             (run-module-instance!.1
-                              minimum-inspector91_0
-                              otherwise-available?87_0
-                              recur?90_0
-                              run-phase_1
-                              seen88_0
-                              seen-list89_0
-                              skip-run?86_0
-                              transitive-record92_0
-                              mi_0
-                              ns_0))))))
+                         (lambda (mpi212_0
+                                  instance-phase214_0
+                                  run-phase215_0
+                                  ns216_0)
+                           (let ((mpi_0
+                                  (if (eq? mpi212_0 unsafe-undefined)
+                                    mpi102_0
+                                    mpi212_0)))
+                             (let ((mi_0
+                                    (let ((or-part_0
+                                           (namespace->module-instance.1
+                                            #f
+                                            #f
+                                            void
+                                            ns216_0
+                                            name_0
+                                            instance-phase214_0)))
+                                      (if or-part_0
+                                        or-part_0
+                                        (namespace-create-module-instance!
+                                         ns216_0
+                                         name_0
+                                         instance-phase214_0
+                                         m_0
+                                         mpi_0)))))
+                               (run-module-instance!.1
+                                minimum-inspector91_0
+                                otherwise-available?87_0
+                                recur?90_0
+                                run-phase215_0
+                                seen88_0
+                                seen-list89_0
+                                skip-run?86_0
+                                transitive-record92_0
+                                mi_0
+                                ns216_0)))))))
                    (if (module-cross-phase-persistent? m_0)
+                     (let ((temp233_0
+                            (let ((or-part_0
+                                   (namespace-root-namespace ns101_0)))
+                              (if or-part_0 or-part_0 ns101_0))))
+                       (let ((temp234_0
+                              (if (self-free-module-path-index? mpi102_0)
+                                mpi102_0
+                                (1/module-path-index-join
+                                 (resolved-module-path->module-path name_0)
+                                 #f))))
+                         (let ((temp233_1 temp233_0))
+                           (instantiate!_0 temp234_0 0 0 temp233_1))))
                      (instantiate!_0
-                      0
-                      0
-                      (let ((or-part_0 (namespace-root-namespace ns101_0)))
-                        (if or-part_0 or-part_0 ns101_0)))
-                     (instantiate!_0
+                      unsafe-undefined
                       instance-phase103_0
                       run-phase_0
                       ns101_0))))))))))))
+(define self-free-module-path-index?
+  (lambda (mpi_0)
+    (letrec*
+     ((loop_0
+       (|#%name|
+        loop
+        (lambda (mpi_1)
+          (call-with-values
+           (lambda () (1/module-path-index-split mpi_1))
+           (lambda (path_0 base_0)
+             (if (not path_0)
+               #f
+               (if (1/module-path-index? base_0) (loop_0 base_0) #t))))))))
+     (loop_0 mpi_0))))
 (define namespace-module-visit!.1
   (|#%name|
    namespace-module-visit!
@@ -18653,12 +19175,12 @@
             (if (eq? visit-phase105_0 unsafe-undefined)
               (namespace-phase ns109_0)
               visit-phase105_0)))
-       (let ((temp228_0 (add1 visit-phase_0)))
+       (let ((temp241_0 (add1 visit-phase_0)))
          (namespace-module-instantiate!.1
           #f
           #t
           #t
-          temp228_0
+          temp241_0
           hash2610
           null
           #f
@@ -18678,12 +19200,12 @@
             (if (eq? visit-phase113_0 unsafe-undefined)
               (namespace-phase ns117_0)
               visit-phase113_0)))
-       (let ((temp233_0 (add1 visit-phase_0)))
+       (let ((temp246_0 (add1 visit-phase_0)))
          (namespace-module-instantiate!.1
           #f
           #t
           #t
-          temp233_0
+          temp246_0
           hash2610
           null
           #t
@@ -18839,9 +19361,17 @@
                              (let ((or-part_0 (not transitive-record128_0)))
                                (if or-part_0
                                  or-part_0
-                                 (not
-                                  (module-cross-phase-persistent?
-                                   (module-instance-module mi137_0)))))
+                                 (let ((or-part_1
+                                        (not
+                                         (if m_0
+                                           (module-cross-phase-persistent? m_0)
+                                           #f))))
+                                   (if or-part_1
+                                     or-part_1
+                                     (hash-ref
+                                      transitive-record128_0
+                                      mi137_0
+                                      #f)))))
                              #f)
                            #f)
                        (void)
@@ -18852,398 +19382,422 @@
                              (error
                               'require
                               "import cycle detected; trying to run module being expanded"))
-                           (let ((mpi_0 (namespace-mpi m-ns_0)))
-                             (let ((bulk-binding-registry_0
-                                    (namespace-bulk-binding-registry m-ns_0)))
-                               (begin
-                                 (if recur?124_0
-                                   (begin
-                                     (if (hash-ref seen125_0 mi137_0 #f)
-                                       (error
-                                        'require
-                                        (apply-string-append
-                                         2
-                                         (list*
-                                          "import cycle detected during module instantiation\n"
-                                          "  dependency chain:"
-                                          (module-instances->indented-module-names
-                                           mi137_0
-                                           seen-list126_0))))
-                                       (void))
-                                     (let ((record-shifted-requires-at-name_0
-                                            (if (module-instance-shifted-requires
-                                                 mi137_0)
-                                              #f
-                                              (let ((name_0
-                                                     (1/module-path-index-resolve
-                                                      mpi_0)))
-                                                (let ((shifted-requires_0
-                                                       (build-module-instance-shifted-requires
-                                                        ns138_0
-                                                        m_1
-                                                        mpi_0
-                                                        name_0)))
-                                                  (begin
-                                                    (set-module-instance-shifted-requires!
-                                                     mi137_0
-                                                     shifted-requires_0)
-                                                    (if (non-self-derived-module-path-index?
-                                                         mpi_0)
-                                                      name_0
-                                                      #f)))))))
-                                       (let ((new-seen_0
-                                              (hash-set seen125_0 mi137_0 #t)))
-                                         (let ((recur-instantiate!_0
-                                                (|#%name|
-                                                 recur-instantiate!
-                                                 (lambda (req-mpi_0
-                                                          req-phase_0
-                                                          req-recur?_0)
-                                                   (let ((temp241_0
-                                                          (phase+
-                                                           instance-phase_0
-                                                           req-phase_0)))
-                                                     (let ((temp246_0
-                                                            (cons
-                                                             mi137_0
-                                                             seen-list126_0)))
-                                                       (let ((temp241_1
-                                                              temp241_0))
-                                                         (namespace-module-instantiate!.1
-                                                          inspector_0
-                                                          otherwise-available?123_0
-                                                          req-recur?_0
-                                                          run-phase121_0
-                                                          new-seen_0
-                                                          temp246_0
-                                                          skip-run?122_0
-                                                          transitive-record128_0
+                           (begin
+                             (if (if transitive-record128_0
+                                   (if recur?124_0
+                                     (module-cross-phase-persistent? m_1)
+                                     #f)
+                                   #f)
+                               (hash-set! transitive-record128_0 mi137_0 #t)
+                               (void))
+                             (let ((mpi_0 (namespace-mpi m-ns_0)))
+                               (let ((bulk-binding-registry_0
+                                      (namespace-bulk-binding-registry
+                                       m-ns_0)))
+                                 (begin
+                                   (if recur?124_0
+                                     (begin
+                                       (if (hash-ref seen125_0 mi137_0 #f)
+                                         (error
+                                          'require
+                                          (apply-string-append
+                                           2
+                                           (list*
+                                            "import cycle detected during module instantiation\n"
+                                            "  dependency chain:"
+                                            (module-instances->indented-module-names
+                                             mi137_0
+                                             seen-list126_0))))
+                                         (void))
+                                       (let ((record-shifted-requires-at-name_0
+                                              (if (module-instance-shifted-requires
+                                                   mi137_0)
+                                                #f
+                                                (let ((name_0
+                                                       (1/module-path-index-resolve
+                                                        mpi_0)))
+                                                  (let ((shifted-requires_0
+                                                         (build-module-instance-shifted-requires
                                                           ns138_0
-                                                          req-mpi_0
-                                                          temp241_1))))))))
-                                           (begin
-                                             (if (not
-                                                  (module-flattened-requires
-                                                   m_1))
-                                               (begin
-                                                 (let ((lst_0
-                                                        (module-instance-shifted-requires
-                                                         mi137_0)))
-                                                   (let ((lst_1
-                                                          (module-recur-requires
-                                                           m_1)))
-                                                     (let ((lst_2 lst_0))
-                                                       (letrec*
-                                                        ((for-loop_0
-                                                          (|#%name|
-                                                           for-loop
-                                                           (lambda (lst_3
-                                                                    lst_4)
-                                                             (if (if (pair?
-                                                                      lst_3)
-                                                                   (pair?
-                                                                    lst_4)
-                                                                   #f)
-                                                               (let ((phase+mpis_0
-                                                                      (unsafe-car
-                                                                       lst_3)))
-                                                                 (let ((rest_0
-                                                                        (unsafe-cdr
-                                                                         lst_3)))
-                                                                   (let ((recurs_0
-                                                                          (unsafe-car
-                                                                           lst_4)))
-                                                                     (let ((rest_1
-                                                                            (unsafe-cdr
-                                                                             lst_4)))
-                                                                       (begin
-                                                                         (let ((req-phase_0
-                                                                                (car
-                                                                                 phase+mpis_0)))
-                                                                           (begin
-                                                                             (let ((lst_5
-                                                                                    (cdr
-                                                                                     phase+mpis_0)))
-                                                                               (letrec*
-                                                                                ((for-loop_1
-                                                                                  (|#%name|
-                                                                                   for-loop
-                                                                                   (lambda (lst_6
-                                                                                            lst_7)
-                                                                                     (if (if (pair?
-                                                                                              lst_6)
-                                                                                           (pair?
-                                                                                            lst_7)
-                                                                                           #f)
-                                                                                       (let ((req-mpi_0
-                                                                                              (unsafe-car
-                                                                                               lst_6)))
-                                                                                         (let ((rest_2
-                                                                                                (unsafe-cdr
-                                                                                                 lst_6)))
-                                                                                           (let ((recur_0
-                                                                                                  (unsafe-car
-                                                                                                   lst_7)))
-                                                                                             (let ((rest_3
-                                                                                                    (unsafe-cdr
-                                                                                                     lst_7)))
-                                                                                               (call-with-values
-                                                                                                (lambda ()
-                                                                                                  (if req-mpi_0
-                                                                                                    (begin
-                                                                                                      (recur-instantiate!_0
-                                                                                                       req-mpi_0
-                                                                                                       req-phase_0
-                                                                                                       recur_0)
-                                                                                                      (values))
-                                                                                                    (values)))
-                                                                                                (lambda ()
-                                                                                                  (for-loop_1
-                                                                                                   rest_2
-                                                                                                   rest_3)))))))
-                                                                                       (values))))))
-                                                                                (for-loop_1
-                                                                                 lst_5
-                                                                                 recurs_0)))
-                                                                             (void)))
-                                                                         (for-loop_0
-                                                                          rest_0
-                                                                          rest_1))))))
-                                                               (values))))))
-                                                        (for-loop_0
-                                                         lst_2
-                                                         lst_1)))))
-                                                 (void))
-                                               (begin
-                                                 (let ((lst_0
-                                                        (module-instance-shifted-requires
-                                                         mi137_0)))
-                                                   (letrec*
-                                                    ((for-loop_0
-                                                      (|#%name|
-                                                       for-loop
-                                                       (lambda (lst_1)
-                                                         (if (pair? lst_1)
-                                                           (let ((mpi+phases_0
-                                                                  (unsafe-car
-                                                                   lst_1)))
-                                                             (let ((rest_0
-                                                                    (unsafe-cdr
-                                                                     lst_1)))
-                                                               (begin
-                                                                 (let ((req-mpi_0
-                                                                        (vector-ref
-                                                                         mpi+phases_0
-                                                                         0)))
-                                                                   (begin
-                                                                     (let ((lst_2
-                                                                            (vector-ref
-                                                                             mpi+phases_0
-                                                                             1)))
-                                                                       (letrec*
-                                                                        ((for-loop_1
-                                                                          (|#%name|
-                                                                           for-loop
-                                                                           (lambda (lst_3)
-                                                                             (if (pair?
-                                                                                  lst_3)
-                                                                               (let ((req-phase_0
-                                                                                      (unsafe-car
-                                                                                       lst_3)))
-                                                                                 (let ((rest_1
-                                                                                        (unsafe-cdr
-                                                                                         lst_3)))
-                                                                                   (begin
-                                                                                     (recur-instantiate!_0
-                                                                                      req-mpi_0
-                                                                                      req-phase_0
-                                                                                      #f)
-                                                                                     (for-loop_1
-                                                                                      rest_1))))
-                                                                               (values))))))
-                                                                        (for-loop_1
-                                                                         lst_2)))
-                                                                     (void)))
-                                                                 (for-loop_0
-                                                                  rest_0))))
-                                                           (values))))))
-                                                    (for-loop_0 lst_0)))
-                                                 (void)))
-                                             (if record-shifted-requires-at-name_0
-                                               (namespace-save-shifted-requires!
-                                                ns138_0
-                                                m_1
-                                                record-shifted-requires-at-name_0
-                                                (module-instance-shifted-requires
-                                                 mi137_0))
-                                               (void)))))))
-                                   (void))
-                                 (if (not instance-phase_0)
-                                   (void)
-                                   (begin
-                                     (let ((start_0
-                                            (module-max-phase-level m_1)))
-                                       (let ((end_0
-                                              (sub1
-                                               (module-min-phase-level m_1))))
-                                         (let ((start_1 start_0))
-                                           (letrec*
-                                            ((for-loop_0
-                                              (|#%name|
-                                               for-loop
-                                               (lambda (pos_0)
-                                                 (if (> pos_0 end_0)
-                                                   (begin
-                                                     (let ((phase_0
+                                                          m_1
+                                                          mpi_0
+                                                          name_0)))
+                                                    (begin
+                                                      (set-module-instance-shifted-requires!
+                                                       mi137_0
+                                                       shifted-requires_0)
+                                                      (if (non-self-derived-module-path-index?
+                                                           mpi_0)
+                                                        name_0
+                                                        #f)))))))
+                                         (let ((new-seen_0
+                                                (hash-set
+                                                 seen125_0
+                                                 mi137_0
+                                                 #t)))
+                                           (let ((recur-instantiate!_0
+                                                  (|#%name|
+                                                   recur-instantiate!
+                                                   (lambda (req-mpi_0
+                                                            req-phase_0
+                                                            req-recur?_0)
+                                                     (let ((temp254_0
                                                             (phase+
-                                                             pos_0
-                                                             instance-phase_0)))
-                                                       (if (if (not
-                                                                skip-run?122_0)
-                                                             (eqv?
-                                                              phase_0
-                                                              run-phase121_0)
-                                                             #f)
-                                                         (if (eq?
-                                                              'started
-                                                              (let ((small-ht_0
-                                                                     (module-instance-phase-level-to-state
-                                                                      mi137_0)))
-                                                                (hash-ref
-                                                                 (unbox
-                                                                  small-ht_0)
-                                                                 pos_0
-                                                                 #f)))
-                                                           (void)
-                                                           (begin
-                                                             (let ((small-ht_0
-                                                                    (module-instance-phase-level-to-state
-                                                                     mi137_0)))
-                                                               (set-box!
-                                                                small-ht_0
-                                                                (hash-set
-                                                                 (unbox
-                                                                  small-ht_0)
-                                                                 pos_0
-                                                                 'started)))
-                                                             (begin
-                                                               (void
-                                                                (namespace->definitions
-                                                                 m-ns_0
-                                                                 pos_0))
-                                                               (let ((p-ns_0
-                                                                      (namespace->namespace-at-phase
-                                                                       m-ns_0
-                                                                       phase_0)))
-                                                                 (let ((insp_0
-                                                                        (module-inspector
-                                                                         m_1)))
-                                                                   (let ((data-box_0
-                                                                          (module-instance-data-box
-                                                                           mi137_0)))
-                                                                     (let ((prep_0
-                                                                            (module-prepare-instance
-                                                                             m_1)))
-                                                                       (let ((go_0
-                                                                              (module-instantiate-phase
-                                                                               m_1)))
+                                                             instance-phase_0
+                                                             req-phase_0)))
+                                                       (let ((temp259_0
+                                                              (cons
+                                                               mi137_0
+                                                               seen-list126_0)))
+                                                         (let ((temp254_1
+                                                                temp254_0))
+                                                           (namespace-module-instantiate!.1
+                                                            inspector_0
+                                                            otherwise-available?123_0
+                                                            req-recur?_0
+                                                            run-phase121_0
+                                                            new-seen_0
+                                                            temp259_0
+                                                            skip-run?122_0
+                                                            transitive-record128_0
+                                                            ns138_0
+                                                            req-mpi_0
+                                                            temp254_1))))))))
+                                             (begin
+                                               (if (not
+                                                    (module-flattened-requires
+                                                     m_1))
+                                                 (begin
+                                                   (let ((lst_0
+                                                          (module-instance-shifted-requires
+                                                           mi137_0)))
+                                                     (let ((lst_1
+                                                            (module-recur-requires
+                                                             m_1)))
+                                                       (let ((lst_2 lst_0))
+                                                         (letrec*
+                                                          ((for-loop_0
+                                                            (|#%name|
+                                                             for-loop
+                                                             (lambda (lst_3
+                                                                      lst_4)
+                                                               (if (if (pair?
+                                                                        lst_3)
+                                                                     (pair?
+                                                                      lst_4)
+                                                                     #f)
+                                                                 (let ((phase+mpis_0
+                                                                        (unsafe-car
+                                                                         lst_3)))
+                                                                   (let ((rest_0
+                                                                          (unsafe-cdr
+                                                                           lst_3)))
+                                                                     (let ((recurs_0
+                                                                            (unsafe-car
+                                                                             lst_4)))
+                                                                       (let ((rest_1
+                                                                              (unsafe-cdr
+                                                                               lst_4)))
                                                                          (begin
-                                                                           (|#%app|
-                                                                            prep_0
-                                                                            data-box_0
-                                                                            p-ns_0
-                                                                            instance-phase_0
-                                                                            mpi_0
-                                                                            bulk-binding-registry_0
-                                                                            insp_0)
-                                                                           (|#%app|
-                                                                            go_0
-                                                                            data-box_0
-                                                                            p-ns_0
-                                                                            instance-phase_0
-                                                                            pos_0
-                                                                            mpi_0
-                                                                            bulk-binding-registry_0
-                                                                            insp_0))))))))))
-                                                         (if (if otherwise-available?123_0
-                                                               (if (not
-                                                                    (negative?
-                                                                     run-phase121_0))
-                                                                 (not
-                                                                  (let ((small-ht_0
-                                                                         (module-instance-phase-level-to-state
-                                                                          mi137_0)))
-                                                                    (hash-ref
-                                                                     (unbox
-                                                                      small-ht_0)
-                                                                     pos_0
-                                                                     #f)))
-                                                                 #f)
-                                                               #f)
-                                                           (begin
-                                                             (if (module-cross-phase-persistent?
-                                                                  m_1)
-                                                               (let ((bx_0
-                                                                      (namespace-available-cross-phase-module-instances
-                                                                       ns138_0)))
-                                                                 (set-box!
-                                                                  bx_0
-                                                                  (cons
-                                                                   mi137_0
-                                                                   (unbox
-                                                                    bx_0))))
-                                                               (let ((ht_0
-                                                                      (namespace-available-module-instances
-                                                                       ns138_0)))
-                                                                 (let ((xform_0
-                                                                        (lambda (l_0)
-                                                                          (cons
-                                                                           mi137_0
-                                                                           l_0))))
-                                                                   (do-hash-update
-                                                                    'hash-update!
-                                                                    #t
-                                                                    hash-set!
-                                                                    ht_0
-                                                                    phase_0
-                                                                    xform_0
-                                                                    null))))
-                                                             (let ((small-ht_0
-                                                                    (module-instance-phase-level-to-state
-                                                                     mi137_0)))
-                                                               (set-box!
-                                                                small-ht_0
-                                                                (hash-set
-                                                                 (unbox
-                                                                  small-ht_0)
-                                                                 pos_0
-                                                                 'available))))
-                                                           (void))))
-                                                     (for-loop_0 (+ pos_0 -1)))
-                                                   (values))))))
-                                            (for-loop_0 start_1)))))
-                                     (void)))
-                                 (if otherwise-available?123_0
-                                   (set-module-instance-made-available?!
-                                    mi137_0
-                                    #t)
-                                   (void))
-                                 (if (not instance-phase_0)
-                                   (|#%app|
-                                    (module-force-bulk-binding m_1)
-                                    (namespace-bulk-binding-registry ns138_0))
-                                   (void))
-                                 (if skip-run?122_0
-                                   (void)
-                                   (let ((small-ht_0
-                                          (module-instance-phase-level-to-state
-                                           mi137_0)))
-                                     (set-box!
-                                      small-ht_0
-                                      (hash-set
-                                       (unbox small-ht_0)
-                                       run-phase-level_0
-                                       'started))))))))))))))))
+                                                                           (let ((req-phase_0
+                                                                                  (car
+                                                                                   phase+mpis_0)))
+                                                                             (begin
+                                                                               (let ((lst_5
+                                                                                      (cdr
+                                                                                       phase+mpis_0)))
+                                                                                 (letrec*
+                                                                                  ((for-loop_1
+                                                                                    (|#%name|
+                                                                                     for-loop
+                                                                                     (lambda (lst_6
+                                                                                              lst_7)
+                                                                                       (if (if (pair?
+                                                                                                lst_6)
+                                                                                             (pair?
+                                                                                              lst_7)
+                                                                                             #f)
+                                                                                         (let ((req-mpi_0
+                                                                                                (unsafe-car
+                                                                                                 lst_6)))
+                                                                                           (let ((rest_2
+                                                                                                  (unsafe-cdr
+                                                                                                   lst_6)))
+                                                                                             (let ((recur_0
+                                                                                                    (unsafe-car
+                                                                                                     lst_7)))
+                                                                                               (let ((rest_3
+                                                                                                      (unsafe-cdr
+                                                                                                       lst_7)))
+                                                                                                 (call-with-values
+                                                                                                  (lambda ()
+                                                                                                    (if req-mpi_0
+                                                                                                      (begin
+                                                                                                        (recur-instantiate!_0
+                                                                                                         req-mpi_0
+                                                                                                         req-phase_0
+                                                                                                         recur_0)
+                                                                                                        (values))
+                                                                                                      (values)))
+                                                                                                  (lambda ()
+                                                                                                    (for-loop_1
+                                                                                                     rest_2
+                                                                                                     rest_3)))))))
+                                                                                         (values))))))
+                                                                                  (for-loop_1
+                                                                                   lst_5
+                                                                                   recurs_0)))
+                                                                               (void)))
+                                                                           (for-loop_0
+                                                                            rest_0
+                                                                            rest_1))))))
+                                                                 (values))))))
+                                                          (for-loop_0
+                                                           lst_2
+                                                           lst_1)))))
+                                                   (void))
+                                                 (begin
+                                                   (let ((lst_0
+                                                          (module-instance-shifted-requires
+                                                           mi137_0)))
+                                                     (letrec*
+                                                      ((for-loop_0
+                                                        (|#%name|
+                                                         for-loop
+                                                         (lambda (lst_1)
+                                                           (if (pair? lst_1)
+                                                             (let ((mpi+phases_0
+                                                                    (unsafe-car
+                                                                     lst_1)))
+                                                               (let ((rest_0
+                                                                      (unsafe-cdr
+                                                                       lst_1)))
+                                                                 (begin
+                                                                   (let ((req-mpi_0
+                                                                          (vector-ref
+                                                                           mpi+phases_0
+                                                                           0)))
+                                                                     (begin
+                                                                       (let ((lst_2
+                                                                              (vector-ref
+                                                                               mpi+phases_0
+                                                                               1)))
+                                                                         (letrec*
+                                                                          ((for-loop_1
+                                                                            (|#%name|
+                                                                             for-loop
+                                                                             (lambda (lst_3)
+                                                                               (if (pair?
+                                                                                    lst_3)
+                                                                                 (let ((req-phase_0
+                                                                                        (unsafe-car
+                                                                                         lst_3)))
+                                                                                   (let ((rest_1
+                                                                                          (unsafe-cdr
+                                                                                           lst_3)))
+                                                                                     (begin
+                                                                                       (recur-instantiate!_0
+                                                                                        req-mpi_0
+                                                                                        req-phase_0
+                                                                                        #f)
+                                                                                       (for-loop_1
+                                                                                        rest_1))))
+                                                                                 (values))))))
+                                                                          (for-loop_1
+                                                                           lst_2)))
+                                                                       (void)))
+                                                                   (for-loop_0
+                                                                    rest_0))))
+                                                             (values))))))
+                                                      (for-loop_0 lst_0)))
+                                                   (void)))
+                                               (if record-shifted-requires-at-name_0
+                                                 (namespace-save-shifted-requires!
+                                                  ns138_0
+                                                  m_1
+                                                  record-shifted-requires-at-name_0
+                                                  (module-instance-shifted-requires
+                                                   mi137_0))
+                                                 (void)))))))
+                                     (void))
+                                   (let ((run-all-levels?_0
+                                          (module-cross-phase-persistent?
+                                           m_1)))
+                                     (begin
+                                       (if (not instance-phase_0)
+                                         (void)
+                                         (begin
+                                           (let ((start_0
+                                                  (module-max-phase-level
+                                                   m_1)))
+                                             (let ((end_0
+                                                    (sub1
+                                                     (module-min-phase-level
+                                                      m_1))))
+                                               (let ((start_1 start_0))
+                                                 (letrec*
+                                                  ((for-loop_0
+                                                    (|#%name|
+                                                     for-loop
+                                                     (lambda (pos_0)
+                                                       (if (> pos_0 end_0)
+                                                         (begin
+                                                           (let ((phase_0
+                                                                  (phase+
+                                                                   pos_0
+                                                                   instance-phase_0)))
+                                                             (if (if (not
+                                                                      skip-run?122_0)
+                                                                   (let ((or-part_0
+                                                                          (eqv?
+                                                                           phase_0
+                                                                           run-phase121_0)))
+                                                                     (if or-part_0
+                                                                       or-part_0
+                                                                       run-all-levels?_0))
+                                                                   #f)
+                                                               (if (eq?
+                                                                    'started
+                                                                    (let ((small-ht_0
+                                                                           (module-instance-phase-level-to-state
+                                                                            mi137_0)))
+                                                                      (hash-ref
+                                                                       (unbox
+                                                                        small-ht_0)
+                                                                       pos_0
+                                                                       #f)))
+                                                                 (void)
+                                                                 (begin
+                                                                   (let ((small-ht_0
+                                                                          (module-instance-phase-level-to-state
+                                                                           mi137_0)))
+                                                                     (set-box!
+                                                                      small-ht_0
+                                                                      (hash-set
+                                                                       (unbox
+                                                                        small-ht_0)
+                                                                       pos_0
+                                                                       'started)))
+                                                                   (begin
+                                                                     (void
+                                                                      (namespace->definitions
+                                                                       m-ns_0
+                                                                       pos_0))
+                                                                     (let ((p-ns_0
+                                                                            (namespace->namespace-at-phase
+                                                                             m-ns_0
+                                                                             phase_0)))
+                                                                       (let ((insp_0
+                                                                              (module-inspector
+                                                                               m_1)))
+                                                                         (let ((data-box_0
+                                                                                (module-instance-data-box
+                                                                                 mi137_0)))
+                                                                           (let ((prep_0
+                                                                                  (module-prepare-instance
+                                                                                   m_1)))
+                                                                             (let ((go_0
+                                                                                    (module-instantiate-phase
+                                                                                     m_1)))
+                                                                               (begin
+                                                                                 (|#%app|
+                                                                                  prep_0
+                                                                                  data-box_0
+                                                                                  p-ns_0
+                                                                                  instance-phase_0
+                                                                                  mpi_0
+                                                                                  bulk-binding-registry_0
+                                                                                  insp_0)
+                                                                                 (|#%app|
+                                                                                  go_0
+                                                                                  data-box_0
+                                                                                  p-ns_0
+                                                                                  instance-phase_0
+                                                                                  pos_0
+                                                                                  mpi_0
+                                                                                  bulk-binding-registry_0
+                                                                                  insp_0))))))))))
+                                                               (if (if otherwise-available?123_0
+                                                                     (if (not
+                                                                          (negative?
+                                                                           run-phase121_0))
+                                                                       (not
+                                                                        (let ((small-ht_0
+                                                                               (module-instance-phase-level-to-state
+                                                                                mi137_0)))
+                                                                          (hash-ref
+                                                                           (unbox
+                                                                            small-ht_0)
+                                                                           pos_0
+                                                                           #f)))
+                                                                       #f)
+                                                                     #f)
+                                                                 (begin
+                                                                   (if (module-cross-phase-persistent?
+                                                                        m_1)
+                                                                     (let ((bx_0
+                                                                            (namespace-available-cross-phase-module-instances
+                                                                             ns138_0)))
+                                                                       (set-box!
+                                                                        bx_0
+                                                                        (cons
+                                                                         mi137_0
+                                                                         (unbox
+                                                                          bx_0))))
+                                                                     (let ((ht_0
+                                                                            (namespace-available-module-instances
+                                                                             ns138_0)))
+                                                                       (let ((xform_0
+                                                                              (lambda (l_0)
+                                                                                (cons
+                                                                                 mi137_0
+                                                                                 l_0))))
+                                                                         (do-hash-update
+                                                                          'hash-update!
+                                                                          #t
+                                                                          hash-set!
+                                                                          ht_0
+                                                                          phase_0
+                                                                          xform_0
+                                                                          null))))
+                                                                   (let ((small-ht_0
+                                                                          (module-instance-phase-level-to-state
+                                                                           mi137_0)))
+                                                                     (set-box!
+                                                                      small-ht_0
+                                                                      (hash-set
+                                                                       (unbox
+                                                                        small-ht_0)
+                                                                       pos_0
+                                                                       'available))))
+                                                                 (void))))
+                                                           (for-loop_0
+                                                            (+ pos_0 -1)))
+                                                         (values))))))
+                                                  (for-loop_0 start_1)))))
+                                           (void)))
+                                       (if otherwise-available?123_0
+                                         (set-module-instance-made-available?!
+                                          mi137_0
+                                          #t)
+                                         (void))
+                                       (if (not instance-phase_0)
+                                         (|#%app|
+                                          (module-force-bulk-binding m_1)
+                                          (namespace-bulk-binding-registry
+                                           ns138_0))
+                                         (void))
+                                       (if skip-run?122_0
+                                         (void)
+                                         (let ((small-ht_0
+                                                (module-instance-phase-level-to-state
+                                                 mi137_0)))
+                                           (set-box!
+                                            small-ht_0
+                                            (hash-set
+                                             (unbox small-ht_0)
+                                             run-phase-level_0
+                                             'started)))))))))))))))))))
          (if log-performance? (end-performance-region) (void)))))))
 (define namespace-visit-available-modules!
   (let ((namespace-visit-available-modules!_0
@@ -20072,7 +20626,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish941
+  (let ((finish952
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -20094,11 +20648,11 @@
             #f
             '(1 . 0)
             'make-struct-type
-            (finish941 'proc)
-            (finish941 'arity)
+            (finish952 'proc)
+            (finish952 'arity)
             #f
             |#%system-inspector|)))
-      (let ((effect942 (finish941 struct:set!-transformer_0)))
+      (let ((effect953 (finish952 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -20732,6 +21286,7 @@
            frame-id_0
            counter_0
            lift-key_0
+           local-state_0
            to-parsed?_0
            context_0
            phase_0
@@ -20774,6 +21329,7 @@
       defined-syms_0
       counter_0
       lift-key_0
+      local-state_0
       to-parsed?_0
       phase_0
       namespace_0
@@ -20947,56 +21503,61 @@
                                 (root-expand-context/inner-lift-key
                                  (root-expand-context/outer-inner
                                   root-ctx_0))))
-                           (let ((phase_0 (namespace-phase ns13_0)))
-                             (let ((binding-layer_0
-                                    (root-expand-context/outer-frame-id
-                                     root-ctx_0)))
-                               (let ((declared-submodule-names_0 hash2610))
-                                 (expand-context/outer1.1
-                                  (expand-context/inner2.1
-                                   self-mpi_0
-                                   module-scopes_0
-                                   top-level-bind-scope_0
-                                   all-scopes-stx_0
-                                   defined-syms_0
-                                   counter_0
-                                   lift-key_0
-                                   to-parsed?3_0
-                                   phase_0
-                                   ns13_0
-                                   #f
-                                   #f
-                                   #t
-                                   #f
-                                   #f
-                                   empty-free-id-set
-                                   declared-submodule-names_0
-                                   #f
-                                   '()
-                                   #f
-                                   #f
-                                   #f
-                                   #f
-                                   observer6_0
-                                   for-serializable?4_0
-                                   to-correlated-linklet?5_0
-                                   to-correlated-linklet?5_0
-                                   #f
-                                   skip-visit-available?7_0)
-                                  post-expansion_0
-                                  use-site-scopes_0
-                                  frame-id_0
-                                  'top-level
-                                  empty-env
-                                  null
-                                  #f
-                                  binding-layer_0
-                                  null
-                                  #f
-                                  #f
-                                  null
-                                  null
-                                  #f))))))))))))))))))
+                           (let ((local-state_0
+                                  (root-expand-context/inner-local-state
+                                   (root-expand-context/outer-inner
+                                    root-ctx_0))))
+                             (let ((phase_0 (namespace-phase ns13_0)))
+                               (let ((binding-layer_0
+                                      (root-expand-context/outer-frame-id
+                                       root-ctx_0)))
+                                 (let ((declared-submodule-names_0 hash2610))
+                                   (expand-context/outer1.1
+                                    (expand-context/inner2.1
+                                     self-mpi_0
+                                     module-scopes_0
+                                     top-level-bind-scope_0
+                                     all-scopes-stx_0
+                                     defined-syms_0
+                                     counter_0
+                                     lift-key_0
+                                     local-state_0
+                                     to-parsed?3_0
+                                     phase_0
+                                     ns13_0
+                                     #f
+                                     #f
+                                     #t
+                                     #f
+                                     #f
+                                     empty-free-id-set
+                                     declared-submodule-names_0
+                                     #f
+                                     '()
+                                     #f
+                                     #f
+                                     #f
+                                     #f
+                                     observer6_0
+                                     for-serializable?4_0
+                                     to-correlated-linklet?5_0
+                                     to-correlated-linklet?5_0
+                                     #f
+                                     skip-visit-available?7_0)
+                                    post-expansion_0
+                                    use-site-scopes_0
+                                    frame-id_0
+                                    'top-level
+                                    empty-env
+                                    null
+                                    #f
+                                    binding-layer_0
+                                    null
+                                    #f
+                                    #f
+                                    null
+                                    null
+                                    #f)))))))))))))))))))
 (define copy-root-expand-context
   (lambda (ctx_0 root-ctx_0)
     (if (expand-context/outer? ctx_0)
@@ -21039,58 +21600,63 @@
                                             (root-expand-context/inner-lift-key
                                              (root-expand-context/outer-inner
                                               root-ctx_0))))
-                                       (expand-context/inner2.1
-                                        self-mpi30_0
-                                        module-scopes31_0
-                                        top-level-bind-scope32_0
-                                        all-scopes-stx33_0
-                                        defined-syms34_0
-                                        counter35_0
-                                        lift-key36_0
-                                        (expand-context/inner-to-parsed?
-                                         the-struct_0)
-                                        (expand-context/inner-phase
-                                         the-struct_0)
-                                        (expand-context/inner-namespace
-                                         the-struct_0)
-                                        (expand-context/inner-just-once?
-                                         the-struct_0)
-                                        (expand-context/inner-module-begin-k
-                                         the-struct_0)
-                                        (expand-context/inner-allow-unbound?
-                                         the-struct_0)
-                                        (expand-context/inner-in-local-expand?
-                                         the-struct_0)
-                                        (|expand-context/inner-keep-#%expression?|
-                                         the-struct_0)
-                                        (expand-context/inner-stops
-                                         the-struct_0)
-                                        (expand-context/inner-declared-submodule-names
-                                         the-struct_0)
-                                        (expand-context/inner-lifts
-                                         the-struct_0)
-                                        (expand-context/inner-lift-envs
-                                         the-struct_0)
-                                        (expand-context/inner-module-lifts
-                                         the-struct_0)
-                                        (expand-context/inner-require-lifts
-                                         the-struct_0)
-                                        (expand-context/inner-to-module-lifts
-                                         the-struct_0)
-                                        (expand-context/inner-requires+provides
-                                         the-struct_0)
-                                        (expand-context/inner-observer
-                                         the-struct_0)
-                                        (expand-context/inner-for-serializable?
-                                         the-struct_0)
-                                        (expand-context/inner-to-correlated-linklet?
-                                         the-struct_0)
-                                        (expand-context/inner-normalize-locals?
-                                         the-struct_0)
-                                        (expand-context/inner-parsing-expanded?
-                                         the-struct_0)
-                                        (expand-context/inner-skip-visit-available?
-                                         the-struct_0)))))))))
+                                       (let ((local-state37_0
+                                              (root-expand-context/inner-local-state
+                                               (root-expand-context/outer-inner
+                                                root-ctx_0))))
+                                         (expand-context/inner2.1
+                                          self-mpi30_0
+                                          module-scopes31_0
+                                          top-level-bind-scope32_0
+                                          all-scopes-stx33_0
+                                          defined-syms34_0
+                                          counter35_0
+                                          lift-key36_0
+                                          local-state37_0
+                                          (expand-context/inner-to-parsed?
+                                           the-struct_0)
+                                          (expand-context/inner-phase
+                                           the-struct_0)
+                                          (expand-context/inner-namespace
+                                           the-struct_0)
+                                          (expand-context/inner-just-once?
+                                           the-struct_0)
+                                          (expand-context/inner-module-begin-k
+                                           the-struct_0)
+                                          (expand-context/inner-allow-unbound?
+                                           the-struct_0)
+                                          (expand-context/inner-in-local-expand?
+                                           the-struct_0)
+                                          (|expand-context/inner-keep-#%expression?|
+                                           the-struct_0)
+                                          (expand-context/inner-stops
+                                           the-struct_0)
+                                          (expand-context/inner-declared-submodule-names
+                                           the-struct_0)
+                                          (expand-context/inner-lifts
+                                           the-struct_0)
+                                          (expand-context/inner-lift-envs
+                                           the-struct_0)
+                                          (expand-context/inner-module-lifts
+                                           the-struct_0)
+                                          (expand-context/inner-require-lifts
+                                           the-struct_0)
+                                          (expand-context/inner-to-module-lifts
+                                           the-struct_0)
+                                          (expand-context/inner-requires+provides
+                                           the-struct_0)
+                                          (expand-context/inner-observer
+                                           the-struct_0)
+                                          (expand-context/inner-for-serializable?
+                                           the-struct_0)
+                                          (expand-context/inner-to-correlated-linklet?
+                                           the-struct_0)
+                                          (expand-context/inner-normalize-locals?
+                                           the-struct_0)
+                                          (expand-context/inner-parsing-expanded?
+                                           the-struct_0)
+                                          (expand-context/inner-skip-visit-available?
+                                           the-struct_0))))))))))
                          (raise-argument-error
                           'struct-copy
                           "expand-context/inner?"
@@ -21153,9 +21719,9 @@
           #f)
       ctx_0
       (if (expand-context/outer? ctx_0)
-        (let ((inner40_0 (root-expand-context/outer-inner ctx_0)))
+        (let ((inner41_0 (root-expand-context/outer-inner ctx_0)))
           (expand-context/outer1.1
-           inner40_0
+           inner41_0
            #f
            (root-expand-context/outer-use-site-scopes ctx_0)
            (root-expand-context/outer-frame-id ctx_0)
@@ -21176,9 +21742,9 @@
     (if (not (expand-context/outer-name ctx_0))
       ctx_0
       (if (expand-context/outer? ctx_0)
-        (let ((inner42_0 (root-expand-context/outer-inner ctx_0)))
+        (let ((inner43_0 (root-expand-context/outer-inner ctx_0)))
           (expand-context/outer1.1
-           inner42_0
+           inner43_0
            (root-expand-context/outer-post-expansion ctx_0)
            (root-expand-context/outer-use-site-scopes ctx_0)
            (root-expand-context/outer-frame-id ctx_0)
@@ -21200,10 +21766,10 @@
    (lambda (wrt19_0 ctx21_0)
      (if (expand-context/outer-name wrt19_0)
        (if (expand-context/outer? ctx21_0)
-         (let ((name43_0 (expand-context/outer-name wrt19_0)))
-           (let ((inner44_0 (root-expand-context/outer-inner ctx21_0)))
+         (let ((name44_0 (expand-context/outer-name wrt19_0)))
+           (let ((inner45_0 (root-expand-context/outer-inner ctx21_0)))
              (expand-context/outer1.1
-              inner44_0
+              inner45_0
               (root-expand-context/outer-post-expansion ctx21_0)
               (root-expand-context/outer-use-site-scopes ctx21_0)
               (root-expand-context/outer-frame-id ctx21_0)
@@ -21217,18 +21783,18 @@
               (expand-context/outer-need-eventually-defined ctx21_0)
               (expand-context/outer-current-introduction-scopes ctx21_0)
               (expand-context/outer-current-use-scopes ctx21_0)
-              name43_0)))
+              name44_0)))
          (raise-argument-error 'struct-copy "expand-context/outer?" ctx21_0))
        ctx21_0))))
 (define as-named-context
   (lambda (ctx_0 ids_0)
     (if (if (pair? ids_0) (null? (cdr ids_0)) #f)
       (if (expand-context/outer? ctx_0)
-        (let ((name45_0 (car ids_0)))
-          (let ((inner46_0 (root-expand-context/outer-inner ctx_0)))
-            (let ((name45_1 name45_0))
+        (let ((name46_0 (car ids_0)))
+          (let ((inner47_0 (root-expand-context/outer-inner ctx_0)))
+            (let ((name46_1 name46_0))
               (expand-context/outer1.1
-               inner46_0
+               inner47_0
                (root-expand-context/outer-post-expansion ctx_0)
                (root-expand-context/outer-use-site-scopes ctx_0)
                (root-expand-context/outer-frame-id ctx_0)
@@ -21242,13 +21808,13 @@
                (expand-context/outer-need-eventually-defined ctx_0)
                (expand-context/outer-current-introduction-scopes ctx_0)
                (expand-context/outer-current-use-scopes ctx_0)
-               name45_1))))
+               name46_1))))
         (raise-argument-error 'struct-copy "expand-context/outer?" ctx_0))
       ctx_0)))
 (define as-to-parsed-context
   (lambda (ctx_0)
     (if (expand-context/outer? ctx_0)
-      (let ((inner47_0
+      (let ((inner48_0
              (let ((the-struct_0 (root-expand-context/outer-inner ctx_0)))
                (if (expand-context/inner? the-struct_0)
                  (expand-context/inner2.1
@@ -21259,6 +21825,7 @@
                   (root-expand-context/inner-defined-syms the-struct_0)
                   (root-expand-context/inner-counter the-struct_0)
                   (root-expand-context/inner-lift-key the-struct_0)
+                  (root-expand-context/inner-local-state the-struct_0)
                   #t
                   (expand-context/inner-phase the-struct_0)
                   (expand-context/inner-namespace the-struct_0)
@@ -21286,7 +21853,7 @@
                   "expand-context/inner?"
                   the-struct_0)))))
         (expand-context/outer1.1
-         inner47_0
+         inner48_0
          (root-expand-context/outer-post-expansion ctx_0)
          (root-expand-context/outer-use-site-scopes ctx_0)
          (root-expand-context/outer-frame-id ctx_0)
@@ -27453,7 +28020,7 @@
     (let ((tmp_0 (unsafe-vector*-ref vec_0 pos_0)))
       (let ((index_0
              (if (keyword? tmp_0)
-               (hash-ref hash2424 tmp_0 (lambda () 0))
+               (hash-ref hash2134 tmp_0 (lambda () 0))
                0)))
         (if (unsafe-fx< index_0 16)
           (if (unsafe-fx< index_0 7)
@@ -28089,6 +28656,29 @@
                         inspector_0
                         bulk-binding-registry_0
                         shared_0))
+                     (lambda (name_0 next-pos_0)
+                       (call-with-values
+                        (lambda ()
+                          (decode
+                           vec_0
+                           next-pos_0
+                           mpis_0
+                           inspector_0
+                           bulk-binding-registry_0
+                           shared_0))
+                        (lambda (scopes_0 next-pos_1)
+                          (values
+                           (deserialize-phaseless-multi-scope name_0 scopes_0)
+                           next-pos_1)))))
+                    (call-with-values
+                     (lambda ()
+                       (decode
+                        vec_0
+                        (add1 pos_0)
+                        mpis_0
+                        inspector_0
+                        bulk-binding-registry_0
+                        shared_0))
                      (lambda (phase_0 next-pos_0)
                        (call-with-values
                         (lambda ()
@@ -28102,32 +28692,6 @@
                         (lambda (multi-scope_0 next-pos_1)
                           (values
                            (intern-shifted-multi-scope phase_0 multi-scope_0)
-                           next-pos_1)))))
-                    (call-with-values
-                     (lambda ()
-                       (decode
-                        vec_0
-                        (add1 pos_0)
-                        mpis_0
-                        inspector_0
-                        bulk-binding-registry_0
-                        shared_0))
-                     (lambda (syms_0 next-pos_0)
-                       (call-with-values
-                        (lambda ()
-                          (decode
-                           vec_0
-                           next-pos_0
-                           mpis_0
-                           inspector_0
-                           bulk-binding-registry_0
-                           shared_0))
-                        (lambda (bulk-bindings_0 next-pos_1)
-                          (values
-                           (table-with-bulk-bindings1.1
-                            syms_0
-                            syms_0
-                            bulk-bindings_0)
                            next-pos_1)))))))))
             (if (unsafe-fx< index_0 28)
               (if (unsafe-fx< index_0 25)
@@ -28140,7 +28704,7 @@
                     inspector_0
                     bulk-binding-registry_0
                     shared_0))
-                 (lambda (scopes_0 next-pos_0)
+                 (lambda (syms_0 next-pos_0)
                    (call-with-values
                     (lambda ()
                       (decode
@@ -28150,9 +28714,12 @@
                        inspector_0
                        bulk-binding-registry_0
                        shared_0))
-                    (lambda (bulk_0 next-pos_1)
+                    (lambda (bulk-bindings_0 next-pos_1)
                       (values
-                       (bulk-binding-at2.1 scopes_0 bulk_0)
+                       (table-with-bulk-bindings1.1
+                        syms_0
+                        syms_0
+                        bulk-bindings_0)
                        next-pos_1)))))
                 (if (unsafe-fx< index_0 26)
                   (call-with-values
@@ -28164,7 +28731,7 @@
                       inspector_0
                       bulk-binding-registry_0
                       shared_0))
-                   (lambda (kind_0 next-pos_0)
+                   (lambda (scopes_0 next-pos_0)
                      (call-with-values
                       (lambda ()
                         (decode
@@ -28174,11 +28741,34 @@
                          inspector_0
                          bulk-binding-registry_0
                          shared_0))
-                      (lambda (phase_0 next-pos_1)
+                      (lambda (bulk_0 next-pos_1)
                         (values
-                         (deserialize-representative-scope kind_0 phase_0)
+                         (bulk-binding-at2.1 scopes_0 bulk_0)
                          next-pos_1)))))
                   (if (unsafe-fx< index_0 27)
+                    (call-with-values
+                     (lambda ()
+                       (decode
+                        vec_0
+                        (add1 pos_0)
+                        mpis_0
+                        inspector_0
+                        bulk-binding-registry_0
+                        shared_0))
+                     (lambda (kind_0 next-pos_0)
+                       (call-with-values
+                        (lambda ()
+                          (decode
+                           vec_0
+                           next-pos_0
+                           mpis_0
+                           inspector_0
+                           bulk-binding-registry_0
+                           shared_0))
+                        (lambda (phase_0 next-pos_1)
+                          (values
+                           (deserialize-representative-scope kind_0 phase_0)
+                           next-pos_1)))))
                     (call-with-values
                      (lambda ()
                        (decode
@@ -28294,56 +28884,56 @@
                                                     free=id_0
                                                     extra-inspector_0
                                                     extra-nominal-bindings_0)
-                                                   next-pos_9)))))))))))))))))))))
-                    (call-with-values
-                     (lambda ()
-                       (decode
-                        vec_0
-                        (add1 pos_0)
-                        mpis_0
-                        inspector_0
-                        bulk-binding-registry_0
-                        shared_0))
-                     (lambda (module_0 next-pos_0)
-                       (call-with-values
-                        (lambda ()
-                          (decode
-                           vec_0
-                           next-pos_0
-                           mpis_0
-                           inspector_0
-                           bulk-binding-registry_0
-                           shared_0))
-                        (lambda (sym_0 next-pos_1)
-                          (call-with-values
-                           (lambda ()
-                             (decode
-                              vec_0
-                              next-pos_1
-                              mpis_0
-                              inspector_0
-                              bulk-binding-registry_0
-                              shared_0))
-                           (lambda (phase_0 next-pos_2)
-                             (call-with-values
-                              (lambda ()
-                                (decode
-                                 vec_0
-                                 next-pos_2
-                                 mpis_0
-                                 inspector_0
-                                 bulk-binding-registry_0
-                                 shared_0))
-                              (lambda (nominal-module_0 next-pos_3)
-                                (values
-                                 (simple-module-binding46.1
-                                  module_0
-                                  phase_0
-                                  sym_0
-                                  nominal-module_0)
-                                 next-pos_3))))))))))))
+                                                   next-pos_9))))))))))))))))))))))))
               (if (unsafe-fx< index_0 30)
                 (if (unsafe-fx< index_0 29)
+                  (call-with-values
+                   (lambda ()
+                     (decode
+                      vec_0
+                      (add1 pos_0)
+                      mpis_0
+                      inspector_0
+                      bulk-binding-registry_0
+                      shared_0))
+                   (lambda (module_0 next-pos_0)
+                     (call-with-values
+                      (lambda ()
+                        (decode
+                         vec_0
+                         next-pos_0
+                         mpis_0
+                         inspector_0
+                         bulk-binding-registry_0
+                         shared_0))
+                      (lambda (sym_0 next-pos_1)
+                        (call-with-values
+                         (lambda ()
+                           (decode
+                            vec_0
+                            next-pos_1
+                            mpis_0
+                            inspector_0
+                            bulk-binding-registry_0
+                            shared_0))
+                         (lambda (phase_0 next-pos_2)
+                           (call-with-values
+                            (lambda ()
+                              (decode
+                               vec_0
+                               next-pos_2
+                               mpis_0
+                               inspector_0
+                               bulk-binding-registry_0
+                               shared_0))
+                            (lambda (nominal-module_0 next-pos_3)
+                              (values
+                               (simple-module-binding46.1
+                                module_0
+                                phase_0
+                                sym_0
+                                nominal-module_0)
+                               next-pos_3)))))))))
                   (call-with-values
                    (lambda ()
                      (decode
@@ -28366,7 +28956,8 @@
                       (lambda (free=id_0 next-pos_1)
                         (values
                          (full-local-binding1.1 #f free=id_0 key_0)
-                         next-pos_1)))))
+                         next-pos_1))))))
+                (if (unsafe-fx< index_0 31)
                   (call-with-values
                    (lambda ()
                      (decode
@@ -28438,137 +29029,138 @@
                                        provide-phase-level_0)
                                       phase-shift_0
                                       bulk-binding-registry_1)
-                                     next-pos_5))))))))))))))
-                (if (unsafe-fx< index_0 31)
-                  (let ((app_0 (like-ambiguous-binding1.1)))
-                    (values app_0 (add1 pos_0)))
+                                     next-pos_5)))))))))))))
                   (if (unsafe-fx< index_0 32)
-                    (call-with-values
-                     (lambda ()
-                       (decode
-                        vec_0
-                        (add1 pos_0)
-                        mpis_0
-                        inspector_0
-                        bulk-binding-registry_0
-                        shared_0))
-                     (lambda (provides_0 next-pos_0)
-                       (call-with-values
-                        (lambda ()
-                          (decode
-                           vec_0
-                           next-pos_0
-                           mpis_0
-                           inspector_0
-                           bulk-binding-registry_0
-                           shared_0))
-                        (lambda (self_0 next-pos_1)
-                          (call-with-values
-                           (lambda ()
-                             (decode
-                              vec_0
-                              next-pos_1
-                              mpis_0
-                              inspector_0
-                              bulk-binding-registry_0
-                              shared_0))
-                           (lambda (prefix_0 next-pos_2)
-                             (call-with-values
-                              (lambda ()
-                                (decode
-                                 vec_0
-                                 next-pos_2
-                                 mpis_0
-                                 inspector_0
-                                 bulk-binding-registry_0
-                                 shared_0))
-                              (lambda (excepts_0 next-pos_3)
-                                (call-with-values
-                                 (lambda ()
-                                   (decode
-                                    vec_0
-                                    next-pos_3
-                                    mpis_0
-                                    inspector_0
-                                    bulk-binding-registry_0
-                                    shared_0))
-                                 (lambda (mpi_0 next-pos_4)
-                                   (call-with-values
-                                    (lambda ()
-                                      (decode
-                                       vec_0
-                                       next-pos_4
-                                       mpis_0
-                                       inspector_0
-                                       bulk-binding-registry_0
-                                       shared_0))
-                                    (lambda (provide-phase-level_0 next-pos_5)
-                                      (call-with-values
-                                       (lambda ()
-                                         (decode
-                                          vec_0
-                                          next-pos_5
-                                          mpis_0
-                                          inspector_0
-                                          bulk-binding-registry_0
-                                          shared_0))
-                                       (lambda (phase-shift_0 next-pos_6)
-                                         (call-with-values
-                                          (lambda ()
-                                            (decode
-                                             vec_0
-                                             next-pos_6
-                                             mpis_0
-                                             inspector_0
-                                             bulk-binding-registry_0
-                                             shared_0))
-                                          (lambda (bulk-binding-registry_1
-                                                   next-pos_7)
-                                            (values
-                                             (bulk-binding12.1
-                                              provides_0
-                                              prefix_0
-                                              excepts_0
-                                              self_0
-                                              mpi_0
-                                              (intern-phase+space
-                                               provide-phase-level_0)
-                                              phase-shift_0
-                                              bulk-binding-registry_1)
-                                             next-pos_7)))))))))))))))))
-                    (call-with-values
-                     (lambda ()
-                       (decode
-                        vec_0
-                        (add1 pos_0)
-                        mpis_0
-                        inspector_0
-                        bulk-binding-registry_0
-                        shared_0))
-                     (lambda (binding_0 next-pos_0)
-                       (call-with-values
-                        (lambda ()
-                          (decode
-                           vec_0
-                           next-pos_0
-                           mpis_0
-                           inspector_0
-                           bulk-binding-registry_0
-                           shared_0))
-                        (lambda (protected?_0 next-pos_1)
-                          (call-with-values
-                           (lambda ()
-                             (decode
-                              vec_0
-                              next-pos_1
-                              mpis_0
-                              inspector_0
-                              bulk-binding-registry_0
-                              shared_0))
-                           (lambda (syntax?_0 next-pos_2)
-                             (values
-                              (provided1.1 binding_0 protected?_0 syntax?_0)
-                              next-pos_2)))))))))))))))))
+                    (let ((app_0 (like-ambiguous-binding1.1)))
+                      (values app_0 (add1 pos_0)))
+                    (if (unsafe-fx< index_0 33)
+                      (call-with-values
+                       (lambda ()
+                         (decode
+                          vec_0
+                          (add1 pos_0)
+                          mpis_0
+                          inspector_0
+                          bulk-binding-registry_0
+                          shared_0))
+                       (lambda (provides_0 next-pos_0)
+                         (call-with-values
+                          (lambda ()
+                            (decode
+                             vec_0
+                             next-pos_0
+                             mpis_0
+                             inspector_0
+                             bulk-binding-registry_0
+                             shared_0))
+                          (lambda (self_0 next-pos_1)
+                            (call-with-values
+                             (lambda ()
+                               (decode
+                                vec_0
+                                next-pos_1
+                                mpis_0
+                                inspector_0
+                                bulk-binding-registry_0
+                                shared_0))
+                             (lambda (prefix_0 next-pos_2)
+                               (call-with-values
+                                (lambda ()
+                                  (decode
+                                   vec_0
+                                   next-pos_2
+                                   mpis_0
+                                   inspector_0
+                                   bulk-binding-registry_0
+                                   shared_0))
+                                (lambda (excepts_0 next-pos_3)
+                                  (call-with-values
+                                   (lambda ()
+                                     (decode
+                                      vec_0
+                                      next-pos_3
+                                      mpis_0
+                                      inspector_0
+                                      bulk-binding-registry_0
+                                      shared_0))
+                                   (lambda (mpi_0 next-pos_4)
+                                     (call-with-values
+                                      (lambda ()
+                                        (decode
+                                         vec_0
+                                         next-pos_4
+                                         mpis_0
+                                         inspector_0
+                                         bulk-binding-registry_0
+                                         shared_0))
+                                      (lambda (provide-phase-level_0
+                                               next-pos_5)
+                                        (call-with-values
+                                         (lambda ()
+                                           (decode
+                                            vec_0
+                                            next-pos_5
+                                            mpis_0
+                                            inspector_0
+                                            bulk-binding-registry_0
+                                            shared_0))
+                                         (lambda (phase-shift_0 next-pos_6)
+                                           (call-with-values
+                                            (lambda ()
+                                              (decode
+                                               vec_0
+                                               next-pos_6
+                                               mpis_0
+                                               inspector_0
+                                               bulk-binding-registry_0
+                                               shared_0))
+                                            (lambda (bulk-binding-registry_1
+                                                     next-pos_7)
+                                              (values
+                                               (bulk-binding12.1
+                                                provides_0
+                                                prefix_0
+                                                excepts_0
+                                                self_0
+                                                mpi_0
+                                                (intern-phase+space
+                                                 provide-phase-level_0)
+                                                phase-shift_0
+                                                bulk-binding-registry_1)
+                                               next-pos_7)))))))))))))))))
+                      (call-with-values
+                       (lambda ()
+                         (decode
+                          vec_0
+                          (add1 pos_0)
+                          mpis_0
+                          inspector_0
+                          bulk-binding-registry_0
+                          shared_0))
+                       (lambda (binding_0 next-pos_0)
+                         (call-with-values
+                          (lambda ()
+                            (decode
+                             vec_0
+                             next-pos_0
+                             mpis_0
+                             inspector_0
+                             bulk-binding-registry_0
+                             shared_0))
+                          (lambda (protected?_0 next-pos_1)
+                            (call-with-values
+                             (lambda ()
+                               (decode
+                                vec_0
+                                next-pos_1
+                                mpis_0
+                                inspector_0
+                                bulk-binding-registry_0
+                                shared_0))
+                             (lambda (syntax?_0 next-pos_2)
+                               (values
+                                (provided1.1 binding_0 protected?_0 syntax?_0)
+                                next-pos_2))))))))))))))))))
 (define decode-fill!
   (lambda (v_0 vec_0 pos_0 mpis_0 inspector_0 bulk-binding-registry_0 shared_0)
     (let ((tmp_0 (unsafe-vector*-ref vec_0 pos_0)))
@@ -30139,33 +30731,68 @@
    syntax-mapped-names
    (lambda (exactly?2_0 only-interned?1_0 s5_0 phase6_0)
      (let ((s-scs_0 (syntax-scope-set s5_0 phase6_0)))
-       (let ((syms_0 (let ((syms_0 (seteq))) syms_0)))
-         (let ((lst_0 (scope-set-elems s-scs_0)))
-           (letrec*
-            ((for-loop_0
-              (|#%name|
-               for-loop
-               (lambda (syms_1 lst_1)
-                 (if (pair? lst_1)
-                   (let ((sc_0 (unsafe-car lst_1)))
-                     (let ((rest_0 (unsafe-cdr lst_1)))
-                       (let ((syms_2
-                              (let ((syms_2
-                                     (set-union
-                                      syms_1
-                                      (let ((temp13_0
-                                             (scope-binding-table sc_0)))
-                                        (binding-table-symbols.1
-                                         exactly?2_0
-                                         only-interned?1_0
-                                         temp13_0
-                                         s-scs_0
-                                         s5_0
-                                         null)))))
-                                (values syms_2))))
-                         (for-loop_0 syms_2 rest_0))))
-                   syms_1)))))
-            (for-loop_0 syms_0 lst_0))))))))
+       (call-with-values
+        (lambda () (phaseless-info s5_0))
+        (lambda (pl-reps_0 normalize_0)
+          (let ((add_0
+                 (|#%name|
+                  add
+                  (lambda (syms_0 sc_0)
+                    (set-union
+                     syms_0
+                     (let ((temp13_0 (scope-binding-table sc_0)))
+                       (binding-table-symbols.1
+                        exactly?2_0
+                        normalize_0
+                        only-interned?1_0
+                        temp13_0
+                        s-scs_0
+                        s5_0
+                        null)))))))
+            (let ((syms_0
+                   (let ((syms_0
+                          (let ((syms_0 (let ((syms_0 (seteq))) syms_0)))
+                            (let ((lst_0 (scope-set-elems s-scs_0)))
+                              (letrec*
+                               ((for-loop_0
+                                 (|#%name|
+                                  for-loop
+                                  (lambda (syms_1 lst_1)
+                                    (if (pair? lst_1)
+                                      (let ((sc_0 (unsafe-car lst_1)))
+                                        (let ((rest_0 (unsafe-cdr lst_1)))
+                                          (let ((syms_2
+                                                 (let ((syms_2
+                                                        (add_0 syms_1 sc_0)))
+                                                   (values syms_2))))
+                                            (for-loop_0 syms_2 rest_0))))
+                                      syms_1)))))
+                               (for-loop_0 syms_0 lst_0))))))
+                     syms_0)))
+              (letrec*
+               ((for-loop_0
+                 (|#%name|
+                  for-loop
+                  (lambda (syms_1 lst_0)
+                    (if (pair? lst_0)
+                      (let ((sc_0 (unsafe-car lst_0)))
+                        (let ((rest_0 (unsafe-cdr lst_0)))
+                          (let ((syms_2
+                                 (let ((syms_2 (add_0 syms_1 sc_0)))
+                                   (values syms_2))))
+                            (for-loop_0 syms_2 rest_0))))
+                      syms_1)))))
+               (for-loop_0 syms_0 pl-reps_0))))))))))
+(define phaseless-info
+  (lambda (s_0)
+    (let ((pl-reps_0
+           (phaseless-representatives
+            (fallback-first (syntax-shifted-multi-scopes s_0)))))
+      (values
+       pl-reps_0
+       (if (null? pl-reps_0)
+         values
+         (lambda (scs_0) (phaseless-normalize-scopes scs_0 pl-reps_0)))))))
 (define syntax-mapped-phases
   (lambda (s_0)
     (let ((smss_0 (fallback-first (syntax-shifted-multi-scopes s_0))))
@@ -30195,35 +30822,60 @@
    (lambda (exactly?8_0 s10_0 phase11_0)
      (let ((s-scs_0 (syntax-scope-set s10_0 phase11_0)))
        (let ((sym_0 (syntax-e$1 s10_0)))
-         (let ((syms_0 (let ((syms_0 (seteq))) syms_0)))
-           (let ((lst_0 (scope-set-elems s-scs_0)))
-             (letrec*
-              ((for-loop_0
-                (|#%name|
-                 for-loop
-                 (lambda (syms_1 lst_1)
-                   (if (pair? lst_1)
-                     (let ((sc_0 (unsafe-car lst_1)))
-                       (let ((rest_0 (unsafe-cdr lst_1)))
-                         (let ((syms_2
-                                (let ((syms_2
-                                       (set-union
-                                        syms_1
-                                        (let ((temp19_0
-                                               (scope-binding-table sc_0)))
-                                          (binding-table-interned-scope-keys.1
-                                           exactly?8_0
-                                           temp19_0
-                                           s-scs_0
-                                           sym_0
-                                           s10_0
-                                           null
-                                           interned-scope?
-                                           interned-scope-key)))))
-                                  (values syms_2))))
-                           (for-loop_0 syms_2 rest_0))))
-                     syms_1)))))
-              (for-loop_0 syms_0 lst_0)))))))))
+         (call-with-values
+          (lambda () (phaseless-info s10_0))
+          (lambda (pl-reps_0 normalize_0)
+            (let ((add_0
+                   (|#%name|
+                    add
+                    (lambda (syms_0 sc_0)
+                      (set-union
+                       syms_0
+                       (let ((temp20_0 (scope-binding-table sc_0)))
+                         (binding-table-interned-scope-keys.1
+                          exactly?8_0
+                          normalize_0
+                          temp20_0
+                          s-scs_0
+                          sym_0
+                          s10_0
+                          null
+                          interned-scope?
+                          interned-scope-key)))))))
+              (let ((syms_0
+                     (let ((syms_0
+                            (let ((syms_0 (let ((syms_0 (seteq))) syms_0)))
+                              (let ((lst_0 (scope-set-elems s-scs_0)))
+                                (letrec*
+                                 ((for-loop_0
+                                   (|#%name|
+                                    for-loop
+                                    (lambda (syms_1 lst_1)
+                                      (if (pair? lst_1)
+                                        (let ((sc_0 (unsafe-car lst_1)))
+                                          (let ((rest_0 (unsafe-cdr lst_1)))
+                                            (let ((syms_2
+                                                   (let ((syms_2
+                                                          (add_0 syms_1 sc_0)))
+                                                     (values syms_2))))
+                                              (for-loop_0 syms_2 rest_0))))
+                                        syms_1)))))
+                                 (for-loop_0 syms_0 lst_0))))))
+                       syms_0)))
+                (letrec*
+                 ((for-loop_0
+                   (|#%name|
+                    for-loop
+                    (lambda (syms_1 lst_0)
+                      (if (pair? lst_0)
+                        (let ((sc_0 (unsafe-car lst_0)))
+                          (let ((rest_0 (unsafe-cdr lst_0)))
+                            (let ((syms_2
+                                   (let ((syms_2 (add_0 syms_1 sc_0)))
+                                     (values syms_2))))
+                              (for-loop_0 syms_2 rest_0))))
+                        syms_1)))))
+                 (for-loop_0 syms_0 pl-reps_0)))))))))))
 (define finish_3291
   (make-struct-type-install-properties
    '(requires+provides)
@@ -30782,6 +31434,167 @@
     (if (bulk-required? r_0)
       (bulk-required->required r_0 mod-name_0 phase+space-shift_0 sym_0)
       r_0)))
+(define requires+provides-for-each-required-id
+  (lambda (r+p_0 proc_0)
+    (begin
+      (let ((ht_0 (requires+provides-requires r+p_0)))
+        (letrec*
+         ((for-loop_0
+           (|#%name|
+            for-loop
+            (lambda (i_0)
+              (if i_0
+                (call-with-values
+                 (lambda () (hash-iterate-key+value ht_0 i_0))
+                 (lambda (mod-name_0 at-mod_0)
+                   (call-with-values
+                    (lambda ()
+                      (letrec*
+                       ((for-loop_1
+                         (|#%name|
+                          for-loop
+                          (lambda (i_1)
+                            (if i_1
+                              (call-with-values
+                               (lambda ()
+                                 (hash-iterate-key+value at-mod_0 i_1))
+                               (lambda (phase+space-shift_0 at-phase_0)
+                                 (call-with-values
+                                  (lambda ()
+                                    (letrec*
+                                     ((for-loop_2
+                                       (|#%name|
+                                        for-loop
+                                        (lambda (i_2)
+                                          (if i_2
+                                            (call-with-values
+                                             (lambda ()
+                                               (hash-iterate-key+value
+                                                at-phase_0
+                                                i_2))
+                                             (lambda (sym_0 reqds_0)
+                                               (call-with-values
+                                                (lambda ()
+                                                  (letrec*
+                                                   ((for-loop_3
+                                                     (|#%name|
+                                                      for-loop
+                                                      (lambda (lst_0)
+                                                        (if (not (null? lst_0))
+                                                          (let ((reqd/maybe-bulk_0
+                                                                 (if (pair?
+                                                                      lst_0)
+                                                                   (car lst_0)
+                                                                   lst_0)))
+                                                            (let ((rest_0
+                                                                   (if (pair?
+                                                                        lst_0)
+                                                                     (cdr
+                                                                      lst_0)
+                                                                     null)))
+                                                              (let ((reqd/maybe-bulk_1
+                                                                     reqd/maybe-bulk_0))
+                                                                (begin
+                                                                  (let ((get-reqd_0
+                                                                         (|#%name|
+                                                                          get-reqd
+                                                                          (lambda ()
+                                                                            (if (bulk-required?
+                                                                                 reqd/maybe-bulk_1)
+                                                                              (bulk-required->required
+                                                                               reqd/maybe-bulk_1
+                                                                               mod-name_0
+                                                                               phase+space-shift_0
+                                                                               sym_0)
+                                                                              reqd/maybe-bulk_1)))))
+                                                                    (if (bulk-required?
+                                                                         reqd/maybe-bulk_1)
+                                                                      (let ((app_0
+                                                                             (phase+space-phase
+                                                                              (let ((p+s_0
+                                                                                     (bulk-required-provide-phase+space
+                                                                                      reqd/maybe-bulk_1)))
+                                                                                (intern-phase+space
+                                                                                 (phase+space+$1
+                                                                                  p+s_0
+                                                                                  phase+space-shift_0))))))
+                                                                        (|#%app|
+                                                                         proc_0
+                                                                         sym_0
+                                                                         app_0
+                                                                         (cons
+                                                                          (bulk-required-provides
+                                                                           reqd/maybe-bulk_1)
+                                                                          (bulk-required-prefix-len
+                                                                           reqd/maybe-bulk_1))
+                                                                         (lambda ()
+                                                                           (required-id
+                                                                            (get-reqd_0)))))
+                                                                      (|#%app|
+                                                                       proc_0
+                                                                       sym_0
+                                                                       (phase+space-phase
+                                                                        (required-phase+space
+                                                                         reqd/maybe-bulk_1))
+                                                                       #f
+                                                                       (lambda ()
+                                                                         (required-id
+                                                                          reqd/maybe-bulk_1)))))
+                                                                  (for-loop_3
+                                                                   rest_0)))))
+                                                          (values))))))
+                                                   (for-loop_3 reqds_0)))
+                                                (lambda ()
+                                                  (for-loop_2
+                                                   (hash-iterate-next
+                                                    at-phase_0
+                                                    i_2))))))
+                                            (values))))))
+                                     (for-loop_2
+                                      (hash-iterate-first at-phase_0))))
+                                  (lambda ()
+                                    (for-loop_1
+                                     (hash-iterate-next at-mod_0 i_1))))))
+                              (values))))))
+                       (for-loop_1 (hash-iterate-first at-mod_0))))
+                    (lambda () (for-loop_0 (hash-iterate-next ht_0 i_0))))))
+                (values))))))
+         (for-loop_0 (hash-iterate-first ht_0))))
+      (void))))
+(define requires+provides-for-each-defined-sym
+  (lambda (r+p_0 proc_0)
+    (begin
+      (let ((ht_0 (requires+provides-phase-to-defined-syms r+p_0)))
+        (letrec*
+         ((for-loop_0
+           (|#%name|
+            for-loop
+            (lambda (i_0)
+              (if i_0
+                (call-with-values
+                 (lambda () (hash-iterate-key+value ht_0 i_0))
+                 (lambda (phase_0 syms_0)
+                   (call-with-values
+                    (lambda ()
+                      (letrec*
+                       ((for-loop_1
+                         (|#%name|
+                          for-loop
+                          (lambda (i_1)
+                            (if i_1
+                              (call-with-values
+                               (lambda () (hash-iterate-key+value syms_0 i_1))
+                               (lambda (sym_0 kind_0)
+                                 (begin
+                                   (|#%app| proc_0 sym_0 phase_0 kind_0)
+                                   (for-loop_1
+                                    (hash-iterate-next syms_0 i_1)))))
+                              (values))))))
+                       (for-loop_1 (hash-iterate-first syms_0))))
+                    (lambda () (for-loop_0 (hash-iterate-next ht_0 i_0))))))
+                (values))))))
+         (for-loop_0 (hash-iterate-first ht_0))))
+      (void))))
 (define add-enclosing-module-defined-and-required!.1
   (|#%name|
    add-enclosing-module-defined-and-required!
@@ -45816,7 +46629,8 @@
                         all-scopes-stx18_0
                         (root-expand-context/inner-defined-syms the-struct_0)
                         (root-expand-context/inner-counter the-struct_0)
-                        (root-expand-context/inner-lift-key the-struct_0)))
+                        (root-expand-context/inner-lift-key the-struct_0)
+                        (root-expand-context/inner-local-state the-struct_0)))
                      (raise-argument-error
                       'struct-copy
                       "root-expand-context/inner?"
@@ -48039,9 +48853,13 @@
                                                                                              (let ((tmp_0
                                                                                                     (syntax-e$1
                                                                                                      kw_0)))
-                                                                                               (if (eq?
-                                                                                                    tmp_0
-                                                                                                    kw2208)
+                                                                                               (if (if (eq?
+                                                                                                        tmp_0
+                                                                                                        kw2208)
+                                                                                                     #t
+                                                                                                     (eq?
+                                                                                                      tmp_0
+                                                                                                      kw2747))
                                                                                                  (set! cross-phase-persistent?_0
                                                                                                    #t)
                                                                                                  (if (eq?
@@ -52880,6 +53698,8 @@
                                                   (root-expand-context/inner-counter
                                                    the-struct_0)
                                                   lift-key_0
+                                                  (root-expand-context/inner-local-state
+                                                   the-struct_0)
                                                   (expand-context/inner-to-parsed?
                                                    the-struct_0)
                                                   (expand-context/inner-phase
@@ -53095,6 +53915,8 @@
                                 the-struct_0)
                                (root-expand-context/inner-counter the-struct_0)
                                (root-expand-context/inner-lift-key
+                                the-struct_0)
+                               (root-expand-context/inner-local-state
                                 the-struct_0)
                                (expand-context/inner-to-parsed? the-struct_0)
                                phase_0
@@ -53916,25 +54738,25 @@
                       (let ((...finition-context.rkt:86:2_0
                              (|#%name|
                               ...finition-context.rkt:86:2
-                              (lambda (s44_0 mode43_0)
+                              (lambda (s47_0 mode46_0)
                                 (begin
-                                  (if (syntax?$1 s44_0)
+                                  (if (syntax?$1 s47_0)
                                     (void)
                                     (raise-argument-error
                                      'definition-context-introducer
                                      "syntax?"
-                                     s44_0))
+                                     s47_0))
                                   (let ((new-s_0
-                                         (if (eq? mode43_0 'add)
-                                           (add-scope s44_0 scope_0)
-                                           (if (eq? mode43_0 'remove)
-                                             (remove-scope s44_0 scope_0)
-                                             (if (eq? mode43_0 'flip)
-                                               (flip-scope s44_0 scope_0)
+                                         (if (eq? mode46_0 'add)
+                                           (add-scope s47_0 scope_0)
+                                           (if (eq? mode46_0 'remove)
+                                             (remove-scope s47_0 scope_0)
+                                             (if (eq? mode46_0 'flip)
+                                               (flip-scope s47_0 scope_0)
                                                (raise-argument-error
                                                 'definition-context-introducer
                                                 "(or/c 'add 'remove 'flip)"
-                                                mode43_0))))))
+                                                mode46_0))))))
                                     (let ((ctx_1
                                            (get-current-expand-context.1
                                             #t
@@ -53951,7 +54773,7 @@
                                                'track-syntax
                                                'definition-context-introducer
                                                new-s_0
-                                               s44_0)
+                                               s47_0)
                                               (void)))
                                           (void))
                                         new-s_0))))))))
@@ -53959,10 +54781,10 @@
                          ...finition-context.rkt:86:2
                          (case-lambda
                           ((s_0) (...finition-context.rkt:86:2_0 s_0 'flip))
-                          ((s_0 mode43_0)
+                          ((s_0 mode46_0)
                            (...finition-context.rkt:86:2_0
                             s_0
-                            mode43_0))))))))))))))
+                            mode46_0))))))))))))))
     (|#%name|
      syntax-local-make-definition-context-introducer
      (case-lambda
@@ -54042,7 +54864,7 @@
                                                                         (expand-context/outer-current-introduction-scopes
                                                                          ctx_0))
                                                                        intdef9_0)))
-                                                                 (let ((temp47_0
+                                                                 (let ((temp50_0
                                                                         (add-intdef-scopes.1
                                                                          unsafe-undefined
                                                                          #t
@@ -54051,7 +54873,7 @@
                                                                    (add-intdef-scopes.1
                                                                     unsafe-undefined
                                                                     #f
-                                                                    temp47_0
+                                                                    temp50_0
                                                                     extra-intdefs6_0)))
                                                                fold-var_0)))
                                                          (values fold-var_1))))
@@ -54097,11 +54919,11 @@
                                                         (let ((fold-var_1
                                                                (let ((fold-var_1
                                                                       (cons
-                                                                       (let ((temp55_0
+                                                                       (let ((temp58_0
                                                                               (internal-definition-context-frame-id
                                                                                intdef9_0)))
                                                                          (add-local-binding!.1
-                                                                          temp55_0
+                                                                          temp58_0
                                                                           #f
                                                                           local-sym_0
                                                                           intdef-id_0
@@ -54167,14 +54989,14 @@
                                                           env_0
                                                           syms_0
                                                           intdef-ids_0)))))
-                                                 (let ((temp57_0
+                                                 (let ((temp60_0
                                                         (if (expand-context/outer?
                                                              ctx_0)
-                                                          (let ((inner62_0
+                                                          (let ((inner65_0
                                                                  (root-expand-context/outer-inner
                                                                   ctx_0)))
                                                             (expand-context/outer1.1
-                                                             inner62_0
+                                                             inner65_0
                                                              (root-expand-context/outer-post-expansion
                                                               ctx_0)
                                                              (root-expand-context/outer-use-site-scopes
@@ -54215,7 +55037,7 @@
                                                     #f
                                                     #f
                                                     #f
-                                                    temp57_0)))
+                                                    temp60_0)))
                                                #f)))
                                         (let ((vals_0
                                                (if s8_0
@@ -54458,7 +55280,7 @@
                    "syntax?"
                    s12_0))
                 (let ((new-s_0
-                       (let ((temp68_0
+                       (let ((temp71_0
                               (if (eq? mode10_0 'add)
                                 add-scope
                                 (if (eq? mode10_0 'remove)
@@ -54469,7 +55291,7 @@
                                      'internal-definition-context-introduce
                                      "(or/c 'add 'remove 'flip)"
                                      mode10_0))))))
-                         (add-intdef-scopes.1 temp68_0 #t s12_0 intdef11_0))))
+                         (add-intdef-scopes.1 temp71_0 #t s12_0 intdef11_0))))
                   (let ((ctx_0 (get-current-expand-context.1 #t 'unexpected)))
                     (begin
                       (if ctx_0
@@ -54697,13 +55519,13 @@
 (define add-intdef-scopes.1
   (|#%name|
    add-intdef-scopes
-   (lambda (action14_0 always?13_0 s17_0 intdefs18_0)
+   (lambda (action17_0 always?16_0 s20_0 intdefs21_0)
      (let ((action_0
-            (if (eq? action14_0 unsafe-undefined) add-scope action14_0)))
+            (if (eq? action17_0 unsafe-undefined) add-scope action17_0)))
        (let ((x_0
-              (if (list? intdefs18_0)
-                (reverse$1 intdefs18_0)
-                (if (not intdefs18_0) null (list intdefs18_0)))))
+              (if (list? intdefs21_0)
+                (reverse$1 intdefs21_0)
+                (if (not intdefs21_0) null (list intdefs21_0)))))
          (begin
            #t
            (letrec*
@@ -54714,8 +55536,8 @@
                  (if (pair? a_0)
                    (let ((intdef_0 (car a_0)))
                      (let ((s_1
-                            (if (if always?13_0
-                                  always?13_0
+                            (if (if always?16_0
+                                  always?16_0
                                   (internal-definition-context-add-scope?
                                    intdef_0))
                               (let ((s_1
@@ -54728,85 +55550,85 @@
                               s_0)))
                        (for-loop_0 s_1 (cdr a_0))))
                    s_0)))))
-            (for-loop_0 s17_0 x_0))))))))
+            (for-loop_0 s20_0 x_0))))))))
 (define make-local-expand-context.1
   (|#%name|
    make-local-expand-context
-   (lambda (context20_0
-            in-local-expand?27_0
-            intdefs22_0
-            |keep-#%expression?26_0|
-            phase21_0
-            stop-ids23_0
-            to-parsed-ok?24_0
-            track-to-be-defined?25_0
-            ctx36_0)
+   (lambda (context23_0
+            in-local-expand?30_0
+            intdefs25_0
+            |keep-#%expression?29_0|
+            phase24_0
+            stop-ids26_0
+            to-parsed-ok?27_0
+            track-to-be-defined?28_0
+            ctx39_0)
      (let ((phase_0
-            (if (eq? phase21_0 unsafe-undefined)
+            (if (eq? phase24_0 unsafe-undefined)
               (expand-context/inner-phase
-               (root-expand-context/outer-inner ctx36_0))
-              phase21_0)))
+               (root-expand-context/outer-inner ctx39_0))
+              phase24_0)))
        (let ((same-kind?_0
               (let ((or-part_0
-                     (eq? context20_0 (expand-context/outer-context ctx36_0))))
+                     (eq? context23_0 (expand-context/outer-context ctx39_0))))
                 (if or-part_0
                   or-part_0
-                  (if (list? context20_0)
-                    (list? (expand-context/outer-context ctx36_0))
+                  (if (list? context23_0)
+                    (list? (expand-context/outer-context ctx39_0))
                     #f)))))
          (let ((all-stop-ids_0
-                (if stop-ids23_0
-                  (stop-ids->all-stop-ids stop-ids23_0 phase_0)
+                (if stop-ids26_0
+                  (stop-ids->all-stop-ids stop-ids26_0 phase_0)
                   #f)))
            (let ((def-ctx-scopes_0
-                  (if (expand-context/outer-def-ctx-scopes ctx36_0)
-                    (unbox (expand-context/outer-def-ctx-scopes ctx36_0))
+                  (if (expand-context/outer-def-ctx-scopes ctx39_0)
+                    (unbox (expand-context/outer-def-ctx-scopes ctx39_0))
                     null)))
-             (if (expand-context/outer? ctx36_0)
-               (let ((env71_0
+             (if (expand-context/outer? ctx39_0)
+               (let ((env74_0
                       (add-intdef-bindings
-                       (expand-context/outer-env ctx36_0)
-                       intdefs22_0)))
-                 (let ((use-site-scopes72_0
-                        (if (let ((or-part_0 (eq? context20_0 'module)))
+                       (expand-context/outer-env ctx39_0)
+                       intdefs25_0)))
+                 (let ((use-site-scopes75_0
+                        (if (let ((or-part_0 (eq? context23_0 'module)))
                               (if or-part_0
                                 or-part_0
                                 (let ((or-part_1
-                                       (eq? context20_0 'module-begin)))
+                                       (eq? context23_0 'module-begin)))
                                   (if or-part_1
                                     or-part_1
-                                    (list? context20_0)))))
-                          (if (1/internal-definition-context? intdefs22_0)
+                                    (list? context23_0)))))
+                          (if (1/internal-definition-context? intdefs25_0)
                             (internal-definition-context-use-site-scopes
-                             intdefs22_0)
+                             intdefs25_0)
                             (let ((or-part_0
                                    (root-expand-context/outer-use-site-scopes
-                                    ctx36_0)))
+                                    ctx39_0)))
                               (if or-part_0 or-part_0 (box null))))
                           #f)))
-                   (let ((frame-id73_0
-                          (if (1/internal-definition-context? intdefs22_0)
-                            (internal-definition-context-frame-id intdefs22_0)
-                            (if (not intdefs22_0)
-                              (root-expand-context/outer-frame-id ctx36_0)
-                              (if (list? intdefs22_0)
+                   (let ((frame-id76_0
+                          (if (1/internal-definition-context? intdefs25_0)
+                            (internal-definition-context-frame-id intdefs25_0)
+                            (if (not intdefs25_0)
+                              (root-expand-context/outer-frame-id ctx39_0)
+                              (if (list? intdefs25_0)
                                 (let ((frame-id_0
                                        (let ((frame-id_0
                                               (if (not
                                                    (eq?
                                                     'expression
                                                     (expand-context/outer-context
-                                                     ctx36_0)))
+                                                     ctx39_0)))
                                                 (root-expand-context/outer-frame-id
-                                                 ctx36_0)
+                                                 ctx39_0)
                                                 #f)))
                                          frame-id_0)))
                                   (let ((x_0
-                                         (if (list? intdefs22_0)
-                                           (reverse$1 intdefs22_0)
-                                           (if (not intdefs22_0)
+                                         (if (list? intdefs25_0)
+                                           (reverse$1 intdefs25_0)
+                                           (if (not intdefs25_0)
                                              null
-                                             (list intdefs22_0)))))
+                                             (list intdefs25_0)))))
                                     (begin
                                       #t
                                       (letrec*
@@ -54840,62 +55662,62 @@
                                               frame-id_1)))))
                                        (for-loop_0 frame-id_0 x_0)))))
                                 (void))))))
-                     (let ((post-expansion74_0
+                     (let ((post-expansion77_0
                             (let ((pe_0
                                    (if same-kind?_0
-                                     (if (let ((or-part_0 (pair? context20_0)))
+                                     (if (let ((or-part_0 (pair? context23_0)))
                                            (if or-part_0
                                              or-part_0
                                              (memq
-                                              context20_0
+                                              context23_0
                                               '(module module-begin top-level))))
                                        (root-expand-context/outer-post-expansion
-                                        ctx36_0)
+                                        ctx39_0)
                                        #f)
                                      #f)))
-                              (if (if intdefs22_0 (not (null? intdefs22_0)) #f)
+                              (if (if intdefs25_0 (not (null? intdefs25_0)) #f)
                                 (|#%name|
-                                 post-expansion74
+                                 post-expansion77
                                  (lambda (s_0)
-                                   (let ((temp80_0
+                                   (let ((temp83_0
                                           (apply-post-expansion pe_0 s_0)))
                                      (add-intdef-scopes.1
                                       unsafe-undefined
                                       #f
-                                      temp80_0
-                                      intdefs22_0))))
+                                      temp83_0
+                                      intdefs25_0))))
                                 pe_0))))
-                       (let ((scopes75_0
+                       (let ((scopes78_0
                               (append
                                def-ctx-scopes_0
-                               (expand-context/outer-scopes ctx36_0))))
-                         (let ((only-immediate?76_0 (not stop-ids23_0)))
-                           (let ((need-eventually-defined78_0
+                               (expand-context/outer-scopes ctx39_0))))
+                         (let ((only-immediate?79_0 (not stop-ids26_0)))
+                           (let ((need-eventually-defined81_0
                                   (let ((ht_0
                                          (expand-context/outer-need-eventually-defined
-                                          ctx36_0)))
-                                    (if track-to-be-defined?25_0
+                                          ctx39_0)))
+                                    (if track-to-be-defined?28_0
                                       ht_0
                                       (if ht_0 (make-hasheqv) #f)))))
-                             (let ((inner79_0
+                             (let ((inner82_0
                                     (let ((the-struct_0
                                            (root-expand-context/outer-inner
-                                            ctx36_0)))
+                                            ctx39_0)))
                                       (if (expand-context/inner? the-struct_0)
-                                        (let ((to-parsed?82_0
-                                               (if to-parsed-ok?24_0
+                                        (let ((to-parsed?85_0
+                                               (if to-parsed-ok?27_0
                                                  (expand-context/inner-to-parsed?
                                                   (root-expand-context/outer-inner
-                                                   ctx36_0))
+                                                   ctx39_0))
                                                  #f)))
-                                          (let ((stops86_0
+                                          (let ((stops89_0
                                                  (free-id-set
                                                   phase_0
                                                   (if all-stop-ids_0
                                                     all-stop-ids_0
                                                     null))))
-                                            (let ((to-parsed?82_1
-                                                   to-parsed?82_0))
+                                            (let ((to-parsed?85_1
+                                                   to-parsed?85_0))
                                               (expand-context/inner2.1
                                                (root-expand-context/inner-self-mpi
                                                 the-struct_0)
@@ -54911,7 +55733,9 @@
                                                 the-struct_0)
                                                (root-expand-context/inner-lift-key
                                                 the-struct_0)
-                                               to-parsed?82_1
+                                               (root-expand-context/inner-local-state
+                                                the-struct_0)
+                                               to-parsed?85_1
                                                (expand-context/inner-phase
                                                 the-struct_0)
                                                (expand-context/inner-namespace
@@ -54921,9 +55745,9 @@
                                                 the-struct_0)
                                                (expand-context/inner-allow-unbound?
                                                 the-struct_0)
-                                               in-local-expand?27_0
-                                               |keep-#%expression?26_0|
-                                               stops86_0
+                                               in-local-expand?30_0
+                                               |keep-#%expression?29_0|
+                                               stops89_0
                                                (expand-context/inner-declared-submodule-names
                                                 the-struct_0)
                                                (expand-context/inner-lifts
@@ -54954,36 +55778,36 @@
                                          'struct-copy
                                          "expand-context/inner?"
                                          the-struct_0)))))
-                               (let ((need-eventually-defined78_1
-                                      need-eventually-defined78_0)
-                                     (only-immediate?76_1 only-immediate?76_0)
-                                     (scopes75_1 scopes75_0)
-                                     (post-expansion74_1 post-expansion74_0)
-                                     (frame-id73_1 frame-id73_0)
-                                     (use-site-scopes72_1 use-site-scopes72_0)
-                                     (env71_1 env71_0))
+                               (let ((need-eventually-defined81_1
+                                      need-eventually-defined81_0)
+                                     (only-immediate?79_1 only-immediate?79_0)
+                                     (scopes78_1 scopes78_0)
+                                     (post-expansion77_1 post-expansion77_0)
+                                     (frame-id76_1 frame-id76_0)
+                                     (use-site-scopes75_1 use-site-scopes75_0)
+                                     (env74_1 env74_0))
                                  (expand-context/outer1.1
-                                  inner79_0
-                                  post-expansion74_1
-                                  use-site-scopes72_1
-                                  frame-id73_1
-                                  context20_0
-                                  env71_1
-                                  scopes75_1
-                                  (expand-context/outer-def-ctx-scopes ctx36_0)
-                                  (expand-context/outer-binding-layer ctx36_0)
+                                  inner82_0
+                                  post-expansion77_1
+                                  use-site-scopes75_1
+                                  frame-id76_1
+                                  context23_0
+                                  env74_1
+                                  scopes78_1
+                                  (expand-context/outer-def-ctx-scopes ctx39_0)
+                                  (expand-context/outer-binding-layer ctx39_0)
                                   (expand-context/outer-reference-records
-                                   ctx36_0)
-                                  only-immediate?76_1
-                                  need-eventually-defined78_1
+                                   ctx39_0)
+                                  only-immediate?79_1
+                                  need-eventually-defined81_1
                                   null
                                   (expand-context/outer-current-use-scopes
-                                   ctx36_0)
-                                  (expand-context/outer-name ctx36_0)))))))))))
+                                   ctx39_0)
+                                  (expand-context/outer-name ctx39_0)))))))))))
                (raise-argument-error
                 'struct-copy
                 "expand-context/outer?"
-                ctx36_0)))))))))
+                ctx39_0)))))))))
 (define flip-introduction-scopes
   (lambda (s_0 ctx_0)
     (flip-scopes
@@ -55195,25 +56019,25 @@
        (do-make-syntax-introducer (make-interned-scope sym-key_0))))))
 (define do-make-syntax-introducer
   (lambda (sc_0)
-    (let ((...and/syntax-local.rkt:149:2_0
+    (let ((...and/syntax-local.rkt:152:2_0
            (|#%name|
-            ...and/syntax-local.rkt:149:2
-            (lambda (s63_0 mode62_0)
+            ...and/syntax-local.rkt:152:2
+            (lambda (s65_0 mode64_0)
               (begin
-                (if (syntax?$1 s63_0)
+                (if (syntax?$1 s65_0)
                   (void)
-                  (raise-argument-error 'syntax-introducer "syntax?" s63_0))
+                  (raise-argument-error 'syntax-introducer "syntax?" s65_0))
                 (let ((new-s_0
-                       (if (eq? mode62_0 'add)
-                         (add-scope s63_0 sc_0)
-                         (if (eq? mode62_0 'remove)
-                           (remove-scope s63_0 sc_0)
-                           (if (eq? mode62_0 'flip)
-                             (flip-scope s63_0 sc_0)
+                       (if (eq? mode64_0 'add)
+                         (add-scope s65_0 sc_0)
+                         (if (eq? mode64_0 'remove)
+                           (remove-scope s65_0 sc_0)
+                           (if (eq? mode64_0 'flip)
+                             (flip-scope s65_0 sc_0)
                              (raise-argument-error
                               'syntax-introducer
                               "(or/c 'add 'remove 'flip)"
-                              mode62_0))))))
+                              mode64_0))))))
                   (let ((ctx_0 (get-current-expand-context.1 #t 'unexpected)))
                     (begin
                       (if ctx_0
@@ -55224,17 +56048,17 @@
                             (call-expand-observe
                              obs_0
                              'track-syntax
-                             mode62_0
+                             mode64_0
                              new-s_0
-                             s63_0)
+                             s65_0)
                             (void)))
                         (void))
                       new-s_0))))))))
       (|#%name|
-       ...and/syntax-local.rkt:149:2
+       ...and/syntax-local.rkt:152:2
        (case-lambda
-        ((s_0) (...and/syntax-local.rkt:149:2_0 s_0 'flip))
-        ((s_0 mode62_0) (...and/syntax-local.rkt:149:2_0 s_0 mode62_0)))))))
+        ((s_0) (...and/syntax-local.rkt:152:2_0 s_0 'flip))
+        ((s_0 mode64_0) (...and/syntax-local.rkt:152:2_0 s_0 mode64_0)))))))
 (define 1/make-syntax-delta-introducer
   (let ((make-syntax-delta-introducer_0
          (|#%name|
@@ -55296,52 +56120,52 @@
                                      values
                                      syntax-taint$1)))
                               (let ((shifts_0 (syntax-mpi-shifts ext-s5_0)))
-                                (let ((...and/syntax-local.rkt:175:2_0
+                                (let ((...and/syntax-local.rkt:178:2_0
                                        (|#%name|
-                                        ...and/syntax-local.rkt:175:2
-                                        (lambda (s70_0 mode69_0)
+                                        ...and/syntax-local.rkt:178:2
+                                        (lambda (s72_0 mode71_0)
                                           (begin
-                                            (if (syntax?$1 s70_0)
+                                            (if (syntax?$1 s72_0)
                                               (void)
                                               (raise-argument-error
                                                'syntax-introducer
                                                "syntax?"
-                                               s70_0))
+                                               s72_0))
                                             (let ((new-s_0
                                                    (|#%app|
                                                     maybe-taint_0
-                                                    (if (eq? mode69_0 'add)
-                                                      (let ((temp71_0
+                                                    (if (eq? mode71_0 'add)
+                                                      (let ((temp73_0
                                                              (add-scopes
-                                                              s70_0
+                                                              s72_0
                                                               delta-scs_0)))
                                                         (syntax-add-shifts.1
                                                          #t
-                                                         temp71_0
+                                                         temp73_0
                                                          shifts_0
                                                          #f))
                                                       (if (eq?
-                                                           mode69_0
+                                                           mode71_0
                                                            'remove)
                                                         (remove-scopes
-                                                         s70_0
+                                                         s72_0
                                                          delta-scs_0)
                                                         (if (eq?
-                                                             mode69_0
+                                                             mode71_0
                                                              'flip)
-                                                          (let ((temp74_0
+                                                          (let ((temp76_0
                                                                  (flip-scopes
-                                                                  s70_0
+                                                                  s72_0
                                                                   delta-scs_0)))
                                                             (syntax-add-shifts.1
                                                              #t
-                                                             temp74_0
+                                                             temp76_0
                                                              shifts_0
                                                              #f))
                                                           (raise-argument-error
                                                            'syntax-introducer
                                                            "(or/c 'add 'remove 'flip)"
-                                                           mode69_0)))))))
+                                                           mode71_0)))))))
                                               (let ((ctx_0
                                                      (get-current-expand-context.1
                                                       #t
@@ -55356,23 +56180,23 @@
                                                         (call-expand-observe
                                                          obs_0
                                                          'track-syntax
-                                                         mode69_0
+                                                         mode71_0
                                                          new-s_0
-                                                         s70_0)
+                                                         s72_0)
                                                         (void)))
                                                     (void))
                                                   new-s_0))))))))
                                   (|#%name|
-                                   ...and/syntax-local.rkt:175:2
+                                   ...and/syntax-local.rkt:178:2
                                    (case-lambda
                                     ((s_0)
-                                     (...and/syntax-local.rkt:175:2_0
+                                     (...and/syntax-local.rkt:178:2_0
                                       s_0
                                       'add))
-                                    ((s_0 mode69_0)
-                                     (...and/syntax-local.rkt:175:2_0
+                                    ((s_0 mode71_0)
+                                     (...and/syntax-local.rkt:178:2_0
                                       s_0
-                                      mode69_0)))))))))))))))))))
+                                      mode71_0)))))))))))))))))))
     (|#%name|
      make-syntax-delta-introducer
      (case-lambda
@@ -55427,16 +56251,16 @@
              (let ((ctx_0
                     (if intdefs11_0
                       (if (expand-context/outer? current-ctx_0)
-                        (let ((env80_0
+                        (let ((env82_0
                                (add-intdef-bindings
                                 (expand-context/outer-env current-ctx_0)
                                 intdefs11_0)))
-                          (let ((inner81_0
+                          (let ((inner83_0
                                  (root-expand-context/outer-inner
                                   current-ctx_0)))
-                            (let ((env80_1 env80_0))
+                            (let ((env82_1 env82_0))
                               (expand-context/outer1.1
-                               inner81_0
+                               inner83_0
                                (root-expand-context/outer-post-expansion
                                 current-ctx_0)
                                (root-expand-context/outer-use-site-scopes
@@ -55444,7 +56268,7 @@
                                (root-expand-context/outer-frame-id
                                 current-ctx_0)
                                (expand-context/outer-context current-ctx_0)
-                               env80_1
+                               env82_1
                                (expand-context/outer-scopes current-ctx_0)
                                (expand-context/outer-def-ctx-scopes
                                 current-ctx_0)
@@ -55731,6 +56555,65 @@
             (get-current-expand-context.1 #f 'syntax-local-lift-context)))
        (root-expand-context/inner-lift-key
         (root-expand-context/outer-inner ctx_0))))))
+(define none (gensym 'none))
+(define 1/syntax-local-state-ref
+  (let ((syntax-local-state-ref_0
+         (|#%name|
+          syntax-local-state-ref
+          (lambda (key21_0 failure-result20_0)
+            (let ((failure-result_0
+                   (if (eq? failure-result20_0 unsafe-undefined)
+                     none
+                     failure-result20_0)))
+              (begin
+                (if (symbol? key21_0)
+                  (void)
+                  (raise-argument-error
+                   'syntax-local-state-ref
+                   "symbol?"
+                   key21_0))
+                (let ((ctx_0
+                       (get-current-expand-context.1
+                        #f
+                        'syntax-local-state-ref)))
+                  (let ((v_0
+                         (hash-ref
+                          (root-expand-context/inner-local-state
+                           (root-expand-context/outer-inner ctx_0))
+                          key21_0
+                          none)))
+                    (if (not (eq? v_0 none))
+                      v_0
+                      (if (eq? failure-result_0 none)
+                        (raise-arguments-error
+                         'syntax-local-state-ref
+                         "no value found for key"
+                         "key"
+                         key21_0)
+                        (if (procedure? failure-result_0)
+                          (|#%app| failure-result_0)
+                          failure-result_0)))))))))))
+    (|#%name|
+     syntax-local-state-ref
+     (case-lambda
+      ((key_0) (syntax-local-state-ref_0 key_0 unsafe-undefined))
+      ((key_0 failure-result20_0)
+       (syntax-local-state-ref_0 key_0 failure-result20_0))))))
+(define 1/syntax-local-state-set!
+  (|#%name|
+   syntax-local-state-set!
+   (lambda (key_0 val_0)
+     (begin
+       (if (symbol? key_0)
+         (void)
+         (raise-argument-error 'syntax-local-state-set! "symbol?" key_0))
+       (let ((ctx_0
+              (get-current-expand-context.1 #f 'syntax-local-state-set!)))
+         (hash-set!
+          (root-expand-context/inner-local-state
+           (root-expand-context/outer-inner ctx_0))
+          key_0
+          val_0))))))
 (define 1/syntax-local-lift-module
   (|#%name|
    syntax-local-lift-module
@@ -55782,58 +56665,58 @@
 (define do-local-lift-to-module.1
   (|#%name|
    do-local-lift-to-module
-   (lambda (add-lifted!25_0
-            get-lift-ctx24_0
-            get-wrt-phase26_0
-            intro?22_0
-            log-tag20_0
-            more-checks23_0
-            no-target-msg21_0
-            post-wrap29_0
-            pre-wrap27_0
-            shift-wrap28_0
-            who40_0
-            s41_0)
+   (lambda (add-lifted!27_0
+            get-lift-ctx26_0
+            get-wrt-phase28_0
+            intro?24_0
+            log-tag22_0
+            more-checks25_0
+            no-target-msg23_0
+            post-wrap31_0
+            pre-wrap29_0
+            shift-wrap30_0
+            who42_0
+            s43_0)
      (let ((pre-wrap_0
-            (if (eq? pre-wrap27_0 unsafe-undefined)
+            (if (eq? pre-wrap29_0 unsafe-undefined)
               (|#%name| pre-wrap (lambda (s_0 phase_0 lift-ctx_0) s_0))
-              pre-wrap27_0)))
+              pre-wrap29_0)))
        (let ((shift-wrap_0
-              (if (eq? shift-wrap28_0 unsafe-undefined)
+              (if (eq? shift-wrap30_0 unsafe-undefined)
                 (|#%name| shift-wrap (lambda (s_0 phase_0 lift-ctx_0) s_0))
-                shift-wrap28_0)))
+                shift-wrap30_0)))
          (let ((post-wrap_0
-                (if (eq? post-wrap29_0 unsafe-undefined)
+                (if (eq? post-wrap31_0 unsafe-undefined)
                   (|#%name| post-wrap (lambda (s_0 phase_0 lift-ctx_0) s_0))
-                  post-wrap29_0)))
+                  post-wrap31_0)))
            (begin
-             (if (syntax?$1 s41_0)
+             (if (syntax?$1 s43_0)
                (void)
-               (raise-argument-error who40_0 "syntax?" s41_0))
+               (raise-argument-error who42_0 "syntax?" s43_0))
              (begin
-               (|#%app| more-checks23_0)
-               (let ((ctx_0 (get-current-expand-context.1 #f who40_0)))
-                 (let ((lift-ctx_0 (|#%app| get-lift-ctx24_0 ctx_0)))
+               (|#%app| more-checks25_0)
+               (let ((ctx_0 (get-current-expand-context.1 #f who42_0)))
+                 (let ((lift-ctx_0 (|#%app| get-lift-ctx26_0 ctx_0)))
                    (begin
                      (if lift-ctx_0
                        (void)
                        (raise-arguments-error
-                        who40_0
-                        no-target-msg21_0
+                        who42_0
+                        no-target-msg23_0
                         "form to lift"
-                        s41_0))
+                        s43_0))
                      (let ((phase_0
                             (expand-context/inner-phase
                              (root-expand-context/outer-inner ctx_0))))
                        (let ((wrt-phase_0
-                              (|#%app| get-wrt-phase26_0 lift-ctx_0)))
+                              (|#%app| get-wrt-phase28_0 lift-ctx_0)))
                          (let ((added-s_0
-                                (if intro?22_0
+                                (if intro?24_0
                                   (flip-scopes
-                                   s41_0
+                                   s43_0
                                    (expand-context/outer-current-introduction-scopes
                                     ctx_0))
-                                  s41_0)))
+                                  s43_0)))
                            (let ((pre-s_0
                                   (|#%app|
                                    pre-wrap_0
@@ -55865,7 +56748,7 @@
                                        wrt-phase_0
                                        lift-ctx_0)))
                                  (begin
-                                   (if log-tag20_0
+                                   (if log-tag22_0
                                      (let ((obs_0
                                             (expand-context/inner-observer
                                              (root-expand-context/outer-inner
@@ -55873,14 +56756,14 @@
                                        (if obs_0
                                          (call-expand-observe
                                           obs_0
-                                          log-tag20_0
-                                          s41_0
+                                          log-tag22_0
+                                          s43_0
                                           added-s_0
                                           post-s_0)
                                          (void)))
                                      (void))
                                    (|#%app|
-                                    add-lifted!25_0
+                                    add-lifted!27_0
                                     lift-ctx_0
                                     post-s_0
                                     wrt-phase_0)
@@ -55889,9 +56772,9 @@
   (let ((syntax-local-lift-require_0
          (|#%name|
           syntax-local-lift-require
-          (lambda (s44_0 use-s45_0 new-scope?43_0)
+          (lambda (s46_0 use-s47_0 new-scope?45_0)
             (let ((sc_0
-                   (if new-scope?43_0
+                   (if new-scope?45_0
                      (let ((id_0 (new-scope-id!)))
                        (scope1.1
                         id_0
@@ -55899,48 +56782,48 @@
                         'lifted-require
                         empty-binding-table))
                      #f)))
-              (let ((temp111_0 (datum->syntax$1 #f s44_0)))
-                (let ((temp112_0 "could not find target context"))
-                  (let ((temp114_0
+              (let ((temp117_0 (datum->syntax$1 #f s46_0)))
+                (let ((temp118_0 "could not find target context"))
+                  (let ((temp120_0
                          (lambda ()
-                           (if (syntax?$1 use-s45_0)
+                           (if (syntax?$1 use-s47_0)
                              (void)
                              (raise-argument-error
                               'syntax-local-lift-require
                               "syntax?"
-                              use-s45_0)))))
-                    (let ((expand-context-require-lifts115_0
+                              use-s47_0)))))
+                    (let ((expand-context-require-lifts121_0
                            expand-context-require-lifts))
-                      (let ((temp118_0
+                      (let ((temp124_0
                              (lambda (s_0 phase_0 require-lift-ctx_0)
                                (require-spec-shift-for-syntax s_0))))
-                        (let ((temp119_0
+                        (let ((temp125_0
                                (lambda (s_0 phase_0 require-lift-ctx_0)
                                  (wrap-form
                                   '|#%require|
                                   (if sc_0 (add-scope s_0 sc_0) s_0)
                                   phase_0))))
-                          (let ((temp118_1 temp118_0)
-                                (expand-context-require-lifts115_1
-                                 expand-context-require-lifts115_0)
-                                (temp114_1 temp114_0)
-                                (temp112_1 temp112_0)
-                                (temp111_1 temp111_0))
+                          (let ((temp124_1 temp124_0)
+                                (expand-context-require-lifts121_1
+                                 expand-context-require-lifts121_0)
+                                (temp120_1 temp120_0)
+                                (temp118_1 temp118_0)
+                                (temp117_1 temp117_0))
                             (call-with-values
                              (lambda ()
                                (do-local-lift-to-module.1
                                 add-lifted-require!
-                                expand-context-require-lifts115_1
+                                expand-context-require-lifts121_1
                                 require-lift-context-wrt-phase
                                 #f
                                 #f
-                                temp114_1
-                                temp112_1
-                                temp119_0
-                                unsafe-undefined
+                                temp120_1
                                 temp118_1
+                                temp125_0
+                                unsafe-undefined
+                                temp124_1
                                 'syntax-local-lift-require
-                                temp111_1))
+                                temp117_1))
                              (lambda (ctx_0 added-s_0)
                                (begin
                                  (with-continuation-mark*
@@ -55954,8 +56837,8 @@
                                     (root-expand-context/outer-inner ctx_0))))
                                  (let ((result-s_0
                                         (if sc_0
-                                          (add-scope use-s45_0 sc_0)
-                                          use-s45_0)))
+                                          (add-scope use-s47_0 sc_0)
+                                          use-s47_0)))
                                    (begin
                                      (let ((obs_0
                                             (expand-context/inner-observer
@@ -55966,7 +56849,7 @@
                                           obs_0
                                           'lift-require
                                           added-s_0
-                                          use-s45_0
+                                          use-s47_0
                                           result-s_0)
                                          (void)))
                                      result-s_0)))))))))))))))))
@@ -55974,36 +56857,36 @@
      syntax-local-lift-require
      (case-lambda
       ((s_0 use-s_0) (syntax-local-lift-require_0 s_0 use-s_0 #t))
-      ((s_0 use-s_0 new-scope?43_0)
-       (syntax-local-lift-require_0 s_0 use-s_0 new-scope?43_0))))))
+      ((s_0 use-s_0 new-scope?45_0)
+       (syntax-local-lift-require_0 s_0 use-s_0 new-scope?45_0))))))
 (define 1/syntax-local-lift-provide
   (|#%name|
    syntax-local-lift-provide
    (lambda (s_0)
-     (let ((temp123_0 "not expanding in a module run-time body"))
-       (let ((expand-context-to-module-lifts124_0
+     (let ((temp129_0 "not expanding in a module run-time body"))
+       (let ((expand-context-to-module-lifts130_0
               expand-context-to-module-lifts))
-         (let ((add-lifted-to-module-provide!126_0
+         (let ((add-lifted-to-module-provide!132_0
                 add-lifted-to-module-provide!))
-           (let ((temp127_0
+           (let ((temp133_0
                   (lambda (s_1 phase_0 to-module-lift-ctx_0)
                     (wrap-form 'for-syntax s_1 #f))))
-             (let ((temp128_0
+             (let ((temp134_0
                     (lambda (s_1 phase_0 to-module-lift-ctx_0)
                       (wrap-form '|#%provide| s_1 phase_0))))
                (call-with-values
                 (lambda ()
                   (do-local-lift-to-module.1
-                   add-lifted-to-module-provide!126_0
-                   expand-context-to-module-lifts124_0
+                   add-lifted-to-module-provide!132_0
+                   expand-context-to-module-lifts130_0
                    to-module-lift-context-wrt-phase
                    #t
                    #f
                    void
-                   temp123_0
-                   temp128_0
+                   temp129_0
+                   temp134_0
                    unsafe-undefined
-                   temp127_0
+                   temp133_0
                    'syntax-local-lift-provide
                    s_0))
                 (lambda (ctx_0 result-s_0)
@@ -56017,34 +56900,34 @@
   (|#%name|
    syntax-local-lift-module-end-declaration
    (lambda (s_0)
-     (let ((temp133_0
+     (let ((temp139_0
             "not currently transforming an expression within a module declaration"))
-       (let ((expand-context-to-module-lifts134_0
+       (let ((expand-context-to-module-lifts140_0
               expand-context-to-module-lifts))
-         (let ((temp135_0 (lambda (lift-ctx_0) 0)))
-           (let ((add-lifted-to-module-end!136_0 add-lifted-to-module-end!))
-             (let ((temp137_0
+         (let ((temp141_0 (lambda (lift-ctx_0) 0)))
+           (let ((add-lifted-to-module-end!142_0 add-lifted-to-module-end!))
+             (let ((temp143_0
                     (lambda (orig-s_0 phase_0 to-module-lift-ctx_0)
                       (if (to-module-lift-context-end-as-expressions?
                            to-module-lift-ctx_0)
                         (wrap-form '|#%expression| orig-s_0 phase_0)
                         orig-s_0))))
-               (let ((temp138_0
+               (let ((temp144_0
                       (lambda (s_1 phase_0 to-module-lift-ctx_0)
                         (wrap-form 'begin-for-syntax s_1 phase_0))))
                  (call-with-values
                   (lambda ()
                     (do-local-lift-to-module.1
-                     add-lifted-to-module-end!136_0
-                     expand-context-to-module-lifts134_0
-                     temp135_0
+                     add-lifted-to-module-end!142_0
+                     expand-context-to-module-lifts140_0
+                     temp141_0
                      #t
                      'lift-end-decl
                      void
-                     temp133_0
+                     temp139_0
                      unsafe-undefined
-                     temp137_0
-                     temp138_0
+                     temp143_0
+                     temp144_0
                      'syntax-local-lift-module-end-declaration
                      s_0))
                   (lambda (ctx_0 also-s_0) (void))))))))))))
@@ -56315,31 +57198,31 @@
   (let ((syntax-local-get-shadower_0
          (|#%name|
           syntax-local-get-shadower
-          (lambda (id47_0 only-generated?46_0)
+          (lambda (id49_0 only-generated?48_0)
             (begin
-              (if (identifier? id47_0)
+              (if (identifier? id49_0)
                 (void)
                 (raise-argument-error
                  'syntax-local-get-shadower
                  "identifier?"
-                 id47_0))
+                 id49_0))
               (let ((ctx_0
                      (get-current-expand-context.1
                       #f
                       'syntax-local-get-shadower)))
                 (let ((new-id_0
                        (add-scopes
-                        id47_0
+                        id49_0
                         (expand-context/outer-scopes ctx_0))))
-                  (if (not (syntax-taintness id47_0))
+                  (if (not (syntax-taintness id49_0))
                     new-id_0
                     (syntax-taint$1 new-id_0)))))))))
     (|#%name|
      syntax-local-get-shadower
      (case-lambda
       ((id_0) (syntax-local-get-shadower_0 id_0 #f))
-      ((id_0 only-generated?46_0)
-       (syntax-local-get-shadower_0 id_0 only-generated?46_0))))))
+      ((id_0 only-generated?48_0)
+       (syntax-local-get-shadower_0 id_0 only-generated?48_0))))))
 (define 1/syntax-source
   (|#%name|
    syntax-source
@@ -57418,13 +58301,13 @@
    do-attach-module
    (lambda (attach-instances?7_0
             who9_0
-            src-namespace10_0
+            given-src-namespace10_0
             mod-path11_0
-            dest-namespace12_0)
+            given-dest-namespace12_0)
      (begin
-       (if (1/namespace? src-namespace10_0)
+       (if (1/namespace? given-src-namespace10_0)
          (void)
-         (raise-argument-error who9_0 "namespace?" src-namespace10_0))
+         (raise-argument-error who9_0 "namespace?" given-src-namespace10_0))
        (begin
          (if (let ((or-part_0 (1/module-path? mod-path11_0)))
                (if or-part_0 or-part_0 (1/resolved-module-path? mod-path11_0)))
@@ -57434,573 +58317,629 @@
             "(or/c module-path? resolved-module-path?)"
             mod-path11_0))
          (begin
-           (if (1/namespace? dest-namespace12_0)
+           (if (1/namespace? given-dest-namespace12_0)
              (void)
-             (raise-argument-error who9_0 "namespace?" dest-namespace12_0))
-           (let ((phase_0 (namespace-phase src-namespace10_0)))
-             (begin
-               (if (eqv? phase_0 (namespace-phase dest-namespace12_0))
-                 (void)
-                 (raise-arguments-error
-                  who9_0
-                  "source and destination namespace phases do not match"
-                  "source phase"
-                  phase_0
-                  "destination phase"
-                  (namespace-phase dest-namespace12_0)))
-               (let ((todo_0 (make-hasheq)))
-                 (let ((missing_0 kw2836))
+             (raise-argument-error
+              who9_0
+              "namespace?"
+              given-dest-namespace12_0))
+           (let ((cross-phase-persistent?_0
+                  (if (not
+                       (eqv?
+                        (namespace-phase given-src-namespace10_0)
+                        (namespace-phase given-dest-namespace12_0)))
+                    (let ((mod-name_0
+                           (if (1/resolved-module-path? mod-path11_0)
+                             mod-path11_0
+                             (with-continuation-mark*
+                              push-authentic
+                              parameterization-key
+                              (extend-parameterization
+                               (continuation-mark-set-first
+                                #f
+                                parameterization-key)
+                               1/current-namespace
+                               given-src-namespace10_0)
+                              (1/module-path-index-resolve
+                               (module-path-index-join* mod-path11_0 #f))))))
+                      (let ((m_0
+                             (namespace->module
+                              given-src-namespace10_0
+                              mod-name_0)))
+                        (if m_0 (module-cross-phase-persistent? m_0) #f)))
+                    #f)))
+             (let ((src-namespace_0
+                    (if cross-phase-persistent?_0
+                      (namespace->namespace-at-phase given-src-namespace10_0 0)
+                      given-src-namespace10_0)))
+               (let ((dest-namespace_0
+                      (if cross-phase-persistent?_0
+                        (namespace->namespace-at-phase
+                         given-dest-namespace12_0
+                         0)
+                        given-dest-namespace12_0)))
+                 (let ((phase_0 (namespace-phase src-namespace_0)))
                    (begin
-                     (letrec*
-                      ((loop_0
-                        (|#%name|
-                         loop
-                         (lambda (mpi_0
-                                  maybe-mod-name_0
-                                  phase_1
-                                  attach-instances?_0
-                                  attach-phase_0
-                                  recur?_0)
-                           (let ((mod-name_0
-                                  (if maybe-mod-name_0
-                                    maybe-mod-name_0
-                                    (with-continuation-mark*
-                                     push-authentic
-                                     parameterization-key
-                                     (extend-parameterization
-                                      (continuation-mark-set-first
-                                       #f
-                                       parameterization-key)
-                                      1/current-namespace
-                                      src-namespace10_0)
-                                     (1/module-path-index-resolve mpi_0)))))
-                             (let ((m-ns_0
-                                    (hash-ref
-                                     (hash-ref todo_0 mod-name_0 hash2589)
-                                     phase_1
-                                     missing_0)))
-                               (if (eq? missing_0 m-ns_0)
-                                 (let ((mi_0
-                                        (namespace->module-instance.1
-                                         #f
-                                         #f
-                                         void
-                                         src-namespace10_0
-                                         mod-name_0
-                                         phase_1)))
-                                   (let ((m_0
-                                          (if mi_0
-                                            (module-instance-module mi_0)
-                                            (namespace->module
-                                             src-namespace10_0
-                                             mod-name_0))))
-                                     (begin
-                                       (if m_0
-                                         (void)
-                                         (raise-arguments-error
-                                          who9_0
-                                          "module not declared (in the source namespace)"
-                                          "module name"
-                                          mod-name_0))
-                                       (if (if (module-cross-phase-persistent?
-                                                m_0)
-                                             (if (not (not phase_1))
-                                               (not (eq? phase_1 0))
-                                               #f)
-                                             #f)
-                                         (loop_0
-                                          mpi_0
-                                          mod-name_0
-                                          0
-                                          attach-instances?_0
-                                          0
-                                          recur?_0)
-                                         (let ((already-m_0
-                                                (namespace->module
-                                                 dest-namespace12_0
-                                                 mod-name_0)))
+                     (if (eqv? phase_0 (namespace-phase dest-namespace_0))
+                       (void)
+                       (raise-arguments-error
+                        who9_0
+                        "source and destination namespace phases do not match"
+                        "source phase"
+                        phase_0
+                        "destination phase"
+                        (namespace-phase dest-namespace_0)))
+                     (let ((todo_0 (make-hasheq)))
+                       (let ((missing_0 kw2836))
+                         (begin
+                           (letrec*
+                            ((loop_0
+                              (|#%name|
+                               loop
+                               (lambda (mpi_0
+                                        maybe-mod-name_0
+                                        phase_1
+                                        attach-instances?_0
+                                        attach-phase_0
+                                        recur?_0)
+                                 (let ((mod-name_0
+                                        (if maybe-mod-name_0
+                                          maybe-mod-name_0
+                                          (with-continuation-mark*
+                                           push-authentic
+                                           parameterization-key
+                                           (extend-parameterization
+                                            (continuation-mark-set-first
+                                             #f
+                                             parameterization-key)
+                                            1/current-namespace
+                                            src-namespace_0)
+                                           (1/module-path-index-resolve
+                                            mpi_0)))))
+                                   (let ((m-ns_0
+                                          (hash-ref
+                                           (hash-ref
+                                            todo_0
+                                            mod-name_0
+                                            hash2589)
+                                           phase_1
+                                           missing_0)))
+                                     (if (eq? missing_0 m-ns_0)
+                                       (let ((mi_0
+                                              (namespace->module-instance.1
+                                               #f
+                                               #f
+                                               void
+                                               src-namespace_0
+                                               mod-name_0
+                                               phase_1)))
+                                         (let ((m_0
+                                                (if mi_0
+                                                  (module-instance-module mi_0)
+                                                  (namespace->module
+                                                   src-namespace_0
+                                                   mod-name_0))))
                                            (begin
-                                             (if (if already-m_0
-                                                   (not (eq? already-m_0 m_0))
-                                                   #f)
+                                             (if m_0
+                                               (void)
                                                (raise-arguments-error
                                                 who9_0
-                                                "a different declaration is already in the destination namespace"
+                                                "module not declared (in the source namespace)"
                                                 "module name"
-                                                mod-name_0)
-                                               (void))
-                                             (let ((attach-this-instance?_0
-                                                    (if attach-instances?_0
-                                                      (module-instantiates-at-level?
-                                                       m_0
-                                                       (phase-
-                                                        attach-phase_0
-                                                        phase_1))
-                                                      #f)))
-                                               (call-with-values
-                                                (lambda ()
-                                                  (if (if attach-this-instance?_0
-                                                        attach-this-instance?_0
-                                                        (if (module-cross-phase-persistent?
-                                                             m_0)
-                                                          (not (not phase_1))
-                                                          #f))
-                                                    (let ((m-ns_1
-                                                           (namespace->module-namespace.1
-                                                            #f
-                                                            #f
-                                                            void
-                                                            src-namespace10_0
-                                                            mod-name_0
-                                                            phase_1)))
-                                                      (begin
-                                                        (if m-ns_1
-                                                          (void)
-                                                          (raise-arguments-error
-                                                           who9_0
-                                                           "module not instantiated (in the source namespace)"
-                                                           "module name"
-                                                           mod-name_0
-                                                           "instance phase"
-                                                           phase_1))
-                                                        (let ((already-m-ns_0
-                                                               (if already-m_0
+                                                mod-name_0))
+                                             (if (if (module-cross-phase-persistent?
+                                                      m_0)
+                                                   (if (not (not phase_1))
+                                                     (not (eq? phase_1 0))
+                                                     #f)
+                                                   #f)
+                                               (loop_0
+                                                mpi_0
+                                                mod-name_0
+                                                0
+                                                attach-instances?_0
+                                                0
+                                                recur?_0)
+                                               (let ((already-m_0
+                                                      (namespace->module
+                                                       dest-namespace_0
+                                                       mod-name_0)))
+                                                 (begin
+                                                   (if (if already-m_0
+                                                         (not
+                                                          (eq?
+                                                           already-m_0
+                                                           m_0))
+                                                         #f)
+                                                     (raise-arguments-error
+                                                      who9_0
+                                                      "a different declaration is already in the destination namespace"
+                                                      "module name"
+                                                      mod-name_0)
+                                                     (void))
+                                                   (let ((attach-this-instance?_0
+                                                          (if attach-instances?_0
+                                                            (module-instantiates-at-level?
+                                                             m_0
+                                                             (phase-
+                                                              attach-phase_0
+                                                              phase_1))
+                                                            #f)))
+                                                     (call-with-values
+                                                      (lambda ()
+                                                        (if (if attach-this-instance?_0
+                                                              attach-this-instance?_0
+                                                              (if (module-cross-phase-persistent?
+                                                                   m_0)
+                                                                (not
+                                                                 (not phase_1))
+                                                                #f))
+                                                          (let ((m-ns_1
                                                                  (namespace->module-namespace.1
                                                                   #f
                                                                   #f
                                                                   void
-                                                                  dest-namespace12_0
+                                                                  src-namespace_0
                                                                   mod-name_0
-                                                                  phase_1)
-                                                                 #f)))
+                                                                  phase_1)))
+                                                            (begin
+                                                              (if m-ns_1
+                                                                (void)
+                                                                (raise-arguments-error
+                                                                 who9_0
+                                                                 "module not instantiated (in the source namespace)"
+                                                                 "module name"
+                                                                 mod-name_0
+                                                                 "instance phase"
+                                                                 phase_1))
+                                                              (let ((already-m-ns_0
+                                                                     (if already-m_0
+                                                                       (namespace->module-namespace.1
+                                                                        #f
+                                                                        #f
+                                                                        void
+                                                                        dest-namespace_0
+                                                                        mod-name_0
+                                                                        phase_1)
+                                                                       #f)))
+                                                                (begin
+                                                                  (if (if already-m-ns_0
+                                                                        (if (not
+                                                                             (eq?
+                                                                              m-ns_1
+                                                                              already-m-ns_0))
+                                                                          (not
+                                                                           (namespace-same-instance?
+                                                                            m-ns_1
+                                                                            already-m-ns_0
+                                                                            (phase-
+                                                                             attach-phase_0
+                                                                             phase_1)))
+                                                                          #f)
+                                                                        #f)
+                                                                    (raise-arguments-error
+                                                                     who9_0
+                                                                     "a different instance is already in the destination namespace"
+                                                                     "module name"
+                                                                     mod-name_0
+                                                                     "instance phase"
+                                                                     phase_1)
+                                                                    (void))
+                                                                  (values
+                                                                   m-ns_1
+                                                                   (if already-m-ns_0
+                                                                     #t
+                                                                     #f))))))
                                                           (begin
-                                                            (if (if already-m-ns_0
-                                                                  (if (not
-                                                                       (eq?
-                                                                        m-ns_1
-                                                                        already-m-ns_0))
-                                                                    (not
-                                                                     (namespace-same-instance?
-                                                                      m-ns_1
-                                                                      already-m-ns_0
-                                                                      (phase-
-                                                                       attach-phase_0
-                                                                       phase_1)))
-                                                                    #f)
+                                                            (if (if (not
+                                                                     phase_1)
+                                                                  (not
+                                                                   (namespace->module-namespace.1
+                                                                    #f
+                                                                    #f
+                                                                    void
+                                                                    src-namespace_0
+                                                                    mod-name_0
+                                                                    phase_1))
                                                                   #f)
-                                                              (raise-arguments-error
-                                                               who9_0
-                                                               "a different instance is already in the destination namespace"
-                                                               "module name"
-                                                               mod-name_0
-                                                               "instance phase"
-                                                               phase_1)
+                                                              (with-continuation-mark*
+                                                               push-authentic
+                                                               parameterization-key
+                                                               (extend-parameterization
+                                                                (continuation-mark-set-first
+                                                                 #f
+                                                                 parameterization-key)
+                                                                1/current-namespace
+                                                                src-namespace_0)
+                                                               (namespace-module-instantiate!.1
+                                                                #f
+                                                                #t
+                                                                #t
+                                                                unsafe-undefined
+                                                                hash2610
+                                                                null
+                                                                #f
+                                                                #f
+                                                                src-namespace_0
+                                                                mpi_0
+                                                                phase_1))
                                                               (void))
                                                             (values
-                                                             m-ns_1
-                                                             (if already-m-ns_0
-                                                               #t
-                                                               #f))))))
-                                                    (begin
-                                                      (if (if (not phase_1)
-                                                            (not
-                                                             (namespace->module-namespace.1
-                                                              #f
-                                                              #f
-                                                              void
-                                                              src-namespace10_0
-                                                              mod-name_0
-                                                              phase_1))
-                                                            #f)
-                                                        (with-continuation-mark*
-                                                         push-authentic
-                                                         parameterization-key
-                                                         (extend-parameterization
-                                                          (continuation-mark-set-first
-                                                           #f
-                                                           parameterization-key)
-                                                          1/current-namespace
-                                                          src-namespace10_0)
-                                                         (namespace-module-instantiate!.1
-                                                          #f
-                                                          #t
-                                                          #t
-                                                          unsafe-undefined
-                                                          hash2610
-                                                          null
-                                                          #f
-                                                          #f
-                                                          src-namespace10_0
-                                                          mpi_0
-                                                          phase_1))
-                                                        (void))
-                                                      (values
-                                                       #f
-                                                       (if already-m_0
-                                                         (not
-                                                          attach-instances?_0)
-                                                         #f)))))
-                                                (lambda (m-ns_1 already?_0)
-                                                  (begin
-                                                    (let ((xform_0
-                                                           (lambda (ht_0)
-                                                             (hash-set
-                                                              ht_0
-                                                              phase_1
-                                                              m-ns_1))))
-                                                      (let ((default_0
-                                                             hash2589))
-                                                        (do-hash-update
-                                                         'hash-update!
-                                                         #t
-                                                         hash-set!
-                                                         todo_0
-                                                         mod-name_0
-                                                         xform_0
-                                                         default_0)))
-                                                    (if (if already?_0
-                                                          already?_0
-                                                          (not recur?_0))
-                                                      (void)
-                                                      (let ((shifted-requires_0
-                                                             (let ((or-part_0
-                                                                    (if mi_0
-                                                                      (module-instance-shifted-requires
-                                                                       mi_0)
-                                                                      #f)))
-                                                               (if or-part_0
-                                                                 or-part_0
-                                                                 (build-module-instance-shifted-requires
-                                                                  src-namespace10_0
-                                                                  m_0
-                                                                  mpi_0
-                                                                  mod-name_0)))))
+                                                             #f
+                                                             (if already-m_0
+                                                               (not
+                                                                attach-instances?_0)
+                                                               #f)))))
+                                                      (lambda (m-ns_1
+                                                               already?_0)
                                                         (begin
-                                                          (if (not
-                                                               (module-flattened-requires
-                                                                m_0))
-                                                            (begin
-                                                              (letrec*
-                                                               ((for-loop_0
-                                                                 (|#%name|
-                                                                  for-loop
-                                                                  (lambda (lst_0)
-                                                                    (if (pair?
-                                                                         lst_0)
-                                                                      (let ((phase+mpis_0
-                                                                             (unsafe-car
-                                                                              lst_0)))
-                                                                        (let ((rest_0
-                                                                               (unsafe-cdr
-                                                                                lst_0)))
-                                                                          (let ((lst_1
-                                                                                 (cdr
-                                                                                  phase+mpis_0)))
-                                                                            (call-with-values
-                                                                             (lambda ()
-                                                                               (letrec*
-                                                                                ((for-loop_1
-                                                                                  (|#%name|
-                                                                                   for-loop
-                                                                                   (lambda (lst_2)
-                                                                                     (if (pair?
-                                                                                          lst_2)
-                                                                                       (let ((mpi_1
-                                                                                              (unsafe-car
-                                                                                               lst_2)))
-                                                                                         (let ((rest_1
-                                                                                                (unsafe-cdr
-                                                                                                 lst_2)))
-                                                                                           (begin
-                                                                                             (if mpi_1
-                                                                                               (loop_0
-                                                                                                mpi_1
-                                                                                                #f
-                                                                                                (phase+
-                                                                                                 phase_1
-                                                                                                 (car
-                                                                                                  phase+mpis_0))
-                                                                                                attach-instances?_0
-                                                                                                attach-phase_0
-                                                                                                #t)
-                                                                                               (void))
-                                                                                             (for-loop_1
-                                                                                              rest_1))))
-                                                                                       (values))))))
-                                                                                (for-loop_1
-                                                                                 lst_1)))
-                                                                             (lambda ()
-                                                                               (for-loop_0
-                                                                                rest_0))))))
-                                                                      (values))))))
-                                                               (for-loop_0
-                                                                shifted-requires_0))
-                                                              (void))
-                                                            (begin
-                                                              (letrec*
-                                                               ((for-loop_0
-                                                                 (|#%name|
-                                                                  for-loop
-                                                                  (lambda (lst_0)
-                                                                    (if (pair?
-                                                                         lst_0)
-                                                                      (let ((mpi+phases_0
-                                                                             (unsafe-car
-                                                                              lst_0)))
-                                                                        (let ((rest_0
-                                                                               (unsafe-cdr
-                                                                                lst_0)))
-                                                                          (begin
-                                                                            (let ((mpi_1
-                                                                                   (vector-ref
-                                                                                    mpi+phases_0
-                                                                                    0)))
-                                                                              (begin
+                                                          (let ((xform_0
+                                                                 (lambda (ht_0)
+                                                                   (hash-set
+                                                                    ht_0
+                                                                    phase_1
+                                                                    m-ns_1))))
+                                                            (let ((default_0
+                                                                   hash2589))
+                                                              (do-hash-update
+                                                               'hash-update!
+                                                               #t
+                                                               hash-set!
+                                                               todo_0
+                                                               mod-name_0
+                                                               xform_0
+                                                               default_0)))
+                                                          (if (if already?_0
+                                                                already?_0
+                                                                (not recur?_0))
+                                                            (void)
+                                                            (let ((shifted-requires_0
+                                                                   (let ((or-part_0
+                                                                          (if mi_0
+                                                                            (module-instance-shifted-requires
+                                                                             mi_0)
+                                                                            #f)))
+                                                                     (if or-part_0
+                                                                       or-part_0
+                                                                       (build-module-instance-shifted-requires
+                                                                        src-namespace_0
+                                                                        m_0
+                                                                        mpi_0
+                                                                        mod-name_0)))))
+                                                              (begin
+                                                                (if (not
+                                                                     (module-flattened-requires
+                                                                      m_0))
+                                                                  (begin
+                                                                    (letrec*
+                                                                     ((for-loop_0
+                                                                       (|#%name|
+                                                                        for-loop
+                                                                        (lambda (lst_0)
+                                                                          (if (pair?
+                                                                               lst_0)
+                                                                            (let ((phase+mpis_0
+                                                                                   (unsafe-car
+                                                                                    lst_0)))
+                                                                              (let ((rest_0
+                                                                                     (unsafe-cdr
+                                                                                      lst_0)))
                                                                                 (let ((lst_1
-                                                                                       (vector-ref
-                                                                                        mpi+phases_0
-                                                                                        1)))
-                                                                                  (letrec*
-                                                                                   ((for-loop_1
-                                                                                     (|#%name|
-                                                                                      for-loop
-                                                                                      (lambda (lst_2)
-                                                                                        (if (pair?
-                                                                                             lst_2)
-                                                                                          (let ((req-phase_0
-                                                                                                 (unsafe-car
-                                                                                                  lst_2)))
-                                                                                            (let ((rest_1
-                                                                                                   (unsafe-cdr
-                                                                                                    lst_2)))
-                                                                                              (begin
-                                                                                                (loop_0
-                                                                                                 mpi_1
-                                                                                                 #f
-                                                                                                 (phase+
-                                                                                                  phase_1
-                                                                                                  req-phase_0)
-                                                                                                 attach-instances?_0
-                                                                                                 attach-phase_0
-                                                                                                 #f)
-                                                                                                (for-loop_1
-                                                                                                 rest_1))))
-                                                                                          (values))))))
-                                                                                   (for-loop_1
+                                                                                       (cdr
+                                                                                        phase+mpis_0)))
+                                                                                  (call-with-values
+                                                                                   (lambda ()
+                                                                                     (letrec*
+                                                                                      ((for-loop_1
+                                                                                        (|#%name|
+                                                                                         for-loop
+                                                                                         (lambda (lst_2)
+                                                                                           (if (pair?
+                                                                                                lst_2)
+                                                                                             (let ((mpi_1
+                                                                                                    (unsafe-car
+                                                                                                     lst_2)))
+                                                                                               (let ((rest_1
+                                                                                                      (unsafe-cdr
+                                                                                                       lst_2)))
+                                                                                                 (begin
+                                                                                                   (if mpi_1
+                                                                                                     (loop_0
+                                                                                                      mpi_1
+                                                                                                      #f
+                                                                                                      (phase+
+                                                                                                       phase_1
+                                                                                                       (car
+                                                                                                        phase+mpis_0))
+                                                                                                      attach-instances?_0
+                                                                                                      attach-phase_0
+                                                                                                      #t)
+                                                                                                     (void))
+                                                                                                   (for-loop_1
+                                                                                                    rest_1))))
+                                                                                             (values))))))
+                                                                                      (for-loop_1
+                                                                                       lst_1)))
+                                                                                   (lambda ()
+                                                                                     (for-loop_0
+                                                                                      rest_0))))))
+                                                                            (values))))))
+                                                                     (for-loop_0
+                                                                      shifted-requires_0))
+                                                                    (void))
+                                                                  (begin
+                                                                    (letrec*
+                                                                     ((for-loop_0
+                                                                       (|#%name|
+                                                                        for-loop
+                                                                        (lambda (lst_0)
+                                                                          (if (pair?
+                                                                               lst_0)
+                                                                            (let ((mpi+phases_0
+                                                                                   (unsafe-car
+                                                                                    lst_0)))
+                                                                              (let ((rest_0
+                                                                                     (unsafe-cdr
+                                                                                      lst_0)))
+                                                                                (begin
+                                                                                  (let ((mpi_1
+                                                                                         (vector-ref
+                                                                                          mpi+phases_0
+                                                                                          0)))
+                                                                                    (begin
+                                                                                      (let ((lst_1
+                                                                                             (vector-ref
+                                                                                              mpi+phases_0
+                                                                                              1)))
+                                                                                        (letrec*
+                                                                                         ((for-loop_1
+                                                                                           (|#%name|
+                                                                                            for-loop
+                                                                                            (lambda (lst_2)
+                                                                                              (if (pair?
+                                                                                                   lst_2)
+                                                                                                (let ((req-phase_0
+                                                                                                       (unsafe-car
+                                                                                                        lst_2)))
+                                                                                                  (let ((rest_1
+                                                                                                         (unsafe-cdr
+                                                                                                          lst_2)))
+                                                                                                    (begin
+                                                                                                      (loop_0
+                                                                                                       mpi_1
+                                                                                                       #f
+                                                                                                       (phase+
+                                                                                                        phase_1
+                                                                                                        req-phase_0)
+                                                                                                       attach-instances?_0
+                                                                                                       attach-phase_0
+                                                                                                       #f)
+                                                                                                      (for-loop_1
+                                                                                                       rest_1))))
+                                                                                                (values))))))
+                                                                                         (for-loop_1
+                                                                                          lst_1)))
+                                                                                      (void)))
+                                                                                  (for-loop_0
+                                                                                   rest_0))))
+                                                                            (values))))))
+                                                                     (for-loop_0
+                                                                      shifted-requires_0))
+                                                                    (void)))
+                                                                (if (non-self-derived-module-path-index?
+                                                                     mpi_0)
+                                                                  (namespace-save-shifted-requires!
+                                                                   src-namespace_0
+                                                                   m_0
+                                                                   mod-name_0
+                                                                   shifted-requires_0)
+                                                                  (void))
+                                                                (let ((lst_0
+                                                                       (module-submodule-names
+                                                                        m_0)))
+                                                                  (letrec*
+                                                                   ((for-loop_0
+                                                                     (|#%name|
+                                                                      for-loop
+                                                                      (lambda (lst_1)
+                                                                        (if (pair?
+                                                                             lst_1)
+                                                                          (let ((submod-name_0
+                                                                                 (unsafe-car
+                                                                                  lst_1)))
+                                                                            (let ((rest_0
+                                                                                   (unsafe-cdr
                                                                                     lst_1)))
-                                                                                (void)))
-                                                                            (for-loop_0
-                                                                             rest_0))))
-                                                                      (values))))))
-                                                               (for-loop_0
-                                                                shifted-requires_0))
-                                                              (void)))
-                                                          (if (non-self-derived-module-path-index?
-                                                               mpi_0)
-                                                            (namespace-save-shifted-requires!
-                                                             src-namespace10_0
-                                                             m_0
-                                                             mod-name_0
-                                                             shifted-requires_0)
-                                                            (void))
-                                                          (let ((lst_0
-                                                                 (module-submodule-names
-                                                                  m_0)))
-                                                            (letrec*
-                                                             ((for-loop_0
-                                                               (|#%name|
-                                                                for-loop
-                                                                (lambda (lst_1)
-                                                                  (if (pair?
-                                                                       lst_1)
-                                                                    (let ((submod-name_0
-                                                                           (unsafe-car
-                                                                            lst_1)))
-                                                                      (let ((rest_0
-                                                                             (unsafe-cdr
-                                                                              lst_1)))
-                                                                        (begin
-                                                                          (let ((app_0
-                                                                                 (module-path-index-join*
-                                                                                  (list
-                                                                                   'submod
-                                                                                   "."
-                                                                                   submod-name_0)
-                                                                                  mpi_0)))
-                                                                            (loop_0
-                                                                             app_0
-                                                                             (1/make-resolved-module-path
-                                                                              (let ((n_0
-                                                                                     (1/resolved-module-path-name
-                                                                                      mod-name_0)))
-                                                                                (if (pair?
-                                                                                     n_0)
-                                                                                  (append
-                                                                                   n_0
-                                                                                   (list
-                                                                                    submod-name_0))
-                                                                                  (list
-                                                                                   n_0
-                                                                                   submod-name_0))))
-                                                                             #f
-                                                                             #f
-                                                                             attach-phase_0
-                                                                             #t))
-                                                                          (for-loop_0
-                                                                           rest_0))))
-                                                                    (values))))))
-                                                             (for-loop_0
-                                                              lst_0)))
-                                                          (void)
-                                                          (if (module-supermodule-name
-                                                               m_0)
-                                                            (loop_0
-                                                             (module-path-index-join*
-                                                              '(submod "..")
-                                                              mpi_0)
-                                                             #f
-                                                             #f
-                                                             #f
-                                                             attach-phase_0
-                                                             #t)
-                                                            (void)))))))))))))))
-                                 (void))))))))
-                      (loop_0
-                       (module-path-index-join*
-                        (if (1/resolved-module-path? mod-path11_0)
-                          (resolved-module-path->module-path mod-path11_0)
-                          mod-path11_0)
-                        #f)
-                       (if (1/resolved-module-path? mod-path11_0)
-                         mod-path11_0
-                         #f)
-                       phase_0
-                       attach-instances?7_0
-                       phase_0
-                       #t))
-                     (begin
-                       (letrec*
-                        ((for-loop_0
-                          (|#%name|
-                           for-loop
-                           (lambda (i_0)
-                             (if i_0
-                               (call-with-values
-                                (lambda () (hash-iterate-key+value todo_0 i_0))
-                                (lambda (mod-name_0 phases_0)
-                                  (begin
-                                    (let ((m_0
-                                           (namespace->module
-                                            src-namespace10_0
-                                            mod-name_0)))
-                                      (begin
-                                        (|#%app|
-                                         (module-force-bulk-binding m_0)
-                                         (namespace-bulk-binding-registry
-                                          src-namespace10_0))
-                                        (if (eq?
-                                             m_0
-                                             (namespace->module
-                                              dest-namespace12_0
-                                              mod-name_0))
-                                          (void)
-                                          (begin
-                                            (namespace-copy-shifted-requires!
-                                             dest-namespace12_0
-                                             src-namespace10_0
-                                             mod-name_0)
-                                            (with-continuation-mark*
-                                             push-authentic
-                                             parameterization-key
-                                             (extend-parameterization
-                                              (continuation-mark-set-first
-                                               #f
-                                               parameterization-key)
-                                              1/current-namespace
-                                              dest-namespace12_0)
-                                             (declare-module!.1
-                                              #t
-                                              dest-namespace12_0
-                                              m_0
-                                              mod-name_0))))
-                                        (letrec*
-                                         ((for-loop_1
-                                           (|#%name|
-                                            for-loop
-                                            (lambda (i_1)
-                                              (if i_1
-                                                (call-with-values
-                                                 (lambda ()
-                                                   (hash-iterate-key+value
-                                                    phases_0
-                                                    i_1))
-                                                 (lambda (m-phase_0 m-ns_0)
-                                                   (begin
-                                                     (if m-ns_0
-                                                       (begin
-                                                         (namespace-record-module-instance-attached!
-                                                          src-namespace10_0
-                                                          mod-name_0
-                                                          m-phase_0)
-                                                         (let ((or-part_0
-                                                                (namespace->module-namespace.1
-                                                                 #f
-                                                                 #f
-                                                                 void
-                                                                 dest-namespace12_0
-                                                                 mod-name_0
-                                                                 m-phase_0)))
-                                                           (if or-part_0
-                                                             or-part_0
-                                                             (namespace-install-module-namespace!
-                                                              dest-namespace12_0
-                                                              mod-name_0
-                                                              m-phase_0
-                                                              m_0
-                                                              m-ns_0
-                                                              phase_0))))
-                                                       (void))
-                                                     (for-loop_1
-                                                      (hash-iterate-next
-                                                       phases_0
-                                                       i_1)))))
-                                                (values))))))
-                                         (for-loop_1
-                                          (hash-iterate-first phases_0)))
-                                        (void)))
-                                    (for-loop_0
-                                     (hash-iterate-next todo_0 i_0)))))
-                               (values))))))
-                        (for-loop_0 (hash-iterate-first todo_0)))
-                       (let ((mnr_0 (1/current-module-name-resolver)))
-                         (with-continuation-mark*
-                          authentic
-                          parameterization-key
-                          (extend-parameterization
-                           (continuation-mark-set-first
-                            #f
-                            parameterization-key)
-                           1/current-namespace
-                           dest-namespace12_0)
-                          (begin
-                            (letrec*
-                             ((for-loop_0
-                               (|#%name|
-                                for-loop
-                                (lambda (i_0)
-                                  (if i_0
-                                    (let ((mod-name_0
-                                           (hash-iterate-key todo_0 i_0)))
-                                      (begin
-                                        (|#%app|
-                                         mnr_0
-                                         mod-name_0
-                                         src-namespace10_0)
-                                        (for-loop_0
-                                         (hash-iterate-next todo_0 i_0))))
-                                    (values))))))
-                             (for-loop_0 (hash-iterate-first todo_0)))
-                            (void))))))))))))))))
+                                                                              (begin
+                                                                                (let ((app_0
+                                                                                       (module-path-index-join*
+                                                                                        (list
+                                                                                         'submod
+                                                                                         "."
+                                                                                         submod-name_0)
+                                                                                        mpi_0)))
+                                                                                  (loop_0
+                                                                                   app_0
+                                                                                   (1/make-resolved-module-path
+                                                                                    (let ((n_0
+                                                                                           (1/resolved-module-path-name
+                                                                                            mod-name_0)))
+                                                                                      (if (pair?
+                                                                                           n_0)
+                                                                                        (append
+                                                                                         n_0
+                                                                                         (list
+                                                                                          submod-name_0))
+                                                                                        (list
+                                                                                         n_0
+                                                                                         submod-name_0))))
+                                                                                   #f
+                                                                                   #f
+                                                                                   attach-phase_0
+                                                                                   #t))
+                                                                                (for-loop_0
+                                                                                 rest_0))))
+                                                                          (values))))))
+                                                                   (for-loop_0
+                                                                    lst_0)))
+                                                                (void)
+                                                                (if (module-supermodule-name
+                                                                     m_0)
+                                                                  (loop_0
+                                                                   (module-path-index-join*
+                                                                    '(submod
+                                                                      "..")
+                                                                    mpi_0)
+                                                                   #f
+                                                                   #f
+                                                                   #f
+                                                                   attach-phase_0
+                                                                   #t)
+                                                                  (void)))))))))))))))
+                                       (void))))))))
+                            (loop_0
+                             (module-path-index-join*
+                              (if (1/resolved-module-path? mod-path11_0)
+                                (resolved-module-path->module-path
+                                 mod-path11_0)
+                                mod-path11_0)
+                              #f)
+                             (if (1/resolved-module-path? mod-path11_0)
+                               mod-path11_0
+                               #f)
+                             phase_0
+                             attach-instances?7_0
+                             phase_0
+                             #t))
+                           (begin
+                             (letrec*
+                              ((for-loop_0
+                                (|#%name|
+                                 for-loop
+                                 (lambda (i_0)
+                                   (if i_0
+                                     (call-with-values
+                                      (lambda ()
+                                        (hash-iterate-key+value todo_0 i_0))
+                                      (lambda (mod-name_0 phases_0)
+                                        (begin
+                                          (let ((m_0
+                                                 (namespace->module
+                                                  src-namespace_0
+                                                  mod-name_0)))
+                                            (begin
+                                              (|#%app|
+                                               (module-force-bulk-binding m_0)
+                                               (namespace-bulk-binding-registry
+                                                src-namespace_0))
+                                              (if (eq?
+                                                   m_0
+                                                   (namespace->module
+                                                    dest-namespace_0
+                                                    mod-name_0))
+                                                (void)
+                                                (begin
+                                                  (namespace-copy-shifted-requires!
+                                                   dest-namespace_0
+                                                   src-namespace_0
+                                                   mod-name_0)
+                                                  (with-continuation-mark*
+                                                   push-authentic
+                                                   parameterization-key
+                                                   (extend-parameterization
+                                                    (continuation-mark-set-first
+                                                     #f
+                                                     parameterization-key)
+                                                    1/current-namespace
+                                                    dest-namespace_0)
+                                                   (declare-module!.1
+                                                    #t
+                                                    dest-namespace_0
+                                                    m_0
+                                                    mod-name_0))))
+                                              (letrec*
+                                               ((for-loop_1
+                                                 (|#%name|
+                                                  for-loop
+                                                  (lambda (i_1)
+                                                    (if i_1
+                                                      (call-with-values
+                                                       (lambda ()
+                                                         (hash-iterate-key+value
+                                                          phases_0
+                                                          i_1))
+                                                       (lambda (m-phase_0
+                                                                m-ns_0)
+                                                         (begin
+                                                           (if m-ns_0
+                                                             (begin
+                                                               (namespace-record-module-instance-attached!
+                                                                src-namespace_0
+                                                                mod-name_0
+                                                                m-phase_0)
+                                                               (let ((or-part_0
+                                                                      (namespace->module-namespace.1
+                                                                       #f
+                                                                       #f
+                                                                       void
+                                                                       dest-namespace_0
+                                                                       mod-name_0
+                                                                       m-phase_0)))
+                                                                 (if or-part_0
+                                                                   or-part_0
+                                                                   (namespace-install-module-namespace!
+                                                                    dest-namespace_0
+                                                                    mod-name_0
+                                                                    m-phase_0
+                                                                    m_0
+                                                                    m-ns_0
+                                                                    phase_0))))
+                                                             (void))
+                                                           (for-loop_1
+                                                            (hash-iterate-next
+                                                             phases_0
+                                                             i_1)))))
+                                                      (values))))))
+                                               (for-loop_1
+                                                (hash-iterate-first phases_0)))
+                                              (void)))
+                                          (for-loop_0
+                                           (hash-iterate-next todo_0 i_0)))))
+                                     (values))))))
+                              (for-loop_0 (hash-iterate-first todo_0)))
+                             (let ((mnr_0 (1/current-module-name-resolver)))
+                               (with-continuation-mark*
+                                authentic
+                                parameterization-key
+                                (extend-parameterization
+                                 (continuation-mark-set-first
+                                  #f
+                                  parameterization-key)
+                                 1/current-namespace
+                                 dest-namespace_0)
+                                (begin
+                                  (letrec*
+                                   ((for-loop_0
+                                     (|#%name|
+                                      for-loop
+                                      (lambda (i_0)
+                                        (if i_0
+                                          (let ((mod-name_0
+                                                 (hash-iterate-key
+                                                  todo_0
+                                                  i_0)))
+                                            (begin
+                                              (|#%app|
+                                               mnr_0
+                                               mod-name_0
+                                               src-namespace_0)
+                                              (for-loop_0
+                                               (hash-iterate-next
+                                                todo_0
+                                                i_0))))
+                                          (values))))))
+                                   (for-loop_0 (hash-iterate-first todo_0)))
+                                  (void)))))))))))))))))))
 (define 1/make-empty-namespace
   (|#%name|
    make-empty-namespace
@@ -59236,6 +60175,7 @@
                         (root-expand-context/inner-defined-syms the-struct_0)
                         (root-expand-context/inner-counter the-struct_0)
                         (root-expand-context/inner-lift-key the-struct_0)
+                        (root-expand-context/inner-local-state the-struct_0)
                         (expand-context/inner-to-parsed? the-struct_0)
                         (expand-context/inner-phase the-struct_0)
                         (expand-context/inner-namespace the-struct_0)
@@ -59374,6 +60314,8 @@
                                        the-struct_0)
                                       (root-expand-context/inner-lift-key
                                        the-struct_0)
+                                      (root-expand-context/inner-local-state
+                                       the-struct_0)
                                       (expand-context/inner-to-parsed?
                                        the-struct_0)
                                       phase_1
@@ -59470,6 +60412,8 @@
                                          (root-expand-context/inner-counter
                                           the-struct_0)
                                          (root-expand-context/inner-lift-key
+                                          the-struct_0)
+                                         (root-expand-context/inner-local-state
                                           the-struct_0)
                                          (expand-context/inner-to-parsed?
                                           the-struct_0)
@@ -59913,6 +60857,8 @@
                                             (root-expand-context/inner-counter
                                              the-struct_0)
                                             (root-expand-context/inner-lift-key
+                                             the-struct_0)
+                                            (root-expand-context/inner-local-state
                                              the-struct_0)
                                             (expand-context/inner-to-parsed?
                                              the-struct_0)
@@ -74488,7 +75434,7 @@
          (void)
          (raise-argument-error 'syntax-taint "syntax?" s_0))
        (syntax-taint$1 s_0)))))
-(define finish_2682
+(define finish_2681
   (make-struct-type-install-properties
    '(serialized-syntax)
    5
@@ -74514,7 +75460,7 @@
    #f
    #f
    'prefab))
-(define effect_2423 (finish_2682 struct:serialized-syntax))
+(define effect_2423 (finish_2681 struct:serialized-syntax))
 (define serialized-syntax1.1
   (|#%name|
    serialized-syntax
@@ -75388,6 +76334,8 @@
    'syntax-local-lift-context
    'syntax-local-lift-module
    'syntax-local-lift-require
+   'syntax-local-state-ref
+   'syntax-local-state-set!
    'syntax-local-lift-provide
    'syntax-local-lift-module-end-declaration
    'syntax-local-module-defined-identifiers
@@ -75451,7 +76399,7 @@
    'variable-reference->module-declaration-inspector
    'read-syntax
    'read-syntax/recursive))
-(define effect_2439
+(define effect_2298
   (begin
     (void
      (begin
@@ -75716,6 +76664,14 @@
         #f
         'syntax-local-lift-require
         1/syntax-local-lift-require)
+       (add-core-primitive!.1
+        #f
+        'syntax-local-state-ref
+        1/syntax-local-state-ref)
+       (add-core-primitive!.1
+        #f
+        'syntax-local-state-set!
+        1/syntax-local-state-set!)
        (add-core-primitive!.1
         #f
         'syntax-local-lift-provide
@@ -87976,6 +88932,8 @@
                                                                                                  the-struct_0)
                                                                                                 (root-expand-context/inner-lift-key
                                                                                                  the-struct_0)
+                                                                                                (root-expand-context/inner-local-state
+                                                                                                 the-struct_0)
                                                                                                 (expand-context/inner-to-parsed?
                                                                                                  the-struct_0)
                                                                                                 (expand-context/inner-phase
@@ -89086,6 +90044,463 @@
      (if (parsed? body_0)
        (datum->syntax$1 #f body_0 (parsed-s body_0))
        body_0))))
+(define make-module-phaseless!
+  (lambda (inside-scope_0 r+p_0 defined-syms_0 s_0)
+    (let ((check-phase_0
+           (|#%name|
+            check-phase
+            (lambda (phase_0 id-or-sym_0 what_0)
+              (if (let ((or-part_0 (eqv? phase_0 0)))
+                    (if or-part_0 or-part_0 (eqv? phase_0 1)))
+                (void)
+                (raise-syntax-error$1
+                 #f
+                 (let ((app_0
+                        (string-append
+                         "~a at ~a not allowed in an unsafe cross-phase persistent module\n"
+                         "  name: ~a")))
+                   (let ((app_1
+                          (if (not phase_0)
+                            "the label phase"
+                            (format "phase ~a" phase_0))))
+                     (format
+                      app_0
+                      what_0
+                      app_1
+                      (if (syntax?$1 id-or-sym_0)
+                        (syntax-e$1 id-or-sym_0)
+                        id-or-sym_0))))
+                 s_0
+                 (if (syntax?$1 id-or-sym_0) id-or-sym_0 #f)))))))
+      (let ((sym-sites_0 (make-hasheq)))
+        (let ((add-site!_0
+               (|#%name|
+                add-site!
+                (lambda (sym_0 get-id_0 phase_0 source_0)
+                  (hash-set!
+                   sym-sites_0
+                   sym_0
+                   (let ((app_0 (vector get-id_0 phase_0 source_0)))
+                     (cons app_0 (hash-ref sym-sites_0 sym_0 null))))))))
+          (begin
+            (requires+provides-for-each-required-id
+             r+p_0
+             (lambda (sym_0 phase_0 source_0 get-id_0)
+               (begin
+                 (if (not phase_0)
+                   (check-phase_0 phase_0 (|#%app| get-id_0) "import")
+                   (void))
+                 (add-site!_0 sym_0 get-id_0 phase_0 source_0))))
+            (begin
+              (requires+provides-for-each-defined-sym
+               r+p_0
+               (lambda (sym_0 phase_0 kind_0)
+                 (begin
+                   (check-phase_0 phase_0 sym_0 "definition")
+                   (if (if (eqv? phase_0 1) (eq? kind_0 'transformer) #f)
+                     (raise-syntax-error$1
+                      #f
+                      (format
+                       (string-append
+                        "macro definition at phase 1 not allowed in an unsafe"
+                        " cross-phase persistent module\n"
+                        "  name: ~a")
+                       sym_0)
+                      s_0)
+                     (void)))))
+              (begin
+                (letrec*
+                 ((for-loop_0
+                   (|#%name|
+                    for-loop
+                    (lambda (i_0)
+                      (if i_0
+                        (call-with-values
+                         (lambda ()
+                           (hash-iterate-key+value defined-syms_0 i_0))
+                         (lambda (phase_0 ht_0)
+                           (call-with-values
+                            (lambda ()
+                              (letrec*
+                               ((for-loop_1
+                                 (|#%name|
+                                  for-loop
+                                  (lambda (i_1)
+                                    (if i_1
+                                      (call-with-values
+                                       (lambda ()
+                                         (hash-iterate-key+value ht_0 i_1))
+                                       (lambda (sym_0 id_0)
+                                         (begin
+                                           (add-site!_0
+                                            (syntax-e$1 id_0)
+                                            (lambda () id_0)
+                                            phase_0
+                                            #f)
+                                           (for-loop_1
+                                            (hash-iterate-next ht_0 i_1)))))
+                                      (values))))))
+                               (for-loop_1 (hash-iterate-first ht_0))))
+                            (lambda ()
+                              (for-loop_0
+                               (hash-iterate-next defined-syms_0 i_0))))))
+                        (values))))))
+                 (for-loop_0 (hash-iterate-first defined-syms_0)))
+                (let ((sites_0
+                       (reverse$1
+                        (letrec*
+                         ((for-loop_0
+                           (|#%name|
+                            for-loop
+                            (lambda (fold-var_0 i_0)
+                              (if i_0
+                                (call-with-values
+                                 (lambda ()
+                                   (hash-iterate-key+value sym-sites_0 i_0))
+                                 (lambda (sym_0 l_0)
+                                   (let ((fold-var_1
+                                          (if (let ((site0_0 (car l_0)))
+                                                (let ((or-part_0
+                                                       (let ((lst_0 (cdr l_0)))
+                                                         (letrec*
+                                                          ((for-loop_1
+                                                            (|#%name|
+                                                             for-loop
+                                                             (lambda (result_0
+                                                                      lst_1)
+                                                               (if (pair?
+                                                                    lst_1)
+                                                                 (let ((site_0
+                                                                        (unsafe-car
+                                                                         lst_1)))
+                                                                   (let ((rest_0
+                                                                          (unsafe-cdr
+                                                                           lst_1)))
+                                                                     (let ((result_1
+                                                                            (let ((result_1
+                                                                                   (let ((app_0
+                                                                                          (vector-ref
+                                                                                           site0_0
+                                                                                           1)))
+                                                                                     (eqv?
+                                                                                      app_0
+                                                                                      (vector-ref
+                                                                                       site_0
+                                                                                       1)))))
+                                                                              (values
+                                                                               result_1))))
+                                                                       (if (if (not
+                                                                                (let ((x_0
+                                                                                       (list
+                                                                                        site_0)))
+                                                                                  (not
+                                                                                   result_1)))
+                                                                             #t
+                                                                             #f)
+                                                                         (for-loop_1
+                                                                          result_1
+                                                                          rest_0)
+                                                                         result_1))))
+                                                                 result_0)))))
+                                                          (for-loop_1
+                                                           #t
+                                                           lst_0)))))
+                                                  (if or-part_0
+                                                    or-part_0
+                                                    (let ((source0_0
+                                                           (vector-ref
+                                                            site0_0
+                                                            2)))
+                                                      (if source0_0
+                                                        (let ((lst_0
+                                                               (cdr l_0)))
+                                                          (letrec*
+                                                           ((for-loop_1
+                                                             (|#%name|
+                                                              for-loop
+                                                              (lambda (result_0
+                                                                       lst_1)
+                                                                (if (pair?
+                                                                     lst_1)
+                                                                  (let ((site_0
+                                                                         (unsafe-car
+                                                                          lst_1)))
+                                                                    (let ((rest_0
+                                                                           (unsafe-cdr
+                                                                            lst_1)))
+                                                                      (let ((result_1
+                                                                             (let ((result_1
+                                                                                    (let ((source_0
+                                                                                           (vector-ref
+                                                                                            site_0
+                                                                                            2)))
+                                                                                      (if source_0
+                                                                                        (if (let ((app_0
+                                                                                                   (car
+                                                                                                    source0_0)))
+                                                                                              (eq?
+                                                                                               app_0
+                                                                                               (car
+                                                                                                source_0)))
+                                                                                          (let ((app_0
+                                                                                                 (cdr
+                                                                                                  source0_0)))
+                                                                                            (eqv?
+                                                                                             app_0
+                                                                                             (cdr
+                                                                                              source_0)))
+                                                                                          #f)
+                                                                                        #f))))
+                                                                               (values
+                                                                                result_1))))
+                                                                        (if (if (not
+                                                                                 (let ((x_0
+                                                                                        (list
+                                                                                         site_0)))
+                                                                                   (not
+                                                                                    result_1)))
+                                                                              #t
+                                                                              #f)
+                                                                          (for-loop_1
+                                                                           result_1
+                                                                           rest_0)
+                                                                          result_1))))
+                                                                  result_0)))))
+                                                           (for-loop_1
+                                                            #t
+                                                            lst_0)))
+                                                        #f)))))
+                                            fold-var_0
+                                            (letrec*
+                                             ((for-loop_1
+                                               (|#%name|
+                                                for-loop
+                                                (lambda (fold-var_1 lst_0)
+                                                  (if (pair? lst_0)
+                                                    (let ((site_0
+                                                           (unsafe-car lst_0)))
+                                                      (let ((rest_0
+                                                             (unsafe-cdr
+                                                              lst_0)))
+                                                        (let ((fold-var_2
+                                                               (let ((fold-var_2
+                                                                      (cons
+                                                                       (let ((id_0
+                                                                              (|#%app|
+                                                                               (vector-ref
+                                                                                site_0
+                                                                                0))))
+                                                                         (let ((app_0
+                                                                                (vector-ref
+                                                                                 site_0
+                                                                                 1)))
+                                                                           (vector
+                                                                            id_0
+                                                                            app_0
+                                                                            (let ((temp2_0
+                                                                                   (vector-ref
+                                                                                    site_0
+                                                                                    1)))
+                                                                              (resolve+shift.1
+                                                                               #f
+                                                                               #f
+                                                                               null
+                                                                               unsafe-undefined
+                                                                               #f
+                                                                               id_0
+                                                                               temp2_0)))))
+                                                                       fold-var_1)))
+                                                                 (values
+                                                                  fold-var_2))))
+                                                          (for-loop_1
+                                                           fold-var_2
+                                                           rest_0))))
+                                                    fold-var_1)))))
+                                             (for-loop_1 fold-var_0 l_0)))))
+                                     (for-loop_0
+                                      fold-var_1
+                                      (hash-iterate-next sym-sites_0 i_0)))))
+                                fold-var_0)))))
+                         (for-loop_0 null (hash-iterate-first sym-sites_0))))))
+                  (begin
+                    (make-shifted-multi-scope-phaseless! inside-scope_0)
+                    (let ((bad-sites_0
+                           (reverse$1
+                            (letrec*
+                             ((for-loop_0
+                               (|#%name|
+                                for-loop
+                                (lambda (fold-var_0 lst_0)
+                                  (if (pair? lst_0)
+                                    (let ((site_0 (unsafe-car lst_0)))
+                                      (let ((rest_0 (unsafe-cdr lst_0)))
+                                        (let ((fold-var_1
+                                               (if (let ((before-b_0
+                                                          (vector-ref
+                                                           site_0
+                                                           2)))
+                                                     (let ((after-b_0
+                                                            (let ((temp3_0
+                                                                   (vector-ref
+                                                                    site_0
+                                                                    0)))
+                                                              (let ((temp4_0
+                                                                     (vector-ref
+                                                                      site_0
+                                                                      1)))
+                                                                (let ((temp3_1
+                                                                       temp3_0))
+                                                                  (resolve+shift.1
+                                                                   #f
+                                                                   #f
+                                                                   null
+                                                                   unsafe-undefined
+                                                                   #f
+                                                                   temp3_1
+                                                                   temp4_0))))))
+                                                       (let ((before-b_1
+                                                              before-b_0))
+                                                         (let ((or-part_0
+                                                                (eq?
+                                                                 before-b_1
+                                                                 after-b_0)))
+                                                           (if or-part_0
+                                                             or-part_0
+                                                             (if before-b_1
+                                                               (if after-b_0
+                                                                 (if (let ((or-part_1
+                                                                            (module-binding?
+                                                                             before-b_1)))
+                                                                       (if or-part_1
+                                                                         or-part_1
+                                                                         (local-binding?
+                                                                          before-b_1)))
+                                                                   (same-binding?
+                                                                    before-b_1
+                                                                    after-b_0)
+                                                                   #f)
+                                                                 #f)
+                                                               #f))))))
+                                                 fold-var_0
+                                                 (let ((fold-var_1
+                                                        (cons
+                                                         site_0
+                                                         fold-var_0)))
+                                                   (values fold-var_1)))))
+                                          (for-loop_0 fold-var_1 rest_0))))
+                                    fold-var_0)))))
+                             (for-loop_0 null sites_0)))))
+                      (if (null? bad-sites_0)
+                        (void)
+                        (let ((site_0 (car bad-sites_0)))
+                          (let ((id_0 (vector-ref site_0 0)))
+                            (let ((phase_0 (vector-ref site_0 1)))
+                              (let ((before-b_0 (vector-ref site_0 2)))
+                                (let ((after-b_0
+                                       (resolve+shift.1
+                                        #f
+                                        #f
+                                        null
+                                        unsafe-undefined
+                                        #f
+                                        id_0
+                                        phase_0)))
+                                  (let ((all-names_0
+                                         (letrec*
+                                          ((loop_0
+                                            (|#%name|
+                                             loop
+                                             (lambda (l_0 seen_0)
+                                               (if (null? l_0)
+                                                 null
+                                                 (let ((sym_0
+                                                        (syntax-e$1
+                                                         (vector-ref
+                                                          (car l_0)
+                                                          0))))
+                                                   (if (hash-ref
+                                                        seen_0
+                                                        sym_0
+                                                        #f)
+                                                     (loop_0 (cdr l_0) seen_0)
+                                                     (cons
+                                                      sym_0
+                                                      (let ((app_0 (cdr l_0)))
+                                                        (loop_0
+                                                         app_0
+                                                         (hash-set
+                                                          seen_0
+                                                          sym_0
+                                                          #t)))))))))))
+                                          (loop_0 bad-sites_0 hash2610))))
+                                    (let ((app_0
+                                           (string-append
+                                            "binding differs across phases in an unsafe cross-phase persistent module;\n"
+                                            " a phase-0 binding and a phase-1 binding with the same name must be the same")))
+                                      (raise-syntax-error$1
+                                       #f
+                                       app_0
+                                       s_0
+                                       id_0
+                                       null
+                                       (let ((app_1
+                                              (describe-binding before-b_0)))
+                                         (let ((app_2
+                                                (describe-binding after-b_0)))
+                                           (format
+                                            "\n  phase of binding: ~a\n  binding at that phase: ~a\n  merged binding: ~a\n  all conflicting names:~a"
+                                            phase_0
+                                            app_1
+                                            app_2
+                                            (apply-string-append
+                                             0
+                                             (reverse$1
+                                              (letrec*
+                                               ((for-loop_0
+                                                 (|#%name|
+                                                  for-loop
+                                                  (lambda (fold-var_0 lst_0)
+                                                    (if (pair? lst_0)
+                                                      (let ((sym_0
+                                                             (unsafe-car
+                                                              lst_0)))
+                                                        (let ((rest_0
+                                                               (unsafe-cdr
+                                                                lst_0)))
+                                                          (let ((fold-var_1
+                                                                 (let ((fold-var_1
+                                                                        (cons
+                                                                         (format
+                                                                          " ~a"
+                                                                          sym_0)
+                                                                         fold-var_0)))
+                                                                   (values
+                                                                    fold-var_1))))
+                                                            (for-loop_0
+                                                             fold-var_1
+                                                             rest_0))))
+                                                      fold-var_0)))))
+                                               (for-loop_0
+                                                null
+                                                all-names_0)))))))))))))))))))))))))))
+(define describe-binding
+  (lambda (b_0)
+    (if (not b_0)
+      "none"
+      (if (module-binding? b_0)
+        (let ((app_0 (module-binding-sym b_0)))
+          (let ((app_1
+                 (let ((mpi_0 (module-binding-module b_0)))
+                   (if (1/module-path-index? mpi_0)
+                     (1/resolved-module-path-name
+                      (1/module-path-index-resolve mpi_0))
+                     mpi_0))))
+            (format
+             "~a from ~a at phase level ~a"
+             app_0
+             app_1
+             (module-binding-phase b_0))))
+        (if (local-binding? b_0) "local binding" "ambiguous")))))
 (define 1/call-with-module-prompt
   (|#%name|
    call-with-module-prompt
@@ -89154,7 +90569,7 @@
            "illegal use (not in a module top-level)"
            s_0)))))
     (void)))
-(define effect_2748
+(define effect_2188
   (begin
     (void
      (add-core-form!*
@@ -89196,6 +90611,7 @@
                          (root-expand-context/inner-defined-syms the-struct_0)
                          (root-expand-context/inner-counter the-struct_0)
                          (root-expand-context/inner-lift-key the-struct_0)
+                         (root-expand-context/inner-local-state the-struct_0)
                          (expand-context/inner-to-parsed? the-struct_0)
                          (expand-context/inner-phase the-struct_0)
                          (expand-context/inner-namespace the-struct_0)
@@ -89519,6 +90935,8 @@
                                                                          (root-expand-context/inner-counter
                                                                           the-struct_0)
                                                                          (root-expand-context/inner-lift-key
+                                                                          the-struct_0)
+                                                                         (root-expand-context/inner-local-state
                                                                           the-struct_0)
                                                                          (expand-context/inner-to-parsed?
                                                                           the-struct_0)
@@ -89962,6 +91380,8 @@
                                                                                                                  the-struct_0)
                                                                                                                 (root-expand-context/inner-lift-key
                                                                                                                  the-struct_0)
+                                                                                                                (root-expand-context/inner-local-state
+                                                                                                                 the-struct_0)
                                                                                                                 (expand-context/inner-to-parsed?
                                                                                                                  the-struct_0)
                                                                                                                 (expand-context/inner-phase
@@ -90232,6 +91652,8 @@
                                                                                                                                                                   (root-expand-context/inner-counter
                                                                                                                                                                    the-struct_0)
                                                                                                                                                                   lift-key323_1
+                                                                                                                                                                  (root-expand-context/inner-local-state
+                                                                                                                                                                   the-struct_0)
                                                                                                                                                                   (expand-context/inner-to-parsed?
                                                                                                                                                                    the-struct_0)
                                                                                                                                                                   phase_0
@@ -90384,6 +91806,8 @@
                                                                                                                                                                  the-struct_0)
                                                                                                                                                                 (root-expand-context/inner-lift-key
                                                                                                                                                                  the-struct_0)
+                                                                                                                                                                (root-expand-context/inner-local-state
+                                                                                                                                                                 the-struct_0)
                                                                                                                                                                 (expand-context/inner-to-parsed?
                                                                                                                                                                  the-struct_0)
                                                                                                                                                                 (expand-context/inner-phase
@@ -90516,250 +91940,279 @@
                                                                                                                                 requires+provides364_0
                                                                                                                                 self_0
                                                                                                                                 expression-expanded-bodys_0))))
-                                                                                                                        (let ((is-cross-phase-persistent?_0
+                                                                                                                        (let ((unsafe-cross-phase-persistent-kw_0
                                                                                                                                (hash-ref
                                                                                                                                 declared-keywords_0
-                                                                                                                                kw2208
+                                                                                                                                kw2747
                                                                                                                                 #f)))
-                                                                                                                          (begin
-                                                                                                                            (if is-cross-phase-persistent?_0
+                                                                                                                          (let ((cross-phase-persistent-kw_0
+                                                                                                                                 (let ((or-part_0
+                                                                                                                                        (hash-ref
+                                                                                                                                         declared-keywords_0
+                                                                                                                                         kw2208
+                                                                                                                                         #f)))
+                                                                                                                                   (if or-part_0
+                                                                                                                                     or-part_0
+                                                                                                                                     unsafe-cross-phase-persistent-kw_0))))
+                                                                                                                            (let ((is-cross-phase-persistent?_0
+                                                                                                                                   (if cross-phase-persistent-kw_0
+                                                                                                                                     #t
+                                                                                                                                     #f)))
                                                                                                                               (begin
-                                                                                                                                (if (let ((r+p_0
-                                                                                                                                           requires+provides_0))
-                                                                                                                                      (not
-                                                                                                                                       (|requires+provides-required-non-cross-phase-module/#f|
-                                                                                                                                        r+p_0)))
-                                                                                                                                  (void)
-                                                                                                                                  (let ((app_0
+                                                                                                                                (if is-cross-phase-persistent?_0
+                                                                                                                                  (begin
+                                                                                                                                    (if (let ((r+p_0
+                                                                                                                                               requires+provides_0))
+                                                                                                                                          (not
+                                                                                                                                           (|requires+provides-required-non-cross-phase-module/#f|
+                                                                                                                                            r+p_0)))
+                                                                                                                                      (void)
+                                                                                                                                      (raise-syntax-error$1
+                                                                                                                                       #f
+                                                                                                                                       "cannot be cross-phase persistent because some required module isn't"
+                                                                                                                                       rebuild-s_0
+                                                                                                                                       cross-phase-persistent-kw_0
+                                                                                                                                       null
+                                                                                                                                       (format
+                                                                                                                                        "~n  required module: ~a"
+                                                                                                                                        (requires+provides-why-not-cross-phase-persistent
+                                                                                                                                         requires+provides_0))))
+                                                                                                                                    (if unsafe-cross-phase-persistent-kw_0
+                                                                                                                                      (begin
+                                                                                                                                        (if log-performance?
+                                                                                                                                          (start-performance-region
+                                                                                                                                           'expand
+                                                                                                                                           'phaseless)
+                                                                                                                                          (void))
+                                                                                                                                        (begin0
+                                                                                                                                          (let ((app_0
+                                                                                                                                                 requires+provides_0))
+                                                                                                                                            (make-module-phaseless!
+                                                                                                                                             inside-scope_0
+                                                                                                                                             app_0
+                                                                                                                                             defined-syms_0
+                                                                                                                                             rebuild-s_0))
+                                                                                                                                          (if log-performance?
+                                                                                                                                            (end-performance-region)
+                                                                                                                                            (void))))
+                                                                                                                                      (check-cross-phase-persistent-form
+                                                                                                                                       fully-expanded-bodys-except-post-submodules_0
+                                                                                                                                       self_0)))
+                                                                                                                                  (void))
+                                                                                                                                (let ((realm_0
+                                                                                                                                       (let ((realm-stx_0
+                                                                                                                                              (hash-ref
+                                                                                                                                               declared-keywords_0
+                                                                                                                                               kw1701
+                                                                                                                                               #f)))
+                                                                                                                                         (if realm-stx_0
+                                                                                                                                           (syntax-e$1
+                                                                                                                                            realm-stx_0)
+                                                                                                                                           (current-compile-realm)))))
+                                                                                                                                  (let ((flatten-requires?_0
                                                                                                                                          (hash-ref
                                                                                                                                           declared-keywords_0
-                                                                                                                                          kw2208)))
-                                                                                                                                    (raise-syntax-error$1
-                                                                                                                                     #f
-                                                                                                                                     "cannot be cross-phase persistent because some required module isn't"
-                                                                                                                                     rebuild-s_0
-                                                                                                                                     app_0
-                                                                                                                                     null
-                                                                                                                                     (format
-                                                                                                                                      "~n  required module: ~a"
-                                                                                                                                      (requires+provides-why-not-cross-phase-persistent
-                                                                                                                                       requires+provides_0)))))
-                                                                                                                                (check-cross-phase-persistent-form
-                                                                                                                                 fully-expanded-bodys-except-post-submodules_0
-                                                                                                                                 self_0))
-                                                                                                                              (void))
-                                                                                                                            (let ((realm_0
-                                                                                                                                   (let ((realm-stx_0
-                                                                                                                                          (hash-ref
-                                                                                                                                           declared-keywords_0
-                                                                                                                                           kw1701
-                                                                                                                                           #f)))
-                                                                                                                                     (if realm-stx_0
-                                                                                                                                       (syntax-e$1
-                                                                                                                                        realm-stx_0)
-                                                                                                                                       (current-compile-realm)))))
-                                                                                                                              (let ((flatten-requires?_0
-                                                                                                                                     (hash-ref
-                                                                                                                                      declared-keywords_0
-                                                                                                                                      kw2160
-                                                                                                                                      #f)))
-                                                                                                                                (begin
-                                                                                                                                  (let ((obs_0
-                                                                                                                                         (expand-context/inner-observer
-                                                                                                                                          (root-expand-context/outer-inner
-                                                                                                                                           ctx_1))))
-                                                                                                                                    (if obs_0
-                                                                                                                                      (call-expand-observe
-                                                                                                                                       obs_0
-                                                                                                                                       'next-group)
-                                                                                                                                      (void)))
-                                                                                                                                  (let ((submod-m-ns_0
-                                                                                                                                         (make-m-ns_0
-                                                                                                                                          #t
-                                                                                                                                          m-ns_0)))
-                                                                                                                                    (let ((submod-ctx_0
-                                                                                                                                           (if (expand-context/outer?
-                                                                                                                                                ctx_1)
-                                                                                                                                             (let ((inner374_0
-                                                                                                                                                    (let ((the-struct_0
-                                                                                                                                                           (root-expand-context/outer-inner
-                                                                                                                                                            ctx_1)))
-                                                                                                                                                      (if (expand-context/inner?
-                                                                                                                                                           the-struct_0)
-                                                                                                                                                        (expand-context/inner2.1
-                                                                                                                                                         (root-expand-context/inner-self-mpi
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (root-expand-context/inner-module-scopes
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (root-expand-context/inner-top-level-bind-scope
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (root-expand-context/inner-all-scopes-stx
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (root-expand-context/inner-defined-syms
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (root-expand-context/inner-counter
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (root-expand-context/inner-lift-key
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-to-parsed?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-phase
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         submod-m-ns_0
-                                                                                                                                                         (expand-context/inner-just-once?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-module-begin-k
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-allow-unbound?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-in-local-expand?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (|expand-context/inner-keep-#%expression?|
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-stops
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-declared-submodule-names
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-lifts
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-lift-envs
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-module-lifts
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-require-lifts
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-to-module-lifts
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-requires+provides
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-observer
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-for-serializable?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-to-correlated-linklet?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-normalize-locals?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-parsing-expanded?
-                                                                                                                                                          the-struct_0)
-                                                                                                                                                         (expand-context/inner-skip-visit-available?
-                                                                                                                                                          the-struct_0))
-                                                                                                                                                        (raise-argument-error
-                                                                                                                                                         'struct-copy
-                                                                                                                                                         "expand-context/inner?"
-                                                                                                                                                         the-struct_0)))))
-                                                                                                                                               (expand-context/outer1.1
-                                                                                                                                                inner374_0
-                                                                                                                                                #f
-                                                                                                                                                (root-expand-context/outer-use-site-scopes
-                                                                                                                                                 ctx_1)
-                                                                                                                                                #f
-                                                                                                                                                (expand-context/outer-context
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-env
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-scopes
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-def-ctx-scopes
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-binding-layer
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-reference-records
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-only-immediate?
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-need-eventually-defined
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-current-introduction-scopes
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-current-use-scopes
-                                                                                                                                                 ctx_1)
-                                                                                                                                                (expand-context/outer-name
-                                                                                                                                                 ctx_1)))
-                                                                                                                                             (raise-argument-error
-                                                                                                                                              'struct-copy
-                                                                                                                                              "expand-context/outer?"
-                                                                                                                                              ctx_1))))
-                                                                                                                                      (let ((declare-enclosing-module_0
-                                                                                                                                             (promise1.1
-                                                                                                                                              (lambda ()
-                                                                                                                                                (let ((requires+provides379_0
-                                                                                                                                                       requires+provides_0))
-                                                                                                                                                  (let ((compiled-module-box389_0
-                                                                                                                                                         compiled-module-box_0))
-                                                                                                                                                    (let ((requires+provides379_1
-                                                                                                                                                           requires+provides379_0))
-                                                                                                                                                      (declare-module-for-expansion.1
-                                                                                                                                                       submod-ctx_0
-                                                                                                                                                       enclosing-self15_0
-                                                                                                                                                       compiled-module-box389_0
-                                                                                                                                                       flatten-requires?_0
-                                                                                                                                                       id:module-name217_0
-                                                                                                                                                       modules-being-compiled_0
-                                                                                                                                                       submod-m-ns_0
-                                                                                                                                                       portal-syntaxes_0
-                                                                                                                                                       realm_0
-                                                                                                                                                       rebuild-s_0
-                                                                                                                                                       requires+provides379_1
-                                                                                                                                                       root-ctx_0
-                                                                                                                                                       self_0
-                                                                                                                                                       fully-expanded-bodys-except-post-submodules_0)))))
-                                                                                                                                              #f)))
-                                                                                                                                        (let ((fully-expanded-bodys_0
-                                                                                                                                               (if (stop-at-module*?
-                                                                                                                                                    submod-ctx_0)
-                                                                                                                                                 fully-expanded-bodys-except-post-submodules_0
-                                                                                                                                                 (let ((requires+provides394_0
-                                                                                                                                                        requires+provides_0))
-                                                                                                                                                   (let ((compiled-submodules399_0
-                                                                                                                                                          compiled-submodules_0))
-                                                                                                                                                     (let ((requires+provides394_1
-                                                                                                                                                            requires+provides394_0))
-                                                                                                                                                       (expand-post-submodules.1
-                                                                                                                                                        initial-require-s_0
-                                                                                                                                                        compiled-submodules399_0
-                                                                                                                                                        submod-ctx_0
-                                                                                                                                                        declare-enclosing-module_0
-                                                                                                                                                        declared-submodule-names_0
-                                                                                                                                                        is-cross-phase-persistent?_0
-                                                                                                                                                        modules-being-compiled_0
-                                                                                                                                                        mpis-to-reset_0
-                                                                                                                                                        0
-                                                                                                                                                        requires+provides394_1
-                                                                                                                                                        self_0
-                                                                                                                                                        fully-expanded-bodys-except-post-submodules_0)))))))
-                                                                                                                                          (if (expand-context/inner-to-parsed?
-                                                                                                                                               (root-expand-context/outer-inner
-                                                                                                                                                submod-ctx_0))
-                                                                                                                                            (|parsed-#%module-begin25.1|
-                                                                                                                                             rebuild-mb-s_0
-                                                                                                                                             (parsed-only
-                                                                                                                                              fully-expanded-bodys_0)
-                                                                                                                                             realm_0
-                                                                                                                                             flatten-requires?_0)
-                                                                                                                                            (let ((mb-result-s_0
-                                                                                                                                                   (let ((temp403_0
-                                                                                                                                                          (list*
-                                                                                                                                                           |#%module-begin287_0|
-                                                                                                                                                           (syntax-only
-                                                                                                                                                            fully-expanded-bodys_0))))
-                                                                                                                                                     (rebuild.1
-                                                                                                                                                      #t
+                                                                                                                                          kw2160
+                                                                                                                                          #f)))
+                                                                                                                                    (begin
+                                                                                                                                      (let ((obs_0
+                                                                                                                                             (expand-context/inner-observer
+                                                                                                                                              (root-expand-context/outer-inner
+                                                                                                                                               ctx_1))))
+                                                                                                                                        (if obs_0
+                                                                                                                                          (call-expand-observe
+                                                                                                                                           obs_0
+                                                                                                                                           'next-group)
+                                                                                                                                          (void)))
+                                                                                                                                      (let ((submod-m-ns_0
+                                                                                                                                             (make-m-ns_0
+                                                                                                                                              #t
+                                                                                                                                              m-ns_0)))
+                                                                                                                                        (let ((submod-ctx_0
+                                                                                                                                               (if (expand-context/outer?
+                                                                                                                                                    ctx_1)
+                                                                                                                                                 (let ((inner374_0
+                                                                                                                                                        (let ((the-struct_0
+                                                                                                                                                               (root-expand-context/outer-inner
+                                                                                                                                                                ctx_1)))
+                                                                                                                                                          (if (expand-context/inner?
+                                                                                                                                                               the-struct_0)
+                                                                                                                                                            (expand-context/inner2.1
+                                                                                                                                                             (root-expand-context/inner-self-mpi
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-module-scopes
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-top-level-bind-scope
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-all-scopes-stx
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-defined-syms
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-counter
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-lift-key
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (root-expand-context/inner-local-state
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-to-parsed?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-phase
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             submod-m-ns_0
+                                                                                                                                                             (expand-context/inner-just-once?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-module-begin-k
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-allow-unbound?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-in-local-expand?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (|expand-context/inner-keep-#%expression?|
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-stops
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-declared-submodule-names
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-lifts
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-lift-envs
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-module-lifts
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-require-lifts
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-to-module-lifts
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-requires+provides
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-observer
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-for-serializable?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-to-correlated-linklet?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-normalize-locals?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-parsing-expanded?
+                                                                                                                                                              the-struct_0)
+                                                                                                                                                             (expand-context/inner-skip-visit-available?
+                                                                                                                                                              the-struct_0))
+                                                                                                                                                            (raise-argument-error
+                                                                                                                                                             'struct-copy
+                                                                                                                                                             "expand-context/inner?"
+                                                                                                                                                             the-struct_0)))))
+                                                                                                                                                   (expand-context/outer1.1
+                                                                                                                                                    inner374_0
+                                                                                                                                                    #f
+                                                                                                                                                    (root-expand-context/outer-use-site-scopes
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    #f
+                                                                                                                                                    (expand-context/outer-context
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-env
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-scopes
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-def-ctx-scopes
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-binding-layer
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-reference-records
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-only-immediate?
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-need-eventually-defined
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-current-introduction-scopes
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-current-use-scopes
+                                                                                                                                                     ctx_1)
+                                                                                                                                                    (expand-context/outer-name
+                                                                                                                                                     ctx_1)))
+                                                                                                                                                 (raise-argument-error
+                                                                                                                                                  'struct-copy
+                                                                                                                                                  "expand-context/outer?"
+                                                                                                                                                  ctx_1))))
+                                                                                                                                          (let ((declare-enclosing-module_0
+                                                                                                                                                 (promise1.1
+                                                                                                                                                  (lambda ()
+                                                                                                                                                    (let ((requires+provides379_0
+                                                                                                                                                           requires+provides_0))
+                                                                                                                                                      (let ((compiled-module-box389_0
+                                                                                                                                                             compiled-module-box_0))
+                                                                                                                                                        (let ((requires+provides379_1
+                                                                                                                                                               requires+provides379_0))
+                                                                                                                                                          (declare-module-for-expansion.1
+                                                                                                                                                           submod-ctx_0
+                                                                                                                                                           enclosing-self15_0
+                                                                                                                                                           compiled-module-box389_0
+                                                                                                                                                           flatten-requires?_0
+                                                                                                                                                           id:module-name217_0
+                                                                                                                                                           modules-being-compiled_0
+                                                                                                                                                           submod-m-ns_0
+                                                                                                                                                           portal-syntaxes_0
+                                                                                                                                                           realm_0
+                                                                                                                                                           rebuild-s_0
+                                                                                                                                                           requires+provides379_1
+                                                                                                                                                           root-ctx_0
+                                                                                                                                                           self_0
+                                                                                                                                                           fully-expanded-bodys-except-post-submodules_0)))))
+                                                                                                                                                  #f)))
+                                                                                                                                            (let ((fully-expanded-bodys_0
+                                                                                                                                                   (if (stop-at-module*?
+                                                                                                                                                        submod-ctx_0)
+                                                                                                                                                     fully-expanded-bodys-except-post-submodules_0
+                                                                                                                                                     (let ((requires+provides394_0
+                                                                                                                                                            requires+provides_0))
+                                                                                                                                                       (let ((compiled-submodules399_0
+                                                                                                                                                              compiled-submodules_0))
+                                                                                                                                                         (let ((requires+provides394_1
+                                                                                                                                                                requires+provides394_0))
+                                                                                                                                                           (expand-post-submodules.1
+                                                                                                                                                            initial-require-s_0
+                                                                                                                                                            compiled-submodules399_0
+                                                                                                                                                            submod-ctx_0
+                                                                                                                                                            declare-enclosing-module_0
+                                                                                                                                                            declared-submodule-names_0
+                                                                                                                                                            is-cross-phase-persistent?_0
+                                                                                                                                                            modules-being-compiled_0
+                                                                                                                                                            mpis-to-reset_0
+                                                                                                                                                            0
+                                                                                                                                                            requires+provides394_1
+                                                                                                                                                            self_0
+                                                                                                                                                            fully-expanded-bodys-except-post-submodules_0)))))))
+                                                                                                                                              (if (expand-context/inner-to-parsed?
+                                                                                                                                                   (root-expand-context/outer-inner
+                                                                                                                                                    submod-ctx_0))
+                                                                                                                                                (|parsed-#%module-begin25.1|
+                                                                                                                                                 rebuild-mb-s_0
+                                                                                                                                                 (parsed-only
+                                                                                                                                                  fully-expanded-bodys_0)
+                                                                                                                                                 realm_0
+                                                                                                                                                 flatten-requires?_0)
+                                                                                                                                                (let ((mb-result-s_0
+                                                                                                                                                       (let ((temp403_0
+                                                                                                                                                              (list*
+                                                                                                                                                               |#%module-begin287_0|
+                                                                                                                                                               (syntax-only
+                                                                                                                                                                fully-expanded-bodys_0))))
+                                                                                                                                                         (rebuild.1
+                                                                                                                                                          #t
+                                                                                                                                                          rebuild-mb-s_0
+                                                                                                                                                          temp403_0))))
+                                                                                                                                                  (if (not
+                                                                                                                                                       (expand-context/inner-in-local-expand?
+                                                                                                                                                        (root-expand-context/outer-inner
+                                                                                                                                                         submod-ctx_0)))
+                                                                                                                                                    (expanded+parsed1.1
+                                                                                                                                                     mb-result-s_0
+                                                                                                                                                     (|parsed-#%module-begin25.1|
                                                                                                                                                       rebuild-mb-s_0
-                                                                                                                                                      temp403_0))))
-                                                                                                                                              (if (not
-                                                                                                                                                   (expand-context/inner-in-local-expand?
-                                                                                                                                                    (root-expand-context/outer-inner
-                                                                                                                                                     submod-ctx_0)))
-                                                                                                                                                (expanded+parsed1.1
-                                                                                                                                                 mb-result-s_0
-                                                                                                                                                 (|parsed-#%module-begin25.1|
-                                                                                                                                                  rebuild-mb-s_0
-                                                                                                                                                  (parsed-only
-                                                                                                                                                   fully-expanded-bodys_0)
-                                                                                                                                                  realm_0
-                                                                                                                                                  flatten-requires?_0))
-                                                                                                                                                mb-result-s_0)))))))))))))))))))))))))))))))))))
+                                                                                                                                                      (parsed-only
+                                                                                                                                                       fully-expanded-bodys_0)
+                                                                                                                                                      realm_0
+                                                                                                                                                      flatten-requires?_0))
+                                                                                                                                                    mb-result-s_0)))))))))))))))))))))))))))))))))))))
                                                                               (let ((mb-ctx_0
                                                                                      (if (expand-context/outer?
                                                                                           ctx_0)
@@ -90798,6 +92251,8 @@
                                                                                                      (root-expand-context/inner-counter
                                                                                                       the-struct_0)
                                                                                                      (root-expand-context/inner-lift-key
+                                                                                                      the-struct_0)
+                                                                                                     (root-expand-context/inner-local-state
                                                                                                       the-struct_0)
                                                                                                      (expand-context/inner-to-parsed?
                                                                                                       the-struct_0)
@@ -92449,6 +93904,8 @@
                                                                                                       the-struct_0)
                                                                                                      (root-expand-context/inner-lift-key
                                                                                                       the-struct_0)
+                                                                                                     (root-expand-context/inner-local-state
+                                                                                                      the-struct_0)
                                                                                                      (expand-context/inner-to-parsed?
                                                                                                       the-struct_0)
                                                                                                      (expand-context/inner-phase
@@ -92866,7 +94323,7 @@
                                                                                         (if (memq
                                                                                              (syntax-e$1
                                                                                               kw_0)
-                                                                                             kws2866)
+                                                                                             kws2217)
                                                                                           (void)
                                                                                           (raise-syntax-error$1
                                                                                            #f
@@ -92903,6 +94360,46 @@
                                                                                                  "unsafe compilation disallowed by code inspector"
                                                                                                  exp-body_0
                                                                                                  kw_0))
+                                                                                              (void))
+                                                                                            (if (eq?
+                                                                                                 (syntax-e$1
+                                                                                                  kw_0)
+                                                                                                 kw2747)
+                                                                                              (begin
+                                                                                                (if (eq?
+                                                                                                     (current-code-inspector)
+                                                                                                     initial-code-inspector)
+                                                                                                  (void)
+                                                                                                  (raise-syntax-error$1
+                                                                                                   #f
+                                                                                                   "unsafe cross-phase persistence disallowed by code inspector"
+                                                                                                   exp-body_0
+                                                                                                   kw_0))
+                                                                                                (if (hash-ref
+                                                                                                     declared-keywords55_0
+                                                                                                     kw2208
+                                                                                                     #f)
+                                                                                                  (raise-syntax-error$1
+                                                                                                   #f
+                                                                                                   "cannot combine with `#:cross-phase-persistent`"
+                                                                                                   exp-body_0
+                                                                                                   kw_0)
+                                                                                                  (void)))
+                                                                                              (void))
+                                                                                            (if (eq?
+                                                                                                 (syntax-e$1
+                                                                                                  kw_0)
+                                                                                                 kw2208)
+                                                                                              (if (hash-ref
+                                                                                                   declared-keywords55_0
+                                                                                                   kw2747
+                                                                                                   #f)
+                                                                                                (raise-syntax-error$1
+                                                                                                 #f
+                                                                                                 "cannot combine with `#:unsafe-cross-phase-persistent`"
+                                                                                                 exp-body_0
+                                                                                                 kw_0)
+                                                                                                (void))
                                                                                               (void))
                                                                                             (if (eq?
                                                                                                  (syntax-e$1
@@ -93731,6 +95228,8 @@
                                                        the-struct_0)
                                                       (root-expand-context/inner-lift-key
                                                        the-struct_0)
+                                                      (root-expand-context/inner-local-state
+                                                       the-struct_0)
                                                       (expand-context/inner-to-parsed?
                                                        the-struct_0)
                                                       phase_0
@@ -94534,6 +96033,8 @@
                                                  the-struct_0)
                                                 (root-expand-context/inner-lift-key
                                                  the-struct_0)
+                                                (root-expand-context/inner-local-state
+                                                 the-struct_0)
                                                 (expand-context/inner-to-parsed?
                                                  the-struct_0)
                                                 (expand-context/inner-phase
@@ -95286,7 +96787,7 @@
                                  (list define-syntaxes15_0 ids_0 exp-rhs_0)))
                             (rebuild.1 #t s_0 temp28_0)))))))))))))))
     (void)))
-(define effect_3390
+(define effect_2404
   (begin
     (void
      (add-core-form!*
@@ -95368,6 +96869,8 @@
                                               (root-expand-context/inner-counter
                                                the-struct_0)
                                               lift-key38_0
+                                              (root-expand-context/inner-local-state
+                                               the-struct_0)
                                               (expand-context/inner-to-parsed?
                                                the-struct_0)
                                               (expand-context/inner-phase

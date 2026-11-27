@@ -909,6 +909,8 @@
      (decode* (make-interned-scope id))]
     [(#:multi-scope)
      (decode* (deserialize-multi-scope name scopes))]
+    [(#:phaseless-multi-scope)
+     (decode* (deserialize-phaseless-multi-scope name scopes))]
     [(#:shifted-multi-scope)
      (decode* (deserialize-shifted-multi-scope phase multi-scope))]
     [(#:table-with-bulk-bindings)

@@ -426,16 +426,27 @@
                          #:ctx ctx))
 
      ;; Validate any cross-phase persistence request
-     (define is-cross-phase-persistent? (hash-ref declared-keywords '#:cross-phase-persistent #f))
+     (define unsafe-cross-phase-persistent-kw (hash-ref declared-keywords '#:unsafe-cross-phase-persistent #f))
+     (define cross-phase-persistent-kw (or (hash-ref declared-keywords '#:cross-phase-persistent #f)
+                                           unsafe-cross-phase-persistent-kw))
+     (define is-cross-phase-persistent? (and cross-phase-persistent-kw #t))
      (when is-cross-phase-persistent?
        (unless (requires+provides-can-cross-phase-persistent? requires+provides)
          (raise-syntax-error #f "cannot be cross-phase persistent because some required module isn't"
                              rebuild-s
-                             (hash-ref declared-keywords '#:cross-phase-persistent)
+                             cross-phase-persistent-kw
                              null
                              (format "~n  required module: ~a"
                                      (requires+provides-why-not-cross-phase-persistent requires+provides))))
-       (check-cross-phase-persistent-form fully-expanded-bodys-except-post-submodules self))
+       (cond
+         [unsafe-cross-phase-persistent-kw
+          ;; Merge phases in the module's inside-edge scope, so that
+          ;; syntax literals work at any phase shift
+          (performance-region
+           ['expand 'phaseless]
+           (make-module-phaseless! inside-scope requires+provides defined-syms rebuild-s))]
+         [else
+          (check-cross-phase-persistent-form fully-expanded-bodys-except-post-submodules self)]))
 
      (define realm (let ([realm-stx (hash-ref declared-keywords '#:realm #f)])
                      (if realm-stx
@@ -987,7 +998,8 @@
               (define kw (car kws))
               (unless (keyword? (syntax-e kw))
                 (raise-syntax-error #f "expected a keyword" exp-body kw))
-              (unless (memq (syntax-e kw) '(#:cross-phase-persistent #:empty-namespace #:unsafe
+              (unless (memq (syntax-e kw) '(#:cross-phase-persistent #:unsafe-cross-phase-persistent
+                                            #:empty-namespace #:unsafe
                                             #:unlimited-compile #:realm
                                             #:require=define #:flatten-requires))
                 (raise-syntax-error #f "not an allowed declaration keyword" exp-body kw))
@@ -997,6 +1009,14 @@
               (when (eq? (syntax-e kw) '#:unsafe)
                 (unless (eq? (current-code-inspector) initial-code-inspector)
                   (raise-syntax-error #f "unsafe compilation disallowed by code inspector" exp-body kw)))
+              (when (eq? (syntax-e kw) '#:unsafe-cross-phase-persistent)
+                (unless (eq? (current-code-inspector) initial-code-inspector)
+                  (raise-syntax-error #f "unsafe cross-phase persistence disallowed by code inspector" exp-body kw))
+                (when (hash-ref declared-keywords '#:cross-phase-persistent #f)
+                  (raise-syntax-error #f "cannot combine with `#:cross-phase-persistent`" exp-body kw)))
+              (when (eq? (syntax-e kw) '#:cross-phase-persistent)
+                (when (hash-ref declared-keywords '#:unsafe-cross-phase-persistent #f)
+                  (raise-syntax-error #f "cannot combine with `#:unsafe-cross-phase-persistent`" exp-body kw)))
               (when (eq? (syntax-e kw) '#:realm)
                 (unless (and (pair? (cdr kws))
                              (identifier? (cadr kws)))

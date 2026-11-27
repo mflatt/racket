@@ -49,6 +49,9 @@
          syntax-local-lift-expression
          syntax-local-lift-values-expression
          syntax-local-lift-context
+
+         syntax-local-state-ref
+         syntax-local-state-set!
          
          syntax-local-lift-module
          
@@ -274,6 +277,31 @@
 (define/who (syntax-local-lift-context)
   (define ctx (get-current-expand-context who))
   (root-expand-context-lift-key ctx))
+
+;; ----------------------------------------
+
+;; State that is local to the current module expansion (or top-level
+;; namespace), which is useful for compile-time state in a module
+;; that is cross-phase persistent, since such a module's compile-time
+;; instance is not created fresh for each module expansion
+
+(define none (gensym 'none))
+
+(define/who (syntax-local-state-ref key [failure-result none])
+  (check who symbol? key)
+  (define ctx (get-current-expand-context who))
+  (define v (hash-ref (root-expand-context-local-state ctx) key none))
+  (cond
+    [(not (eq? v none)) v]
+    [(eq? failure-result none)
+     (raise-arguments-error who "no value found for key" "key" key)]
+    [(procedure? failure-result) (failure-result)]
+    [else failure-result]))
+
+(define/who (syntax-local-state-set! key val)
+  (check who symbol? key)
+  (define ctx (get-current-expand-context who))
+  (hash-set! (root-expand-context-local-state ctx) key val))
 
 ;; ----------------------------------------
 

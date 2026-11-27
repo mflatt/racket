@@ -38,6 +38,8 @@
          add-defined-or-required-id!
          add-bulk-required-ids!
          add-enclosing-module-defined-and-required!
+         requires+provides-for-each-required-id
+         requires+provides-for-each-defined-sym
          remove-required-id!
          check-not-defined
          adjust-shadow-requires!
@@ -270,6 +272,38 @@
   (if (bulk-required? r)
       (bulk-required->required r mod-name phase+space-shift sym)
       r))
+
+;; Call `proc` on every symbol that is imported into the module, along
+;; with the phase of its binding, a "source" that is either #f or a
+;; pair that is `equal?` for two bulk imports that supply the same
+;; binding for a given symbol, and a thunk to get the imported
+;; identifier (which is created on demand, since there can be many)
+(define (requires+provides-for-each-required-id r+p proc)
+  (for* ([(mod-name at-mod) (in-hash (requires+provides-requires r+p))]
+         [(phase+space-shift at-phase) (in-hash at-mod)]
+         [(sym reqds) (in-hash at-phase)]
+         [reqd/maybe-bulk (in-list-ish reqds)])
+    (define (get-reqd) (normalize-required reqd/maybe-bulk mod-name phase+space-shift sym))
+    (cond
+      [(bulk-required? reqd/maybe-bulk)
+       (proc sym
+             (phase+space-phase (phase+space+ (bulk-required-provide-phase+space reqd/maybe-bulk)
+                                              phase+space-shift))
+             (cons (bulk-required-provides reqd/maybe-bulk)
+                   (bulk-required-prefix-len reqd/maybe-bulk))
+             (lambda () (required-id (get-reqd))))]
+      [else
+       (proc sym
+             (phase+space-phase (required-phase+space reqd/maybe-bulk))
+             #f
+             (lambda () (required-id reqd/maybe-bulk)))])))
+
+;; Call `proc` on every symbol that is defined in the module, along
+;; with its phase and 'variable or 'transformer
+(define (requires+provides-for-each-defined-sym r+p proc)
+  (for* ([(phase syms) (in-hash (requires+provides-phase-to-defined-syms r+p))]
+         [(sym kind) (in-hash syms)])
+    (proc sym phase kind)))
 
 ;; Add bindings of an enclosing module
 (define (add-enclosing-module-defined-and-required! r+p

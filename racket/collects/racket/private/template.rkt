@@ -1,4 +1,5 @@
 (module template '#%kernel
+  (#%declare #:unsafe-cross-phase-persistent)
 (#%require "stx.rkt" "core-syntax.rkt" "performance-hint.rkt"
            "ellipses.rkt"
            (for-syntax "stx.rkt" "core-syntax.rkt"
@@ -507,11 +508,21 @@
       (map (lambda (loc) (datum->syntax id (string->symbol (substring id-string 0 loc))))
            dot-locations)))
 
+  ;; The counter is local to a module expansion when possible, since
+  ;; this module's instance is shared (cross-phase persistent):
   (define gentemp-counter 0)
+  (define gentemp-counter-key (gensym 'gentemp))
+  (define (next-gentemp-counter!)
+    (if (syntax-transforming?)
+        (let ([n (add1 (syntax-local-state-ref gentemp-counter-key 0))])
+          (syntax-local-state-set! gentemp-counter-key n)
+          n)
+        (begin
+          (set! gentemp-counter (add1 gentemp-counter))
+          gentemp-counter)))
   (define (gentemp)
-    (set! gentemp-counter (add1 gentemp-counter))
     ((make-syntax-introducer)
-     (datum->syntax #f (string->symbol (format "pv_~s" gentemp-counter)))))
+     (datum->syntax #f (string->symbol (format "pv_~s" (next-gentemp-counter!))))))
 
   (define (stx-drop n x)
     (if (zero? n) x (stx-drop (sub1 n) (stx-cdr x))))

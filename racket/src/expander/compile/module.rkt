@@ -166,7 +166,7 @@
                                                (define-match m (parsed-s body) '(_ kw ...))
                                                (for ([kw (in-list (m 'kw))])
                                                  (case (syntax-e kw)
-                                                   [(#:cross-phase-persistent)
+                                                   [(#:cross-phase-persistent #:unsafe-cross-phase-persistent)
                                                     (set! cross-phase-persistent? #t)]
                                                    [(#:empty-namespace)
                                                     (set! empty-result-for-module->namespace? #t)

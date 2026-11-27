@@ -23,13 +23,32 @@
                     #:attach-instances? #f))
 
 (define (do-attach-module who
-                          src-namespace mod-path dest-namespace
+                          given-src-namespace mod-path given-dest-namespace
                           #:attach-instances? [attach-instances? #f])
-  (check who namespace? src-namespace)
+  (check who namespace? given-src-namespace)
   (unless (or (module-path? mod-path)
               (resolved-module-path? mod-path))
     (raise-argument-error who "(or/c module-path? resolved-module-path?)" mod-path))
-  (check who namespace? dest-namespace)
+  (check who namespace? given-dest-namespace)
+
+  ;; A cross-phase persistent module (whose dependencies are all
+  ;; cross-phase persistent) has the same instance at every phase, so
+  ;; attaching it doesn't depend on the namespaces' phases; in that
+  ;; case, attach at phase 0
+  (define cross-phase-persistent?
+    (and (not (eqv? (namespace-phase given-src-namespace) (namespace-phase given-dest-namespace)))
+         (let* ([mod-name (if (resolved-module-path? mod-path)
+                              mod-path
+                              (parameterize ([current-namespace given-src-namespace])
+                                (module-path-index-resolve (module-path-index-join* mod-path #f))))]
+                [m (namespace->module given-src-namespace mod-name)])
+           (and m (module-cross-phase-persistent? m)))))
+  (define src-namespace (if cross-phase-persistent?
+                            (namespace->namespace-at-phase given-src-namespace 0)
+                            given-src-namespace))
+  (define dest-namespace (if cross-phase-persistent?
+                             (namespace->namespace-at-phase given-dest-namespace 0)
+                             given-dest-namespace))
 
   (define phase (namespace-phase src-namespace))
   (unless (eqv? phase (namespace-phase dest-namespace))

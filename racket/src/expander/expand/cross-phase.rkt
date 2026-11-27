@@ -7,15 +7,18 @@
          "../syntax/error.rkt"
          "../namespace/core.rkt"
          "../common/module-path.rkt"
+         "../common/phase.rkt"
          "../common/prefab.rkt"
          "../boot/runtime-primitive.rkt"
          "parsed.rkt"
-         "expanded+parsed.rkt")
+         "expanded+parsed.rkt"
+         "require+provide.rkt")
 
 ;; Check whether a module fits the restricted grammar of a cross-phase
 ;; persistent module
 
-(provide check-cross-phase-persistent-form)
+(provide check-cross-phase-persistent-form
+         make-module-phaseless!)
 
 (define (check-cross-phase-persistent-form bodys self-mpi)
 
@@ -194,3 +197,134 @@
                       (if (parsed? body)
                           (datum->syntax #f body (parsed-s body))
                           body)))
+
+;; ----------------------------------------
+
+;; Convert a module that is declared `#:unsafe-cross-phase-persistent`
+;; so that its inside-edge scope is phaseless. The module can have
+;; definitions only at phases 0 and 1, and no transformer definitions
+;; at phase 1 (which would need phase-2 code). Imports are allowed at
+;; any phase except the label phase, since an import does not imply
+;; code at the import's phase. Converting to phaseless merges bindings
+;; at all phases, so check that every module-level binding is the same
+;; after conversion as before; that is, no symbol can be imported or
+;; defined differently at different phases.
+(define (make-module-phaseless! inside-scope r+p defined-syms s)
+  (define (check-phase phase id-or-sym what)
+    (unless (or (eqv? phase 0) (eqv? phase 1))
+      (raise-syntax-error #f
+                          (format (string-append "~a at ~a not allowed in an unsafe cross-phase persistent module\n"
+                                                 "  name: ~a")
+                                  what
+                                  (cond
+                                    [(not phase) "the label phase"]
+                                    [else (format "phase ~a" phase)])
+                                  (if (syntax? id-or-sym) (syntax-e id-or-sym) id-or-sym))
+                          s
+                          (and (syntax? id-or-sym) id-or-sym))))
+
+  ;; Collect each binding site: sym -> list of (vector get-id phase source)
+  (define sym-sites (make-hasheq))
+  (define (add-site! sym get-id phase source)
+    (hash-set! sym-sites sym (cons (vector get-id phase source) (hash-ref sym-sites sym null))))
+  (requires+provides-for-each-required-id
+   r+p
+   (lambda (sym phase source get-id)
+     ;; Imports at any phase are allowed, since they don't imply code
+     ;; at that phase, but they are merged with other phases
+     (when (label-phase? phase)
+       (check-phase phase (get-id) "import"))
+     (add-site! sym get-id phase source)))
+  (requires+provides-for-each-defined-sym
+   r+p
+   (lambda (sym phase kind)
+     (check-phase phase sym "definition")
+     (when (and (eqv? phase 1) (eq? kind 'transformer))
+       (raise-syntax-error #f
+                           (format (string-append "macro definition at phase 1 not allowed in an unsafe"
+                                                  " cross-phase persistent module\n"
+                                                  "  name: ~a")
+                                   sym)
+                           s))))
+  (for* ([(phase ht) (in-hash defined-syms)]
+         [(sym id) (in-hash ht)])
+    (add-site! (syntax-e id) (lambda () id) phase #f))
+
+  ;; Merging phases can only change the binding of a site if the same
+  ;; symbol has a binding site at some other phase, and only if the
+  ;; sites can have different bindings; all sites for a symbol that
+  ;; are bulk imports from the same provides table have the same
+  ;; binding. So, record bindings before conversion only for other
+  ;; sites, which avoids resolving (twice) every name imported from,
+  ;; say, '#%kernel at both phase 0 and phase 1.
+  (define sites
+    (for*/list ([(sym l) (in-hash sym-sites)]
+                #:unless (let ([site0 (car l)])
+                           (or (for/and ([site (in-list (cdr l))])
+                                 (eqv? (vector-ref site0 1) (vector-ref site 1)))
+                               (let ([source0 (vector-ref site0 2)])
+                                 (and source0
+                                      (for/and ([site (in-list (cdr l))])
+                                        (define source (vector-ref site 2))
+                                        (and source
+                                             (eq? (car source0) (car source))
+                                             (eqv? (cdr source0) (cdr source))))))))
+                [site (in-list l)])
+      (define id ((vector-ref site 0)))
+      (vector id (vector-ref site 1) (resolve+shift id (vector-ref site 1)))))
+
+  (make-shifted-multi-scope-phaseless! inside-scope)
+
+  ;; Check that bindings are unchanged
+  (define bad-sites
+    (for/list ([site (in-list sites)]
+               #:unless (let ([before-b (vector-ref site 2)]
+                              [after-b (resolve+shift (vector-ref site 0) (vector-ref site 1))])
+                          (or (eq? before-b after-b)
+                              (and before-b
+                                   after-b
+                                   (or (module-binding? before-b) (local-binding? before-b))
+                                   (same-binding? before-b after-b)))))
+      site))
+  (unless (null? bad-sites)
+    (define site (car bad-sites))
+    (define id (vector-ref site 0))
+    (define phase (vector-ref site 1))
+    (define before-b (vector-ref site 2))
+    (define after-b (resolve+shift id phase))
+    (define all-names
+      (let loop ([l bad-sites] [seen #hasheq()])
+        (cond
+          [(null? l) null]
+          [else
+           (define sym (syntax-e (vector-ref (car l) 0)))
+           (if (hash-ref seen sym #f)
+               (loop (cdr l) seen)
+               (cons sym (loop (cdr l) (hash-set seen sym #t))))])))
+    (raise-syntax-error #f
+                        (string-append "binding differs across phases in an unsafe cross-phase persistent module;\n"
+                                       " a phase-0 binding and a phase-1 binding with the same name must be the same")
+                        s
+                        id
+                        null
+                        (format "\n  phase of binding: ~a\n  binding at that phase: ~a\n  merged binding: ~a\n  all conflicting names:~a"
+                                phase
+                                (describe-binding before-b)
+                                (describe-binding after-b)
+                                (apply string-append
+                                       (for/list ([sym (in-list all-names)])
+                                         (format " ~a" sym)))))))
+
+(define (describe-binding b)
+  (cond
+    [(not b) "none"]
+    [(module-binding? b)
+     (format "~a from ~a at phase level ~a"
+             (module-binding-sym b)
+             (let ([mpi (module-binding-module b)])
+               (if (module-path-index? mpi)
+                   (resolved-module-path-name (module-path-index-resolve mpi))
+                   mpi))
+             (module-binding-phase b))]
+    [(local-binding? b) "local binding"]
+    [else "ambiguous"]))

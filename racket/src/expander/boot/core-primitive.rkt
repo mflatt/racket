@@ -164,6 +164,8 @@
                       syntax-local-lift-module
                       
                       syntax-local-lift-require
+                      syntax-local-state-ref
+                      syntax-local-state-set!
                       syntax-local-lift-provide
                       syntax-local-lift-module-end-declaration
                       
