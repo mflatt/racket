@@ -39,6 +39,8 @@
          add-bulk-required-ids!
          add-enclosing-module-defined-and-required!
          requires+provides-for-each-required-id
+         requires+provides-for-each-required-site
+         requires+provides-site-id
          requires+provides-for-each-defined-sym
          remove-required-id!
          check-not-defined
@@ -297,6 +299,39 @@
              (phase+space-phase (required-phase+space reqd/maybe-bulk))
              #f
              (lambda () (required-id reqd/maybe-bulk)))])))
+
+;; Like `requires+provides-for-each-required-id`, but avoids allocation
+;; by passing `proc` the pieces of a site: symbol, phase, provides table
+;; and prefix length (or #f and #f for a non-bulk import), and an
+;; opaque site that can be passed to `requires+provides-site-id`
+(define (requires+provides-for-each-required-site r+p proc)
+  (for* ([(mod-name at-mod) (in-hash (requires+provides-requires r+p))]
+         [(phase+space-shift at-phase) (in-hash at-mod)]
+         [(sym reqds) (in-hash at-phase)]
+         [reqd/maybe-bulk (in-list-ish reqds)])
+    (cond
+      [(bulk-required? reqd/maybe-bulk)
+       (proc sym
+             (phase+space-phase (phase+space+ (bulk-required-provide-phase+space reqd/maybe-bulk)
+                                              phase+space-shift))
+             (bulk-required-provides reqd/maybe-bulk)
+             (bulk-required-prefix-len reqd/maybe-bulk)
+             mod-name
+             phase+space-shift
+             reqd/maybe-bulk)]
+      [else
+       (proc sym
+             (phase+space-phase (required-phase+space reqd/maybe-bulk))
+             #f
+             #f
+             mod-name
+             phase+space-shift
+             reqd/maybe-bulk)])))
+
+(define (requires+provides-site-id sym mod-name phase+space-shift reqd/maybe-bulk)
+  (required-id (if (bulk-required? reqd/maybe-bulk)
+                   (normalize-required reqd/maybe-bulk mod-name phase+space-shift sym)
+                   reqd/maybe-bulk)))
 
 ;; Call `proc` on every symbol that is defined in the module, along
 ;; with its phase and 'variable or 'transformer
@@ -713,7 +748,7 @@
                (if (hash-ref name-to-phases name #f)
                    all-mpis
                    (cons (cons name mpi) all-mpis)))
-             (define m (namespace->module/cross-phase ns name))
+             (define m (namespace->module ns name))
              (unless m
                (raise-arguments-error 'module
                                       "cannot find module while flattening requires"

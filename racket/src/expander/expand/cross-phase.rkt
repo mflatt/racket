@@ -12,7 +12,8 @@
          "../boot/runtime-primitive.rkt"
          "parsed.rkt"
          "expanded+parsed.rkt"
-         "require+provide.rkt")
+         "require+provide.rkt"
+         "../common/performance.rkt")
 
 ;; Check whether a module fits the restricted grammar of a cross-phase
 ;; persistent module
@@ -220,60 +221,104 @@
                           s
                           (and (syntax? id-or-sym) id-or-sym))))
 
-  ;; Collect each binding site: sym -> list of (vector get-id phase source)
-  (define sym-sites (make-hasheq))
-  (define (add-site! sym get-id phase source)
-    (hash-set! sym-sites sym (cons (vector get-id phase source) (hash-ref sym-sites sym null))))
-  (requires+provides-for-each-required-id
-   r+p
-   (lambda (sym phase source get-id)
-     (when (label-phase? phase)
-       (check-phase phase (get-id) "import"))
-     (add-site! sym get-id phase source)))
-  (requires+provides-for-each-defined-sym
-   r+p
-   (lambda (sym phase kind)
-     (check-phase phase sym "definition")))
-  (for* ([(phase ht) (in-hash defined-syms)]
-         [(sym id) (in-hash ht)])
-    (add-site! (syntax-e id) (lambda () id) phase #f))
-
   ;; Merging phases can only change the binding of a site if the same
   ;; symbol has a binding site at some other phase, and only if the
   ;; sites can have different bindings; all sites for a symbol that
   ;; are bulk imports from the same provides table have the same
-  ;; binding. So, record bindings before conversion only for other
-  ;; sites, which avoids resolving (twice) every name imported from,
-  ;; say, '#%kernel at both phase 0 and phase 1.
+  ;; binding. A first pass finds candidate symbols with minimal
+  ;; allocation, recording just the first site's phase and source for
+  ;; each symbol; that avoids even collecting sites for every name
+  ;; imported from, say, `racket/base` at both phase 0 and phase 1.
+  (define firsts (make-hasheq)) ; sym -> (vector phase provides-or-#f prefix-len multi-phase? multi-source?)
+  (define candidates (make-hasheq)) ; sym -> #t
+  (define (note-site! sym phase provides prefix-len)
+    (define first (hash-ref firsts sym #f))
+    (cond
+      [(not first)
+       (hash-set! firsts sym (vector phase provides prefix-len #f #f))]
+      [else
+       (unless (eqv? phase (vector-ref first 0))
+         (vector-set! first 3 #t))
+       (unless (and provides
+                    (eq? provides (vector-ref first 1))
+                    (eqv? prefix-len (vector-ref first 2)))
+         (vector-set! first 4 #t))
+       ;; Candidate if sites span multiple phases and are not all from
+       ;; the same source
+       (when (and (vector-ref first 3) (vector-ref first 4))
+         (hash-set! candidates sym #t))]))
+  (performance-region
+   ['expand 'pl-collect]
+   (requires+provides-for-each-required-site
+    r+p
+    (lambda (sym phase provides prefix-len mod-name shift site)
+      (when (label-phase? phase)
+        (check-phase phase (requires+provides-site-id sym mod-name shift site) "import"))
+      (note-site! sym phase provides prefix-len)))
+   (requires+provides-for-each-defined-sym
+    r+p
+    (lambda (sym phase kind)
+      (check-phase phase sym "definition")))
+   (for* ([(phase ht) (in-hash defined-syms)]
+          [(sym id) (in-hash ht)])
+     ;; a definition is never the same source as another site
+     (note-site! (syntax-e id) phase #f #f)))
+
+  ;; Collect sites for candidate symbols: sym -> list of (vector id phase)
+  (define sym-sites (make-hasheq))
+  (unless (zero? (hash-count candidates))
+    (define (add-site! sym id phase)
+      (hash-set! sym-sites sym (cons (vector id phase) (hash-ref sym-sites sym null))))
+    (requires+provides-for-each-required-site
+     r+p
+     (lambda (sym phase provides prefix-len mod-name shift site)
+       (when (hash-ref candidates sym #f)
+         (add-site! sym (requires+provides-site-id sym mod-name shift site) phase))))
+    (for* ([(phase ht) (in-hash defined-syms)]
+           [(sym id) (in-hash ht)])
+      (when (hash-ref candidates (syntax-e id) #f)
+        (add-site! (syntax-e id) id phase))))
+
+  ;; Record bindings before conversion: list of (vector id phase binding)
   (define sites
-    (for*/list ([(sym l) (in-hash sym-sites)]
-                #:unless (let ([site0 (car l)])
-                           (or (for/and ([site (in-list (cdr l))])
-                                 (eqv? (vector-ref site0 1) (vector-ref site 1)))
-                               (let ([source0 (vector-ref site0 2)])
-                                 (and source0
-                                      (for/and ([site (in-list (cdr l))])
-                                        (define source (vector-ref site 2))
-                                        (and source
-                                             (eq? (car source0) (car source))
-                                             (eqv? (cdr source0) (cdr source))))))))
-                [site (in-list l)])
-      (define id ((vector-ref site 0)))
-      (vector id (vector-ref site 1) (resolve+shift id (vector-ref site 1)))))
+    (performance-region
+     ['expand 'pl-resolve]
+     (for*/list ([(sym l) (in-hash sym-sites)]
+                 [site (in-list l)])
+       (define id (vector-ref site 0))
+       (vector id (vector-ref site 1) (resolve+shift id (vector-ref site 1))))))
 
   (make-shifted-multi-scope-phaseless! inside-scope)
 
-  ;; Check that bindings are unchanged
+  ;; After conversion, all sites for a symbol have the same binding, so
+  ;; a binding can change only if the sites for a symbol had different
+  ;; bindings before conversion; check after conversion only in that case
+  (define (same-binding/maybe? a b)
+    (or (eq? a b)
+        (and a
+             b
+             (or (module-binding? a) (local-binding? a))
+             (same-binding? a b))))
+  (define disagreeing-syms
+    (let ([by-sym (make-hasheq)])
+      (for/fold ([syms #hasheq()]) ([site (in-list sites)])
+        (define sym (syntax-e (vector-ref site 0)))
+        (define b (vector-ref site 2))
+        (define prev (hash-ref by-sym sym missing))
+        (cond
+          [(eq? prev missing)
+           (hash-set! by-sym sym b)
+           syms]
+          [(same-binding/maybe? prev b) syms]
+          [else (hash-set syms sym #t)]))))
   (define bad-sites
-    (for/list ([site (in-list sites)]
-               #:unless (let ([before-b (vector-ref site 2)]
-                              [after-b (resolve+shift (vector-ref site 0) (vector-ref site 1))])
-                          (or (eq? before-b after-b)
-                              (and before-b
-                                   after-b
-                                   (or (module-binding? before-b) (local-binding? before-b))
-                                   (same-binding? before-b after-b)))))
-      site))
+    (performance-region
+     ['expand 'pl-resolve]
+     (for/list ([site (in-list sites)]
+                #:when (hash-ref disagreeing-syms (syntax-e (vector-ref site 0)) #f)
+                #:unless (same-binding/maybe? (vector-ref site 2)
+                                              (resolve+shift (vector-ref site 0) (vector-ref site 1))))
+       site)))
   (unless (null? bad-sites)
     (define site (car bad-sites))
     (define id (vector-ref site 0))
@@ -312,6 +357,8 @@
                                                  (let ([loc (syntax-srcloc site-id)])
                                                    (if (srcloc? loc) (srcloc->string loc) "unknown location"))
                                                  (describe-binding (vector-ref site 2)))))))))
+
+(define missing (gensym))
 
 (define (describe-binding b)
   (cond

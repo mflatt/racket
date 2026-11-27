@@ -91,6 +91,9 @@
        (with-syntax ([(aux-name ...) (generate-temporaries #'(bind-name ...))])
          #'(begin 
              mpi-var-defn
+             ;; In case this module is cross-phase persistent, make sure that
+             ;; attaching it also loads and attaches `modpath`:
+             (variable-reference-add-attach-dependency! (#%variable-reference) mpi-var)
              (define (get-sym sym)
                (parameterize ((current-namespace (variable-reference->namespace (#%variable-reference))))
                  (begin0

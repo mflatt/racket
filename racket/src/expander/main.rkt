@@ -36,8 +36,6 @@
          (only-in "syntax/cache.rkt" cache-place-init!)
          (only-in "syntax/syntax.rkt" syntax-place-init!)
          (only-in "syntax/scope.rkt" scope-place-init!)
-         (only-in "namespace/registry.rkt" cross-phase-instances-place-init!)
-         (only-in "syntax/bulk-binding.rkt" bulk-binding-place-init!)
          (only-in "syntax/error.rkt" install-error-syntax->string-handler!)
          "syntax/serialize.rkt"
          (only-in "eval/module-cache.rkt" module-cache-place-init!)
@@ -245,8 +243,6 @@
   (datum->syntax core-stx s))
 
 (define (expander-place-init!)
-  (cross-phase-instances-place-init!)
-  (bulk-binding-place-init!)
   (syntax-place-init!)
   (scope-place-init!)
   (cache-place-init!)

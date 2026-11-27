@@ -20,8 +20,8 @@
     ;; that it's a portal binding.
     (cond
       [(non-self-module-path-index? (module-binding-nominal-module b))
-       (define m (namespace->module/cross-phase ns (module-path-index-resolve
-                                                    (module-binding-nominal-module b))))
+       (define m (namespace->module ns (module-path-index-resolve
+                                        (module-binding-nominal-module b))))
        (define b/p (hash-ref (hash-ref (module-provides m) (module-binding-nominal-phase+space b) #hasheq())
                              (module-binding-nominal-sym b)
                              #f))

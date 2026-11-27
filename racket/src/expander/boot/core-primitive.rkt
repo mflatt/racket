@@ -243,6 +243,7 @@
                       variable-reference->phase
                       variable-reference->module-base-phase
                       variable-reference->module-declaration-inspector
+                      variable-reference-add-attach-dependency!
 
                       read-syntax
                       read-syntax/recursive)

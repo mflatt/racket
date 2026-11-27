@@ -1,35 +1,20 @@
 #lang racket/base
 
-(require racket/private/place-local)
-
 (provide (struct-out module-registry)
          make-module-registry
-         registry-call-with-lock
-
-         cross-phase-instance-ref
-         cross-phase-instance-set!
-         cross-phase-instances-place-init!)
+         registry-call-with-lock)
 
 (struct module-registry (declarations  ; resolved-module-path -> module
+                         cross-phase-instances ; resolved-module-path -> module-instance
+                         collection-prefixes ; directory path -> collection string; see "module.rkt"
                          lock-box))    ; reentrant lock to guard registry for use by on-demand visits
 
+;; A cross-phase persistent module has a single instance per registry,
+;; independent of the phase or the namespace that requests it; the
+;; instance can be shared with other registries by `namespace-attach-module`
+
 (define (make-module-registry)
-  (module-registry (make-hasheq) (box #f)))
-
-;; A cross-phase persistent module has a single instance per place,
-;; independent of namespaces and module registries: resolved-module-path ->
-;; module-instance; it's an ephemeron table so that an instance for a
-;; submodule of a module being expanded can be reclaimed
-(define-place-local cross-phase-instances (make-ephemeron-hasheq))
-
-(define (cross-phase-instances-place-init!)
-  (set! cross-phase-instances (make-ephemeron-hasheq)))
-
-(define (cross-phase-instance-ref name)
-  (hash-ref cross-phase-instances name #f))
-
-(define (cross-phase-instance-set! name mi)
-  (hash-set! cross-phase-instances name mi))
+  (module-registry (make-hasheq) (make-hasheq) (make-hash) (box #f)))
 
 (define (registry-call-with-lock r proc)
   (define lock-box (module-registry-lock-box r))

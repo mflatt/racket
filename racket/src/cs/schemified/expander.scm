@@ -118,6 +118,8 @@
 (define kw2762 (string->keyword "bulk-binding"))
 (define kw2607 (string->keyword "bulk-binding-registry"))
 (define rx2823 (regexp "\n"))
+(define nhash2607 (cons #f (hasheq)))
+(define rx2897 (regexp "/+"))
 (define kw2626 (string->keyword "quote"))
 (define kw2603 (string->keyword "ref"))
 (define kw3163 (string->keyword "mpi"))
@@ -474,8 +476,6 @@
    'visit
    '1))
 (define kw2836 (string->keyword "missing"))
-(define nhash2607 (cons #f (hasheq)))
-(define rx2897 (regexp "/+"))
 (define rx2900 (byte-regexp #vu8(91 46 93 40 91 94 46 93 42 41 36)))
 (define rx2937 (regexp "[.]zo$"))
 (define rx2418 (regexp "[.]ss$"))
@@ -4054,7 +4054,7 @@
        #vu8(80 76 84 95 69 88 80 65 78 68 69 82 95 84 73 77 69 83))
     #t
     #f))
-(define cell.1$12 (unsafe-make-place-local #f))
+(define cell.1$10 (unsafe-make-place-local #f))
 (define cell.2$7 (unsafe-make-place-local (make-hasheq)))
 (define performance-place-init!
   (lambda () (unsafe-place-local-set! cell.2$7 (make-hasheq))))
@@ -4423,10 +4423,10 @@
 (define start-performance-region
   (lambda path_0
     (unsafe-place-local-set!
-     cell.1$12
+     cell.1$10
      (let ((app_0
             (let ((app_0
-                   (if (unsafe-place-local-ref cell.1$12)
+                   (if (unsafe-place-local-ref cell.1$10)
                      (letrec*
                       ((loop_0
                         (|#%name|
@@ -4450,7 +4450,7 @@
                                      null))))))))))
                       (loop_0
                        path_0
-                       (region-path (car (unsafe-place-local-ref cell.1$12)))))
+                       (region-path (car (unsafe-place-local-ref cell.1$10)))))
                      path_0)))
               (let ((app_1 (current-inexact-monotonic-milliseconds)))
                 (let ((app_2 (current-gc-milliseconds)))
@@ -4462,17 +4462,17 @@
                    0.0
                    0
                    0))))))
-       (cons app_0 (unsafe-place-local-ref cell.1$12))))))
+       (cons app_0 (unsafe-place-local-ref cell.1$10))))))
 (define end-performance-region
   (lambda ()
     (let ((now_0 (current-inexact-monotonic-milliseconds)))
       (let ((now-gc_0 (current-gc-milliseconds)))
         (let ((now-memory_0 (current-memory-use 'cumulative)))
-          (let ((r_0 (car (unsafe-place-local-ref cell.1$12))))
+          (let ((r_0 (car (unsafe-place-local-ref cell.1$10))))
             (begin
               (unsafe-place-local-set!
-               cell.1$12
-               (cdr (unsafe-place-local-ref cell.1$12)))
+               cell.1$10
+               (cdr (unsafe-place-local-ref cell.1$10)))
               (let ((full-delta_0 (- now_0 (region-start r_0))))
                 (let ((delta_0 (- full-delta_0 (region-as-nested r_0))))
                   (let ((full-delta-gc_0 (- now-gc_0 (region-start-gc r_0))))
@@ -4546,34 +4546,34 @@
                                              (cdr path_0)))))))))))
                              (let ((app_0 (unsafe-place-local-ref cell.2$7)))
                                (loop_0 app_0 (region-path r_0))))
-                            (if (unsafe-place-local-ref cell.1$12)
+                            (if (unsafe-place-local-ref cell.1$10)
                               (begin
                                 (let ((app_0
                                        (car
-                                        (unsafe-place-local-ref cell.1$12))))
+                                        (unsafe-place-local-ref cell.1$10))))
                                   (set-region-as-nested!
                                    app_0
                                    (+
                                     (region-as-nested
-                                     (car (unsafe-place-local-ref cell.1$12)))
+                                     (car (unsafe-place-local-ref cell.1$10)))
                                     full-delta_0)))
                                 (let ((app_0
                                        (car
-                                        (unsafe-place-local-ref cell.1$12))))
+                                        (unsafe-place-local-ref cell.1$10))))
                                   (set-region-as-nested-gc!
                                    app_0
                                    (+
                                     (region-as-nested-gc
-                                     (car (unsafe-place-local-ref cell.1$12)))
+                                     (car (unsafe-place-local-ref cell.1$10)))
                                     full-delta-gc_0)))
                                 (let ((app_0
                                        (car
-                                        (unsafe-place-local-ref cell.1$12))))
+                                        (unsafe-place-local-ref cell.1$10))))
                                   (set-region-as-nested-memory!
                                    app_0
                                    (+
                                     (region-as-nested-memory
-                                     (car (unsafe-place-local-ref cell.1$12)))
+                                     (car (unsafe-place-local-ref cell.1$10)))
                                     full-delta-memory_0))))
                               (void))))))))))))))))
 (define effect_2055
@@ -6324,13 +6324,13 @@
      (let ((temp21_0
             (if enclosing_0 (1/module-path-index-resolve enclosing_0) #f)))
        (build-module-name.1 unsafe-undefined name_0 temp21_0))))))
-(define cell.1$11 (unsafe-make-place-local (make-weak-hash)))
+(define cell.1$9 (unsafe-make-place-local (make-weak-hash)))
 (define cell.2$6 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
 (define generic-module-name '|expanded module|)
 (define module-path-place-init!
   (lambda ()
     (begin
-      (unsafe-place-local-set! cell.1$11 (make-weak-hash))
+      (unsafe-place-local-set! cell.1$9 (make-weak-hash))
       (unsafe-place-local-set! cell.2$6 (unsafe-make-uninterruptible-lock)))))
 (define make-generic-self-module-path-index
   (lambda (self_0)
@@ -6343,13 +6343,13 @@
         (begin0
           (let ((or-part_0
                  (let ((e_0
-                        (hash-ref (unsafe-place-local-ref cell.1$11) r_0 #f)))
+                        (hash-ref (unsafe-place-local-ref cell.1$9) r_0 #f)))
                    (if e_0 (ephemeron-value e_0) #f))))
             (if or-part_0
               or-part_0
               (let ((mpi_0 (module-path-index2.1 #f #f r_0 '())))
                 (begin
-                  (let ((app_0 (unsafe-place-local-ref cell.1$11)))
+                  (let ((app_0 (unsafe-place-local-ref cell.1$9)))
                     (hash-set! app_0 r_0 (make-ephemeron r_0 mpi_0)))
                   mpi_0))))
           (let ((lock_0 (unsafe-place-local-ref cell.2$6)))
@@ -8487,7 +8487,7 @@
                                        (gf_0 #f s_2))))))))))))
                     (loop_1 #f s_1 0))))))))
           (loop_0 s_0)))))))
-(define cell.1$10 (unsafe-make-place-local (make-weak-hasheq)))
+(define cell.1$8 (unsafe-make-place-local (make-weak-hasheq)))
 (define immediate-datum->syntax
   (lambda (stx-c_0 content_0 stx-l_0 props_0 insp_0)
     (let ((app_0
@@ -8553,7 +8553,7 @@
                                       (fx= 0 (fxand tail?_0 (fx- tail?_0 1)))
                                       #f)
                                   (hash-set!
-                                   (unsafe-place-local-ref cell.1$10)
+                                   (unsafe-place-local-ref cell.1$8)
                                    x_0
                                    #t)
                                   (void))
@@ -8562,7 +8562,7 @@
                     (let ((result-s_0
                            (let ((s->_0 (|#%name| s-> (lambda (s_0) s_0))))
                              (let ((known-pairs_0
-                                    (unsafe-place-local-ref cell.1$10)))
+                                    (unsafe-place-local-ref cell.1$8)))
                                (let ((s->_1 s->_0) (f_1 f_0))
                                  (let ((gf_0
                                         (|#%name|
@@ -8679,7 +8679,7 @@
       "datum"
       s_0))))
 (define syntax-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$10 (make-weak-hasheq))))
+  (lambda () (unsafe-place-local-set! cell.1$8 (make-weak-hasheq))))
 (define finish_2442
   (make-struct-type-install-properties
    '(syntax-state)
@@ -8840,12 +8840,12 @@
   (lambda (b_0) (if (full-binding? b_0) (full-binding-frame-id b_0) #f)))
 (define binding-free=id
   (lambda (b_0) (if (full-binding? b_0) (full-binding-free=id b_0) #f)))
-(define cell.1$9 (unsafe-make-place-local (make-weak-hash)))
+(define cell.1$7 (unsafe-make-place-local (make-weak-hash)))
 (define cell.2$5 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
 (define phase+space-place-init!
   (lambda ()
     (begin
-      (unsafe-place-local-set! cell.1$9 (make-weak-hash))
+      (unsafe-place-local-set! cell.1$7 (make-weak-hash))
       (unsafe-place-local-set! cell.2$5 (unsafe-make-uninterruptible-lock)))))
 (define intern
   (lambda (new-key_0)
@@ -8853,11 +8853,11 @@
       (let ((lock_0 (unsafe-place-local-ref cell.2$5)))
         (unsafe-uninterruptible-lock-acquire lock_0))
       (let ((old-key_0
-             (hash-ref-key (unsafe-place-local-ref cell.1$9) new-key_0 #f)))
+             (hash-ref-key (unsafe-place-local-ref cell.1$7) new-key_0 #f)))
         (begin
           (if old-key_0
             (void)
-            (hash-set! (unsafe-place-local-ref cell.1$9) new-key_0 #t))
+            (hash-set! (unsafe-place-local-ref cell.1$7) new-key_0 #t))
           (let ((lock_0 (unsafe-place-local-ref cell.2$5)))
             (unsafe-uninterruptible-lock-release lock_0))
           (if old-key_0 old-key_0 new-key_0))))))
@@ -11069,18 +11069,18 @@
     (if (fallback? smss_0) (fallback-search-list smss_0) (list smss_0))))
 (define make-cache$1
   (|#%name| make-cache (lambda () (box (make-weak-box #f)))))
-(define cell.1$8 (unsafe-make-place-local (make-cache$1)))
+(define cell.1$6 (unsafe-make-place-local (make-cache$1)))
 (define resolve-cache-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$8 (make-cache$1))))
+  (lambda () (unsafe-place-local-set! cell.1$6 (make-cache$1))))
 (define clear-resolve-cache!
   (case-lambda
    ((sym_0)
     (let ((c_0
-           (weak-box-value (unsafe-unbox* (unsafe-place-local-ref cell.1$8)))))
+           (weak-box-value (unsafe-unbox* (unsafe-place-local-ref cell.1$6)))))
       (if c_0 (hash-remove! c_0 sym_0) (void))))
    (()
     (let ((c_0
-           (weak-box-value (unsafe-unbox* (unsafe-place-local-ref cell.1$8)))))
+           (weak-box-value (unsafe-unbox* (unsafe-place-local-ref cell.1$6)))))
       (if c_0 (hash-clear! c_0) (void))))))
 (define finish_2822
   (make-struct-type-install-properties
@@ -11123,7 +11123,7 @@
 (define resolve-cache-get
   (lambda (sym_0 phase_0 scs_0 smss_0)
     (let ((c_0
-           (weak-box-value (unsafe-unbox* (unsafe-place-local-ref cell.1$8)))))
+           (weak-box-value (unsafe-unbox* (unsafe-place-local-ref cell.1$6)))))
       (if c_0
         (let ((v_0 (hash-ref c_0 sym_0 #f)))
           (if v_0
@@ -11136,11 +11136,11 @@
         #f))))
 (define resolve-cache-set!
   (lambda (sym_0 phase_0 scs_0 smss_0 b_0)
-    (let ((wb_0 (unsafe-unbox* (unsafe-place-local-ref cell.1$8))))
+    (let ((wb_0 (unsafe-unbox* (unsafe-place-local-ref cell.1$6))))
       (let ((c_0 (weak-box-value wb_0)))
         (if (not c_0)
           (begin
-            (let ((app_0 (unsafe-place-local-ref cell.1$8)))
+            (let ((app_0 (unsafe-place-local-ref cell.1$6)))
               (unsafe-box*-cas! app_0 wb_0 (make-weak-box (make-hasheq))))
             (resolve-cache-set! sym_0 phase_0 scs_0 smss_0 b_0))
           (hash-set! c_0 sym_0 (entry1.1 scs_0 smss_0 phase_0 b_0)))))))
@@ -11864,14 +11864,14 @@
   (lambda (kind_0)
     (let ((id_0 (new-scope-id!)))
       (scope1.1 id_0 (make-scope-key id_0) kind_0 empty-binding-table))))
-(define cell.1$7 (unsafe-make-place-local (make-ephemeron-hasheq)))
+(define cell.1$5 (unsafe-make-place-local (make-ephemeron-hasheq)))
 (define cell.2$4 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
 (define interned-scope-symbols
   (lambda ()
     (begin
       (let ((lock_0 (unsafe-place-local-ref cell.2$4)))
         (unsafe-uninterruptible-lock-acquire lock_0))
-      (let ((keys_0 (hash-keys (unsafe-place-local-ref cell.1$7))))
+      (let ((keys_0 (hash-keys (unsafe-place-local-ref cell.1$5))))
         (begin
           (let ((lock_0 (unsafe-place-local-ref cell.2$4)))
             (unsafe-uninterruptible-lock-release lock_0))
@@ -11884,7 +11884,7 @@
       (let ((table_0 hash2610))
         (let ((scs_0
                (let ((table_1 table_0))
-                 (let ((ht_0 (unsafe-place-local-ref cell.1$7)))
+                 (let ((ht_0 (unsafe-place-local-ref cell.1$5)))
                    (letrec*
                     ((for-loop_0
                       (|#%name|
@@ -11907,7 +11907,7 @@
 (define scope-place-init!
   (lambda ()
     (begin
-      (unsafe-place-local-set! cell.1$7 (make-ephemeron-hasheq))
+      (unsafe-place-local-set! cell.1$5 (make-ephemeron-hasheq))
       (unsafe-place-local-set! cell.2$4 (unsafe-make-uninterruptible-lock)))))
 (define make-interned-scope
   (lambda (sym_0)
@@ -11922,7 +11922,7 @@
                  'interned
                  empty-binding-table
                  sym_0))))))
-      (let ((cond-val_0 (hash-ref (unsafe-place-local-ref cell.1$7) sym_0 #f)))
+      (let ((cond-val_0 (hash-ref (unsafe-place-local-ref cell.1$5) sym_0 #f)))
         (if cond-val_0
           cond-val_0
           (let ((new_0 (make_0)))
@@ -11932,14 +11932,14 @@
               (let ((s_0
                      (let ((or-part_0
                             (hash-ref
-                             (unsafe-place-local-ref cell.1$7)
+                             (unsafe-place-local-ref cell.1$5)
                              sym_0
                              #f)))
                        (if or-part_0
                          or-part_0
                          (begin
                            (hash-set!
-                            (unsafe-place-local-ref cell.1$7)
+                            (unsafe-place-local-ref cell.1$5)
                             sym_0
                             new_0)
                            new_0)))))
@@ -15591,7 +15591,7 @@
                 unsafe-undefined
                 unsafe-undefined
                 binding_0)))))))))
-(define finish_2919
+(define finish_2524
   (make-struct-type-install-properties
    '(bulk-binding)
    8
@@ -15646,14 +15646,7 @@
                 (let ((table_0
                        (bulk-binding-registry-table
                         (bulk-binding-bulk-binding-registry b_0))))
-                  (let ((bulk-provide_0
-                         (let ((or-part_1 (hash-ref table_0 mod-name_0 #f)))
-                           (if or-part_1
-                             or-part_1
-                             (hash-ref
-                              (unsafe-place-local-ref cell.1$6)
-                              mod-name_0
-                              #f)))))
+                  (let ((bulk-provide_0 (hash-ref table_0 mod-name_0 #f)))
                     (begin
                       (if bulk-provide_0
                         (void)
@@ -15771,11 +15764,11 @@
    #f
    '(8 . 9)
    'make-struct-type
-   (finish_2919 'proc)
-   (finish_2919 'arity)
+   (finish_2524 'proc)
+   (finish_2524 'arity)
    #f
    |#%system-inspector|))
-(define effect_2834 (finish_2919 struct:bulk-binding))
+(define effect_2834 (finish_2524 struct:bulk-binding))
 (define bulk-binding12.1
   (|#%name|
    bulk-binding
@@ -16019,18 +16012,6 @@
   (lambda (bulk-binding-registry_0 mod-name_0 self_0 provides_0)
     (let ((app_0 (bulk-binding-registry-table bulk-binding-registry_0)))
       (hash-set! app_0 mod-name_0 (bulk-provide13.1 self_0 provides_0)))))
-(define register-cross-phase-bulk-provide!
-  (lambda (bulk-binding-registry_0 mod-name_0 self_0 provides_0)
-    (let ((bp_0 (bulk-provide13.1 self_0 provides_0)))
-      (begin
-        (hash-set!
-         (bulk-binding-registry-table bulk-binding-registry_0)
-         mod-name_0
-         bp_0)
-        (hash-set! (unsafe-place-local-ref cell.1$6) mod-name_0 bp_0)))))
-(define cell.1$6 (unsafe-make-place-local (make-hasheq)))
-(define bulk-binding-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$6 (make-hasheq))))
 (define registered-bulk-provide?
   (lambda (bulk-binding-registry_0 mod-name_0)
     (if (hash-ref
@@ -16625,16 +16606,16 @@
        (error
         "broken '#%linklet primitive table; maybe you need to use \"bootstrap-run.rkt\"")))
     (void)))
-(define finish_2938
+(define finish_2520
   (make-struct-type-install-properties
    '(module-registry)
-   2
+   4
    0
    #f
    null
    (current-inspector)
    #f
-   '(0 1)
+   '(0 1 2 3)
    #f
    'module-registry))
 (define struct:module-registry
@@ -16645,13 +16626,13 @@
    (|#%nongenerative-uid| module-registry)
    #f
    #f
-   '(2 . 0)
+   '(4 . 0)
    'make-struct-type
    #f
    #f
    #f
    |#%system-inspector|))
-(define effect_2565 (finish_2938 struct:module-registry))
+(define effect_2565 (finish_2520 struct:module-registry))
 (define module-registry1.1
   (|#%name|
    module-registry
@@ -16686,34 +16667,63 @@
          0
          s
          'declarations))))))
-(define module-registry-lock-box_2205
+(define module-registry-cross-phase-instances_2205
+  (|#%name|
+   module-registry-cross-phase-instances
+   (record-accessor struct:module-registry 1)))
+(define module-registry-cross-phase-instances
+  (|#%name|
+   module-registry-cross-phase-instances
+   (lambda (s)
+     (if (module-registry?_2653 s)
+       (module-registry-cross-phase-instances_2205 s)
+       ($value
+        (impersonate-ref
+         module-registry-cross-phase-instances_2205
+         struct:module-registry
+         1
+         s
+         'cross-phase-instances))))))
+(define module-registry-collection-prefixes_2353
+  (|#%name|
+   module-registry-collection-prefixes
+   (record-accessor struct:module-registry 2)))
+(define module-registry-collection-prefixes
+  (|#%name|
+   module-registry-collection-prefixes
+   (lambda (s)
+     (if (module-registry?_2653 s)
+       (module-registry-collection-prefixes_2353 s)
+       ($value
+        (impersonate-ref
+         module-registry-collection-prefixes_2353
+         struct:module-registry
+         2
+         s
+         'collection-prefixes))))))
+(define module-registry-lock-box_2848
   (|#%name|
    module-registry-lock-box
-   (record-accessor struct:module-registry 1)))
+   (record-accessor struct:module-registry 3)))
 (define module-registry-lock-box
   (|#%name|
    module-registry-lock-box
    (lambda (s)
      (if (module-registry?_2653 s)
-       (module-registry-lock-box_2205 s)
+       (module-registry-lock-box_2848 s)
        ($value
         (impersonate-ref
-         module-registry-lock-box_2205
+         module-registry-lock-box_2848
          struct:module-registry
-         1
+         3
          s
          'lock-box))))))
 (define make-module-registry
   (lambda ()
-    (let ((app_0 (make-hasheq))) (module-registry1.1 app_0 (box #f)))))
-(define cell.1$5 (unsafe-make-place-local (make-ephemeron-hasheq)))
-(define cross-phase-instances-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$5 (make-ephemeron-hasheq))))
-(define cross-phase-instance-ref
-  (lambda (name_0) (hash-ref (unsafe-place-local-ref cell.1$5) name_0 #f)))
-(define cross-phase-instance-set!
-  (lambda (name_0 mi_0)
-    (hash-set! (unsafe-place-local-ref cell.1$5) name_0 mi_0)))
+    (let ((app_0 (make-hasheq)))
+      (let ((app_1 (make-hasheq)))
+        (let ((app_2 (make-hash)))
+          (module-registry1.1 app_0 app_1 app_2 (box #f)))))))
 (define registry-call-with-lock
   (lambda (r_0 proc_0)
     (let ((lock-box_0 (module-registry-lock-box r_0)))
@@ -17192,7 +17202,7 @@
                     (if (syntax?$1 s_1) (loop_0 (syntax-e$1 s_1)) s_1))))))
              (loop_0 s_0))))
        (if (list? l_0) l_0 #f)))))
-(define missing$1 (gensym))
+(define missing$2 (gensym))
 (define syntax-track-origin$1
   (let ((syntax-track-origin_0
          (|#%name|
@@ -17223,9 +17233,9 @@
                       (if id_0
                         (let ((old-origin_0
                                (plain-property-value
-                                (hash-ref old-props_0 'origin missing$1))))
+                                (hash-ref old-props_0 'origin missing$2))))
                           (let ((origin_0
-                                 (if (eq? old-origin_0 missing$1)
+                                 (if (eq? old-origin_0 missing$2)
                                    (list id_0)
                                    (cons id_0 old-origin_0))))
                             (if (syntax?$1 new-stx2_0)
@@ -17303,13 +17313,13 @@
                                                                  (hash-ref
                                                                   new-props_1
                                                                   k_0
-                                                                  missing$1)))
+                                                                  missing$2)))
                                                             (hash-set
                                                              new-props_1
                                                              k_0
                                                              (if (eq?
                                                                   new-v_0
-                                                                  missing$1)
+                                                                  missing$2)
                                                                v_0
                                                                (cons/preserve
                                                                 new-v_0
@@ -17343,13 +17353,13 @@
                                                                  (hash-ref
                                                                   old-props_1
                                                                   k_0
-                                                                  missing$1)))
+                                                                  missing$2)))
                                                             (hash-set
                                                              old-props_1
                                                              k_0
                                                              (if (eq?
                                                                   old-v_0
-                                                                  missing$1)
+                                                                  missing$2)
                                                                v_0
                                                                (cons/preserve
                                                                 v_0
@@ -18183,6 +18193,1426 @@
          (if pos_0
            (|#%app| (portal-syntax-get-content p_0) pos_0)
            (portal-syntax-get-content p_0)))))))
+(define find-main-collects
+  (lambda ()
+    (cache-configuration
+     0
+     (lambda ()
+       (exe-relative-path->complete-path (find-system-path 'collects-dir))))))
+(define find-main-config
+  (lambda ()
+    (cache-configuration
+     1
+     (lambda ()
+       (exe-relative-path->complete-path (find-system-path 'config-dir))))))
+(define exe-relative-path->complete-path
+  (lambda (collects-path_0)
+    (if (complete-path? collects-path_0)
+      (simplify-path collects-path_0)
+      (if (absolute-path? collects-path_0)
+        (let ((exec_0
+               (call-in-original-directory
+                (lambda ()
+                  (let ((app_0
+                         (find-executable-path (find-system-path 'exec-file))))
+                    (path->complete-path
+                     app_0
+                     (find-system-path 'orig-dir)))))))
+          (call-with-values
+           (lambda () (split-path exec_0))
+           (lambda (base_0 name_0 dir?_0)
+             (simplify-path (path->complete-path collects-path_0 base_0)))))
+        (let ((p_0
+               (call-in-original-directory
+                (lambda ()
+                  (find-executable-path
+                   (find-system-path 'exec-file)
+                   collects-path_0
+                   #t)))))
+          (if p_0 (simplify-path p_0) #f))))))
+(define call-in-original-directory
+  (lambda (thunk_0)
+    (with-continuation-mark*
+     authentic
+     parameterization-key
+     (let ((app_0 (continuation-mark-set-first #f parameterization-key)))
+       (extend-parameterization
+        app_0
+        current-directory
+        (find-system-path 'orig-dir)))
+     (|#%app| thunk_0))))
+(define encoded-link-path?
+  (lambda (p_0)
+    (let ((or-part_0 (path-string? p_0)))
+      (if or-part_0
+        or-part_0
+        (let ((or-part_1 (path-bytes? p_0)))
+          (if or-part_1
+            or-part_1
+            (if (pair? p_0)
+              (if (list? p_0) (andmap_2814 path-element-bytes/same/up? p_0) #f)
+              #f)))))))
+(define path-bytes?
+  (lambda (p_0)
+    (if (bytes? p_0)
+      (if (positive? (unsafe-bytes-length p_0))
+        (let ((vec_0 p_0) (len_0 (unsafe-bytes-length p_0)))
+          (letrec*
+           ((for-loop_0
+             (|#%name|
+              for-loop
+              (lambda (result_0 pos_0)
+                (if (unsafe-fx< pos_0 len_0)
+                  (let ((c_0 (unsafe-bytes-ref vec_0 pos_0)))
+                    (let ((result_1 (not (eqv? c_0 0))))
+                      (let ((result_2 (values result_1)))
+                        (if (if (not (let ((x_0 (list c_0))) (not result_2)))
+                              #t
+                              #f)
+                          (for-loop_0 result_2 (unsafe-fx+ 1 pos_0))
+                          result_2))))
+                  result_0)))))
+           (for-loop_0 #t 0)))
+        #f)
+      #f)))
+(define path-element-bytes/same/up?
+  (lambda (p_0)
+    (let ((or-part_0 (eq? p_0 'up)))
+      (if or-part_0
+        or-part_0
+        (let ((or-part_1 (eq? p_0 'same)))
+          (if or-part_1
+            or-part_1
+            (if (path-bytes? p_0)
+              (let ((p_1
+                     (bytes->path-element
+                      p_0
+                      (system-path-convention-type)
+                      #t)))
+                (if p_1 (relative-path? p_1) #f))
+              #f)))))))
+(define decode-link-path
+  (lambda (p_0)
+    (if (path-string? p_0)
+      p_0
+      (if (bytes? p_0)
+        (bytes->path p_0)
+        (letrec*
+         ((loop_0
+           (|#%name|
+            loop
+            (lambda (path_0 p_1)
+              (if (null? p_1)
+                path_0
+                (let ((elem_0
+                       (if (bytes? (car p_1))
+                         (bytes->path-element (car p_1))
+                         (car p_1))))
+                  (let ((app_0 (if path_0 (build-path path_0 elem_0) elem_0)))
+                    (loop_0 app_0 (cdr p_1)))))))))
+         (loop_0 #f p_0))))))
+(define replace-me
+  (lambda (who_0) (lambda args_0 (error who_0 "this stub must be replaced"))))
+(define 1/current-eval
+  (make-parameter
+   (replace-me 'current-eval)
+   (lambda (p_0)
+     (begin
+       (if (if (procedure? p_0) (procedure-arity-includes? p_0 1) #f)
+         (void)
+         (raise-argument-error
+          'current-eval
+          "(procedure-arity-includes/c 1)"
+          p_0))
+       p_0))
+   'current-eval))
+(define 1/current-compile
+  (make-parameter
+   (replace-me 'current-compile)
+   (lambda (p_0)
+     (begin
+       (if (if (procedure? p_0) (procedure-arity-includes? p_0 2) #f)
+         (void)
+         (raise-argument-error
+          'current-compile
+          "(procedure-arity-includes/c 2)"
+          p_0))
+       p_0))
+   'current-compile))
+(define 1/current-load
+  (make-parameter
+   (replace-me 'current-load)
+   (lambda (p_0)
+     (begin
+       (if (if (procedure? p_0) (procedure-arity-includes? p_0 2) #f)
+         (void)
+         (raise-argument-error
+          'current-load
+          "(procedure-arity-includes/c 2)"
+          p_0))
+       p_0))
+   'current-load))
+(define 1/current-load/use-compiled
+  (make-parameter
+   (replace-me 'current-load/use-compiled)
+   (lambda (p_0)
+     (begin
+       (if (if (procedure? p_0) (procedure-arity-includes? p_0 2) #f)
+         (void)
+         (raise-argument-error
+          'current-load/use-compiled
+          "(procedure-arity-includes/c 2)"
+          p_0))
+       p_0))
+   'current-load/use-compiled))
+(define 1/current-library-collection-paths
+  (make-parameter
+   null
+   (lambda (l_0)
+     (begin
+       (if (if (list? l_0) (andmap_2814 complete-path-string? l_0) #f)
+         (void)
+         (raise-argument-error
+          'current-library-collection-paths
+          "(listof (and/c path-string? complete-path?))"
+          l_0))
+       (map_2353 to-path l_0)))
+   'current-library-collection-paths))
+(define 1/current-library-collection-links
+  (make-parameter
+   null
+   (lambda (l_0)
+     (begin
+       (if (if (list? l_0)
+             (andmap_2814
+              (lambda (p_0)
+                (let ((or-part_0 (not p_0)))
+                  (if or-part_0
+                    or-part_0
+                    (let ((or-part_1 (complete-path-string? p_0)))
+                      (if or-part_1
+                        or-part_1
+                        (if (hash? p_0)
+                          (letrec*
+                           ((for-loop_0
+                             (|#%name|
+                              for-loop
+                              (lambda (result_0 i_0)
+                                (if i_0
+                                  (call-with-values
+                                   (lambda () (hash-iterate-key+value p_0 i_0))
+                                   (lambda (k_0 v_0)
+                                     (let ((result_1
+                                            (let ((result_1
+                                                   (if (let ((or-part_2
+                                                              (not k_0)))
+                                                         (if or-part_2
+                                                           or-part_2
+                                                           (if (symbol? k_0)
+                                                             (1/module-path?
+                                                              k_0)
+                                                             #f)))
+                                                     (if (list? v_0)
+                                                       (andmap_2814
+                                                        complete-path-string?
+                                                        v_0)
+                                                       #f)
+                                                     #f)))
+                                              (values result_1))))
+                                       (if (if (not
+                                                (let ((x_0 (list k_0 v_0)))
+                                                  (not result_1)))
+                                             #t
+                                             #f)
+                                         (for-loop_0
+                                          result_1
+                                          (hash-iterate-next p_0 i_0))
+                                         result_1))))
+                                  result_0)))))
+                           (for-loop_0 #t (hash-iterate-first p_0)))
+                          #f))))))
+              l_0)
+             #f)
+         (void)
+         (raise-argument-error
+          'current-library-collection-links
+          (string-append
+           "(listof (or/c #f\n"
+           "              (and/c path-string? complete-path?)\n"
+           "              (hash/c (or/c (and/c symbol? module-path?) #f)\n"
+           "                      (listof (and/c path-string? complete-path?)))))")
+          l_0))
+       (map_2353
+        (lambda (p_0)
+          (if (not p_0)
+            #f
+            (if (path? p_0)
+              p_0
+              (if (string? p_0)
+                (string->path p_0)
+                (let ((table_0 hash2725))
+                  (let ((table_1 table_0))
+                    (letrec*
+                     ((for-loop_0
+                       (|#%name|
+                        for-loop
+                        (lambda (table_2 i_0)
+                          (if i_0
+                            (call-with-values
+                             (lambda () (hash-iterate-key+value p_0 i_0))
+                             (lambda (k_0 v_0)
+                               (let ((table_3
+                                      (let ((table_3
+                                             (let ((val_0 (to-path v_0)))
+                                               (hash-set table_2 k_0 val_0))))
+                                        (values table_3))))
+                                 (for-loop_0
+                                  table_3
+                                  (hash-iterate-next p_0 i_0)))))
+                            table_2)))))
+                     (for-loop_0 table_1 (hash-iterate-first p_0)))))))))
+        l_0)))
+   'current-library-collection-links))
+(define 1/use-compiled-file-paths
+  (make-parameter
+   (list (string->path "compiled"))
+   (lambda (l_0)
+     (begin
+       (if (if (list? l_0) (andmap_2814 relative-path-string?$1 l_0) #f)
+         (void)
+         (raise-argument-error
+          'use-compiled-file-paths
+          "(listof (and/c path-string? relative-path?))"
+          l_0))
+       (map_2353 to-path l_0)))
+   'use-compiled-file-paths))
+(define 1/current-compiled-file-roots
+  (make-parameter
+   '(same)
+   (lambda (l_0)
+     (begin
+       (if (if (list? l_0)
+             (andmap_2814
+              (lambda (p_0)
+                (let ((or-part_0 (path-string? p_0)))
+                  (if or-part_0 or-part_0 (eq? p_0 'same))))
+              l_0)
+             #f)
+         (void)
+         (raise-argument-error
+          'current-compiled-file-roots
+          "(listof (or/c path-string? 'same))"
+          l_0))
+       (map_2353 to-path l_0)))
+   'current-compiled-file-roots))
+(define 1/use-compiled-file-check
+  (make-parameter
+   'modify-seconds
+   (lambda (v_0)
+     (begin
+       (if (let ((or-part_0 (eq? v_0 'modify-seconds)))
+             (if or-part_0 or-part_0 (eq? v_0 'exists)))
+         (void)
+         (raise-argument-error
+          'use-compiled-file-check
+          "(or/c 'modify-seconds 'exists)"
+          v_0))
+       v_0))
+   'use-compiled-file-check))
+(define 1/use-collection-link-paths
+  (make-parameter #t (lambda (v_0) (if v_0 #t #f)) 'use-collection-link-paths))
+(define 1/use-user-specific-search-paths
+  (make-parameter
+   #t
+   (lambda (v_0) (if v_0 #t #f))
+   'use-user-specific-search-paths))
+(define complete-path-string?
+  (lambda (p_0) (if (path-string? p_0) (complete-path? p_0) #f)))
+(define relative-path-string?$1
+  (|#%name|
+   relative-path-string?
+   (lambda (p_0) (if (path-string? p_0) (relative-path? p_0) #f))))
+(define to-path (lambda (p_0) (if (string? p_0) (string->path p_0) p_0)))
+(define finish_3090
+  (make-struct-type-install-properties
+   '(shadow-directory)
+   2
+   0
+   #f
+   (list (cons prop:authentic #t))
+   (current-inspector)
+   #f
+   '(0 1)
+   #f
+   'shadow-directory))
+(define struct:shadow-directory
+  (|#%make-record-type-descriptor|
+   |#%racket-base-rtd|
+   'shadow-directory
+   #f
+   (|#%nongenerative-uid| shadow-directory)
+   #f
+   #f
+   '(2 . 0)
+   'make-struct-type
+   #f
+   #f
+   #f
+   |#%system-inspector|))
+(define effect_2776 (finish_3090 struct:shadow-directory))
+(define shadow-directory1.1
+  (|#%name|
+   shadow-directory
+   (record-constructor
+    (make-record-constructor-descriptor struct:shadow-directory #f #f))))
+(define shadow-directory?
+  (|#%name| shadow-directory? (record-predicate struct:shadow-directory)))
+(define shadow-directory-evt
+  (|#%name| shadow-directory-evt (record-accessor struct:shadow-directory 0)))
+(define shadow-directory-table
+  (|#%name|
+   shadow-directory-table
+   (record-accessor struct:shadow-directory 1)))
+(define use-shadow-directory?
+  (let ((v_0 (system-type 'fs-change)))
+    (if (eq? 'scalable (vector-ref v_0 1))
+      (eq? 'low-latency (vector-ref v_0 2))
+      #f)))
+(define make-cache (lambda () (if use-shadow-directory? (make-weak-hash) #f)))
+(define cell.1$4 (unsafe-make-place-local (make-cache)))
+(define cell.2$3 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
+(define shadow-directory-place-init!
+  (lambda () (unsafe-place-local-set! cell.1$4 (make-cache))))
+(define lookup-shadow-directory
+  (lambda (orig_0)
+    (begin
+      (let ((lock_0 (unsafe-place-local-ref cell.2$3)))
+        (unsafe-uninterruptible-lock-acquire lock_0))
+      (let ((sd_0 (hash-ref (unsafe-place-local-ref cell.1$4) orig_0 #f)))
+        (begin
+          (let ((lock_0 (unsafe-place-local-ref cell.2$3)))
+            (unsafe-uninterruptible-lock-release lock_0))
+          (if sd_0
+            (if (sync/timeout 0 (shadow-directory-evt sd_0))
+              (begin
+                (let ((lock_0 (unsafe-place-local-ref cell.2$3)))
+                  (unsafe-uninterruptible-lock-acquire lock_0))
+                (hash-remove! (unsafe-place-local-ref cell.1$4) orig_0)
+                (let ((lock_0 (unsafe-place-local-ref cell.2$3)))
+                  (unsafe-uninterruptible-lock-release lock_0))
+                (lookup-shadow-directory orig_0))
+              sd_0)
+            (let ((evt_0 (filesystem-change-evt orig_0 (lambda () #f))))
+              (if evt_0
+                (let ((table_0 hash2725))
+                  (let ((table_1
+                         (let ((table_1 table_0))
+                           (let ((lst_0 (directory-list orig_0)))
+                             (letrec*
+                              ((for-loop_0
+                                (|#%name|
+                                 for-loop
+                                 (lambda (table_2 lst_1)
+                                   (if (pair? lst_1)
+                                     (let ((p_0 (unsafe-car lst_1)))
+                                       (let ((rest_0 (unsafe-cdr lst_1)))
+                                         (let ((table_3
+                                                (if (directory-exists?
+                                                     (build-path orig_0 p_0))
+                                                  (let ((table_3
+                                                         (let ((key_0
+                                                                (normal-case-path
+                                                                 p_0)))
+                                                           (hash-set
+                                                            table_2
+                                                            key_0
+                                                            #t))))
+                                                    (values table_3))
+                                                  table_2)))
+                                           (for-loop_0 table_3 rest_0))))
+                                     table_2)))))
+                              (for-loop_0 table_1 lst_0))))))
+                    (let ((sd_1 (shadow-directory1.1 evt_0 table_1)))
+                      (begin
+                        (let ((lock_0 (unsafe-place-local-ref cell.2$3)))
+                          (unsafe-uninterruptible-lock-acquire lock_0))
+                        (hash-set!
+                         (unsafe-place-local-ref cell.1$4)
+                         orig_0
+                         sd_1)
+                        (let ((lock_0 (unsafe-place-local-ref cell.2$3)))
+                          (unsafe-uninterruptible-lock-release lock_0))
+                        sd_1))))
+                #f))))))))
+(define directory-exists?/shadow-filesystem
+  (lambda (p_0 orig_0 subpath_0)
+    (if (not (unsafe-place-local-ref cell.1$4))
+      (directory-exists? p_0)
+      (let ((sd_0 (lookup-shadow-directory orig_0)))
+        (if (not sd_0)
+          (directory-exists? p_0)
+          (if sd_0
+            (let ((ht_0 (shadow-directory-table sd_0)))
+              (hash-ref ht_0 (normal-case-path subpath_0) #f))
+            (void)))))))
+(define relative-path-string?
+  (lambda (s_0) (if (path-string? s_0) (relative-path? s_0) #f)))
+(define check-collection
+  (lambda (who_0 s_0 l_0)
+    (begin
+      (if (relative-path-string? s_0)
+        (void)
+        (raise-argument-error who_0 "(and/c path-string? relative-path?)" s_0))
+      (if (if (list? l_0) (andmap_2814 relative-path-string? l_0) #f)
+        (void)
+        (raise-argument-error
+         who_0
+         "(listof (and/c path-string? relative-path?))"
+         l_0)))))
+(define check-fail
+  (lambda (who_0 fail_0)
+    (if (if (procedure? fail_0) (procedure-arity-includes? fail_0 1) #f)
+      (void)
+      (raise-argument-error who_0 "(procedure-arity-includes/c 1)" fail_0))))
+(define 1/collection-path
+  (|#%name|
+   collection-path
+   (lambda (fail_0 collection_0 collection-path_0)
+     (begin
+       (check-collection 'collection-path collection_0 collection-path_0)
+       (check-fail 'collection-path fail_0)
+       (find-col-file fail_0 collection_0 collection-path_0 #f #f)))))
+(define 1/collection-file-path
+  (|#%name|
+   collection-file-path
+   (lambda (fail_0
+            check-compiled?_0
+            file-name_0
+            collection_0
+            collection-path_0)
+     (begin
+       (if (relative-path-string? file-name_0)
+         (void)
+         (raise-argument-error
+          'collection-file-path
+          "(and/c path-string? relative-path?)"
+          file-name_0))
+       (check-collection 'collection-file-path collection_0 collection-path_0)
+       (check-fail 'collection-file-path fail_0)
+       (find-col-file
+        fail_0
+        collection_0
+        collection-path_0
+        file-name_0
+        check-compiled?_0)))))
+(define 1/read-installation-configuration-table
+  (|#%name|
+   read-installation-configuration-table
+   (lambda ()
+     (let ((d_0 (find-main-config)))
+       (let ((p_0 (if d_0 (build-path d_0 "config.rktd") #f)))
+         (let ((or-part_0
+                (if p_0
+                  (if (file-exists? p_0)
+                    (let ((with-handlers-handler12_0
+                           (|#%name|
+                            with-handlers-handler12
+                            (lambda (exn_0) hash2725))))
+                      (let ((bpz_0
+                             (continuation-mark-set-first
+                              #f
+                              break-enabled-key)))
+                        (call-handled-body
+                         bpz_0
+                         (lambda (e_0)
+                           (select-handler/no-breaks
+                            e_0
+                            bpz_0
+                            (list (cons exn:fail? with-handlers-handler12_0))))
+                         (lambda ()
+                           (let ((temp14_0
+                                  (lambda ()
+                                    (let ((v_0
+                                           (call-with-default-reading-parameterization
+                                            1/read)))
+                                      (if (hash? v_0) v_0 #f)))))
+                             (with-input-from-file.1 'binary p_0 temp14_0))))))
+                    #f)
+                  #f)))
+           (if or-part_0 or-part_0 hash2725)))))))
+(define get-installation-name
+  (let ((get-installation-name_0
+         (|#%name|
+          get-installation-name
+          (lambda (config-table1_0)
+            (let ((config-table_0
+                   (if (eq? config-table1_0 unsafe-undefined)
+                     (1/read-installation-configuration-table)
+                     config-table1_0)))
+              (begin
+                (if (hash? config-table_0)
+                  (void)
+                  (raise-argument-error
+                   'get-installation-name
+                   "hash?"
+                   config-table_0))
+                (let ((base-name_0
+                       (hash-ref config-table_0 'installation-name (version))))
+                  (if (not (1/use-user-specific-search-paths))
+                    base-name_0
+                    (let ((addon-dir_0 (find-system-path 'addon-dir)))
+                      (let ((other-version-name_0 "other-version"))
+                        (if (directory-exists?
+                             (build-path addon-dir_0 base-name_0))
+                          base-name_0
+                          (if (directory-exists?
+                               (build-path addon-dir_0 other-version-name_0))
+                            other-version-name_0
+                            base-name_0))))))))))))
+    (case-lambda
+     (() (get-installation-name_0 unsafe-undefined))
+     ((config-table1_0) (get-installation-name_0 config-table1_0)))))
+(define coerce-to-relative-path
+  (lambda (p_0)
+    (if (string? p_0)
+      (string->path p_0)
+      (if (bytes? p_0) (bytes->path p_0) p_0))))
+(define coerce-to-path
+  (lambda (p_0)
+    (if (string? p_0)
+      (collects-relative-path->complete-path (string->path p_0))
+      (if (bytes? p_0)
+        (collects-relative-path->complete-path (bytes->path p_0))
+        (if (path? p_0) (collects-relative-path->complete-path p_0) p_0)))))
+(define collects-relative-path->complete-path
+  (lambda (p_0)
+    (if (complete-path? p_0)
+      p_0
+      (path->complete-path
+       p_0
+       (let ((or-part_0 (find-main-collects)))
+         (if or-part_0 or-part_0 (current-directory)))))))
+(define add-config-search
+  (lambda (ht_0 key_0 orig-l_0)
+    (let ((l_0 (hash-ref ht_0 key_0 #f)))
+      (if l_0
+        (letrec*
+         ((loop_0
+           (|#%name|
+            loop
+            (lambda (l_1)
+              (if (null? l_1)
+                null
+                (if (not (car l_1))
+                  (append orig-l_0 (loop_0 (cdr l_1)))
+                  (let ((app_0 (coerce-to-path (car l_1))))
+                    (cons app_0 (loop_0 (cdr l_1))))))))))
+         (loop_0 l_0))
+        orig-l_0))))
+(define 1/find-library-collection-links
+  (let ((find-library-collection-links_0
+         (|#%name|
+          find-library-collection-links
+          (lambda (config-table2_0 installation-name3_0)
+            (let ((config-table_0
+                   (if (eq? config-table2_0 unsafe-undefined)
+                     (1/read-installation-configuration-table)
+                     config-table2_0)))
+              (let ((installation-name_0
+                     (if (eq? installation-name3_0 unsafe-undefined)
+                       (if (hash? config-table_0)
+                         (get-installation-name config-table_0)
+                         #f)
+                       installation-name3_0)))
+                (begin
+                  (if (hash? config-table_0)
+                    (void)
+                    (raise-argument-error
+                     'find-library-collection-links
+                     "hash?"
+                     config-table_0))
+                  (begin
+                    (if (string? installation-name_0)
+                      (void)
+                      (raise-argument-error
+                       'find-library-collection-links
+                       "string?"
+                       installation-name_0))
+                    (let ((lf_0
+                           (coerce-to-path
+                            (let ((or-part_0
+                                   (hash-ref config-table_0 'links-file #f)))
+                              (if or-part_0
+                                or-part_0
+                                (build-path
+                                 (let ((or-part_1
+                                        (hash-ref
+                                         config-table_0
+                                         'share-dir
+                                         #f)))
+                                   (if or-part_1
+                                     or-part_1
+                                     (build-path 'up "share")))
+                                 "links.rktd"))))))
+                      (let ((app_0 (list #f)))
+                        (let ((app_1
+                               (if (if (1/use-user-specific-search-paths)
+                                     (1/use-collection-link-paths)
+                                     #f)
+                                 (list
+                                  (build-path
+                                   (find-system-path 'addon-dir)
+                                   installation-name_0
+                                   "links.rktd"))
+                                 null)))
+                          (append
+                           app_0
+                           app_1
+                           (if (1/use-collection-link-paths)
+                             (add-config-search
+                              config-table_0
+                              'links-search-files
+                              (list lf_0))
+                             null)))))))))))))
+    (|#%name|
+     find-library-collection-links
+     (case-lambda
+      (() (find-library-collection-links_0 unsafe-undefined unsafe-undefined))
+      ((config-table_0 installation-name3_0)
+       (find-library-collection-links_0 config-table_0 installation-name3_0))
+      ((config-table2_0)
+       (find-library-collection-links_0 config-table2_0 unsafe-undefined))))))
+(define cell.1$3 (unsafe-make-place-local (make-weak-hash)))
+(define cell.2$2 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
+(define collection-place-init!
+  (lambda ()
+    (begin
+      (unsafe-place-local-set! cell.1$3 (make-weak-hash))
+      (unsafe-place-local-set! cell.2$2 (unsafe-make-uninterruptible-lock)))))
+(define stamp-prompt-tag (make-continuation-prompt-tag 'stamp))
+(define file->stamp
+  (lambda (path_0 old-stamp_0)
+    (if (if old-stamp_0
+          (if (cdr old-stamp_0)
+            (not (filesystem-change-evt-ready? (cdr old-stamp_0)))
+            #f)
+          #f)
+      old-stamp_0
+      (call-with-continuation-prompt
+       (lambda ()
+         (call-with-exception-handler
+          (lambda (exn_0)
+            (abort-current-continuation
+             stamp-prompt-tag
+             (if (exn:fail:filesystem? exn_0)
+               (lambda () #f)
+               (lambda () (raise exn_0)))))
+          (lambda ()
+            (let ((dir-evt_0
+                   (if (vector-ref (system-type 'fs-change) 2)
+                     (letrec*
+                      ((loop_0
+                        (|#%name|
+                         loop
+                         (lambda (path_1)
+                           (call-with-values
+                            (lambda () (split-path path_1))
+                            (lambda (base_0 name_0 dir?_0)
+                              (if (path? base_0)
+                                (if (directory-exists? base_0)
+                                  (filesystem-change-evt base_0 (lambda () #f))
+                                  (loop_0 base_0))
+                                #f)))))))
+                      (loop_0 path_0))
+                     #f)))
+              (if (not (file-exists? path_0))
+                (cons #f dir-evt_0)
+                (let ((evt_0
+                       (if (vector-ref (system-type 'fs-change) 2)
+                         (filesystem-change-evt path_0 (lambda () #f))
+                         #f)))
+                  (begin
+                    (if dir-evt_0
+                      (filesystem-change-evt-cancel dir-evt_0)
+                      (void))
+                    (cons (file->bytes path_0) evt_0))))))))
+       stamp-prompt-tag))))
+(define file->bytes
+  (lambda (path_0)
+    (let ((temp16_0
+           (lambda (p_0)
+             (let ((bstr_0 (read-bytes 8192 p_0)))
+               (if (if (bytes? bstr_0)
+                     (>= (unsafe-bytes-length bstr_0) 8192)
+                     #f)
+                 (apply-bytes-append
+                  0
+                  (cons
+                   bstr_0
+                   (letrec*
+                    ((loop_0
+                      (|#%name|
+                       loop
+                       (lambda ()
+                         (let ((bstr_1 (read-bytes 8192 p_0)))
+                           (if (eof-object? bstr_1)
+                             null
+                             (cons bstr_1 (loop_0))))))))
+                    (loop_0))))
+                 bstr_0)))))
+      (call-with-input-file*.1 'binary path_0 temp16_0))))
+(define no-file-stamp?
+  (lambda (a_0)
+    (let ((or-part_0 (not a_0))) (if or-part_0 or-part_0 (not (car a_0))))))
+(define get-linked-collections
+  (lambda (links-path_0)
+    (call-with-escape-continuation
+     (lambda (esc_0)
+       (let ((make-handler_0
+              (|#%name|
+               make-handler
+               (lambda (ts_0)
+                 (lambda (exn_0)
+                   (begin
+                     (if (exn:fail? exn_0)
+                       (let ((l_0 (current-logger)))
+                         (if (log-level? l_0 'error)
+                           (let ((app_0
+                                  (format
+                                   "error reading collection links file ~s: ~a"
+                                   links-path_0
+                                   (exn-message exn_0))))
+                             (log-message
+                              l_0
+                              'error
+                              app_0
+                              (current-continuation-marks)))
+                           (void)))
+                       (void))
+                     (if ts_0
+                       (begin
+                         (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
+                           (unsafe-uninterruptible-lock-acquire lock_0))
+                         (let ((app_0 (unsafe-place-local-ref cell.1$3)))
+                           (hash-set!
+                            app_0
+                            links-path_0
+                            (cons ts_0 hash2610)))
+                         (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
+                           (unsafe-uninterruptible-lock-release lock_0)))
+                       (void))
+                     (if (exn:fail? exn_0)
+                       (|#%app| esc_0 (make-hasheq))
+                       exn_0)))))))
+         (call-with-exception-handler
+          (make-handler_0 #f)
+          (lambda ()
+            (begin
+              (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
+                (unsafe-uninterruptible-lock-acquire lock_0))
+              (let ((links-stamp+cache_0
+                     (hash-ref
+                      (unsafe-place-local-ref cell.1$3)
+                      links-path_0
+                      nhash2607)))
+                (begin
+                  (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
+                    (unsafe-uninterruptible-lock-release lock_0))
+                  (let ((a-links-stamp_0 (car links-stamp+cache_0)))
+                    (let ((ts_0 (file->stamp links-path_0 a-links-stamp_0)))
+                      (if (equal? ts_0 a-links-stamp_0)
+                        (cdr links-stamp+cache_0)
+                        (call-with-exception-handler
+                         (make-handler_0 ts_0)
+                         (lambda ()
+                           (call-with-default-reading-parameterization
+                            (lambda ()
+                              (let ((v_0
+                                     (if (no-file-stamp? ts_0)
+                                       null
+                                       (let ((temp18_0
+                                              (lambda (p_0)
+                                                (begin0
+                                                  (1/read p_0)
+                                                  (if (eof-object?
+                                                       (1/read p_0))
+                                                    (void)
+                                                    (error
+                                                     "expected a single S-expression"))))))
+                                         (call-with-input-file*.1
+                                          'binary
+                                          links-path_0
+                                          temp18_0)))))
+                                (begin
+                                  (if (if (list? v_0)
+                                        (andmap_2814
+                                         (lambda (p_0)
+                                           (if (list? p_0)
+                                             (if (let ((or-part_0
+                                                        (= 2 (length p_0))))
+                                                   (if or-part_0
+                                                     or-part_0
+                                                     (= 3 (length p_0))))
+                                               (if (let ((or-part_0
+                                                          (string? (car p_0))))
+                                                     (if or-part_0
+                                                       or-part_0
+                                                       (let ((or-part_1
+                                                              (eq?
+                                                               'root
+                                                               (car p_0))))
+                                                         (if or-part_1
+                                                           or-part_1
+                                                           (eq?
+                                                            'static-root
+                                                            (car p_0))))))
+                                                 (if (encoded-link-path?
+                                                      (cadr p_0))
+                                                   (let ((or-part_0
+                                                          (null? (cddr p_0))))
+                                                     (if or-part_0
+                                                       or-part_0
+                                                       (regexp? (caddr p_0))))
+                                                   #f)
+                                                 #f)
+                                               #f)
+                                             #f))
+                                         v_0)
+                                        #f)
+                                    (void)
+                                    (error "ill-formed content"))
+                                  (let ((ht_0 (make-hasheq)))
+                                    (let ((dir_0
+                                           (call-with-values
+                                            (lambda ()
+                                              (split-path links-path_0))
+                                            (lambda (base_0 name_0 dir?_0)
+                                              base_0))))
+                                      (begin
+                                        (for-each_2009
+                                         (lambda (p_0)
+                                           (if (let ((or-part_0
+                                                      (null? (cddr p_0))))
+                                                 (if or-part_0
+                                                   or-part_0
+                                                   (regexp-match?
+                                                    (caddr p_0)
+                                                    (version))))
+                                             (let ((dir_1
+                                                    (simplify-path
+                                                     (path->complete-path
+                                                      (decode-link-path
+                                                       (cadr p_0))
+                                                      dir_0))))
+                                               (if (eq? (car p_0) 'static-root)
+                                                 (for-each_2009
+                                                  (lambda (sub_0)
+                                                    (if (directory-exists?
+                                                         (build-path
+                                                          dir_1
+                                                          sub_0))
+                                                      (let ((k_0
+                                                             (string->symbol
+                                                              (path->string
+                                                               sub_0))))
+                                                        (hash-set!
+                                                         ht_0
+                                                         k_0
+                                                         (cons
+                                                          dir_1
+                                                          (hash-ref
+                                                           ht_0
+                                                           k_0
+                                                           null))))
+                                                      (void)))
+                                                  (directory-list dir_1))
+                                                 (if (eq? (car p_0) 'root)
+                                                   (begin
+                                                     (if (hash-ref ht_0 #f #f)
+                                                       (void)
+                                                       (hash-set!
+                                                        ht_0
+                                                        #f
+                                                        null))
+                                                     (hash-for-each
+                                                      ht_0
+                                                      (lambda (k_0 v_1)
+                                                        (hash-set!
+                                                         ht_0
+                                                         k_0
+                                                         (cons dir_1 v_1)))))
+                                                   (let ((s_0
+                                                          (string->symbol
+                                                           (car p_0))))
+                                                     (hash-set!
+                                                      ht_0
+                                                      s_0
+                                                      (let ((app_0
+                                                             (box dir_1)))
+                                                        (cons
+                                                         app_0
+                                                         (hash-ref
+                                                          ht_0
+                                                          s_0
+                                                          null))))))))
+                                             (void)))
+                                         v_0)
+                                        (hash-for-each
+                                         ht_0
+                                         (lambda (k_0 v_1)
+                                           (hash-set!
+                                            ht_0
+                                            k_0
+                                            (reverse$1 v_1))))
+                                        (let ((lock_0
+                                               (unsafe-place-local-ref
+                                                cell.2$2)))
+                                          (unsafe-uninterruptible-lock-acquire
+                                           lock_0))
+                                        (let ((app_0
+                                               (unsafe-place-local-ref
+                                                cell.1$3)))
+                                          (hash-set!
+                                           app_0
+                                           links-path_0
+                                           (cons ts_0 ht_0)))
+                                        (let ((lock_0
+                                               (unsafe-place-local-ref
+                                                cell.2$2)))
+                                          (unsafe-uninterruptible-lock-release
+                                           lock_0))
+                                        ht_0))))))))))))))))))))))
+(define normalize-collection-reference
+  (lambda (collection_0 collection-path_0)
+    (if (string? collection_0)
+      (let ((m_0 (regexp-match-positions rx2897 collection_0)))
+        (if m_0
+          (if (let ((app_0 (caar m_0)))
+                (= app_0 (sub1 (string-length collection_0))))
+            (values (substring collection_0 0 (caar m_0)) collection-path_0)
+            (let ((app_0 (substring collection_0 0 (caar m_0))))
+              (values
+               app_0
+               (cons (substring collection_0 (cdar m_0)) collection-path_0))))
+          (values collection_0 collection-path_0)))
+      (call-with-values
+       (lambda () (split-path collection_0))
+       (lambda (base_0 name_0 dir?_0)
+         (if (eq? base_0 'relative)
+           (values name_0 collection-path_0)
+           (normalize-collection-reference
+            base_0
+            (cons name_0 collection-path_0))))))))
+(define find-col-file
+  (lambda (fail_0
+           collection-in_0
+           collection-path-in_0
+           file-name_0
+           check-compiled?_0)
+    (call-with-values
+     (lambda ()
+       (normalize-collection-reference collection-in_0 collection-path-in_0))
+     (lambda (collection_0 collection-path_0)
+       (let ((all-paths_0
+              (let ((sym_0
+                     (string->symbol
+                      (if (path? collection_0)
+                        (path->string collection_0)
+                        collection_0))))
+                (letrec*
+                 ((loop_0
+                   (|#%name|
+                    loop
+                    (lambda (l_0)
+                      (if (null? l_0)
+                        null
+                        (if (not (car l_0))
+                          (let ((app_0 (1/current-library-collection-paths)))
+                            (append app_0 (loop_0 (cdr l_0))))
+                          (if (hash? (car l_0))
+                            (let ((app_0
+                                   (map_2353
+                                    box
+                                    (hash-ref (car l_0) sym_0 null))))
+                              (let ((app_1 (hash-ref (car l_0) #f null)))
+                                (append app_0 app_1 (loop_0 (cdr l_0)))))
+                            (let ((ht_0 (get-linked-collections (car l_0))))
+                              (let ((app_0 (hash-ref ht_0 sym_0 null)))
+                                (let ((app_1 (hash-ref ht_0 #f null)))
+                                  (append
+                                   app_0
+                                   app_1
+                                   (loop_0 (cdr l_0)))))))))))))
+                 (loop_0 (1/current-library-collection-links))))))
+         (let ((done_0
+                (|#%name|
+                 done
+                 (lambda (p_0)
+                   (if file-name_0 (build-path p_0 file-name_0) p_0)))))
+           (let ((*build-path-rep_0
+                  (|#%name|
+                   *build-path-rep
+                   (lambda (p_0 c_0)
+                     (if (path? p_0) (build-path p_0 c_0) (unbox p_0))))))
+             (let ((*directory-exists?_0
+                    (|#%name|
+                     *directory-exists?
+                     (lambda (orig_0 collection_1 p_0)
+                       (if (path? orig_0)
+                         (directory-exists?/shadow-filesystem
+                          p_0
+                          orig_0
+                          collection_1)
+                         #t)))))
+               (let ((to-string_0
+                      (|#%name|
+                       to-string
+                       (lambda (p_0)
+                         (if (path? p_0) (path->string p_0) p_0)))))
+                 (letrec*
+                  ((cloop_0
+                    (|#%name|
+                     cloop
+                     (lambda (paths_0 found-col_0)
+                       (if (null? paths_0)
+                         (if found-col_0
+                           (done_0 found-col_0)
+                           (let ((rest-coll_0
+                                  (if (null? collection-path_0)
+                                    ""
+                                    (apply-string-append
+                                     0
+                                     (letrec*
+                                      ((loop_0
+                                        (|#%name|
+                                         loop
+                                         (lambda (cp_0)
+                                           (if (null? (cdr cp_0))
+                                             (list (to-string_0 (car cp_0)))
+                                             (let ((app_0
+                                                    (to-string_0 (car cp_0))))
+                                               (list*
+                                                app_0
+                                                "/"
+                                                (loop_0 (cdr cp_0)))))))))
+                                      (loop_0 collection-path_0))))))
+                             (letrec*
+                              ((filter_0
+                                (|#%name|
+                                 filter
+                                 (lambda (f_0 l_0)
+                                   (if (null? l_0)
+                                     null
+                                     (if (|#%app| f_0 (car l_0))
+                                       (let ((app_0 (car l_0)))
+                                         (cons app_0 (filter_0 f_0 (cdr l_0))))
+                                       (filter_0 f_0 (cdr l_0))))))))
+                              (|#%app|
+                               fail_0
+                               (let ((app_0
+                                      (if (null? collection-path_0)
+                                        (to-string_0 collection_0)
+                                        (string-append
+                                         (to-string_0 collection_0)
+                                         "/"
+                                         rest-coll_0))))
+                                 (let ((app_1
+                                        (apply-string-append
+                                         0
+                                         (map_2353
+                                          (lambda (p_0)
+                                            (format "\n ~a ~a" " " p_0))
+                                          (let ((len_0 (length all-paths_0)))
+                                            (let ((clen_0
+                                                   (length
+                                                    (1/current-library-collection-paths))))
+                                              (let ((len_1 len_0))
+                                                (if (< (- len_1 clen_0) 5)
+                                                  all-paths_0
+                                                  (let ((app_1
+                                                         (1/current-library-collection-paths)))
+                                                    (append
+                                                     app_1
+                                                     (list
+                                                      (format
+                                                       "... [~a additional linked and package directories]"
+                                                       (-
+                                                        len_1
+                                                        clen_0)))))))))))))
+                                   (format
+                                    "collection not found\n  collection: ~s\n  in collection directories:~a~a"
+                                    app_0
+                                    app_1
+                                    (if (ormap_2207 box? all-paths_0)
+                                      (format
+                                       "\n   sub-collection: ~s\n  in parent directories:~a"
+                                       rest-coll_0
+                                       (apply-string-append
+                                        0
+                                        (map_2353
+                                         (lambda (p_0)
+                                           (format "\n   ~a" (unbox p_0)))
+                                         (filter_0 box? all-paths_0))))
+                                      ""))))))))
+                         (let ((dir_0
+                                (*build-path-rep_0
+                                 (car paths_0)
+                                 collection_0)))
+                           (if (*directory-exists?_0
+                                (car paths_0)
+                                collection_0
+                                dir_0)
+                             (let ((cpath_0
+                                    (apply
+                                     build-path
+                                     dir_0
+                                     collection-path_0)))
+                               (if (if (null? collection-path_0)
+                                     #t
+                                     (directory-exists? cpath_0))
+                                 (if file-name_0
+                                   (if (let ((or-part_0
+                                              (file-exists?/maybe-compiled
+                                               cpath_0
+                                               file-name_0
+                                               check-compiled?_0)))
+                                         (if or-part_0
+                                           or-part_0
+                                           (let ((alt-file-name_0
+                                                  (let ((file-name_1
+                                                         (if (path?
+                                                              file-name_0)
+                                                           (path->string
+                                                            file-name_0)
+                                                           file-name_0)))
+                                                    (let ((len_0
+                                                           (string-length
+                                                            file-name_1)))
+                                                      (if (>= len_0 4)
+                                                        (if (string=?
+                                                             ".rkt"
+                                                             (substring
+                                                              file-name_1
+                                                              (- len_0 4)))
+                                                          (string-append
+                                                           (substring
+                                                            file-name_1
+                                                            0
+                                                            (- len_0 4))
+                                                           ".ss")
+                                                          #f)
+                                                        #f)))))
+                                             (if alt-file-name_0
+                                               (file-exists?/maybe-compiled
+                                                cpath_0
+                                                alt-file-name_0
+                                                check-compiled?_0)
+                                               #f))))
+                                     (done_0 cpath_0)
+                                     (cloop_0
+                                      (cdr paths_0)
+                                      (if found-col_0 found-col_0 cpath_0)))
+                                   (done_0 cpath_0))
+                                 (cloop_0 (cdr paths_0) found-col_0)))
+                             (cloop_0 (cdr paths_0) found-col_0))))))))
+                  (cloop_0 all-paths_0 #f)))))))))))
+(define file-exists?/maybe-compiled
+  (lambda (dir_0 path_0 check-compiled?_0)
+    (let ((or-part_0 (file-exists? (build-path dir_0 path_0))))
+      (if or-part_0
+        or-part_0
+        (if check-compiled?_0
+          (let ((sfx_0 #vu8(46 122 111)))
+            (let ((try-path_0
+                   (path-adjust-extension
+                    'path-add-extension
+                    #vu8(95)
+                    subbytes
+                    path_0
+                    sfx_0
+                    #t)))
+              (let ((modes_0 (1/use-compiled-file-paths)))
+                (let ((roots_0 (1/current-compiled-file-roots)))
+                  (let ((modes_1 modes_0) (try-path_1 try-path_0))
+                    (ormap_2207
+                     (lambda (d_0)
+                       (ormap_2207
+                        (lambda (mode_0)
+                          (file-exists?
+                           (let ((dir_1
+                                  (if (eq? d_0 'same)
+                                    dir_0
+                                    (if (relative-path? d_0)
+                                      (build-path dir_0 d_0)
+                                      (reroot-path dir_0 d_0)))))
+                             (build-path dir_1 mode_0 try-path_1))))
+                        modes_1))
+                     roots_0))))))
+          #f)))))
+(define 1/find-library-collection-paths
+  (let ((find-library-collection-paths_0
+         (|#%name|
+          find-library-collection-paths
+          (lambda (extra-collects-dirs4_0
+                   post-collects-dirs5_0
+                   config-table6_0
+                   installation-name7_0)
+            (let ((config-table_0
+                   (if (eq? config-table6_0 unsafe-undefined)
+                     (1/read-installation-configuration-table)
+                     config-table6_0)))
+              (let ((installation-name_0
+                     (if (eq? installation-name7_0 unsafe-undefined)
+                       (if (hash? config-table_0)
+                         (get-installation-name config-table_0)
+                         #f)
+                       installation-name7_0)))
+                (begin
+                  (if (if (list? extra-collects-dirs4_0)
+                        (andmap_2814 path-string? extra-collects-dirs4_0)
+                        #f)
+                    (void)
+                    (raise-argument-error
+                     'find-library-collection-paths
+                     "(listof path-string?)"
+                     extra-collects-dirs4_0))
+                  (if (if (list? post-collects-dirs5_0)
+                        (andmap_2814 path-string? post-collects-dirs5_0)
+                        #f)
+                    (void)
+                    (raise-argument-error
+                     'find-library-collection-paths
+                     "(listof path-string?)"
+                     post-collects-dirs5_0))
+                  (if (hash? config-table_0)
+                    (void)
+                    (raise-argument-error
+                     'find-library-collection-paths
+                     "hash?"
+                     config-table_0))
+                  (if (string? installation-name_0)
+                    (void)
+                    (raise-argument-error
+                     'find-library-collection-paths
+                     "string?"
+                     installation-name_0))
+                  (let ((user-too?_0 (1/use-user-specific-search-paths)))
+                    (let ((cons-if_0
+                           (|#%name|
+                            cons-if
+                            (lambda (f_0 r_0) (if f_0 (cons f_0 r_0) r_0)))))
+                      (let ((user-too?_1 user-too?_0))
+                        (let ((app_0
+                               (if user-too?_1
+                                 (let ((c_0
+                                        (environment-variables-ref
+                                         (current-environment-variables)
+                                         #vu8(80 76 84 67 79 76 76 69 67 84 83))))
+                                   (if c_0
+                                     (bytes->string/locale c_0 '#\x3f)
+                                     ""))
+                                 "")))
+                          (path-list-string->path-list
+                           app_0
+                           (add-config-search
+                            config-table_0
+                            'collects-search-dirs
+                            (let ((app_1
+                                   (if user-too?_1
+                                     (build-path
+                                      (find-system-path 'addon-dir)
+                                      installation-name_0
+                                      "collects")
+                                     #f)))
+                              (cons-if_0
+                               app_1
+                               (letrec*
+                                ((loop_0
+                                  (|#%name|
+                                   loop
+                                   (lambda (l_0)
+                                     (if (null? l_0)
+                                       null
+                                       (let ((collects-path_0 (car l_0)))
+                                         (let ((v_0
+                                                (exe-relative-path->complete-path
+                                                 collects-path_0)))
+                                           (if v_0
+                                             (let ((app_2
+                                                    (simplify-path
+                                                     (path->complete-path
+                                                      v_0
+                                                      (current-directory)))))
+                                               (cons app_2 (loop_0 (cdr l_0))))
+                                             (loop_0 (cdr l_0))))))))))
+                                (loop_0
+                                 (append
+                                  extra-collects-dirs4_0
+                                  (list (find-system-path 'collects-dir))
+                                  post-collects-dirs5_0))))))))))))))))))
+    (|#%name|
+     find-library-collection-paths
+     (case-lambda
+      (()
+       (find-library-collection-paths_0
+        null
+        null
+        unsafe-undefined
+        unsafe-undefined))
+      ((extra-collects-dirs_0
+        post-collects-dirs_0
+        config-table_0
+        installation-name7_0)
+       (find-library-collection-paths_0
+        extra-collects-dirs_0
+        post-collects-dirs_0
+        config-table_0
+        installation-name7_0))
+      ((extra-collects-dirs_0 post-collects-dirs_0 config-table6_0)
+       (find-library-collection-paths_0
+        extra-collects-dirs_0
+        post-collects-dirs_0
+        config-table6_0
+        unsafe-undefined))
+      ((extra-collects-dirs_0 post-collects-dirs5_0)
+       (find-library-collection-paths_0
+        extra-collects-dirs_0
+        post-collects-dirs5_0
+        unsafe-undefined
+        unsafe-undefined))
+      ((extra-collects-dirs4_0)
+       (find-library-collection-paths_0
+        extra-collects-dirs4_0
+        null
+        unsafe-undefined
+        unsafe-undefined))))))
+(define 1/find-compiled-file-roots
+  (let ((find-compiled-file-roots_0
+         (|#%name|
+          find-compiled-file-roots
+          (lambda (ht8_0)
+            (let ((ht_0
+                   (if (eq? ht8_0 unsafe-undefined)
+                     (1/read-installation-configuration-table)
+                     ht8_0)))
+              (begin
+                (if (hash? ht_0)
+                  (void)
+                  (raise-argument-error
+                   'find-compiled-file-roots
+                   "hash?"
+                   ht_0))
+                (let ((paths_0 (hash-ref ht_0 'compiled-file-roots #f)))
+                  (let ((or-part_0
+                         (if (list? paths_0)
+                           (map_2353 coerce-to-relative-path paths_0)
+                           #f)))
+                    (if or-part_0 or-part_0 (list 'same))))))))))
+    (|#%name|
+     find-compiled-file-roots
+     (case-lambda
+      (() (find-compiled-file-roots_0 unsafe-undefined))
+      ((ht8_0) (find-compiled-file-roots_0 ht8_0))))))
 (define finish_2696
   (make-struct-type-install-properties
    '(module)
@@ -18444,10 +19874,10 @@
                 supermodule-name22_0
                 get-all-variables_0
                 get-portal-syntax-callback_0)))))))))
-(define finish_2793
+(define finish_2283
   (make-struct-type-install-properties
    '(module-instance)
-   8
+   10
    0
    #f
    (list (cons prop:authentic #t))
@@ -18464,13 +19894,13 @@
    (|#%nongenerative-uid| module-instance)
    #f
    #f
-   '(8 . 52)
+   '(10 . 820)
    'make-struct-type
    #f
    #f
    #f
    |#%system-inspector|))
-(define effect_2382 (finish_2793 struct:module-instance))
+(define effect_2382 (finish_2283 struct:module-instance))
 (define module-instance48.1
   (|#%name|
    module-instance
@@ -18508,6 +19938,14 @@
   (|#%name|
    module-instance-portal-syntaxes
    (record-accessor struct:module-instance 7)))
+(define module-instance-all-levels-started?
+  (|#%name|
+   module-instance-all-levels-started?
+   (record-accessor struct:module-instance 8)))
+(define module-instance-attach-dependencies
+  (|#%name|
+   module-instance-attach-dependencies
+   (record-accessor struct:module-instance 9)))
 (define set-module-instance-shifted-requires!
   (|#%name|
    set-module-instance-shifted-requires!
@@ -18520,6 +19958,14 @@
   (|#%name|
    set-module-instance-attached?!
    (record-mutator struct:module-instance 5)))
+(define set-module-instance-all-levels-started?!
+  (|#%name|
+   set-module-instance-all-levels-started?!
+   (record-mutator struct:module-instance 8)))
+(define set-module-instance-attach-dependencies!
+  (|#%name|
+   set-module-instance-attach-dependencies!
+   (record-mutator struct:module-instance 9)))
 (define make-module-instance
   (lambda (m-ns_0 m_0 portal-syntaxes_0)
     (let ((app_0 (make-small-hasheqv)))
@@ -18531,7 +19977,9 @@
        #f
        #f
        (box #f)
-       portal-syntaxes_0))))
+       portal-syntaxes_0
+       #f
+       null))))
 (define make-module-namespace.1
   (|#%name|
    make-module-namespace
@@ -18545,30 +19993,30 @@
               (let ((the-struct_0
                      (new-namespace.1 #f root-expand-context50_0 ns57_0)))
                 (if (1/namespace? the-struct_0)
-                  (let ((source-name186_0
+                  (let ((source-name171_0
                          (resolved-module-path-root-name name_0)))
-                    (let ((submodule-declarations189_0
+                    (let ((submodule-declarations174_0
                            (if for-submodule?51_0
                              (namespace-submodule-declarations ns57_0)
                              (make-small-hasheq))))
-                      (let ((available-module-instances190_0 (make-hasheqv)))
-                        (let ((available-cross-phase-module-instances191_0
+                      (let ((available-module-instances175_0 (make-hasheqv)))
+                        (let ((available-cross-phase-module-instances176_0
                                (box null)))
-                          (let ((module-instances192_0 (make-hasheqv)))
-                            (let ((declaration-inspector193_0
+                          (let ((module-instances177_0 (make-hasheqv)))
+                            (let ((declaration-inspector178_0
                                    (current-code-inspector)))
-                              (let ((module-instances192_1
-                                     module-instances192_0)
-                                    (available-cross-phase-module-instances191_1
-                                     available-cross-phase-module-instances191_0)
-                                    (available-module-instances190_1
-                                     available-module-instances190_0)
-                                    (submodule-declarations189_1
-                                     submodule-declarations189_0)
-                                    (source-name186_1 source-name186_0))
+                              (let ((module-instances177_1
+                                     module-instances177_0)
+                                    (available-cross-phase-module-instances176_1
+                                     available-cross-phase-module-instances176_0)
+                                    (available-module-instances175_1
+                                     available-module-instances175_0)
+                                    (submodule-declarations174_1
+                                     submodule-declarations174_0)
+                                    (source-name171_1 source-name171_0))
                                 (namespace1.1
                                  mpi49_0
-                                 source-name186_1
+                                 source-name171_1
                                  (namespace-root-expand-ctx the-struct_0)
                                  0
                                  0
@@ -18579,13 +20027,13 @@
                                  (namespace-module-instance-shifted-requires
                                   the-struct_0)
                                  (namespace-bulk-binding-registry the-struct_0)
-                                 submodule-declarations189_1
+                                 submodule-declarations174_1
                                  (namespace-root-namespace the-struct_0)
-                                 declaration-inspector193_0
+                                 declaration-inspector178_0
                                  (namespace-inspector the-struct_0)
-                                 available-module-instances190_1
-                                 available-cross-phase-module-instances191_1
-                                 module-instances192_1))))))))
+                                 available-module-instances175_1
+                                 available-cross-phase-module-instances176_1
+                                 module-instances177_1))))))))
                   (raise-argument-error
                    'struct-copy
                    "namespace?"
@@ -18616,14 +20064,14 @@
        (let ((prior-mi_0
               (if prior-m_0
                 (if (not (eq? m62_0 prior-m_0))
-                  (let ((temp199_0 (namespace-phase ns61_0)))
+                  (let ((temp184_0 (namespace-phase ns61_0)))
                     (namespace->module-instance.1
                      #f
                      #f
                      void
                      ns61_0
                      mod-name63_0
-                     temp199_0))
+                     temp184_0))
                   #f)
                 #f)))
          (begin
@@ -18642,14 +20090,17 @@
                 (hash-set (unbox small-ht_0) mod-name63_0 m62_0))))
            (if with-submodules?59_0
              (begin
-               (|#%app|
-                (if (module-cross-phase-persistent? m62_0)
-                  register-cross-phase-bulk-provide!
-                  register-bulk-provide!)
-                (namespace-bulk-binding-registry ns61_0)
-                mod-name63_0
-                (module-self m62_0)
-                (module-provides m62_0))
+               (let ((bulk-binding-registry_0
+                      (namespace-bulk-binding-registry ns61_0)))
+                 (let ((self_0 (module-self m62_0)))
+                   (let ((provides_0 (module-provides m62_0)))
+                     (let ((app_0
+                            (bulk-binding-registry-table
+                             bulk-binding-registry_0)))
+                       (hash-set!
+                        app_0
+                        mod-name63_0
+                        (bulk-provide13.1 self_0 provides_0))))))
                (|#%app| (1/current-module-name-resolver) mod-name63_0 #f))
              (void))
            (if prior-mi_0
@@ -18682,17 +20133,18 @@
                             (namespace-module-instance-shifted-requires ns61_0)
                             mod-name63_0)
                            (if visit?_0
-                             (let ((temp201_0 (namespace-mpi m-ns_0)))
+                             (let ((temp186_0 (namespace-mpi m-ns_0)))
                                (namespace-module-visit!.1
                                 #f
                                 unsafe-undefined
                                 ns61_0
-                                temp201_0
+                                temp186_0
                                 phase_0))
                              (void))
                            (if run?_0
-                             (let ((temp204_0 (namespace-mpi m-ns_0)))
+                             (let ((temp189_0 (namespace-mpi m-ns_0)))
                                (namespace-module-instantiate!.1
+                                #f
                                 #f
                                 #t
                                 #t
@@ -18702,7 +20154,7 @@
                                 #f
                                 #f
                                 ns61_0
-                                temp204_0
+                                temp189_0
                                 phase_0))
                              (void)))))))))
              (void))))))))
@@ -18772,7 +20224,12 @@
                     #f)))
               (if or-part_0
                 or-part_0
-                (let ((or-part_1 (cross-phase-instance-ref name72_0)))
+                (let ((or-part_1
+                       (hash-ref
+                        (module-registry-cross-phase-instances
+                         (namespace-module-registry$1 ns71_0))
+                        name72_0
+                        #f)))
                   (if or-part_1
                     or-part_1
                     (let ((or-part_2
@@ -18817,54 +20274,59 @@
              'namespace-attach-module
              "internal error: cannot find cross-phase persistent instance: ~s"
              name_0))
-          (set-module-instance-attached?! existing-mi_0 #t)))
+          (set-module-instance-attached?! existing-mi_0 #t)
+          (hash-set!
+           (module-registry-cross-phase-instances
+            (namespace-module-registry$1 ns_0))
+           name_0
+           existing-mi_0)))
       (let ((m-ns_0
              (if (1/namespace? ns_0)
-               (let ((mpi209_0 (namespace-mpi existing-m-ns_0)))
-                 (let ((source-name210_0
+               (let ((mpi194_0 (namespace-mpi existing-m-ns_0)))
+                 (let ((source-name195_0
                         (namespace-source-name existing-m-ns_0)))
-                   (let ((root-expand-ctx211_0
+                   (let ((root-expand-ctx196_0
                           (box
                            (unbox
                             (namespace-root-expand-ctx existing-m-ns_0)))))
-                     (let ((phase212_0 (namespace-phase existing-m-ns_0)))
-                       (let ((0-phase213_0
+                     (let ((phase197_0 (namespace-phase existing-m-ns_0)))
+                       (let ((0-phase198_0
                               (namespace-0-phase existing-m-ns_0)))
-                         (let ((phase-to-namespace214_0 (make-small-hasheqv)))
-                           (let ((phase-level-to-definitions215_0
+                         (let ((phase-to-namespace199_0 (make-small-hasheqv)))
+                           (let ((phase-level-to-definitions200_0
                                   (make-small-hasheqv)))
-                             (let ((declaration-inspector216_0
+                             (let ((declaration-inspector201_0
                                     (module-inspector m_0)))
-                               (let ((inspector217_0
+                               (let ((inspector202_0
                                       (namespace-inspector existing-m-ns_0)))
-                                 (let ((declaration-inspector216_1
-                                        declaration-inspector216_0)
-                                       (phase-level-to-definitions215_1
-                                        phase-level-to-definitions215_0)
-                                       (phase-to-namespace214_1
-                                        phase-to-namespace214_0)
-                                       (0-phase213_1 0-phase213_0)
-                                       (phase212_1 phase212_0)
-                                       (root-expand-ctx211_1
-                                        root-expand-ctx211_0)
-                                       (source-name210_1 source-name210_0)
-                                       (mpi209_1 mpi209_0))
+                                 (let ((declaration-inspector201_1
+                                        declaration-inspector201_0)
+                                       (phase-level-to-definitions200_1
+                                        phase-level-to-definitions200_0)
+                                       (phase-to-namespace199_1
+                                        phase-to-namespace199_0)
+                                       (0-phase198_1 0-phase198_0)
+                                       (phase197_1 phase197_0)
+                                       (root-expand-ctx196_1
+                                        root-expand-ctx196_0)
+                                       (source-name195_1 source-name195_0)
+                                       (mpi194_1 mpi194_0))
                                    (namespace1.1
-                                    mpi209_1
-                                    source-name210_1
-                                    root-expand-ctx211_1
-                                    phase212_1
-                                    0-phase213_1
-                                    phase-to-namespace214_1
-                                    phase-level-to-definitions215_1
+                                    mpi194_1
+                                    source-name195_1
+                                    root-expand-ctx196_1
+                                    phase197_1
+                                    0-phase198_1
+                                    phase-to-namespace199_1
+                                    phase-level-to-definitions200_1
                                     (namespace-module-registry$1 ns_0)
                                     (namespace-module-instance-shifted-requires
                                      ns_0)
                                     (namespace-bulk-binding-registry ns_0)
                                     (namespace-submodule-declarations ns_0)
                                     (namespace-root-namespace ns_0)
-                                    declaration-inspector216_1
-                                    inspector217_0
+                                    declaration-inspector201_1
+                                    inspector202_0
                                     (namespace-available-module-instances ns_0)
                                     (namespace-available-cross-phase-module-instances
                                      ns_0)
@@ -18923,42 +20385,42 @@
   (lambda (ns_0 name_0 0-phase_0 m_0 mpi_0)
     (let ((m-ns_0
            (if (1/namespace? ns_0)
-             (let ((source-name219_0
+             (let ((source-name204_0
                     (let ((or-part_0 (module-source-name m_0)))
                       (if or-part_0
                         or-part_0
                         (resolved-module-path-root-name
                          (1/module-path-index-resolve mpi_0))))))
-               (let ((root-expand-ctx220_0 (box #f)))
-                 (let ((phase-to-namespace223_0 (make-small-hasheqv)))
-                   (let ((phase-level-to-definitions224_0
+               (let ((root-expand-ctx205_0 (box #f)))
+                 (let ((phase-to-namespace208_0 (make-small-hasheqv)))
+                   (let ((phase-level-to-definitions209_0
                           (make-small-hasheqv)))
-                     (let ((declaration-inspector225_0 (module-inspector m_0)))
-                       (let ((inspector226_0
+                     (let ((declaration-inspector210_0 (module-inspector m_0)))
+                       (let ((inspector211_0
                               (make-inspector (module-inspector m_0))))
-                         (let ((declaration-inspector225_1
-                                declaration-inspector225_0)
-                               (phase-level-to-definitions224_1
-                                phase-level-to-definitions224_0)
-                               (phase-to-namespace223_1
-                                phase-to-namespace223_0)
-                               (root-expand-ctx220_1 root-expand-ctx220_0)
-                               (source-name219_1 source-name219_0))
+                         (let ((declaration-inspector210_1
+                                declaration-inspector210_0)
+                               (phase-level-to-definitions209_1
+                                phase-level-to-definitions209_0)
+                               (phase-to-namespace208_1
+                                phase-to-namespace208_0)
+                               (root-expand-ctx205_1 root-expand-ctx205_0)
+                               (source-name204_1 source-name204_0))
                            (namespace1.1
                             mpi_0
-                            source-name219_1
-                            root-expand-ctx220_1
+                            source-name204_1
+                            root-expand-ctx205_1
                             0-phase_0
                             0-phase_0
-                            phase-to-namespace223_1
-                            phase-level-to-definitions224_1
+                            phase-to-namespace208_1
+                            phase-level-to-definitions209_1
                             (namespace-module-registry$1 ns_0)
                             (namespace-module-instance-shifted-requires ns_0)
                             (namespace-bulk-binding-registry ns_0)
                             (namespace-submodule-declarations ns_0)
                             (namespace-root-namespace ns_0)
-                            declaration-inspector225_1
-                            inspector226_0
+                            declaration-inspector210_1
+                            inspector211_0
                             (namespace-available-module-instances ns_0)
                             (namespace-available-cross-phase-module-instances
                              ns_0)
@@ -18972,7 +20434,11 @@
             (if (module-cross-phase-persistent? m_0)
               (if (expansion-time-module-name? name_0)
                 (hash-set! (namespace-module-instances ns_0) name_0 mi_0)
-                (hash-set! (unsafe-place-local-ref cell.1$5) name_0 mi_0))
+                (hash-set!
+                 (module-registry-cross-phase-instances
+                  (namespace-module-registry$1 ns_0))
+                 name_0
+                 mi_0))
               (let ((at-phase_0
                      (let ((or-part_0
                             (hash-ref
@@ -18994,19 +20460,24 @@
   (lambda (mi_0 check-available-at-phase-level_0 unavailable-callback_0)
     (let ((m_0 (module-instance-module mi_0)))
       (if (if m_0
-            (if (let ((app_0 (add1 check-available-at-phase-level_0)))
-                  (<=
-                   (module-min-phase-level m_0)
-                   app_0
-                   (module-max-phase-level m_0)))
-              (not
+            (let ((app_0 (add1 check-available-at-phase-level_0)))
+              (<=
+               (module-min-phase-level m_0)
+               app_0
+               (module-max-phase-level m_0)))
+            #f)
+        (let ((state_0
                (let ((small-ht_0 (module-instance-phase-level-to-state mi_0)))
                  (let ((key_0 (add1 check-available-at-phase-level_0)))
                    (let ((small-ht_1 small-ht_0))
-                     (hash-ref (unbox small-ht_1) key_0 #f)))))
-              #f)
-            #f)
-        (|#%app| unavailable-callback_0 mi_0)
+                     (hash-ref (unbox small-ht_1) key_0 #f))))))
+          (if (not state_0)
+            (|#%app| unavailable-callback_0 mi_0)
+            (if (if (eq? state_0 'available)
+                  (module-cross-phase-persistent? m_0)
+                  #f)
+              (begin (cross-phase-module-instance-run-all-levels! mi_0) mi_0)
+              mi_0)))
         mi_0))))
 (define namespace->module-namespace.1
   (|#%name|
@@ -19047,7 +20518,8 @@
 (define namespace-module-instantiate!.1
   (|#%name|
    namespace-module-instantiate!
-   (lambda (minimum-inspector91_0
+   (lambda (cross-phase-all-levels?93_0
+            minimum-inspector91_0
             otherwise-available?87_0
             recur?90_0
             run-phase85_0
@@ -19055,18 +20527,18 @@
             seen-list89_0
             skip-run?86_0
             transitive-record92_0
-            ns101_0
-            mpi102_0
-            instance-phase103_0)
+            ns103_0
+            mpi104_0
+            instance-phase105_0)
      (let ((run-phase_0
             (if (eq? run-phase85_0 unsafe-undefined)
-              (namespace-phase ns101_0)
+              (namespace-phase ns103_0)
               run-phase85_0)))
        (begin
-         (if (1/module-path-index? mpi102_0)
+         (if (1/module-path-index? mpi104_0)
            (void)
-           (error "not a module path index:" mpi102_0))
-         (let ((name_0 (1/module-path-index-resolve mpi102_0 #t)))
+           (error "not a module path index:" mpi104_0))
+         (let ((name_0 (1/module-path-index-resolve mpi104_0 #t)))
            (begin
              (if (if transitive-record92_0 (pair? seen-list89_0) #f)
                (hash-set!
@@ -19074,138 +20546,343 @@
                 name_0
                 (hash-set
                  (hash-ref transitive-record92_0 name_0 hash2589)
-                 instance-phase103_0
+                 instance-phase105_0
                  #t))
                (void))
-             (let ((cross-phase-mi_0 (cross-phase-instance-ref name_0)))
-               (if (if cross-phase-mi_0
-                     (module-instance-module cross-phase-mi_0)
+             (let ((m_0 (namespace->module ns103_0 name_0)))
+               (begin
+                 (if m_0
+                   (void)
+                   (raise-arguments-error
+                    'instantiate
+                    "unknown module"
+                    "module name"
+                    (module-name->error-string name_0)))
+                 (let ((instantiate!_0
+                        (|#%name|
+                         instantiate!
+                         (lambda (all-levels?223_0
+                                  mpi221_0
+                                  run-ns222_0
+                                  instance-phase227_0
+                                  run-phase228_0
+                                  ns229_0)
+                           (let ((mpi_0
+                                  (if (eq? mpi221_0 unsafe-undefined)
+                                    mpi104_0
+                                    mpi221_0)))
+                             (let ((run-ns_0
+                                    (if (eq? run-ns222_0 unsafe-undefined)
+                                      ns229_0
+                                      run-ns222_0)))
+                               (let ((mi_0
+                                      (let ((or-part_0
+                                             (namespace->module-instance.1
+                                              #f
+                                              #f
+                                              void
+                                              ns229_0
+                                              name_0
+                                              instance-phase227_0)))
+                                        (if or-part_0
+                                          or-part_0
+                                          (namespace-create-module-instance!
+                                           ns229_0
+                                           name_0
+                                           instance-phase227_0
+                                           m_0
+                                           mpi_0)))))
+                                 (begin
+                                   (run-module-instance!.1
+                                    all-levels?223_0
+                                    minimum-inspector91_0
+                                    otherwise-available?87_0
+                                    recur?90_0
+                                    run-phase228_0
+                                    seen88_0
+                                    seen-list89_0
+                                    skip-run?86_0
+                                    transitive-record92_0
+                                    mi_0
+                                    run-ns_0)
+                                   mi_0))))))))
+                   (if (module-cross-phase-persistent? m_0)
+                     (let ((run-phase-level_0
+                            (if instance-phase105_0
+                              (phase- run-phase_0 instance-phase105_0)
+                              #f)))
+                       (let ((all-levels?_0
+                              (if (not skip-run?86_0)
+                                (if cross-phase-all-levels?93_0
+                                  cross-phase-all-levels?93_0
+                                  (if run-phase-level_0
+                                    (<=
+                                     1
+                                     run-phase-level_0
+                                     (module-max-phase-level m_0))
+                                    #f))
+                                #f)))
+                         (let ((self-free_0
+                                (|#%name|
+                                 self-free
+                                 (lambda (mpi_0)
+                                   (if (self-free-module-path-index? mpi_0)
+                                     mpi_0
+                                     (1/module-path-index-join
+                                      (resolved-module-path->stable-module-path
+                                       name_0
+                                       ns103_0)
+                                      #f))))))
+                           (let ((mi_0
+                                  (if (let ((or-part_0
+                                             (expansion-time-module-name?
+                                              name_0)))
+                                        (if or-part_0
+                                          or-part_0
+                                          (not
+                                           (hash-ref
+                                            (module-registry-declarations
+                                             (namespace-module-registry$1
+                                              ns103_0))
+                                            name_0
+                                            #f))))
+                                    (instantiate!_0
+                                     all-levels?_0
+                                     unsafe-undefined
+                                     unsafe-undefined
+                                     0
+                                     0
+                                     ns103_0)
+                                    (let ((temp251_0
+                                           (let ((or-part_0
+                                                  (namespace-root-namespace
+                                                   ns103_0)))
+                                             (if or-part_0
+                                               or-part_0
+                                               ns103_0))))
+                                      (let ((temp252_0 (self-free_0 mpi104_0)))
+                                        (let ((temp251_1 temp251_0))
+                                          (instantiate!_0
+                                           all-levels?_0
+                                           temp252_0
+                                           ns103_0
+                                           0
+                                           0
+                                           temp251_1)))))))
+                             (if (if otherwise-available?87_0
+                                   (if instance-phase105_0
+                                     (if (not
+                                          (module-instance-all-levels-started?
+                                           mi_0))
+                                       (> (module-max-phase-level m_0) 0)
+                                       #f)
+                                     #f)
+                                   #f)
+                               (let ((bx_0
+                                      (namespace-available-cross-phase-module-instances
+                                       ns103_0)))
+                                 (if (memq mi_0 (unbox bx_0))
+                                   (void)
+                                   (set-box! bx_0 (cons mi_0 (unbox bx_0)))))
+                               (void))))))
+                     (void
+                      (instantiate!_0
+                       #f
+                       unsafe-undefined
+                       unsafe-undefined
+                       instance-phase105_0
+                       run-phase_0
+                       ns103_0)))))))))))))
+(define cross-phase-module-instance-run-all-levels!
+  (let ((cross-phase-module-instance-run-all-levels!_0
+         (|#%name|
+          cross-phase-module-instance-run-all-levels!
+          (lambda (mi108_0 ns107_0)
+            (let ((ns_0
+                   (if (eq? ns107_0 unsafe-undefined)
+                     (module-instance-namespace mi108_0)
+                     ns107_0)))
+              (if (module-instance-all-levels-started? mi108_0)
+                (void)
+                (registry-call-with-lock
+                 (namespace-module-registry$1 ns_0)
+                 (lambda ()
+                   (with-continuation-mark*
+                    authentic
+                    parameterization-key
+                    (extend-parameterization
+                     (continuation-mark-set-first #f parameterization-key)
+                     1/current-namespace
+                     ns_0)
+                    (run-module-instance!.1
+                     #t
+                     #f
+                     #f
+                     #t
+                     0
+                     hash2610
+                     null
+                     #f
+                     #f
+                     mi108_0
+                     ns_0))))))))))
+    (case-lambda
+     ((mi_0)
+      (cross-phase-module-instance-run-all-levels!_0 mi_0 unsafe-undefined))
+     ((mi_0 ns107_0)
+      (cross-phase-module-instance-run-all-levels!_0 mi_0 ns107_0)))))
+(define resolved-module-path->stable-module-path
+  (lambda (name_0 ns_0)
+    (let ((n_0 (1/resolved-module-path-name name_0)))
+      (let ((p_0 (if (pair? n_0) (car n_0) n_0)))
+        (let ((lib-mp_0
+               (if (path? p_0)
+                 (path->collection-module-path
+                  p_0
+                  (module-registry-collection-prefixes
+                   (namespace-module-registry$1 ns_0)))
+                 #f)))
+          (if (not lib-mp_0)
+            (resolved-module-path->module-path name_0)
+            (if (pair? n_0) (list* 'submod lib-mp_0 (cdr n_0)) lib-mp_0)))))))
+(define path->collection-module-path
+  (lambda (p_0 prefixes_0)
+    (let ((try_0
+           (|#%name|
+            try
+            (lambda (str_0)
+              (let ((mp_0 (list 'lib str_0)))
+                (if (1/module-path? mp_0)
+                  (let ((elems_0 (split-on-slash str_0)))
+                    (let ((rev-elems_0 (reverse$1 elems_0)))
+                      (let ((with-handlers-handler265_0
+                             (|#%name|
+                              with-handlers-handler265
+                              (lambda (exn_0) #f))))
+                        (let ((r_0
+                               (let ((bpz_0
+                                      (continuation-mark-set-first
+                                       #f
+                                       break-enabled-key)))
+                                 (call-handled-body
+                                  bpz_0
+                                  (lambda (e_0)
+                                    (select-handler/no-breaks
+                                     e_0
+                                     bpz_0
+                                     (list
+                                      (cons
+                                       exn:fail?
+                                       with-handlers-handler265_0))))
+                                  (lambda ()
+                                    (let ((app_0 (car rev-elems_0)))
+                                      (let ((app_1 (car elems_0)))
+                                        (1/collection-file-path
+                                         (lambda (s_0) #f)
+                                         #t
+                                         app_0
+                                         app_1
+                                         (cdr
+                                          (reverse$1
+                                           (cdr rev-elems_0)))))))))))
+                          (if r_0
+                            (if (equal?
+                                 (simplify-path (path->complete-path r_0))
+                                 p_0)
+                              mp_0
+                              #f)
+                            #f)))))
+                  #f))))))
+      (call-with-values
+       (lambda () (split-path p_0))
+       (lambda (dir_0 file-elem_0 dir?_0)
+         (let ((file-str_0
+                (if (path? file-elem_0) (path->string file-elem_0) #f)))
+           (let ((cached-prefix_0
+                  (if file-str_0
+                    (if (path? dir_0) (hash-ref prefixes_0 dir_0 #f) #f)
+                    #f)))
+             (let ((or-part_0
+                    (if cached-prefix_0
+                      (try_0 (string-append cached-prefix_0 "/" file-str_0))
+                      #f)))
+               (if or-part_0
+                 or-part_0
+                 (if file-str_0
+                   (if (path? dir_0)
+                     (let ((dir-elems_0
+                            (letrec*
+                             ((loop_0
+                               (|#%name|
+                                loop
+                                (lambda (p_1 accum_0)
+                                  (call-with-values
+                                   (lambda () (split-path p_1))
+                                   (lambda (base_0 elem_0 dir?_1)
+                                     (let ((str_0
+                                            (if (path? elem_0)
+                                              (path->string elem_0)
+                                              #f)))
+                                       (if (not str_0)
+                                         accum_0
+                                         (if (path? base_0)
+                                           (loop_0 base_0 (cons str_0 accum_0))
+                                           (cons str_0 accum_0))))))))))
+                             (loop_0 dir_0 null))))
+                       (letrec*
+                        ((loop_0
+                          (|#%name|
+                           loop
+                           (lambda (k_0 rev-dir-elems_0 prefix_0)
+                             (if (let ((or-part_1 (> k_0 7)))
+                                   (if or-part_1
+                                     or-part_1
+                                     (null? rev-dir-elems_0)))
+                               #f
+                               (let ((new-prefix_0
+                                      (if prefix_0
+                                        (string-append
+                                         (car rev-dir-elems_0)
+                                         "/"
+                                         prefix_0)
+                                        (car rev-dir-elems_0))))
+                                 (let ((mp_0
+                                        (try_0
+                                         (string-append
+                                          new-prefix_0
+                                          "/"
+                                          file-str_0))))
+                                   (if mp_0
+                                     (begin
+                                       (hash-set!
+                                        prefixes_0
+                                        dir_0
+                                        new-prefix_0)
+                                       mp_0)
+                                     (let ((app_0 (add1 k_0)))
+                                       (loop_0
+                                        app_0
+                                        (cdr rev-dir-elems_0)
+                                        new-prefix_0))))))))))
+                        (loop_0 1 (reverse$1 dir-elems_0) #f)))
                      #f)
-                 (let ((temp237_0
-                        (module-instance-namespace cross-phase-mi_0)))
-                   (run-module-instance!.1
-                    minimum-inspector91_0
-                    otherwise-available?87_0
-                    recur?90_0
-                    0
-                    seen88_0
-                    seen-list89_0
-                    skip-run?86_0
-                    transitive-record92_0
-                    cross-phase-mi_0
-                    temp237_0))
-                 (namespace-module-instantiate/declared!.1
-                  minimum-inspector91_0
-                  otherwise-available?87_0
-                  recur?90_0
-                  run-phase_0
-                  seen88_0
-                  seen-list89_0
-                  skip-run?86_0
-                  transitive-record92_0
-                  ns101_0
-                  mpi102_0
-                  name_0
-                  instance-phase103_0))))))))))
-(define namespace-module-instantiate/declared!.1
-  (|#%name|
-   namespace-module-instantiate/declared!
-   (lambda (minimum-inspector111_0
-            otherwise-available?107_0
-            recur?110_0
-            run-phase105_0
-            seen108_0
-            seen-list109_0
-            skip-run?106_0
-            transitive-record112_0
-            ns121_0
-            mpi122_0
-            name123_0
-            instance-phase124_0)
-     (let ((m_0 (namespace->module ns121_0 name123_0)))
-       (begin
-         (if m_0
-           (void)
-           (raise-arguments-error
-            'instantiate
-            "unknown module"
-            "module name"
-            (module-name->error-string name123_0)))
-         (let ((instantiate!_0
-                (|#%name|
-                 instantiate!
-                 (lambda (mpi258_0 instance-phase260_0 run-phase261_0 ns262_0)
-                   (let ((mpi_0
-                          (if (eq? mpi258_0 unsafe-undefined)
-                            mpi122_0
-                            mpi258_0)))
-                     (let ((mi_0
-                            (let ((or-part_0
-                                   (namespace->module-instance.1
-                                    #f
-                                    #f
-                                    void
-                                    ns262_0
-                                    name123_0
-                                    instance-phase260_0)))
-                              (if or-part_0
-                                or-part_0
-                                (namespace-create-module-instance!
-                                 ns262_0
-                                 name123_0
-                                 instance-phase260_0
-                                 m_0
-                                 mpi_0)))))
-                       (run-module-instance!.1
-                        minimum-inspector111_0
-                        otherwise-available?107_0
-                        recur?110_0
-                        run-phase261_0
-                        seen108_0
-                        seen-list109_0
-                        skip-run?106_0
-                        transitive-record112_0
-                        mi_0
-                        ns262_0)))))))
-           (if (module-cross-phase-persistent? m_0)
-             (let ((root-ns_0
-                    (let ((or-part_0 (namespace-root-namespace ns121_0)))
-                      (if or-part_0 or-part_0 ns121_0))))
-               (if (expansion-time-module-name? name123_0)
-                 (instantiate!_0 unsafe-undefined 0 0 ns121_0)
-                 (if (namespace->module root-ns_0 name123_0)
-                   (let ((temp283_0
-                          (if (self-free-module-path-index? mpi122_0)
-                            mpi122_0
-                            (1/module-path-index-join
-                             (resolved-module-path->module-path name123_0)
-                             #f))))
-                     (instantiate!_0 temp283_0 0 0 root-ns_0))
-                   (if (hash-ref
-                        (module-registry-declarations
-                         (namespace-module-registry$1 ns121_0))
-                        name123_0
-                        #f)
-                     (let ((temp287_0
-                            (if (self-free-module-path-index? mpi122_0)
-                              mpi122_0
-                              (1/module-path-index-join
-                               (resolved-module-path->module-path name123_0)
-                               #f))))
-                       (instantiate!_0 temp287_0 0 0 ns121_0))
-                     (instantiate!_0 unsafe-undefined 0 0 ns121_0)))))
-             (instantiate!_0
-              unsafe-undefined
-              instance-phase124_0
-              run-phase105_0
-              ns121_0))))))))
-(define namespace->module/cross-phase
-  (lambda (ns_0 name_0)
-    (let ((or-part_0 (namespace->module ns_0 name_0)))
-      (if or-part_0
-        or-part_0
-        (let ((mi_0 (cross-phase-instance-ref name_0)))
-          (if mi_0 (module-instance-module mi_0) #f))))))
+                   #f))))))))))
+(define split-on-slash
+  (lambda (str_0)
+    (letrec*
+     ((loop_0
+       (|#%name|
+        loop
+        (lambda (start_0 i_0)
+          (if (= i_0 (string-length str_0))
+            (list (substring str_0 start_0 i_0))
+            (if (char=? '#\x2f (string-ref str_0 i_0))
+              (let ((app_0 (substring str_0 start_0 i_0)))
+                (cons
+                 app_0
+                 (let ((app_1 (add1 i_0))) (loop_0 app_1 (add1 i_0)))))
+              (loop_0 start_0 (add1 i_0))))))))
+     (loop_0 0 0))))
 (define expansion-time-module-name?
   (lambda (name_0)
     (let ((r_0 (resolved-module-path-root-name name_0)))
@@ -19227,53 +20904,55 @@
 (define namespace-module-visit!.1
   (|#%name|
    namespace-module-visit!
-   (lambda (transitive-record127_0
-            visit-phase126_0
-            ns130_0
-            mpi131_0
-            instance-phase132_0)
+   (lambda (transitive-record110_0
+            visit-phase109_0
+            ns113_0
+            mpi114_0
+            instance-phase115_0)
      (let ((visit-phase_0
-            (if (eq? visit-phase126_0 unsafe-undefined)
-              (namespace-phase ns130_0)
-              visit-phase126_0)))
-       (let ((temp297_0 (add1 visit-phase_0)))
+            (if (eq? visit-phase109_0 unsafe-undefined)
+              (namespace-phase ns113_0)
+              visit-phase109_0)))
+       (let ((temp269_0 (add1 visit-phase_0)))
          (namespace-module-instantiate!.1
+          #f
           #f
           #t
           #t
-          temp297_0
+          temp269_0
           hash2610
           null
           #f
-          transitive-record127_0
-          ns130_0
-          mpi131_0
-          instance-phase132_0))))))
+          transitive-record110_0
+          ns113_0
+          mpi114_0
+          instance-phase115_0))))))
 (define namespace-module-make-available!.1
   (|#%name|
    namespace-module-make-available!
-   (lambda (transitive-record135_0
-            visit-phase134_0
-            ns138_0
-            mpi139_0
-            instance-phase140_0)
+   (lambda (transitive-record118_0
+            visit-phase117_0
+            ns121_0
+            mpi122_0
+            instance-phase123_0)
      (let ((visit-phase_0
-            (if (eq? visit-phase134_0 unsafe-undefined)
-              (namespace-phase ns138_0)
-              visit-phase134_0)))
-       (let ((temp302_0 (add1 visit-phase_0)))
+            (if (eq? visit-phase117_0 unsafe-undefined)
+              (namespace-phase ns121_0)
+              visit-phase117_0)))
+       (let ((temp274_0 (add1 visit-phase_0)))
          (namespace-module-instantiate!.1
+          #f
           #f
           #t
           #t
-          temp302_0
+          temp274_0
           hash2610
           null
           #t
-          transitive-record135_0
-          ns138_0
-          mpi139_0
-          instance-phase140_0))))))
+          transitive-record118_0
+          ns121_0
+          mpi122_0
+          instance-phase123_0))))))
 (define namespace-module-get-portal-syntax-lookup
   (lambda (ns_0 mpi_0 phase-shift_0)
     (let ((name_0 (1/module-path-index-resolve mpi_0 #t)))
@@ -19367,76 +21046,85 @@
 (define run-module-instance!.1
   (|#%name|
    run-module-instance!
-   (lambda (minimum-inspector148_0
-            otherwise-available?144_0
-            recur?145_0
-            run-phase142_0
-            seen146_0
-            seen-list147_0
-            skip-run?143_0
-            transitive-record149_0
-            mi158_0
-            ns159_0)
+   (lambda (all-levels?133_0
+            minimum-inspector131_0
+            otherwise-available?127_0
+            recur?128_0
+            run-phase125_0
+            seen129_0
+            seen-list130_0
+            skip-run?126_0
+            transitive-record132_0
+            mi143_0
+            ns144_0)
      (begin
        (if log-performance? (start-performance-region 'eval 'requires) (void))
        (begin0
-         (let ((m-ns_0 (module-instance-namespace mi158_0)))
+         (let ((m-ns_0 (module-instance-namespace mi143_0)))
            (let ((instance-phase_0 (namespace-0-phase m-ns_0)))
              (let ((run-phase-level_0
-                    (phase- run-phase142_0 instance-phase_0)))
-               (let ((m_0 (module-instance-module mi158_0)))
+                    (phase- run-phase125_0 instance-phase_0)))
+               (let ((m_0 (module-instance-module mi143_0)))
                  (let ((inspector_0 (if m_0 (module-inspector m_0) #f)))
                    (begin
-                     (if (if minimum-inspector148_0 inspector_0 #f)
+                     (if (if minimum-inspector131_0 inspector_0 #f)
                        (if (let ((or-part_0
-                                  (eq? inspector_0 minimum-inspector148_0)))
+                                  (eq? inspector_0 minimum-inspector131_0)))
                              (if or-part_0
                                or-part_0
                                (inspector-superior?
                                 inspector_0
-                                minimum-inspector148_0)))
+                                minimum-inspector131_0)))
                          (void)
                          (error
                           'require
                           "cannot import module with weaker code inspector\n  module: ~a"
                           (1/module-path-index-resolve
                            (namespace-mpi
-                            (module-instance-namespace mi158_0)))))
+                            (module-instance-namespace mi143_0)))))
                        (void))
-                     (if (if (if skip-run?143_0
-                               skip-run?143_0
+                     (if (if (if skip-run?126_0
+                               skip-run?126_0
                                (eq?
                                 'started
                                 (let ((small-ht_0
                                        (module-instance-phase-level-to-state
-                                        mi158_0)))
+                                        mi143_0)))
                                   (hash-ref
                                    (unbox small-ht_0)
                                    run-phase-level_0
                                    #f))))
-                           (if (let ((or-part_0
-                                      (not otherwise-available?144_0)))
+                           (if (let ((or-part_0 (not all-levels?133_0)))
                                  (if or-part_0
                                    or-part_0
-                                   (module-instance-made-available? mi158_0)))
-                             (let ((or-part_0 (not transitive-record149_0)))
-                               (if or-part_0
-                                 or-part_0
-                                 (let ((or-part_1
-                                        (not
-                                         (if m_0
-                                           (module-cross-phase-persistent? m_0)
-                                           #f))))
-                                   (if or-part_1
-                                     or-part_1
-                                     (hash-ref
-                                      transitive-record149_0
-                                      mi158_0
-                                      #f)))))
+                                   (module-instance-all-levels-started?
+                                    mi143_0)))
+                             (if (let ((or-part_0
+                                        (not otherwise-available?127_0)))
+                                   (if or-part_0
+                                     or-part_0
+                                     (module-instance-made-available?
+                                      mi143_0)))
+                               (let ((or-part_0 (not transitive-record132_0)))
+                                 (if or-part_0
+                                   or-part_0
+                                   (let ((or-part_1
+                                          (not
+                                           (if m_0
+                                             (module-cross-phase-persistent?
+                                              m_0)
+                                             #f))))
+                                     (if or-part_1
+                                       or-part_1
+                                       (hash-ref
+                                        transitive-record132_0
+                                        mi143_0
+                                        #f)))))
+                               #f)
                              #f)
                            #f)
                        (void)
-                       (let ((m_1 (module-instance-module mi158_0)))
+                       (let ((m_1 (module-instance-module mi143_0)))
                          (begin
                            (if m_1
                              (void)
@@ -19444,21 +21132,21 @@
                               'require
                               "import cycle detected; trying to run module being expanded"))
                            (begin
-                             (if (if transitive-record149_0
-                                   (if recur?145_0
+                             (if (if transitive-record132_0
+                                   (if recur?128_0
                                      (module-cross-phase-persistent? m_1)
                                      #f)
                                    #f)
-                               (hash-set! transitive-record149_0 mi158_0 #t)
+                               (hash-set! transitive-record132_0 mi143_0 #t)
                                (void))
                              (let ((mpi_0 (namespace-mpi m-ns_0)))
                                (let ((bulk-binding-registry_0
                                       (namespace-bulk-binding-registry
                                        m-ns_0)))
                                  (begin
-                                   (if recur?145_0
+                                   (if recur?128_0
                                      (begin
-                                       (if (hash-ref seen146_0 mi158_0 #f)
+                                       (if (hash-ref seen129_0 mi143_0 #f)
                                          (error
                                           'require
                                           (apply-string-append
@@ -19467,25 +21155,25 @@
                                             "import cycle detected during module instantiation\n"
                                             "  dependency chain:"
                                             (module-instances->indented-module-names
-                                             mi158_0
-                                             seen-list147_0))))
+                                             mi143_0
+                                             seen-list130_0))))
                                          (void))
                                        (let ((record-shifted-requires-at-name_0
                                               (if (module-instance-shifted-requires
-                                                   mi158_0)
+                                                   mi143_0)
                                                 #f
                                                 (let ((name_0
                                                        (1/module-path-index-resolve
                                                         mpi_0)))
                                                   (let ((shifted-requires_0
                                                          (build-module-instance-shifted-requires
-                                                          ns159_0
+                                                          ns144_0
                                                           m_1
                                                           mpi_0
                                                           name_0)))
                                                     (begin
                                                       (set-module-instance-shifted-requires!
-                                                       mi158_0
+                                                       mi143_0
                                                        shifted-requires_0)
                                                       (if (non-self-derived-module-path-index?
                                                            mpi_0)
@@ -19493,8 +21181,8 @@
                                                         #f)))))))
                                          (let ((new-seen_0
                                                 (hash-set
-                                                 seen146_0
-                                                 mi158_0
+                                                 seen129_0
+                                                 mi143_0
                                                  #t)))
                                            (let ((recur-instantiate!_0
                                                   (|#%name|
@@ -19502,28 +21190,37 @@
                                                    (lambda (req-mpi_0
                                                             req-phase_0
                                                             req-recur?_0)
-                                                     (let ((temp310_0
+                                                     (let ((temp282_0
                                                             (phase+
                                                              instance-phase_0
                                                              req-phase_0)))
-                                                       (let ((temp315_0
+                                                       (let ((temp287_0
                                                               (cons
-                                                               mi158_0
-                                                               seen-list147_0)))
-                                                         (let ((temp310_1
-                                                                temp310_0))
-                                                           (namespace-module-instantiate!.1
-                                                            inspector_0
-                                                            otherwise-available?144_0
-                                                            req-recur?_0
-                                                            run-phase142_0
-                                                            new-seen_0
-                                                            temp315_0
-                                                            skip-run?143_0
-                                                            transitive-record149_0
-                                                            ns159_0
-                                                            req-mpi_0
-                                                            temp310_1))))))))
+                                                               mi143_0
+                                                               seen-list130_0)))
+                                                         (let ((temp291_0
+                                                                (if all-levels?133_0
+                                                                  (not
+                                                                   (not
+                                                                    req-phase_0))
+                                                                  #f)))
+                                                           (let ((temp287_1
+                                                                  temp287_0)
+                                                                 (temp282_1
+                                                                  temp282_0))
+                                                             (namespace-module-instantiate!.1
+                                                              temp291_0
+                                                              inspector_0
+                                                              otherwise-available?127_0
+                                                              req-recur?_0
+                                                              run-phase125_0
+                                                              new-seen_0
+                                                              temp287_1
+                                                              skip-run?126_0
+                                                              transitive-record132_0
+                                                              ns144_0
+                                                              req-mpi_0
+                                                              temp282_1)))))))))
                                              (begin
                                                (if (not
                                                     (module-flattened-requires
@@ -19531,7 +21228,7 @@
                                                  (begin
                                                    (let ((lst_0
                                                           (module-instance-shifted-requires
-                                                           mi158_0)))
+                                                           mi143_0)))
                                                      (let ((lst_1
                                                             (module-recur-requires
                                                              m_1)))
@@ -19620,7 +21317,7 @@
                                                  (begin
                                                    (let ((lst_0
                                                           (module-instance-shifted-requires
-                                                           mi158_0)))
+                                                           mi143_0)))
                                                      (letrec*
                                                       ((for-loop_0
                                                         (|#%name|
@@ -19674,16 +21371,18 @@
                                                    (void)))
                                                (if record-shifted-requires-at-name_0
                                                  (namespace-save-shifted-requires!
-                                                  ns159_0
+                                                  ns144_0
                                                   m_1
                                                   record-shifted-requires-at-name_0
                                                   (module-instance-shifted-requires
-                                                   mi158_0))
+                                                   mi143_0))
                                                  (void)))))))
                                      (void))
                                    (let ((run-all-levels?_0
-                                          (module-cross-phase-persistent?
-                                           m_1)))
+                                          (if all-levels?133_0
+                                            (module-cross-phase-persistent?
+                                             m_1)
+                                            #f)))
                                      (begin
                                        (if (not instance-phase_0)
                                          (void)
@@ -19708,11 +21407,11 @@
                                                                    pos_0
                                                                    instance-phase_0)))
                                                              (if (if (not
-                                                                      skip-run?143_0)
+                                                                      skip-run?126_0)
                                                                    (let ((or-part_0
                                                                           (eqv?
                                                                            phase_0
-                                                                           run-phase142_0)))
+                                                                           run-phase125_0)))
                                                                      (if or-part_0
                                                                        or-part_0
                                                                        run-all-levels?_0))
@@ -19721,7 +21420,7 @@
                                                                     'started
                                                                     (let ((small-ht_0
                                                                            (module-instance-phase-level-to-state
-                                                                            mi158_0)))
+                                                                            mi143_0)))
                                                                       (hash-ref
                                                                        (unbox
                                                                         small-ht_0)
@@ -19731,7 +21430,7 @@
                                                                  (begin
                                                                    (let ((small-ht_0
                                                                           (module-instance-phase-level-to-state
-                                                                           mi158_0)))
+                                                                           mi143_0)))
                                                                      (set-box!
                                                                       small-ht_0
                                                                       (hash-set
@@ -19753,7 +21452,7 @@
                                                                                m_1)))
                                                                          (let ((data-box_0
                                                                                 (module-instance-data-box
-                                                                                 mi158_0)))
+                                                                                 mi143_0)))
                                                                            (let ((prep_0
                                                                                   (module-prepare-instance
                                                                                    m_1)))
@@ -19778,14 +21477,14 @@
                                                                                   mpi_0
                                                                                   bulk-binding-registry_0
                                                                                   insp_0))))))))))
-                                                               (if (if otherwise-available?144_0
+                                                               (if (if otherwise-available?127_0
                                                                      (if (not
                                                                           (negative?
-                                                                           run-phase142_0))
+                                                                           run-phase125_0))
                                                                        (not
                                                                         (let ((small-ht_0
                                                                                (module-instance-phase-level-to-state
-                                                                                mi158_0)))
+                                                                                mi143_0)))
                                                                           (hash-ref
                                                                            (unbox
                                                                             small-ht_0)
@@ -19796,22 +21495,14 @@
                                                                  (begin
                                                                    (if (module-cross-phase-persistent?
                                                                         m_1)
-                                                                     (let ((bx_0
-                                                                            (namespace-available-cross-phase-module-instances
-                                                                             ns159_0)))
-                                                                       (set-box!
-                                                                        bx_0
-                                                                        (cons
-                                                                         mi158_0
-                                                                         (unbox
-                                                                          bx_0))))
+                                                                     (void)
                                                                      (let ((ht_0
                                                                             (namespace-available-module-instances
-                                                                             ns159_0)))
+                                                                             ns144_0)))
                                                                        (let ((xform_0
                                                                               (lambda (l_0)
                                                                                 (cons
-                                                                                 mi158_0
+                                                                                 mi143_0
                                                                                  l_0))))
                                                                          (do-hash-update
                                                                           'hash-update!
@@ -19823,7 +21514,7 @@
                                                                           null))))
                                                                    (let ((small-ht_0
                                                                           (module-instance-phase-level-to-state
-                                                                           mi158_0)))
+                                                                           mi143_0)))
                                                                      (set-box!
                                                                       small-ht_0
                                                                       (hash-set
@@ -19837,22 +21528,27 @@
                                                          (values))))))
                                                   (for-loop_0 start_1)))))
                                            (void)))
-                                       (if otherwise-available?144_0
+                                       (if run-all-levels?_0
+                                         (set-module-instance-all-levels-started?!
+                                          mi143_0
+                                          #t)
+                                         (void))
+                                       (if otherwise-available?127_0
                                          (set-module-instance-made-available?!
-                                          mi158_0
+                                          mi143_0
                                           #t)
                                          (void))
                                        (if (not instance-phase_0)
                                          (|#%app|
                                           (module-force-bulk-binding m_1)
                                           (namespace-bulk-binding-registry
-                                           ns159_0))
+                                           ns144_0))
                                          (void))
-                                       (if skip-run?143_0
+                                       (if skip-run?126_0
                                          (void)
                                          (let ((small-ht_0
                                                 (module-instance-phase-level-to-state
-                                                 mi158_0)))
+                                                 mi143_0)))
                                            (set-box!
                                             small-ht_0
                                             (hash-set
@@ -19864,29 +21560,29 @@
   (let ((namespace-visit-available-modules!_0
          (|#%name|
           namespace-visit-available-modules!
-          (lambda (ns162_0 run-phase161_0)
+          (lambda (ns147_0 run-phase146_0)
             (let ((run-phase_0
-                   (if (eq? run-phase161_0 unsafe-undefined)
-                     (namespace-phase ns162_0)
-                     run-phase161_0)))
+                   (if (eq? run-phase146_0 unsafe-undefined)
+                     (namespace-phase ns147_0)
+                     run-phase146_0)))
               (namespace-run-available-modules!
-               ns162_0
+               ns147_0
                (add1 run-phase_0)))))))
     (case-lambda
      ((ns_0) (namespace-visit-available-modules!_0 ns_0 unsafe-undefined))
-     ((ns_0 run-phase161_0)
-      (namespace-visit-available-modules!_0 ns_0 run-phase161_0)))))
+     ((ns_0 run-phase146_0)
+      (namespace-visit-available-modules!_0 ns_0 run-phase146_0)))))
 (define namespace-run-available-modules!
   (let ((namespace-run-available-modules!_0
          (|#%name|
           namespace-run-available-modules!
-          (lambda (ns164_0 run-phase163_0)
+          (lambda (ns149_0 run-phase148_0)
             (let ((run-phase_0
-                   (if (eq? run-phase163_0 unsafe-undefined)
-                     (namespace-phase ns164_0)
-                     run-phase163_0)))
+                   (if (eq? run-phase148_0 unsafe-undefined)
+                     (namespace-phase ns149_0)
+                     run-phase148_0)))
               (registry-call-with-lock
-               (namespace-module-registry$1 ns164_0)
+               (namespace-module-registry$1 ns149_0)
                (lambda ()
                  (letrec*
                   ((loop_0
@@ -19896,10 +21592,10 @@
                        (let ((cp-mis_0
                               (unbox
                                (namespace-available-cross-phase-module-instances
-                                ns164_0))))
+                                ns149_0))))
                          (let ((mis_0
                                 (hash-ref
-                                 (namespace-available-module-instances ns164_0)
+                                 (namespace-available-module-instances ns149_0)
                                  run-phase_0
                                  null)))
                            (if (if (null? cp-mis_0) (null? mis_0) #f)
@@ -19907,10 +21603,10 @@
                              (begin
                                (set-box!
                                 (namespace-available-cross-phase-module-instances
-                                 ns164_0)
+                                 ns149_0)
                                 null)
                                (hash-set!
-                                (namespace-available-module-instances ns164_0)
+                                (namespace-available-module-instances ns149_0)
                                 run-phase_0
                                 null)
                                (let ((lst_0 (reverse$1 cp-mis_0)))
@@ -19924,16 +21620,17 @@
                                            (let ((rest_0 (unsafe-cdr lst_1)))
                                              (begin
                                                (run-module-instance!.1
+                                                #t
                                                 #f
                                                 #f
-                                                #f
+                                                #t
                                                 0
                                                 hash2610
                                                 null
                                                 #f
                                                 #f
                                                 mi_0
-                                                ns164_0)
+                                                ns149_0)
                                                (for-loop_0 rest_0))))
                                          (values))))))
                                   (for-loop_0 lst_0)))
@@ -19952,13 +21649,14 @@
                                                 #f
                                                 #f
                                                 #f
+                                                #f
                                                 run-phase_0
                                                 hash2610
                                                 null
                                                 #f
                                                 #f
                                                 mi_0
-                                                ns164_0)
+                                                ns149_0)
                                                (for-loop_0 rest_0))))
                                          (values))))))
                                   (for-loop_0 lst_0)))
@@ -19967,14 +21665,14 @@
                   (loop_0)))))))))
     (case-lambda
      ((ns_0) (namespace-run-available-modules!_0 ns_0 unsafe-undefined))
-     ((ns_0 run-phase163_0)
-      (namespace-run-available-modules!_0 ns_0 run-phase163_0)))))
+     ((ns_0 run-phase148_0)
+      (namespace-run-available-modules!_0 ns_0 run-phase148_0)))))
 (define namespace-primitive-module-visit!
   (lambda (ns_0 name_0)
     (let ((mi_0
-           (let ((temp337_0 (1/make-resolved-module-path name_0)))
-             (namespace->module-instance.1 #f #f void ns_0 temp337_0 0))))
-      (run-module-instance!.1 #f #t #t 1 hash2610 null #f #f mi_0 ns_0))))
+           (let ((temp310_0 (1/make-resolved-module-path name_0)))
+             (namespace->module-instance.1 #f #f void ns_0 temp310_0 0))))
+      (run-module-instance!.1 #f #f #t #t 1 hash2610 null #f #f mi_0 ns_0))))
 (define namespace-clear-shifted-requires!
   (lambda (ns_0 mod-name_0)
     (hash-remove!
@@ -20132,16 +21830,16 @@
 (define namespace-find-shifted-requires.1
   (|#%name|
    namespace-find-shifted-requires
-   (lambda (flattened?165_0 ns167_0 name168_0 requires169_0)
+   (lambda (flattened?150_0 ns152_0 name153_0 requires154_0)
      (let ((bx_0
             (hash-ref
-             (namespace-module-instance-shifted-requires ns167_0)
-             name168_0
+             (namespace-module-instance-shifted-requires ns152_0)
+             name153_0
              #f)))
        (let ((or-part_0 (if bx_0 (unbox bx_0) #f)))
          (if or-part_0
            or-part_0
-           (if (not flattened?165_0)
+           (if (not flattened?150_0)
              (reverse$1
               (letrec*
                ((for-loop_0
@@ -20183,7 +21881,7 @@
                                    (values fold-var_1))))
                             (for-loop_0 fold-var_1 rest_0))))
                       fold-var_0)))))
-               (for-loop_0 null requires169_0)))
+               (for-loop_0 null requires154_0)))
              (reverse$1
               (letrec*
                ((for-loop_0
@@ -20197,7 +21895,7 @@
                             (let ((fold-var_2 (values fold-var_1)))
                               (for-loop_0 fold-var_2 rest_0)))))
                       fold-var_0)))))
-               (for-loop_0 null requires169_0))))))))))
+               (for-loop_0 null requires154_0))))))))))
 (define namespace-shifted-requires-box
   (lambda (ns_0 name_0)
     (let ((or-part_0
@@ -20310,32 +22008,32 @@
 (define namespace-module-use->module+linklet-instances.1
   (|#%name|
    namespace-module-use->module+linklet-instances
-   (lambda (phase-shift173_0
-            resolution-cache174_0
-            shift-from171_0
-            shift-to172_0
-            ns179_0
-            mu180_0)
-     (let ((mod_0 (module-use-module mu180_0)))
+   (lambda (phase-shift158_0
+            resolution-cache159_0
+            shift-from156_0
+            shift-to157_0
+            ns164_0
+            mu165_0)
+     (let ((mod_0 (module-use-module mu165_0)))
        (let ((use-name_0
               (let ((or-part_0
-                     (if resolution-cache174_0
-                       (hash-ref resolution-cache174_0 mod_0 #f)
+                     (if resolution-cache159_0
+                       (hash-ref resolution-cache159_0 mod_0 #f)
                        #f)))
                 (if or-part_0
                   or-part_0
                   (let ((name_0
                          (1/module-path-index-resolve
-                          (if shift-from171_0
+                          (if shift-from156_0
                             (module-path-index-shift*
                              mod_0
-                             shift-from171_0
-                             shift-to172_0
+                             shift-from156_0
+                             shift-to157_0
                              #f)
                             mod_0))))
                     (begin
-                      (if resolution-cache174_0
-                        (hash-set! resolution-cache174_0 mod_0 name_0)
+                      (if resolution-cache159_0
+                        (hash-set! resolution-cache159_0 mod_0 name_0)
                         (void))
                       name_0))))))
          (let ((mi_0
@@ -20343,16 +22041,40 @@
                  #f
                  #t
                  void
-                 ns179_0
+                 ns164_0
                  use-name_0
-                 phase-shift173_0)))
+                 phase-shift158_0)))
            (let ((m-ns_0 (module-instance-namespace mi_0)))
              (let ((d_0
-                    (let ((small-ht_0
-                           (namespace-phase-level-to-definitions m-ns_0)))
-                      (let ((key_0 (module-use-phase mu180_0)))
-                        (let ((small-ht_1 small-ht_0))
-                          (hash-ref (unbox small-ht_1) key_0 #f))))))
+                    (let ((or-part_0
+                           (let ((small-ht_0
+                                  (namespace-phase-level-to-definitions
+                                   m-ns_0)))
+                             (let ((key_0 (module-use-phase mu165_0)))
+                               (let ((small-ht_1 small-ht_0))
+                                 (hash-ref (unbox small-ht_1) key_0 #f))))))
+                      (if or-part_0
+                        or-part_0
+                        (let ((m_0 (module-instance-module mi_0)))
+                          (if m_0
+                            (if (module-cross-phase-persistent? m_0)
+                              (if (not
+                                   (module-instance-all-levels-started? mi_0))
+                                (begin
+                                  (cross-phase-module-instance-run-all-levels!
+                                   mi_0)
+                                  (let ((small-ht_0
+                                         (namespace-phase-level-to-definitions
+                                          m-ns_0)))
+                                    (let ((key_0 (module-use-phase mu165_0)))
+                                      (let ((small-ht_1 small-ht_0))
+                                        (hash-ref
+                                         (unbox small-ht_1)
+                                         key_0
+                                         #f)))))
+                                #f)
+                              #f)
+                            #f))))))
                (if d_0
                  (values mi_0 (definitions-variables d_0))
                  (let ((app_0
@@ -20362,7 +22084,7 @@
                          "  instance phase: ~a\n"
                          "  phase level: ~a\n"
                          "  found phase levels: ~a")))
-                   (let ((app_1 (module-use-phase mu180_0)))
+                   (let ((app_1 (module-use-phase mu165_0)))
                      (error
                       'eval
                       app_0
@@ -20686,7 +22408,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish931
+  (let ((finish991
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -20708,11 +22430,11 @@
             #f
             '(1 . 0)
             'make-struct-type
-            (finish931 'proc)
-            (finish931 'arity)
+            (finish991 'proc)
+            (finish991 'arity)
             #f
             |#%system-inspector|)))
-      (let ((effect932 (finish931 struct:set!-transformer_0)))
+      (let ((effect992 (finish991 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -20834,7 +22556,7 @@
              (1/syntax-property-remove pruned-id_0 original-property-sym)
              pruned-id_0)))
        id4_0))))
-(define missing (gensym 'missing))
+(define missing$1 (gensym 'missing))
 (define transformer?
   (lambda (t_0)
     (let ((or-part_0 (procedure? t_0)))
@@ -21003,8 +22725,8 @@
        (if (local-binding? b40_0)
          (let ((t_0
                 (let ((key_0 (local-binding-key b40_0)))
-                  (hash-ref env41_0 key_0 missing))))
-           (if (eq? t_0 missing)
+                  (hash-ref env41_0 key_0 missing$1))))
+           (if (eq? t_0 missing$1)
              (values
               (let ((or-part_0
                      (letrec*
@@ -31494,7 +33216,7 @@
     (if (bulk-required? r_0)
       (bulk-required->required r_0 mod-name_0 phase+space-shift_0 sym_0)
       r_0)))
-(define requires+provides-for-each-required-id
+(define requires+provides-for-each-required-site
   (lambda (r+p_0 proc_0)
     (begin
       (let ((ht_0 (requires+provides-requires r+p_0)))
@@ -31555,51 +33277,41 @@
                                                               (let ((reqd/maybe-bulk_1
                                                                      reqd/maybe-bulk_0))
                                                                 (begin
-                                                                  (let ((get-reqd_0
-                                                                         (|#%name|
-                                                                          get-reqd
-                                                                          (lambda ()
-                                                                            (if (bulk-required?
-                                                                                 reqd/maybe-bulk_1)
-                                                                              (bulk-required->required
-                                                                               reqd/maybe-bulk_1
-                                                                               mod-name_0
-                                                                               phase+space-shift_0
-                                                                               sym_0)
-                                                                              reqd/maybe-bulk_1)))))
-                                                                    (if (bulk-required?
-                                                                         reqd/maybe-bulk_1)
-                                                                      (let ((app_0
-                                                                             (phase+space-phase
-                                                                              (let ((p+s_0
-                                                                                     (bulk-required-provide-phase+space
-                                                                                      reqd/maybe-bulk_1)))
-                                                                                (intern-phase+space
-                                                                                 (phase+space+$1
-                                                                                  p+s_0
-                                                                                  phase+space-shift_0))))))
+                                                                  (if (bulk-required?
+                                                                       reqd/maybe-bulk_1)
+                                                                    (let ((app_0
+                                                                           (phase+space-phase
+                                                                            (let ((p+s_0
+                                                                                   (bulk-required-provide-phase+space
+                                                                                    reqd/maybe-bulk_1)))
+                                                                              (intern-phase+space
+                                                                               (phase+space+$1
+                                                                                p+s_0
+                                                                                phase+space-shift_0))))))
+                                                                      (let ((app_1
+                                                                             (bulk-required-provides
+                                                                              reqd/maybe-bulk_1)))
                                                                         (|#%app|
                                                                          proc_0
                                                                          sym_0
                                                                          app_0
-                                                                         (cons
-                                                                          (bulk-required-provides
-                                                                           reqd/maybe-bulk_1)
-                                                                          (bulk-required-prefix-len
-                                                                           reqd/maybe-bulk_1))
-                                                                         (lambda ()
-                                                                           (required-id
-                                                                            (get-reqd_0)))))
-                                                                      (|#%app|
-                                                                       proc_0
-                                                                       sym_0
-                                                                       (phase+space-phase
-                                                                        (required-phase+space
-                                                                         reqd/maybe-bulk_1))
-                                                                       #f
-                                                                       (lambda ()
-                                                                         (required-id
-                                                                          reqd/maybe-bulk_1)))))
+                                                                         app_1
+                                                                         (bulk-required-prefix-len
+                                                                          reqd/maybe-bulk_1)
+                                                                         mod-name_0
+                                                                         phase+space-shift_0
+                                                                         reqd/maybe-bulk_1)))
+                                                                    (|#%app|
+                                                                     proc_0
+                                                                     sym_0
+                                                                     (phase+space-phase
+                                                                      (required-phase+space
+                                                                       reqd/maybe-bulk_1))
+                                                                     #f
+                                                                     #f
+                                                                     mod-name_0
+                                                                     phase+space-shift_0
+                                                                     reqd/maybe-bulk_1))
                                                                   (for-loop_3
                                                                    rest_0)))))
                                                           (values))))))
@@ -31621,6 +33333,18 @@
                 (values))))))
          (for-loop_0 (hash-iterate-first ht_0))))
       (void))))
+(define requires+provides-site-id
+  (lambda (sym_0 mod-name_0 phase+space-shift_0 reqd/maybe-bulk_0)
+    (required-id
+     (if (bulk-required? reqd/maybe-bulk_0)
+       (if (bulk-required? reqd/maybe-bulk_0)
+         (bulk-required->required
+          reqd/maybe-bulk_0
+          mod-name_0
+          phase+space-shift_0
+          sym_0)
+         reqd/maybe-bulk_0)
+       reqd/maybe-bulk_0))))
 (define requires+provides-for-each-defined-sym
   (lambda (r+p_0 proc_0)
     (begin
@@ -32885,7 +34609,7 @@
                                                                                              mpi_2)
                                                                                             all-mpis_3))))))
                                                                                  (let ((m_0
-                                                                                        (namespace->module/cross-phase
+                                                                                        (namespace->module
                                                                                          namespace99_0
                                                                                          name_0)))
                                                                                    (begin
@@ -35497,6 +37221,7 @@
                            (begin
                              (if run?53_0
                                (namespace-module-instantiate!.1
+                                #f
                                 #f
                                 #t
                                 #t
@@ -45973,26 +47698,26 @@
 (define core-stx (add-scope empty-syntax core-scope))
 (define core-module-name (1/make-resolved-module-path '|#%core|))
 (define core-mpi (module-path-index-join* ''|#%core| #f))
-(define cell.1$4 (unsafe-make-place-local (make-hasheq)))
-(define cell.2$3 (unsafe-make-place-local (make-hasheq)))
+(define cell.1$2 (unsafe-make-place-local (make-hasheq)))
+(define cell.2$1 (unsafe-make-place-local (make-hasheq)))
 (define core-place-init!
   (lambda ()
     (begin
-      (unsafe-place-local-set! cell.1$4 (make-hasheq))
-      (unsafe-place-local-set! cell.2$3 (make-hasheq)))))
+      (unsafe-place-local-set! cell.1$2 (make-hasheq))
+      (unsafe-place-local-set! cell.2$1 (make-hasheq)))))
 (define core-id
   (lambda (sym_0 phase_0)
     (if (eqv? phase_0 0)
-      (let ((or-part_0 (hash-ref (unsafe-place-local-ref cell.1$4) sym_0 #f)))
+      (let ((or-part_0 (hash-ref (unsafe-place-local-ref cell.1$2) sym_0 #f)))
         (if or-part_0
           or-part_0
           (let ((s_0 (datum->syntax$1 core-stx sym_0)))
             (begin
-              (hash-set! (unsafe-place-local-ref cell.1$4) sym_0 s_0)
+              (hash-set! (unsafe-place-local-ref cell.1$2) sym_0 s_0)
               s_0))))
       (if (eq? phase_0 1)
         (let ((or-part_0
-               (hash-ref (unsafe-place-local-ref cell.2$3) sym_0 #f)))
+               (hash-ref (unsafe-place-local-ref cell.2$1) sym_0 #f)))
           (if or-part_0
             or-part_0
             (let ((s_0
@@ -46000,7 +47725,7 @@
                     (syntax-shift-phase-level$1 core-stx 1)
                     sym_0)))
               (begin
-                (hash-set! (unsafe-place-local-ref cell.2$3) sym_0 s_0)
+                (hash-set! (unsafe-place-local-ref cell.2$1) sym_0 s_0)
                 s_0))))
         (datum->syntax$1
          (syntax-shift-phase-level$1 core-stx phase_0)
@@ -46704,9 +48429,9 @@
            'struct-copy
            "root-expand-context/outer?"
            root-context_0))))))
-(define cell.1$3 (unsafe-make-place-local (make-weak-hasheq)))
+(define cell.1$1 (unsafe-make-place-local (make-weak-hasheq)))
 (define module-cache-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$3 (make-weak-hasheq))))
+  (lambda () (unsafe-place-local-set! cell.1$1 (make-weak-hasheq))))
 (define make-module-cache-key
   (lambda (hash-code_0)
     (if hash-code_0
@@ -46721,16 +48446,16 @@
       #f)))
 (define module-cache-set!
   (lambda (key_0 proc_0)
-    (let ((app_0 (unsafe-place-local-ref cell.1$3)))
+    (let ((app_0 (unsafe-place-local-ref cell.1$1)))
       (hash-set! app_0 key_0 (make-ephemeron key_0 proc_0)))))
 (define module-cache-ref
   (lambda (key_0)
-    (let ((e_0 (hash-ref (unsafe-place-local-ref cell.1$3) key_0 #f)))
+    (let ((e_0 (hash-ref (unsafe-place-local-ref cell.1$1) key_0 #f)))
       (if e_0 (ephemeron-value e_0) #f))))
 (define 1/module-cache-clear!
   (|#%name|
    module-cache-clear!
-   (lambda () (hash-clear! (unsafe-place-local-ref cell.1$3)))))
+   (lambda () (hash-clear! (unsafe-place-local-ref cell.1$1)))))
 (define current-module-declare-as-predefined
   (make-parameter #f #f 'current-module-declare-as-predefined))
 (define eval-module.1
@@ -54438,7 +56163,7 @@
      module*
      |#%declare|
      |#%stratified-body|)))
-(define finish_2794
+(define finish_2793
   (make-struct-type-install-properties
    '(internal-definition-context)
    7
@@ -54464,7 +56189,7 @@
    #f
    #f
    |#%system-inspector|))
-(define effect_2979 (finish_2794 struct:internal-definition-context))
+(define effect_2979 (finish_2793 struct:internal-definition-context))
 (define internal-definition-context1.1
   (|#%name|
    internal-definition-context
@@ -58464,44 +60189,29 @@
                                             hash2589)
                                            phase_1
                                            missing_0)))
-                                     (let ((mi_0
-                                            (if (eq? missing_0 m-ns_0)
+                                     (if (eq? missing_0 m-ns_0)
+                                       (let ((mi_0
                                               (namespace->module-instance.1
                                                #f
                                                #f
                                                void
                                                src-namespace_0
                                                mod-name_0
-                                               phase_1)
-                                              #f)))
-                                       (let ((m_0
-                                              (if (eq? missing_0 m-ns_0)
-                                                (let ((or-part_0
-                                                       (namespace->module
-                                                        src-namespace_0
-                                                        mod-name_0)))
-                                                  (if or-part_0
-                                                    or-part_0
-                                                    (if mi_0
-                                                      (module-instance-module
-                                                       mi_0)
-                                                      #f)))
-                                                #f)))
-                                         (begin
-                                           (if (if (eq? missing_0 m-ns_0)
-                                                 (if (not m_0)
-                                                   (not (not phase_1))
-                                                   #f)
-                                                 #f)
-                                             (raise-arguments-error
-                                              who9_0
-                                              "module not declared (in the source namespace)"
-                                              "module name"
-                                              mod-name_0)
-                                             (void))
-                                           (if (if (eq? missing_0 m-ns_0)
-                                                 m_0
-                                                 #f)
+                                               phase_1)))
+                                         (let ((m_0
+                                                (if mi_0
+                                                  (module-instance-module mi_0)
+                                                  (namespace->module
+                                                   src-namespace_0
+                                                   mod-name_0))))
+                                           (begin
+                                             (if m_0
+                                               (void)
+                                               (raise-arguments-error
+                                                who9_0
+                                                "module not declared (in the source namespace)"
+                                                "module name"
+                                                mod-name_0))
                                              (if (if (module-cross-phase-persistent?
                                                       m_0)
                                                    (if (not (not phase_1))
@@ -58567,44 +60277,101 @@
                                                                  mod-name_0
                                                                  "instance phase"
                                                                  phase_1))
-                                                              (let ((already-m-ns_0
-                                                                     (if already-m_0
-                                                                       (namespace->module-namespace.1
-                                                                        #f
-                                                                        #f
-                                                                        void
-                                                                        dest-namespace_0
-                                                                        mod-name_0
-                                                                        phase_1)
-                                                                       #f)))
-                                                                (begin
-                                                                  (if (if already-m-ns_0
-                                                                        (if (not
-                                                                             (eq?
+                                                              (begin
+                                                                (if (module-cross-phase-persistent?
+                                                                     m_0)
+                                                                  (begin
+                                                                    (cross-phase-module-instance-run-all-levels!
+                                                                     mi_0)
+                                                                    (let ((inst-ns_0
+                                                                           (module-instance-namespace
+                                                                            mi_0)))
+                                                                      (begin
+                                                                        (let ((lst_0
+                                                                               (reverse$1
+                                                                                (module-instance-attach-dependencies
+                                                                                 mi_0))))
+                                                                          (letrec*
+                                                                           ((for-loop_0
+                                                                             (|#%name|
+                                                                              for-loop
+                                                                              (lambda (lst_1)
+                                                                                (if (pair?
+                                                                                     lst_1)
+                                                                                  (let ((dep-mpi_0
+                                                                                         (unsafe-car
+                                                                                          lst_1)))
+                                                                                    (let ((rest_0
+                                                                                           (unsafe-cdr
+                                                                                            lst_1)))
+                                                                                      (begin
+                                                                                        (with-continuation-mark*
+                                                                                         push-authentic
+                                                                                         parameterization-key
+                                                                                         (extend-parameterization
+                                                                                          (continuation-mark-set-first
+                                                                                           #f
+                                                                                           parameterization-key)
+                                                                                          1/current-namespace
+                                                                                          inst-ns_0)
+                                                                                         (namespace-module-instantiate!.1
+                                                                                          #f
+                                                                                          #f
+                                                                                          #t
+                                                                                          #t
+                                                                                          0
+                                                                                          hash2610
+                                                                                          null
+                                                                                          #f
+                                                                                          #f
+                                                                                          inst-ns_0
+                                                                                          dep-mpi_0
+                                                                                          0))
+                                                                                        (for-loop_0
+                                                                                         rest_0))))
+                                                                                  (values))))))
+                                                                           (for-loop_0
+                                                                            lst_0)))
+                                                                        (void))))
+                                                                  (void))
+                                                                (let ((already-m-ns_0
+                                                                       (if already-m_0
+                                                                         (namespace->module-namespace.1
+                                                                          #f
+                                                                          #f
+                                                                          void
+                                                                          dest-namespace_0
+                                                                          mod-name_0
+                                                                          phase_1)
+                                                                         #f)))
+                                                                  (begin
+                                                                    (if (if already-m-ns_0
+                                                                          (if (not
+                                                                               (eq?
+                                                                                m-ns_1
+                                                                                already-m-ns_0))
+                                                                            (not
+                                                                             (namespace-same-instance?
                                                                               m-ns_1
-                                                                              already-m-ns_0))
-                                                                          (not
-                                                                           (namespace-same-instance?
-                                                                            m-ns_1
-                                                                            already-m-ns_0
-                                                                            (phase-
-                                                                             attach-phase_0
-                                                                             phase_1)))
+                                                                              already-m-ns_0
+                                                                              (phase-
+                                                                               attach-phase_0
+                                                                               phase_1)))
+                                                                            #f)
                                                                           #f)
-                                                                        #f)
-                                                                    (raise-arguments-error
-                                                                     who9_0
-                                                                     "a different instance is already in the destination namespace"
-                                                                     "module name"
-                                                                     mod-name_0
-                                                                     "instance phase"
-                                                                     phase_1)
-                                                                    (void))
-                                                                  (values
-                                                                   m-ns_1
-                                                                   (if already-m-ns_0
-                                                                     #t
-                                                                     #f))))))
+                                                                      (raise-arguments-error
+                                                                       who9_0
+                                                                       "a different instance is already in the destination namespace"
+                                                                       "module name"
+                                                                       mod-name_0
+                                                                       "instance phase"
+                                                                       phase_1)
+                                                                      (void))
+                                                                    (values
+                                                                     m-ns_1
+                                                                     (if already-m-ns_0
+                                                                       #t
+                                                                       #f)))))))
                                                           (begin
                                                             (if (if (not
                                                                      phase_1)
@@ -58627,6 +60394,7 @@
                                                                 1/current-namespace
                                                                 src-namespace_0)
                                                                (namespace-module-instantiate!.1
+                                                                #f
                                                                 #f
                                                                 #t
                                                                 #t
@@ -58870,8 +60638,48 @@
                                                                    #f
                                                                    attach-phase_0
                                                                    #t)
-                                                                  (void))))))))))))
-                                             (void)))))))))))
+                                                                  (void)))))
+                                                          (if (if m-ns_1
+                                                                (if (not
+                                                                     already?_0)
+                                                                  (module-cross-phase-persistent?
+                                                                   m_0)
+                                                                  #f)
+                                                                #f)
+                                                            (begin
+                                                              (let ((lst_0
+                                                                     (reverse$1
+                                                                      (module-instance-attach-dependencies
+                                                                       mi_0))))
+                                                                (letrec*
+                                                                 ((for-loop_0
+                                                                   (|#%name|
+                                                                    for-loop
+                                                                    (lambda (lst_1)
+                                                                      (if (pair?
+                                                                           lst_1)
+                                                                        (let ((dep-mpi_0
+                                                                               (unsafe-car
+                                                                                lst_1)))
+                                                                          (let ((rest_0
+                                                                                 (unsafe-cdr
+                                                                                  lst_1)))
+                                                                            (begin
+                                                                              (loop_0
+                                                                               dep-mpi_0
+                                                                               #f
+                                                                               phase_1
+                                                                               attach-instances?_0
+                                                                               attach-phase_0
+                                                                               #t)
+                                                                              (for-loop_0
+                                                                               rest_0))))
+                                                                        (values))))))
+                                                                 (for-loop_0
+                                                                  lst_0)))
+                                                              (void))
+                                                            (void))))))))))))
+                                       (void))))))))
                             (loop_0
                              (module-path-index-join*
                               (if (1/resolved-module-path? mod-path11_0)
@@ -58899,24 +60707,9 @@
                                       (lambda (mod-name_0 phases_0)
                                         (begin
                                           (let ((m_0
-                                                 (let ((or-part_0
-                                                        (namespace->module
-                                                         src-namespace_0
-                                                         mod-name_0)))
-                                                   (if or-part_0
-                                                     or-part_0
-                                                     (let ((mi_0
-                                                            (namespace->module-instance.1
-                                                             #f
-                                                             #f
-                                                             void
-                                                             src-namespace_0
-                                                             mod-name_0
-                                                             0)))
-                                                       (if mi_0
-                                                         (module-instance-module
-                                                          mi_0)
-                                                         #f))))))
+                                                 (namespace->module
+                                                  src-namespace_0
+                                                  mod-name_0)))
                                             (begin
                                               (|#%app|
                                                (module-force-bulk-binding m_0)
@@ -61156,228 +62949,6 @@
                   fold-var_0)))))
            (for-loop_0 null lst_0)))))
       exp-s60_0))))
-(define replace-me
-  (lambda (who_0) (lambda args_0 (error who_0 "this stub must be replaced"))))
-(define 1/current-eval
-  (make-parameter
-   (replace-me 'current-eval)
-   (lambda (p_0)
-     (begin
-       (if (if (procedure? p_0) (procedure-arity-includes? p_0 1) #f)
-         (void)
-         (raise-argument-error
-          'current-eval
-          "(procedure-arity-includes/c 1)"
-          p_0))
-       p_0))
-   'current-eval))
-(define 1/current-compile
-  (make-parameter
-   (replace-me 'current-compile)
-   (lambda (p_0)
-     (begin
-       (if (if (procedure? p_0) (procedure-arity-includes? p_0 2) #f)
-         (void)
-         (raise-argument-error
-          'current-compile
-          "(procedure-arity-includes/c 2)"
-          p_0))
-       p_0))
-   'current-compile))
-(define 1/current-load
-  (make-parameter
-   (replace-me 'current-load)
-   (lambda (p_0)
-     (begin
-       (if (if (procedure? p_0) (procedure-arity-includes? p_0 2) #f)
-         (void)
-         (raise-argument-error
-          'current-load
-          "(procedure-arity-includes/c 2)"
-          p_0))
-       p_0))
-   'current-load))
-(define 1/current-load/use-compiled
-  (make-parameter
-   (replace-me 'current-load/use-compiled)
-   (lambda (p_0)
-     (begin
-       (if (if (procedure? p_0) (procedure-arity-includes? p_0 2) #f)
-         (void)
-         (raise-argument-error
-          'current-load/use-compiled
-          "(procedure-arity-includes/c 2)"
-          p_0))
-       p_0))
-   'current-load/use-compiled))
-(define 1/current-library-collection-paths
-  (make-parameter
-   null
-   (lambda (l_0)
-     (begin
-       (if (if (list? l_0) (andmap_2814 complete-path-string? l_0) #f)
-         (void)
-         (raise-argument-error
-          'current-library-collection-paths
-          "(listof (and/c path-string? complete-path?))"
-          l_0))
-       (map_2353 to-path l_0)))
-   'current-library-collection-paths))
-(define 1/current-library-collection-links
-  (make-parameter
-   null
-   (lambda (l_0)
-     (begin
-       (if (if (list? l_0)
-             (andmap_2814
-              (lambda (p_0)
-                (let ((or-part_0 (not p_0)))
-                  (if or-part_0
-                    or-part_0
-                    (let ((or-part_1 (complete-path-string? p_0)))
-                      (if or-part_1
-                        or-part_1
-                        (if (hash? p_0)
-                          (letrec*
-                           ((for-loop_0
-                             (|#%name|
-                              for-loop
-                              (lambda (result_0 i_0)
-                                (if i_0
-                                  (call-with-values
-                                   (lambda () (hash-iterate-key+value p_0 i_0))
-                                   (lambda (k_0 v_0)
-                                     (let ((result_1
-                                            (let ((result_1
-                                                   (if (let ((or-part_2
-                                                              (not k_0)))
-                                                         (if or-part_2
-                                                           or-part_2
-                                                           (if (symbol? k_0)
-                                                             (1/module-path?
-                                                              k_0)
-                                                             #f)))
-                                                     (if (list? v_0)
-                                                       (andmap_2814
-                                                        complete-path-string?
-                                                        v_0)
-                                                       #f)
-                                                     #f)))
-                                              (values result_1))))
-                                       (if (if (not
-                                                (let ((x_0 (list k_0 v_0)))
-                                                  (not result_1)))
-                                             #t
-                                             #f)
-                                         (for-loop_0
-                                          result_1
-                                          (hash-iterate-next p_0 i_0))
-                                         result_1))))
-                                  result_0)))))
-                           (for-loop_0 #t (hash-iterate-first p_0)))
-                          #f))))))
-              l_0)
-             #f)
-         (void)
-         (raise-argument-error
-          'current-library-collection-links
-          (string-append
-           "(listof (or/c #f\n"
-           "              (and/c path-string? complete-path?)\n"
-           "              (hash/c (or/c (and/c symbol? module-path?) #f)\n"
-           "                      (listof (and/c path-string? complete-path?)))))")
-          l_0))
-       (map_2353
-        (lambda (p_0)
-          (if (not p_0)
-            #f
-            (if (path? p_0)
-              p_0
-              (if (string? p_0)
-                (string->path p_0)
-                (let ((table_0 hash2725))
-                  (let ((table_1 table_0))
-                    (letrec*
-                     ((for-loop_0
-                       (|#%name|
-                        for-loop
-                        (lambda (table_2 i_0)
-                          (if i_0
-                            (call-with-values
-                             (lambda () (hash-iterate-key+value p_0 i_0))
-                             (lambda (k_0 v_0)
-                               (let ((table_3
-                                      (let ((table_3
-                                             (let ((val_0 (to-path v_0)))
-                                               (hash-set table_2 k_0 val_0))))
-                                        (values table_3))))
-                                 (for-loop_0
-                                  table_3
-                                  (hash-iterate-next p_0 i_0)))))
-                            table_2)))))
-                     (for-loop_0 table_1 (hash-iterate-first p_0)))))))))
-        l_0)))
-   'current-library-collection-links))
-(define 1/use-compiled-file-paths
-  (make-parameter
-   (list (string->path "compiled"))
-   (lambda (l_0)
-     (begin
-       (if (if (list? l_0) (andmap_2814 relative-path-string?$1 l_0) #f)
-         (void)
-         (raise-argument-error
-          'use-compiled-file-paths
-          "(listof (and/c path-string? relative-path?))"
-          l_0))
-       (map_2353 to-path l_0)))
-   'use-compiled-file-paths))
-(define 1/current-compiled-file-roots
-  (make-parameter
-   '(same)
-   (lambda (l_0)
-     (begin
-       (if (if (list? l_0)
-             (andmap_2814
-              (lambda (p_0)
-                (let ((or-part_0 (path-string? p_0)))
-                  (if or-part_0 or-part_0 (eq? p_0 'same))))
-              l_0)
-             #f)
-         (void)
-         (raise-argument-error
-          'current-compiled-file-roots
-          "(listof (or/c path-string? 'same))"
-          l_0))
-       (map_2353 to-path l_0)))
-   'current-compiled-file-roots))
-(define 1/use-compiled-file-check
-  (make-parameter
-   'modify-seconds
-   (lambda (v_0)
-     (begin
-       (if (let ((or-part_0 (eq? v_0 'modify-seconds)))
-             (if or-part_0 or-part_0 (eq? v_0 'exists)))
-         (void)
-         (raise-argument-error
-          'use-compiled-file-check
-          "(or/c 'modify-seconds 'exists)"
-          v_0))
-       v_0))
-   'use-compiled-file-check))
-(define 1/use-collection-link-paths
-  (make-parameter #t (lambda (v_0) (if v_0 #t #f)) 'use-collection-link-paths))
-(define 1/use-user-specific-search-paths
-  (make-parameter
-   #t
-   (lambda (v_0) (if v_0 #t #f))
-   'use-user-specific-search-paths))
-(define complete-path-string?
-  (lambda (p_0) (if (path-string? p_0) (complete-path? p_0) #f)))
-(define relative-path-string?$1
-  (|#%name|
-   relative-path-string?
-   (lambda (p_0) (if (path-string? p_0) (relative-path? p_0) #f))))
-(define to-path (lambda (p_0) (if (string? p_0) (string->path p_0) p_0)))
 (define eval$1
   (|#%name|
    eval
@@ -61675,6 +63246,7 @@
                               (namespace-module-instantiate!.1
                                #f
                                #f
+                               #f
                                #t
                                phase_0
                                hash2610
@@ -61686,6 +63258,7 @@
                                phase_0)
                               (if (eq? sym5_0 0)
                                 (namespace-module-instantiate!.1
+                                 #f
                                  #f
                                  #t
                                  #t
@@ -61748,6 +63321,7 @@
                                                       binding_0)))
                                                 (begin
                                                   (namespace-module-instantiate!.1
+                                                   #f
                                                    #f
                                                    #f
                                                    #t
@@ -62101,1204 +63675,6 @@
      ((start_0 end_0 bstr_0 as-predefined?_0 in-path1_0)
       (embedded-load_0 start_0 end_0 bstr_0 as-predefined?_0 in-path1_0)))))
 (define ->path (lambda (s_0) (if (string? s_0) (string->path s_0) s_0)))
-(define find-main-collects
-  (lambda ()
-    (cache-configuration
-     0
-     (lambda ()
-       (exe-relative-path->complete-path (find-system-path 'collects-dir))))))
-(define find-main-config
-  (lambda ()
-    (cache-configuration
-     1
-     (lambda ()
-       (exe-relative-path->complete-path (find-system-path 'config-dir))))))
-(define exe-relative-path->complete-path
-  (lambda (collects-path_0)
-    (if (complete-path? collects-path_0)
-      (simplify-path collects-path_0)
-      (if (absolute-path? collects-path_0)
-        (let ((exec_0
-               (call-in-original-directory
-                (lambda ()
-                  (let ((app_0
-                         (find-executable-path (find-system-path 'exec-file))))
-                    (path->complete-path
-                     app_0
-                     (find-system-path 'orig-dir)))))))
-          (call-with-values
-           (lambda () (split-path exec_0))
-           (lambda (base_0 name_0 dir?_0)
-             (simplify-path (path->complete-path collects-path_0 base_0)))))
-        (let ((p_0
-               (call-in-original-directory
-                (lambda ()
-                  (find-executable-path
-                   (find-system-path 'exec-file)
-                   collects-path_0
-                   #t)))))
-          (if p_0 (simplify-path p_0) #f))))))
-(define call-in-original-directory
-  (lambda (thunk_0)
-    (with-continuation-mark*
-     authentic
-     parameterization-key
-     (let ((app_0 (continuation-mark-set-first #f parameterization-key)))
-       (extend-parameterization
-        app_0
-        current-directory
-        (find-system-path 'orig-dir)))
-     (|#%app| thunk_0))))
-(define encoded-link-path?
-  (lambda (p_0)
-    (let ((or-part_0 (path-string? p_0)))
-      (if or-part_0
-        or-part_0
-        (let ((or-part_1 (path-bytes? p_0)))
-          (if or-part_1
-            or-part_1
-            (if (pair? p_0)
-              (if (list? p_0) (andmap_2814 path-element-bytes/same/up? p_0) #f)
-              #f)))))))
-(define path-bytes?
-  (lambda (p_0)
-    (if (bytes? p_0)
-      (if (positive? (unsafe-bytes-length p_0))
-        (let ((vec_0 p_0) (len_0 (unsafe-bytes-length p_0)))
-          (letrec*
-           ((for-loop_0
-             (|#%name|
-              for-loop
-              (lambda (result_0 pos_0)
-                (if (unsafe-fx< pos_0 len_0)
-                  (let ((c_0 (unsafe-bytes-ref vec_0 pos_0)))
-                    (let ((result_1 (not (eqv? c_0 0))))
-                      (let ((result_2 (values result_1)))
-                        (if (if (not (let ((x_0 (list c_0))) (not result_2)))
-                              #t
-                              #f)
-                          (for-loop_0 result_2 (unsafe-fx+ 1 pos_0))
-                          result_2))))
-                  result_0)))))
-           (for-loop_0 #t 0)))
-        #f)
-      #f)))
-(define path-element-bytes/same/up?
-  (lambda (p_0)
-    (let ((or-part_0 (eq? p_0 'up)))
-      (if or-part_0
-        or-part_0
-        (let ((or-part_1 (eq? p_0 'same)))
-          (if or-part_1
-            or-part_1
-            (if (path-bytes? p_0)
-              (let ((p_1
-                     (bytes->path-element
-                      p_0
-                      (system-path-convention-type)
-                      #t)))
-                (if p_1 (relative-path? p_1) #f))
-              #f)))))))
-(define decode-link-path
-  (lambda (p_0)
-    (if (path-string? p_0)
-      p_0
-      (if (bytes? p_0)
-        (bytes->path p_0)
-        (letrec*
-         ((loop_0
-           (|#%name|
-            loop
-            (lambda (path_0 p_1)
-              (if (null? p_1)
-                path_0
-                (let ((elem_0
-                       (if (bytes? (car p_1))
-                         (bytes->path-element (car p_1))
-                         (car p_1))))
-                  (let ((app_0 (if path_0 (build-path path_0 elem_0) elem_0)))
-                    (loop_0 app_0 (cdr p_1)))))))))
-         (loop_0 #f p_0))))))
-(define finish_3090
-  (make-struct-type-install-properties
-   '(shadow-directory)
-   2
-   0
-   #f
-   (list (cons prop:authentic #t))
-   (current-inspector)
-   #f
-   '(0 1)
-   #f
-   'shadow-directory))
-(define struct:shadow-directory
-  (|#%make-record-type-descriptor|
-   |#%racket-base-rtd|
-   'shadow-directory
-   #f
-   (|#%nongenerative-uid| shadow-directory)
-   #f
-   #f
-   '(2 . 0)
-   'make-struct-type
-   #f
-   #f
-   #f
-   |#%system-inspector|))
-(define effect_2776 (finish_3090 struct:shadow-directory))
-(define shadow-directory1.1
-  (|#%name|
-   shadow-directory
-   (record-constructor
-    (make-record-constructor-descriptor struct:shadow-directory #f #f))))
-(define shadow-directory?
-  (|#%name| shadow-directory? (record-predicate struct:shadow-directory)))
-(define shadow-directory-evt
-  (|#%name| shadow-directory-evt (record-accessor struct:shadow-directory 0)))
-(define shadow-directory-table
-  (|#%name|
-   shadow-directory-table
-   (record-accessor struct:shadow-directory 1)))
-(define use-shadow-directory?
-  (let ((v_0 (system-type 'fs-change)))
-    (if (eq? 'scalable (vector-ref v_0 1))
-      (eq? 'low-latency (vector-ref v_0 2))
-      #f)))
-(define make-cache (lambda () (if use-shadow-directory? (make-weak-hash) #f)))
-(define cell.1$2 (unsafe-make-place-local (make-cache)))
-(define cell.2$2 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
-(define shadow-directory-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$2 (make-cache))))
-(define lookup-shadow-directory
-  (lambda (orig_0)
-    (begin
-      (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
-        (unsafe-uninterruptible-lock-acquire lock_0))
-      (let ((sd_0 (hash-ref (unsafe-place-local-ref cell.1$2) orig_0 #f)))
-        (begin
-          (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
-            (unsafe-uninterruptible-lock-release lock_0))
-          (if sd_0
-            (if (sync/timeout 0 (shadow-directory-evt sd_0))
-              (begin
-                (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
-                  (unsafe-uninterruptible-lock-acquire lock_0))
-                (hash-remove! (unsafe-place-local-ref cell.1$2) orig_0)
-                (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
-                  (unsafe-uninterruptible-lock-release lock_0))
-                (lookup-shadow-directory orig_0))
-              sd_0)
-            (let ((evt_0 (filesystem-change-evt orig_0 (lambda () #f))))
-              (if evt_0
-                (let ((table_0 hash2725))
-                  (let ((table_1
-                         (let ((table_1 table_0))
-                           (let ((lst_0 (directory-list orig_0)))
-                             (letrec*
-                              ((for-loop_0
-                                (|#%name|
-                                 for-loop
-                                 (lambda (table_2 lst_1)
-                                   (if (pair? lst_1)
-                                     (let ((p_0 (unsafe-car lst_1)))
-                                       (let ((rest_0 (unsafe-cdr lst_1)))
-                                         (let ((table_3
-                                                (if (directory-exists?
-                                                     (build-path orig_0 p_0))
-                                                  (let ((table_3
-                                                         (let ((key_0
-                                                                (normal-case-path
-                                                                 p_0)))
-                                                           (hash-set
-                                                            table_2
-                                                            key_0
-                                                            #t))))
-                                                    (values table_3))
-                                                  table_2)))
-                                           (for-loop_0 table_3 rest_0))))
-                                     table_2)))))
-                              (for-loop_0 table_1 lst_0))))))
-                    (let ((sd_1 (shadow-directory1.1 evt_0 table_1)))
-                      (begin
-                        (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
-                          (unsafe-uninterruptible-lock-acquire lock_0))
-                        (hash-set!
-                         (unsafe-place-local-ref cell.1$2)
-                         orig_0
-                         sd_1)
-                        (let ((lock_0 (unsafe-place-local-ref cell.2$2)))
-                          (unsafe-uninterruptible-lock-release lock_0))
-                        sd_1))))
-                #f))))))))
-(define directory-exists?/shadow-filesystem
-  (lambda (p_0 orig_0 subpath_0)
-    (if (not (unsafe-place-local-ref cell.1$2))
-      (directory-exists? p_0)
-      (let ((sd_0 (lookup-shadow-directory orig_0)))
-        (if (not sd_0)
-          (directory-exists? p_0)
-          (if sd_0
-            (let ((ht_0 (shadow-directory-table sd_0)))
-              (hash-ref ht_0 (normal-case-path subpath_0) #f))
-            (void)))))))
-(define relative-path-string?
-  (lambda (s_0) (if (path-string? s_0) (relative-path? s_0) #f)))
-(define check-collection
-  (lambda (who_0 s_0 l_0)
-    (begin
-      (if (relative-path-string? s_0)
-        (void)
-        (raise-argument-error who_0 "(and/c path-string? relative-path?)" s_0))
-      (if (if (list? l_0) (andmap_2814 relative-path-string? l_0) #f)
-        (void)
-        (raise-argument-error
-         who_0
-         "(listof (and/c path-string? relative-path?))"
-         l_0)))))
-(define check-fail
-  (lambda (who_0 fail_0)
-    (if (if (procedure? fail_0) (procedure-arity-includes? fail_0 1) #f)
-      (void)
-      (raise-argument-error who_0 "(procedure-arity-includes/c 1)" fail_0))))
-(define 1/collection-path
-  (|#%name|
-   collection-path
-   (lambda (fail_0 collection_0 collection-path_0)
-     (begin
-       (check-collection 'collection-path collection_0 collection-path_0)
-       (check-fail 'collection-path fail_0)
-       (find-col-file fail_0 collection_0 collection-path_0 #f #f)))))
-(define 1/collection-file-path
-  (|#%name|
-   collection-file-path
-   (lambda (fail_0
-            check-compiled?_0
-            file-name_0
-            collection_0
-            collection-path_0)
-     (begin
-       (if (relative-path-string? file-name_0)
-         (void)
-         (raise-argument-error
-          'collection-file-path
-          "(and/c path-string? relative-path?)"
-          file-name_0))
-       (check-collection 'collection-file-path collection_0 collection-path_0)
-       (check-fail 'collection-file-path fail_0)
-       (find-col-file
-        fail_0
-        collection_0
-        collection-path_0
-        file-name_0
-        check-compiled?_0)))))
-(define 1/read-installation-configuration-table
-  (|#%name|
-   read-installation-configuration-table
-   (lambda ()
-     (let ((d_0 (find-main-config)))
-       (let ((p_0 (if d_0 (build-path d_0 "config.rktd") #f)))
-         (let ((or-part_0
-                (if p_0
-                  (if (file-exists? p_0)
-                    (let ((with-handlers-handler12_0
-                           (|#%name|
-                            with-handlers-handler12
-                            (lambda (exn_0) hash2725))))
-                      (let ((bpz_0
-                             (continuation-mark-set-first
-                              #f
-                              break-enabled-key)))
-                        (call-handled-body
-                         bpz_0
-                         (lambda (e_0)
-                           (select-handler/no-breaks
-                            e_0
-                            bpz_0
-                            (list (cons exn:fail? with-handlers-handler12_0))))
-                         (lambda ()
-                           (let ((temp14_0
-                                  (lambda ()
-                                    (let ((v_0
-                                           (call-with-default-reading-parameterization
-                                            1/read)))
-                                      (if (hash? v_0) v_0 #f)))))
-                             (with-input-from-file.1 'binary p_0 temp14_0))))))
-                    #f)
-                  #f)))
-           (if or-part_0 or-part_0 hash2725)))))))
-(define get-installation-name
-  (let ((get-installation-name_0
-         (|#%name|
-          get-installation-name
-          (lambda (config-table1_0)
-            (let ((config-table_0
-                   (if (eq? config-table1_0 unsafe-undefined)
-                     (1/read-installation-configuration-table)
-                     config-table1_0)))
-              (begin
-                (if (hash? config-table_0)
-                  (void)
-                  (raise-argument-error
-                   'get-installation-name
-                   "hash?"
-                   config-table_0))
-                (let ((base-name_0
-                       (hash-ref config-table_0 'installation-name (version))))
-                  (if (not (1/use-user-specific-search-paths))
-                    base-name_0
-                    (let ((addon-dir_0 (find-system-path 'addon-dir)))
-                      (let ((other-version-name_0 "other-version"))
-                        (if (directory-exists?
-                             (build-path addon-dir_0 base-name_0))
-                          base-name_0
-                          (if (directory-exists?
-                               (build-path addon-dir_0 other-version-name_0))
-                            other-version-name_0
-                            base-name_0))))))))))))
-    (case-lambda
-     (() (get-installation-name_0 unsafe-undefined))
-     ((config-table1_0) (get-installation-name_0 config-table1_0)))))
-(define coerce-to-relative-path
-  (lambda (p_0)
-    (if (string? p_0)
-      (string->path p_0)
-      (if (bytes? p_0) (bytes->path p_0) p_0))))
-(define coerce-to-path
-  (lambda (p_0)
-    (if (string? p_0)
-      (collects-relative-path->complete-path (string->path p_0))
-      (if (bytes? p_0)
-        (collects-relative-path->complete-path (bytes->path p_0))
-        (if (path? p_0) (collects-relative-path->complete-path p_0) p_0)))))
-(define collects-relative-path->complete-path
-  (lambda (p_0)
-    (if (complete-path? p_0)
-      p_0
-      (path->complete-path
-       p_0
-       (let ((or-part_0 (find-main-collects)))
-         (if or-part_0 or-part_0 (current-directory)))))))
-(define add-config-search
-  (lambda (ht_0 key_0 orig-l_0)
-    (let ((l_0 (hash-ref ht_0 key_0 #f)))
-      (if l_0
-        (letrec*
-         ((loop_0
-           (|#%name|
-            loop
-            (lambda (l_1)
-              (if (null? l_1)
-                null
-                (if (not (car l_1))
-                  (append orig-l_0 (loop_0 (cdr l_1)))
-                  (let ((app_0 (coerce-to-path (car l_1))))
-                    (cons app_0 (loop_0 (cdr l_1))))))))))
-         (loop_0 l_0))
-        orig-l_0))))
-(define 1/find-library-collection-links
-  (let ((find-library-collection-links_0
-         (|#%name|
-          find-library-collection-links
-          (lambda (config-table2_0 installation-name3_0)
-            (let ((config-table_0
-                   (if (eq? config-table2_0 unsafe-undefined)
-                     (1/read-installation-configuration-table)
-                     config-table2_0)))
-              (let ((installation-name_0
-                     (if (eq? installation-name3_0 unsafe-undefined)
-                       (if (hash? config-table_0)
-                         (get-installation-name config-table_0)
-                         #f)
-                       installation-name3_0)))
-                (begin
-                  (if (hash? config-table_0)
-                    (void)
-                    (raise-argument-error
-                     'find-library-collection-links
-                     "hash?"
-                     config-table_0))
-                  (begin
-                    (if (string? installation-name_0)
-                      (void)
-                      (raise-argument-error
-                       'find-library-collection-links
-                       "string?"
-                       installation-name_0))
-                    (let ((lf_0
-                           (coerce-to-path
-                            (let ((or-part_0
-                                   (hash-ref config-table_0 'links-file #f)))
-                              (if or-part_0
-                                or-part_0
-                                (build-path
-                                 (let ((or-part_1
-                                        (hash-ref
-                                         config-table_0
-                                         'share-dir
-                                         #f)))
-                                   (if or-part_1
-                                     or-part_1
-                                     (build-path 'up "share")))
-                                 "links.rktd"))))))
-                      (let ((app_0 (list #f)))
-                        (let ((app_1
-                               (if (if (1/use-user-specific-search-paths)
-                                     (1/use-collection-link-paths)
-                                     #f)
-                                 (list
-                                  (build-path
-                                   (find-system-path 'addon-dir)
-                                   installation-name_0
-                                   "links.rktd"))
-                                 null)))
-                          (append
-                           app_0
-                           app_1
-                           (if (1/use-collection-link-paths)
-                             (add-config-search
-                              config-table_0
-                              'links-search-files
-                              (list lf_0))
-                             null)))))))))))))
-    (|#%name|
-     find-library-collection-links
-     (case-lambda
-      (() (find-library-collection-links_0 unsafe-undefined unsafe-undefined))
-      ((config-table_0 installation-name3_0)
-       (find-library-collection-links_0 config-table_0 installation-name3_0))
-      ((config-table2_0)
-       (find-library-collection-links_0 config-table2_0 unsafe-undefined))))))
-(define cell.1$1 (unsafe-make-place-local (make-weak-hash)))
-(define cell.2$1 (unsafe-make-place-local (unsafe-make-uninterruptible-lock)))
-(define collection-place-init!
-  (lambda ()
-    (begin
-      (unsafe-place-local-set! cell.1$1 (make-weak-hash))
-      (unsafe-place-local-set! cell.2$1 (unsafe-make-uninterruptible-lock)))))
-(define stamp-prompt-tag (make-continuation-prompt-tag 'stamp))
-(define file->stamp
-  (lambda (path_0 old-stamp_0)
-    (if (if old-stamp_0
-          (if (cdr old-stamp_0)
-            (not (filesystem-change-evt-ready? (cdr old-stamp_0)))
-            #f)
-          #f)
-      old-stamp_0
-      (call-with-continuation-prompt
-       (lambda ()
-         (call-with-exception-handler
-          (lambda (exn_0)
-            (abort-current-continuation
-             stamp-prompt-tag
-             (if (exn:fail:filesystem? exn_0)
-               (lambda () #f)
-               (lambda () (raise exn_0)))))
-          (lambda ()
-            (let ((dir-evt_0
-                   (if (vector-ref (system-type 'fs-change) 2)
-                     (letrec*
-                      ((loop_0
-                        (|#%name|
-                         loop
-                         (lambda (path_1)
-                           (call-with-values
-                            (lambda () (split-path path_1))
-                            (lambda (base_0 name_0 dir?_0)
-                              (if (path? base_0)
-                                (if (directory-exists? base_0)
-                                  (filesystem-change-evt base_0 (lambda () #f))
-                                  (loop_0 base_0))
-                                #f)))))))
-                      (loop_0 path_0))
-                     #f)))
-              (if (not (file-exists? path_0))
-                (cons #f dir-evt_0)
-                (let ((evt_0
-                       (if (vector-ref (system-type 'fs-change) 2)
-                         (filesystem-change-evt path_0 (lambda () #f))
-                         #f)))
-                  (begin
-                    (if dir-evt_0
-                      (filesystem-change-evt-cancel dir-evt_0)
-                      (void))
-                    (cons (file->bytes path_0) evt_0))))))))
-       stamp-prompt-tag))))
-(define file->bytes
-  (lambda (path_0)
-    (let ((temp16_0
-           (lambda (p_0)
-             (let ((bstr_0 (read-bytes 8192 p_0)))
-               (if (if (bytes? bstr_0)
-                     (>= (unsafe-bytes-length bstr_0) 8192)
-                     #f)
-                 (apply-bytes-append
-                  0
-                  (cons
-                   bstr_0
-                   (letrec*
-                    ((loop_0
-                      (|#%name|
-                       loop
-                       (lambda ()
-                         (let ((bstr_1 (read-bytes 8192 p_0)))
-                           (if (eof-object? bstr_1)
-                             null
-                             (cons bstr_1 (loop_0))))))))
-                    (loop_0))))
-                 bstr_0)))))
-      (call-with-input-file*.1 'binary path_0 temp16_0))))
-(define no-file-stamp?
-  (lambda (a_0)
-    (let ((or-part_0 (not a_0))) (if or-part_0 or-part_0 (not (car a_0))))))
-(define get-linked-collections
-  (lambda (links-path_0)
-    (call-with-escape-continuation
-     (lambda (esc_0)
-       (let ((make-handler_0
-              (|#%name|
-               make-handler
-               (lambda (ts_0)
-                 (lambda (exn_0)
-                   (begin
-                     (if (exn:fail? exn_0)
-                       (let ((l_0 (current-logger)))
-                         (if (log-level? l_0 'error)
-                           (let ((app_0
-                                  (format
-                                   "error reading collection links file ~s: ~a"
-                                   links-path_0
-                                   (exn-message exn_0))))
-                             (log-message
-                              l_0
-                              'error
-                              app_0
-                              (current-continuation-marks)))
-                           (void)))
-                       (void))
-                     (if ts_0
-                       (begin
-                         (let ((lock_0 (unsafe-place-local-ref cell.2$1)))
-                           (unsafe-uninterruptible-lock-acquire lock_0))
-                         (let ((app_0 (unsafe-place-local-ref cell.1$1)))
-                           (hash-set!
-                            app_0
-                            links-path_0
-                            (cons ts_0 hash2610)))
-                         (let ((lock_0 (unsafe-place-local-ref cell.2$1)))
-                           (unsafe-uninterruptible-lock-release lock_0)))
-                       (void))
-                     (if (exn:fail? exn_0)
-                       (|#%app| esc_0 (make-hasheq))
-                       exn_0)))))))
-         (call-with-exception-handler
-          (make-handler_0 #f)
-          (lambda ()
-            (begin
-              (let ((lock_0 (unsafe-place-local-ref cell.2$1)))
-                (unsafe-uninterruptible-lock-acquire lock_0))
-              (let ((links-stamp+cache_0
-                     (hash-ref
-                      (unsafe-place-local-ref cell.1$1)
-                      links-path_0
-                      nhash2607)))
-                (begin
-                  (let ((lock_0 (unsafe-place-local-ref cell.2$1)))
-                    (unsafe-uninterruptible-lock-release lock_0))
-                  (let ((a-links-stamp_0 (car links-stamp+cache_0)))
-                    (let ((ts_0 (file->stamp links-path_0 a-links-stamp_0)))
-                      (if (equal? ts_0 a-links-stamp_0)
-                        (cdr links-stamp+cache_0)
-                        (call-with-exception-handler
-                         (make-handler_0 ts_0)
-                         (lambda ()
-                           (call-with-default-reading-parameterization
-                            (lambda ()
-                              (let ((v_0
-                                     (if (no-file-stamp? ts_0)
-                                       null
-                                       (let ((temp18_0
-                                              (lambda (p_0)
-                                                (begin0
-                                                  (1/read p_0)
-                                                  (if (eof-object?
-                                                       (1/read p_0))
-                                                    (void)
-                                                    (error
-                                                     "expected a single S-expression"))))))
-                                         (call-with-input-file*.1
-                                          'binary
-                                          links-path_0
-                                          temp18_0)))))
-                                (begin
-                                  (if (if (list? v_0)
-                                        (andmap_2814
-                                         (lambda (p_0)
-                                           (if (list? p_0)
-                                             (if (let ((or-part_0
-                                                        (= 2 (length p_0))))
-                                                   (if or-part_0
-                                                     or-part_0
-                                                     (= 3 (length p_0))))
-                                               (if (let ((or-part_0
-                                                          (string? (car p_0))))
-                                                     (if or-part_0
-                                                       or-part_0
-                                                       (let ((or-part_1
-                                                              (eq?
-                                                               'root
-                                                               (car p_0))))
-                                                         (if or-part_1
-                                                           or-part_1
-                                                           (eq?
-                                                            'static-root
-                                                            (car p_0))))))
-                                                 (if (encoded-link-path?
-                                                      (cadr p_0))
-                                                   (let ((or-part_0
-                                                          (null? (cddr p_0))))
-                                                     (if or-part_0
-                                                       or-part_0
-                                                       (regexp? (caddr p_0))))
-                                                   #f)
-                                                 #f)
-                                               #f)
-                                             #f))
-                                         v_0)
-                                        #f)
-                                    (void)
-                                    (error "ill-formed content"))
-                                  (let ((ht_0 (make-hasheq)))
-                                    (let ((dir_0
-                                           (call-with-values
-                                            (lambda ()
-                                              (split-path links-path_0))
-                                            (lambda (base_0 name_0 dir?_0)
-                                              base_0))))
-                                      (begin
-                                        (for-each_2009
-                                         (lambda (p_0)
-                                           (if (let ((or-part_0
-                                                      (null? (cddr p_0))))
-                                                 (if or-part_0
-                                                   or-part_0
-                                                   (regexp-match?
-                                                    (caddr p_0)
-                                                    (version))))
-                                             (let ((dir_1
-                                                    (simplify-path
-                                                     (path->complete-path
-                                                      (decode-link-path
-                                                       (cadr p_0))
-                                                      dir_0))))
-                                               (if (eq? (car p_0) 'static-root)
-                                                 (for-each_2009
-                                                  (lambda (sub_0)
-                                                    (if (directory-exists?
-                                                         (build-path
-                                                          dir_1
-                                                          sub_0))
-                                                      (let ((k_0
-                                                             (string->symbol
-                                                              (path->string
-                                                               sub_0))))
-                                                        (hash-set!
-                                                         ht_0
-                                                         k_0
-                                                         (cons
-                                                          dir_1
-                                                          (hash-ref
-                                                           ht_0
-                                                           k_0
-                                                           null))))
-                                                      (void)))
-                                                  (directory-list dir_1))
-                                                 (if (eq? (car p_0) 'root)
-                                                   (begin
-                                                     (if (hash-ref ht_0 #f #f)
-                                                       (void)
-                                                       (hash-set!
-                                                        ht_0
-                                                        #f
-                                                        null))
-                                                     (hash-for-each
-                                                      ht_0
-                                                      (lambda (k_0 v_1)
-                                                        (hash-set!
-                                                         ht_0
-                                                         k_0
-                                                         (cons dir_1 v_1)))))
-                                                   (let ((s_0
-                                                          (string->symbol
-                                                           (car p_0))))
-                                                     (hash-set!
-                                                      ht_0
-                                                      s_0
-                                                      (let ((app_0
-                                                             (box dir_1)))
-                                                        (cons
-                                                         app_0
-                                                         (hash-ref
-                                                          ht_0
-                                                          s_0
-                                                          null))))))))
-                                             (void)))
-                                         v_0)
-                                        (hash-for-each
-                                         ht_0
-                                         (lambda (k_0 v_1)
-                                           (hash-set!
-                                            ht_0
-                                            k_0
-                                            (reverse$1 v_1))))
-                                        (let ((lock_0
-                                               (unsafe-place-local-ref
-                                                cell.2$1)))
-                                          (unsafe-uninterruptible-lock-acquire
-                                           lock_0))
-                                        (let ((app_0
-                                               (unsafe-place-local-ref
-                                                cell.1$1)))
-                                          (hash-set!
-                                           app_0
-                                           links-path_0
-                                           (cons ts_0 ht_0)))
-                                        (let ((lock_0
-                                               (unsafe-place-local-ref
-                                                cell.2$1)))
-                                          (unsafe-uninterruptible-lock-release
-                                           lock_0))
-                                        ht_0))))))))))))))))))))))
-(define normalize-collection-reference
-  (lambda (collection_0 collection-path_0)
-    (if (string? collection_0)
-      (let ((m_0 (regexp-match-positions rx2897 collection_0)))
-        (if m_0
-          (if (let ((app_0 (caar m_0)))
-                (= app_0 (sub1 (string-length collection_0))))
-            (values (substring collection_0 0 (caar m_0)) collection-path_0)
-            (let ((app_0 (substring collection_0 0 (caar m_0))))
-              (values
-               app_0
-               (cons (substring collection_0 (cdar m_0)) collection-path_0))))
-          (values collection_0 collection-path_0)))
-      (call-with-values
-       (lambda () (split-path collection_0))
-       (lambda (base_0 name_0 dir?_0)
-         (if (eq? base_0 'relative)
-           (values name_0 collection-path_0)
-           (normalize-collection-reference
-            base_0
-            (cons name_0 collection-path_0))))))))
-(define find-col-file
-  (lambda (fail_0
-           collection-in_0
-           collection-path-in_0
-           file-name_0
-           check-compiled?_0)
-    (call-with-values
-     (lambda ()
-       (normalize-collection-reference collection-in_0 collection-path-in_0))
-     (lambda (collection_0 collection-path_0)
-       (let ((all-paths_0
-              (let ((sym_0
-                     (string->symbol
-                      (if (path? collection_0)
-                        (path->string collection_0)
-                        collection_0))))
-                (letrec*
-                 ((loop_0
-                   (|#%name|
-                    loop
-                    (lambda (l_0)
-                      (if (null? l_0)
-                        null
-                        (if (not (car l_0))
-                          (let ((app_0 (1/current-library-collection-paths)))
-                            (append app_0 (loop_0 (cdr l_0))))
-                          (if (hash? (car l_0))
-                            (let ((app_0
-                                   (map_2353
-                                    box
-                                    (hash-ref (car l_0) sym_0 null))))
-                              (let ((app_1 (hash-ref (car l_0) #f null)))
-                                (append app_0 app_1 (loop_0 (cdr l_0)))))
-                            (let ((ht_0 (get-linked-collections (car l_0))))
-                              (let ((app_0 (hash-ref ht_0 sym_0 null)))
-                                (let ((app_1 (hash-ref ht_0 #f null)))
-                                  (append
-                                   app_0
-                                   app_1
-                                   (loop_0 (cdr l_0)))))))))))))
-                 (loop_0 (1/current-library-collection-links))))))
-         (let ((done_0
-                (|#%name|
-                 done
-                 (lambda (p_0)
-                   (if file-name_0 (build-path p_0 file-name_0) p_0)))))
-           (let ((*build-path-rep_0
-                  (|#%name|
-                   *build-path-rep
-                   (lambda (p_0 c_0)
-                     (if (path? p_0) (build-path p_0 c_0) (unbox p_0))))))
-             (let ((*directory-exists?_0
-                    (|#%name|
-                     *directory-exists?
-                     (lambda (orig_0 collection_1 p_0)
-                       (if (path? orig_0)
-                         (directory-exists?/shadow-filesystem
-                          p_0
-                          orig_0
-                          collection_1)
-                         #t)))))
-               (let ((to-string_0
-                      (|#%name|
-                       to-string
-                       (lambda (p_0)
-                         (if (path? p_0) (path->string p_0) p_0)))))
-                 (letrec*
-                  ((cloop_0
-                    (|#%name|
-                     cloop
-                     (lambda (paths_0 found-col_0)
-                       (if (null? paths_0)
-                         (if found-col_0
-                           (done_0 found-col_0)
-                           (let ((rest-coll_0
-                                  (if (null? collection-path_0)
-                                    ""
-                                    (apply-string-append
-                                     0
-                                     (letrec*
-                                      ((loop_0
-                                        (|#%name|
-                                         loop
-                                         (lambda (cp_0)
-                                           (if (null? (cdr cp_0))
-                                             (list (to-string_0 (car cp_0)))
-                                             (let ((app_0
-                                                    (to-string_0 (car cp_0))))
-                                               (list*
-                                                app_0
-                                                "/"
-                                                (loop_0 (cdr cp_0)))))))))
-                                      (loop_0 collection-path_0))))))
-                             (letrec*
-                              ((filter_0
-                                (|#%name|
-                                 filter
-                                 (lambda (f_0 l_0)
-                                   (if (null? l_0)
-                                     null
-                                     (if (|#%app| f_0 (car l_0))
-                                       (let ((app_0 (car l_0)))
-                                         (cons app_0 (filter_0 f_0 (cdr l_0))))
-                                       (filter_0 f_0 (cdr l_0))))))))
-                              (|#%app|
-                               fail_0
-                               (let ((app_0
-                                      (if (null? collection-path_0)
-                                        (to-string_0 collection_0)
-                                        (string-append
-                                         (to-string_0 collection_0)
-                                         "/"
-                                         rest-coll_0))))
-                                 (let ((app_1
-                                        (apply-string-append
-                                         0
-                                         (map_2353
-                                          (lambda (p_0)
-                                            (format "\n ~a ~a" " " p_0))
-                                          (let ((len_0 (length all-paths_0)))
-                                            (let ((clen_0
-                                                   (length
-                                                    (1/current-library-collection-paths))))
-                                              (let ((len_1 len_0))
-                                                (if (< (- len_1 clen_0) 5)
-                                                  all-paths_0
-                                                  (let ((app_1
-                                                         (1/current-library-collection-paths)))
-                                                    (append
-                                                     app_1
-                                                     (list
-                                                      (format
-                                                       "... [~a additional linked and package directories]"
-                                                       (-
-                                                        len_1
-                                                        clen_0)))))))))))))
-                                   (format
-                                    "collection not found\n  collection: ~s\n  in collection directories:~a~a"
-                                    app_0
-                                    app_1
-                                    (if (ormap_2207 box? all-paths_0)
-                                      (format
-                                       "\n   sub-collection: ~s\n  in parent directories:~a"
-                                       rest-coll_0
-                                       (apply-string-append
-                                        0
-                                        (map_2353
-                                         (lambda (p_0)
-                                           (format "\n   ~a" (unbox p_0)))
-                                         (filter_0 box? all-paths_0))))
-                                      ""))))))))
-                         (let ((dir_0
-                                (*build-path-rep_0
-                                 (car paths_0)
-                                 collection_0)))
-                           (if (*directory-exists?_0
-                                (car paths_0)
-                                collection_0
-                                dir_0)
-                             (let ((cpath_0
-                                    (apply
-                                     build-path
-                                     dir_0
-                                     collection-path_0)))
-                               (if (if (null? collection-path_0)
-                                     #t
-                                     (directory-exists? cpath_0))
-                                 (if file-name_0
-                                   (if (let ((or-part_0
-                                              (file-exists?/maybe-compiled
-                                               cpath_0
-                                               file-name_0
-                                               check-compiled?_0)))
-                                         (if or-part_0
-                                           or-part_0
-                                           (let ((alt-file-name_0
-                                                  (let ((file-name_1
-                                                         (if (path?
-                                                              file-name_0)
-                                                           (path->string
-                                                            file-name_0)
-                                                           file-name_0)))
-                                                    (let ((len_0
-                                                           (string-length
-                                                            file-name_1)))
-                                                      (if (>= len_0 4)
-                                                        (if (string=?
-                                                             ".rkt"
-                                                             (substring
-                                                              file-name_1
-                                                              (- len_0 4)))
-                                                          (string-append
-                                                           (substring
-                                                            file-name_1
-                                                            0
-                                                            (- len_0 4))
-                                                           ".ss")
-                                                          #f)
-                                                        #f)))))
-                                             (if alt-file-name_0
-                                               (file-exists?/maybe-compiled
-                                                cpath_0
-                                                alt-file-name_0
-                                                check-compiled?_0)
-                                               #f))))
-                                     (done_0 cpath_0)
-                                     (cloop_0
-                                      (cdr paths_0)
-                                      (if found-col_0 found-col_0 cpath_0)))
-                                   (done_0 cpath_0))
-                                 (cloop_0 (cdr paths_0) found-col_0)))
-                             (cloop_0 (cdr paths_0) found-col_0))))))))
-                  (cloop_0 all-paths_0 #f)))))))))))
-(define file-exists?/maybe-compiled
-  (lambda (dir_0 path_0 check-compiled?_0)
-    (let ((or-part_0 (file-exists? (build-path dir_0 path_0))))
-      (if or-part_0
-        or-part_0
-        (if check-compiled?_0
-          (let ((sfx_0 #vu8(46 122 111)))
-            (let ((try-path_0
-                   (path-adjust-extension
-                    'path-add-extension
-                    #vu8(95)
-                    subbytes
-                    path_0
-                    sfx_0
-                    #t)))
-              (let ((modes_0 (1/use-compiled-file-paths)))
-                (let ((roots_0 (1/current-compiled-file-roots)))
-                  (let ((modes_1 modes_0) (try-path_1 try-path_0))
-                    (ormap_2207
-                     (lambda (d_0)
-                       (ormap_2207
-                        (lambda (mode_0)
-                          (file-exists?
-                           (let ((dir_1
-                                  (if (eq? d_0 'same)
-                                    dir_0
-                                    (if (relative-path? d_0)
-                                      (build-path dir_0 d_0)
-                                      (reroot-path dir_0 d_0)))))
-                             (build-path dir_1 mode_0 try-path_1))))
-                        modes_1))
-                     roots_0))))))
-          #f)))))
-(define 1/find-library-collection-paths
-  (let ((find-library-collection-paths_0
-         (|#%name|
-          find-library-collection-paths
-          (lambda (extra-collects-dirs4_0
-                   post-collects-dirs5_0
-                   config-table6_0
-                   installation-name7_0)
-            (let ((config-table_0
-                   (if (eq? config-table6_0 unsafe-undefined)
-                     (1/read-installation-configuration-table)
-                     config-table6_0)))
-              (let ((installation-name_0
-                     (if (eq? installation-name7_0 unsafe-undefined)
-                       (if (hash? config-table_0)
-                         (get-installation-name config-table_0)
-                         #f)
-                       installation-name7_0)))
-                (begin
-                  (if (if (list? extra-collects-dirs4_0)
-                        (andmap_2814 path-string? extra-collects-dirs4_0)
-                        #f)
-                    (void)
-                    (raise-argument-error
-                     'find-library-collection-paths
-                     "(listof path-string?)"
-                     extra-collects-dirs4_0))
-                  (if (if (list? post-collects-dirs5_0)
-                        (andmap_2814 path-string? post-collects-dirs5_0)
-                        #f)
-                    (void)
-                    (raise-argument-error
-                     'find-library-collection-paths
-                     "(listof path-string?)"
-                     post-collects-dirs5_0))
-                  (if (hash? config-table_0)
-                    (void)
-                    (raise-argument-error
-                     'find-library-collection-paths
-                     "hash?"
-                     config-table_0))
-                  (if (string? installation-name_0)
-                    (void)
-                    (raise-argument-error
-                     'find-library-collection-paths
-                     "string?"
-                     installation-name_0))
-                  (let ((user-too?_0 (1/use-user-specific-search-paths)))
-                    (let ((cons-if_0
-                           (|#%name|
-                            cons-if
-                            (lambda (f_0 r_0) (if f_0 (cons f_0 r_0) r_0)))))
-                      (let ((user-too?_1 user-too?_0))
-                        (let ((app_0
-                               (if user-too?_1
-                                 (let ((c_0
-                                        (environment-variables-ref
-                                         (current-environment-variables)
-                                         #vu8(80 76 84 67 79 76 76 69 67 84 83))))
-                                   (if c_0
-                                     (bytes->string/locale c_0 '#\x3f)
-                                     ""))
-                                 "")))
-                          (path-list-string->path-list
-                           app_0
-                           (add-config-search
-                            config-table_0
-                            'collects-search-dirs
-                            (let ((app_1
-                                   (if user-too?_1
-                                     (build-path
-                                      (find-system-path 'addon-dir)
-                                      installation-name_0
-                                      "collects")
-                                     #f)))
-                              (cons-if_0
-                               app_1
-                               (letrec*
-                                ((loop_0
-                                  (|#%name|
-                                   loop
-                                   (lambda (l_0)
-                                     (if (null? l_0)
-                                       null
-                                       (let ((collects-path_0 (car l_0)))
-                                         (let ((v_0
-                                                (exe-relative-path->complete-path
-                                                 collects-path_0)))
-                                           (if v_0
-                                             (let ((app_2
-                                                    (simplify-path
-                                                     (path->complete-path
-                                                      v_0
-                                                      (current-directory)))))
-                                               (cons app_2 (loop_0 (cdr l_0))))
-                                             (loop_0 (cdr l_0))))))))))
-                                (loop_0
-                                 (append
-                                  extra-collects-dirs4_0
-                                  (list (find-system-path 'collects-dir))
-                                  post-collects-dirs5_0))))))))))))))))))
-    (|#%name|
-     find-library-collection-paths
-     (case-lambda
-      (()
-       (find-library-collection-paths_0
-        null
-        null
-        unsafe-undefined
-        unsafe-undefined))
-      ((extra-collects-dirs_0
-        post-collects-dirs_0
-        config-table_0
-        installation-name7_0)
-       (find-library-collection-paths_0
-        extra-collects-dirs_0
-        post-collects-dirs_0
-        config-table_0
-        installation-name7_0))
-      ((extra-collects-dirs_0 post-collects-dirs_0 config-table6_0)
-       (find-library-collection-paths_0
-        extra-collects-dirs_0
-        post-collects-dirs_0
-        config-table6_0
-        unsafe-undefined))
-      ((extra-collects-dirs_0 post-collects-dirs5_0)
-       (find-library-collection-paths_0
-        extra-collects-dirs_0
-        post-collects-dirs5_0
-        unsafe-undefined
-        unsafe-undefined))
-      ((extra-collects-dirs4_0)
-       (find-library-collection-paths_0
-        extra-collects-dirs4_0
-        null
-        unsafe-undefined
-        unsafe-undefined))))))
-(define 1/find-compiled-file-roots
-  (let ((find-compiled-file-roots_0
-         (|#%name|
-          find-compiled-file-roots
-          (lambda (ht8_0)
-            (let ((ht_0
-                   (if (eq? ht8_0 unsafe-undefined)
-                     (1/read-installation-configuration-table)
-                     ht8_0)))
-              (begin
-                (if (hash? ht_0)
-                  (void)
-                  (raise-argument-error
-                   'find-compiled-file-roots
-                   "hash?"
-                   ht_0))
-                (let ((paths_0 (hash-ref ht_0 'compiled-file-roots #f)))
-                  (let ((or-part_0
-                         (if (list? paths_0)
-                           (map_2353 coerce-to-relative-path paths_0)
-                           #f)))
-                    (if or-part_0 or-part_0 (list 'same))))))))))
-    (|#%name|
-     find-compiled-file-roots
-     (case-lambda
-      (() (find-compiled-file-roots_0 unsafe-undefined))
-      ((ht8_0) (find-compiled-file-roots_0 ht8_0))))))
 (define-values
  (prop:readtable prop:readtable? prop:readtable-ref)
  (make-struct-type-property 'readtable))
@@ -76328,6 +76704,51 @@
            (raise-arguments-error
             'variable-reference->module-declaration-inspector
             "given variable reference is not from a module")))))))
+(define 1/variable-reference-add-attach-dependency!
+  (|#%name|
+   variable-reference-add-attach-dependency!
+   (lambda (vr_0 mpi_0)
+     (begin
+       (if (variable-reference? vr_0)
+         (void)
+         (raise-argument-error
+          'variable-reference-add-attach-dependency!
+          "variable-reference?"
+          vr_0))
+       (begin
+         (if (1/module-path-index? mpi_0)
+           (void)
+           (raise-argument-error
+            'variable-reference-add-attach-dependency!
+            "module-path-index?"
+            mpi_0))
+         (let ((ns_0
+                (variable-reference->namespace*
+                 'variable-reference-add-attach-dependency!
+                 vr_0)))
+           (let ((mod-mpi_0 (namespace-mpi ns_0)))
+             (if (eq? top-level-module-path-index mod-mpi_0)
+               (void)
+               (let ((mi_0
+                      (let ((temp15_0 (1/module-path-index-resolve mod-mpi_0)))
+                        (let ((temp16_0 (namespace-0-phase ns_0)))
+                          (let ((temp15_1 temp15_0))
+                            (namespace->module-instance.1
+                             #f
+                             #f
+                             void
+                             ns_0
+                             temp15_1
+                             temp16_0))))))
+                 (let ((m_0 (if mi_0 (module-instance-module mi_0) #f)))
+                   (if (if m_0 (module-cross-phase-persistent? m_0) #f)
+                     (let ((deps_0 (module-instance-attach-dependencies mi_0)))
+                       (if (member mpi_0 deps_0)
+                         (void)
+                         (set-module-instance-attach-dependencies!
+                          mi_0
+                          (cons mpi_0 deps_0))))
+                     (void))))))))))))
 (define primitive-ids
   (seteq
    'syntax?
@@ -76487,9 +76908,10 @@
    'variable-reference->phase
    'variable-reference->module-base-phase
    'variable-reference->module-declaration-inspector
+   'variable-reference-add-attach-dependency!
    'read-syntax
    'read-syntax/recursive))
-(define effect_2298
+(define effect_2295
   (begin
     (void
      (begin
@@ -76979,6 +77401,10 @@
         #f
         'variable-reference->module-declaration-inspector
         1/variable-reference->module-declaration-inspector)
+       (add-core-primitive!.1
+        #f
+        'variable-reference-add-attach-dependency!
+        1/variable-reference-add-attach-dependency!)
        (add-core-primitive!.1 #f 'read-syntax 1/read-syntax)
        (add-core-primitive!.1
         #f
@@ -86860,7 +87286,7 @@
     (if (not at-phase_0)
       (if (non-self-module-path-index? (module-binding-nominal-module b_0))
         (let ((m_0
-               (namespace->module/cross-phase
+               (namespace->module
                 ns_0
                 (1/module-path-index-resolve
                  (module-binding-nominal-module b_0)))))
@@ -90157,474 +90583,602 @@
                  s_0
                  (if (syntax?$1 id-or-sym_0) id-or-sym_0 #f))
                 (void))))))
-      (let ((sym-sites_0 (make-hasheq)))
-        (let ((add-site!_0
-               (|#%name|
-                add-site!
-                (lambda (sym_0 get-id_0 phase_0 source_0)
-                  (hash-set!
-                   sym-sites_0
-                   sym_0
-                   (let ((app_0 (vector get-id_0 phase_0 source_0)))
-                     (cons app_0 (hash-ref sym-sites_0 sym_0 null))))))))
-          (begin
-            (requires+provides-for-each-required-id
-             r+p_0
-             (lambda (sym_0 phase_0 source_0 get-id_0)
-               (begin
-                 (if (not phase_0)
-                   (check-phase_0 phase_0 (|#%app| get-id_0) "import")
-                   (void))
-                 (add-site!_0 sym_0 get-id_0 phase_0 source_0))))
+      (let ((firsts_0 (make-hasheq)))
+        (let ((candidates_0 (make-hasheq)))
+          (let ((note-site!_0
+                 (|#%name|
+                  note-site!
+                  (lambda (sym_0 phase_0 provides_0 prefix-len_0)
+                    (let ((first_0 (hash-ref firsts_0 sym_0 #f)))
+                      (if (not first_0)
+                        (hash-set!
+                         firsts_0
+                         sym_0
+                         (vector phase_0 provides_0 prefix-len_0 #f #f))
+                        (begin
+                          (if (eqv? phase_0 (vector-ref first_0 0))
+                            (void)
+                            (vector-set! first_0 3 #t))
+                          (if (if provides_0
+                                (if (eq? provides_0 (vector-ref first_0 1))
+                                  (eqv? prefix-len_0 (vector-ref first_0 2))
+                                  #f)
+                                #f)
+                            (void)
+                            (vector-set! first_0 4 #t))
+                          (if (if (vector-ref first_0 3)
+                                (vector-ref first_0 4)
+                                #f)
+                            (hash-set! candidates_0 sym_0 #t)
+                            (void)))))))))
             (begin
-              (requires+provides-for-each-defined-sym
-               r+p_0
-               (lambda (sym_0 phase_0 kind_0)
-                 (check-phase_0 phase_0 sym_0 "definition")))
+              (if log-performance?
+                (start-performance-region 'expand 'pl-collect)
+                (void))
               (begin
-                (letrec*
-                 ((for-loop_0
-                   (|#%name|
-                    for-loop
-                    (lambda (i_0)
-                      (if i_0
-                        (call-with-values
-                         (lambda ()
-                           (hash-iterate-key+value defined-syms_0 i_0))
-                         (lambda (phase_0 ht_0)
-                           (call-with-values
-                            (lambda ()
-                              (letrec*
-                               ((for-loop_1
-                                 (|#%name|
-                                  for-loop
-                                  (lambda (i_1)
-                                    (if i_1
-                                      (call-with-values
-                                       (lambda ()
-                                         (hash-iterate-key+value ht_0 i_1))
-                                       (lambda (sym_0 id_0)
-                                         (begin
-                                           (add-site!_0
-                                            (syntax-e$1 id_0)
-                                            (lambda () id_0)
-                                            phase_0
-                                            #f)
-                                           (for-loop_1
-                                            (hash-iterate-next ht_0 i_1)))))
-                                      (values))))))
-                               (for-loop_1 (hash-iterate-first ht_0))))
-                            (lambda ()
-                              (for-loop_0
-                               (hash-iterate-next defined-syms_0 i_0))))))
-                        (values))))))
-                 (for-loop_0 (hash-iterate-first defined-syms_0)))
-                (let ((sites_0
-                       (reverse$1
-                        (letrec*
-                         ((for-loop_0
-                           (|#%name|
-                            for-loop
-                            (lambda (fold-var_0 i_0)
-                              (if i_0
-                                (call-with-values
-                                 (lambda ()
-                                   (hash-iterate-key+value sym-sites_0 i_0))
-                                 (lambda (sym_0 l_0)
-                                   (let ((fold-var_1
-                                          (if (let ((site0_0 (car l_0)))
-                                                (let ((or-part_0
-                                                       (let ((lst_0 (cdr l_0)))
-                                                         (letrec*
-                                                          ((for-loop_1
-                                                            (|#%name|
-                                                             for-loop
-                                                             (lambda (result_0
-                                                                      lst_1)
-                                                               (if (pair?
-                                                                    lst_1)
-                                                                 (let ((site_0
-                                                                        (unsafe-car
-                                                                         lst_1)))
-                                                                   (let ((rest_0
-                                                                          (unsafe-cdr
-                                                                           lst_1)))
-                                                                     (let ((result_1
-                                                                            (let ((result_1
-                                                                                   (let ((app_0
-                                                                                          (vector-ref
-                                                                                           site0_0
-                                                                                           1)))
-                                                                                     (eqv?
-                                                                                      app_0
-                                                                                      (vector-ref
-                                                                                       site_0
-                                                                                       1)))))
-                                                                              (values
-                                                                               result_1))))
-                                                                       (if (if (not
-                                                                                (let ((x_0
-                                                                                       (list
-                                                                                        site_0)))
-                                                                                  (not
-                                                                                   result_1)))
-                                                                             #t
-                                                                             #f)
-                                                                         (for-loop_1
-                                                                          result_1
-                                                                          rest_0)
-                                                                         result_1))))
-                                                                 result_0)))))
-                                                          (for-loop_1
-                                                           #t
-                                                           lst_0)))))
-                                                  (if or-part_0
-                                                    or-part_0
-                                                    (let ((source0_0
-                                                           (vector-ref
-                                                            site0_0
-                                                            2)))
-                                                      (if source0_0
-                                                        (let ((lst_0
-                                                               (cdr l_0)))
-                                                          (letrec*
-                                                           ((for-loop_1
-                                                             (|#%name|
-                                                              for-loop
-                                                              (lambda (result_0
-                                                                       lst_1)
-                                                                (if (pair?
-                                                                     lst_1)
-                                                                  (let ((site_0
-                                                                         (unsafe-car
-                                                                          lst_1)))
-                                                                    (let ((rest_0
-                                                                           (unsafe-cdr
-                                                                            lst_1)))
-                                                                      (let ((result_1
-                                                                             (let ((result_1
-                                                                                    (let ((source_0
-                                                                                           (vector-ref
-                                                                                            site_0
-                                                                                            2)))
-                                                                                      (if source_0
-                                                                                        (if (let ((app_0
-                                                                                                   (car
-                                                                                                    source0_0)))
-                                                                                              (eq?
-                                                                                               app_0
-                                                                                               (car
-                                                                                                source_0)))
-                                                                                          (let ((app_0
-                                                                                                 (cdr
-                                                                                                  source0_0)))
-                                                                                            (eqv?
-                                                                                             app_0
-                                                                                             (cdr
-                                                                                              source_0)))
-                                                                                          #f)
-                                                                                        #f))))
-                                                                               (values
-                                                                                result_1))))
-                                                                        (if (if (not
-                                                                                 (let ((x_0
-                                                                                        (list
-                                                                                         site_0)))
-                                                                                   (not
-                                                                                    result_1)))
-                                                                              #t
-                                                                              #f)
-                                                                          (for-loop_1
-                                                                           result_1
-                                                                           rest_0)
-                                                                          result_1))))
-                                                                  result_0)))))
-                                                           (for-loop_1
-                                                            #t
-                                                            lst_0)))
-                                                        #f)))))
-                                            fold-var_0
-                                            (letrec*
-                                             ((for-loop_1
-                                               (|#%name|
-                                                for-loop
-                                                (lambda (fold-var_1 lst_0)
-                                                  (if (pair? lst_0)
-                                                    (let ((site_0
-                                                           (unsafe-car lst_0)))
-                                                      (let ((rest_0
-                                                             (unsafe-cdr
-                                                              lst_0)))
-                                                        (let ((fold-var_2
-                                                               (let ((fold-var_2
-                                                                      (cons
-                                                                       (let ((id_0
-                                                                              (|#%app|
-                                                                               (vector-ref
-                                                                                site_0
-                                                                                0))))
-                                                                         (let ((app_0
-                                                                                (vector-ref
-                                                                                 site_0
-                                                                                 1)))
-                                                                           (vector
-                                                                            id_0
-                                                                            app_0
-                                                                            (let ((temp2_0
-                                                                                   (vector-ref
-                                                                                    site_0
-                                                                                    1)))
-                                                                              (resolve+shift.1
-                                                                               #f
-                                                                               #f
-                                                                               null
-                                                                               unsafe-undefined
-                                                                               #f
-                                                                               id_0
-                                                                               temp2_0)))))
-                                                                       fold-var_1)))
-                                                                 (values
-                                                                  fold-var_2))))
-                                                          (for-loop_1
-                                                           fold-var_2
-                                                           rest_0))))
-                                                    fold-var_1)))))
-                                             (for-loop_1 fold-var_0 l_0)))))
-                                     (for-loop_0
-                                      fold-var_1
-                                      (hash-iterate-next sym-sites_0 i_0)))))
-                                fold-var_0)))))
-                         (for-loop_0 null (hash-iterate-first sym-sites_0))))))
+                (begin0
                   (begin
-                    (make-shifted-multi-scope-phaseless! inside-scope_0)
-                    (let ((bad-sites_0
-                           (reverse$1
-                            (letrec*
-                             ((for-loop_0
-                               (|#%name|
-                                for-loop
-                                (lambda (fold-var_0 lst_0)
-                                  (if (pair? lst_0)
-                                    (let ((site_0 (unsafe-car lst_0)))
-                                      (let ((rest_0 (unsafe-cdr lst_0)))
-                                        (let ((fold-var_1
-                                               (if (let ((before-b_0
-                                                          (vector-ref
-                                                           site_0
-                                                           2)))
-                                                     (let ((after-b_0
-                                                            (let ((temp3_0
-                                                                   (vector-ref
-                                                                    site_0
-                                                                    0)))
-                                                              (let ((temp4_0
-                                                                     (vector-ref
-                                                                      site_0
-                                                                      1)))
-                                                                (let ((temp3_1
-                                                                       temp3_0))
-                                                                  (resolve+shift.1
-                                                                   #f
-                                                                   #f
-                                                                   null
-                                                                   unsafe-undefined
-                                                                   #f
-                                                                   temp3_1
-                                                                   temp4_0))))))
-                                                       (let ((before-b_1
-                                                              before-b_0))
-                                                         (let ((or-part_0
-                                                                (eq?
-                                                                 before-b_1
-                                                                 after-b_0)))
-                                                           (if or-part_0
-                                                             or-part_0
-                                                             (if before-b_1
-                                                               (if after-b_0
-                                                                 (if (let ((or-part_1
-                                                                            (module-binding?
-                                                                             before-b_1)))
-                                                                       (if or-part_1
-                                                                         or-part_1
-                                                                         (local-binding?
-                                                                          before-b_1)))
-                                                                   (same-binding?
-                                                                    before-b_1
-                                                                    after-b_0)
-                                                                   #f)
-                                                                 #f)
-                                                               #f))))))
-                                                 fold-var_0
-                                                 (let ((fold-var_1
-                                                        (cons
-                                                         site_0
-                                                         fold-var_0)))
-                                                   (values fold-var_1)))))
-                                          (for-loop_0 fold-var_1 rest_0))))
-                                    fold-var_0)))))
-                             (for-loop_0 null sites_0)))))
-                      (if (null? bad-sites_0)
-                        (void)
-                        (let ((site_0 (car bad-sites_0)))
-                          (let ((id_0 (vector-ref site_0 0)))
-                            (let ((phase_0 (vector-ref site_0 1)))
-                              (let ((before-b_0 (vector-ref site_0 2)))
-                                (let ((after-b_0
-                                       (resolve+shift.1
-                                        #f
-                                        #f
-                                        null
-                                        unsafe-undefined
-                                        #f
-                                        id_0
-                                        phase_0)))
-                                  (let ((all-names_0
-                                         (letrec*
-                                          ((loop_0
-                                            (|#%name|
-                                             loop
-                                             (lambda (l_0 seen_0)
-                                               (if (null? l_0)
-                                                 null
-                                                 (let ((sym_0
-                                                        (syntax-e$1
-                                                         (vector-ref
-                                                          (car l_0)
-                                                          0))))
-                                                   (if (hash-ref
-                                                        seen_0
-                                                        sym_0
-                                                        #f)
-                                                     (loop_0 (cdr l_0) seen_0)
-                                                     (cons
-                                                      sym_0
-                                                      (let ((app_0 (cdr l_0)))
-                                                        (loop_0
-                                                         app_0
-                                                         (hash-set
-                                                          seen_0
-                                                          sym_0
-                                                          #t)))))))))))
-                                          (loop_0 bad-sites_0 hash2610))))
-                                    (let ((app_0
-                                           (string-append
-                                            "binding differs across phases in an unsafe cross-phase persistent module;\n"
-                                            " a phase-0 binding and a phase-1 binding with the same name must be the same")))
-                                      (raise-syntax-error$1
-                                       #f
-                                       app_0
-                                       s_0
-                                       id_0
-                                       null
-                                       (let ((app_1
-                                              (describe-binding before-b_0)))
-                                         (let ((app_2
-                                                (describe-binding after-b_0)))
-                                           (let ((app_3
-                                                  (apply-string-append
-                                                   0
-                                                   (reverse$1
-                                                    (letrec*
-                                                     ((for-loop_0
-                                                       (|#%name|
-                                                        for-loop
-                                                        (lambda (fold-var_0
-                                                                 lst_0)
-                                                          (if (pair? lst_0)
-                                                            (let ((sym_0
-                                                                   (unsafe-car
-                                                                    lst_0)))
-                                                              (let ((rest_0
-                                                                     (unsafe-cdr
-                                                                      lst_0)))
-                                                                (let ((fold-var_1
-                                                                       (let ((fold-var_1
-                                                                              (cons
-                                                                               (format
-                                                                                " ~a"
-                                                                                sym_0)
-                                                                               fold-var_0)))
-                                                                         (values
-                                                                          fold-var_1))))
-                                                                  (for-loop_0
-                                                                   fold-var_1
-                                                                   rest_0))))
-                                                            fold-var_0)))))
-                                                     (for-loop_0
-                                                      null
-                                                      all-names_0))))))
-                                             (let ((app_4 (syntax-e$1 id_0)))
-                                               (format
-                                                "\n  phase of binding: ~a\n  binding at that phase: ~a\n  merged binding: ~a\n  all conflicting names:~a\n  binding sites for `~a`:~a"
+                    (requires+provides-for-each-required-site
+                     r+p_0
+                     (lambda (sym_0
+                              phase_0
+                              provides_0
+                              prefix-len_0
+                              mod-name_0
+                              shift_0
+                              site_0)
+                       (begin
+                         (if (not phase_0)
+                           (check-phase_0
+                            phase_0
+                            (required-id
+                             (if (bulk-required? site_0)
+                               (if (bulk-required? site_0)
+                                 (bulk-required->required
+                                  site_0
+                                  mod-name_0
+                                  shift_0
+                                  sym_0)
+                                 site_0)
+                               site_0))
+                            "import")
+                           (void))
+                         (note-site!_0
+                          sym_0
+                          phase_0
+                          provides_0
+                          prefix-len_0))))
+                    (requires+provides-for-each-defined-sym
+                     r+p_0
+                     (lambda (sym_0 phase_0 kind_0)
+                       (check-phase_0 phase_0 sym_0 "definition")))
+                    (letrec*
+                     ((for-loop_0
+                       (|#%name|
+                        for-loop
+                        (lambda (i_0)
+                          (if i_0
+                            (call-with-values
+                             (lambda ()
+                               (hash-iterate-key+value defined-syms_0 i_0))
+                             (lambda (phase_0 ht_0)
+                               (call-with-values
+                                (lambda ()
+                                  (letrec*
+                                   ((for-loop_1
+                                     (|#%name|
+                                      for-loop
+                                      (lambda (i_1)
+                                        (if i_1
+                                          (call-with-values
+                                           (lambda ()
+                                             (hash-iterate-key+value ht_0 i_1))
+                                           (lambda (sym_0 id_0)
+                                             (begin
+                                               (note-site!_0
+                                                (syntax-e$1 id_0)
                                                 phase_0
-                                                app_1
-                                                app_2
-                                                app_3
-                                                app_4
-                                                (apply-string-append
-                                                 0
-                                                 (reverse$1
+                                                #f
+                                                #f)
+                                               (for-loop_1
+                                                (hash-iterate-next
+                                                 ht_0
+                                                 i_1)))))
+                                          (values))))))
+                                   (for-loop_1 (hash-iterate-first ht_0))))
+                                (lambda ()
+                                  (for-loop_0
+                                   (hash-iterate-next defined-syms_0 i_0))))))
+                            (values))))))
+                     (for-loop_0 (hash-iterate-first defined-syms_0)))
+                    (void))
+                  (if log-performance? (end-performance-region) (void)))
+                (let ((sym-sites_0 (make-hasheq)))
+                  (begin
+                    (if (zero? (hash-count candidates_0))
+                      (void)
+                      (let ((add-site!_0
+                             (|#%name|
+                              add-site!
+                              (lambda (sym_0 id_0 phase_0)
+                                (hash-set!
+                                 sym-sites_0
+                                 sym_0
+                                 (let ((app_0 (vector id_0 phase_0)))
+                                   (cons
+                                    app_0
+                                    (hash-ref sym-sites_0 sym_0 null))))))))
+                        (begin
+                          (requires+provides-for-each-required-site
+                           r+p_0
+                           (lambda (sym_0
+                                    phase_0
+                                    provides_0
+                                    prefix-len_0
+                                    mod-name_0
+                                    shift_0
+                                    site_0)
+                             (if (hash-ref candidates_0 sym_0 #f)
+                               (add-site!_0
+                                sym_0
+                                (required-id
+                                 (if (bulk-required? site_0)
+                                   (if (bulk-required? site_0)
+                                     (bulk-required->required
+                                      site_0
+                                      mod-name_0
+                                      shift_0
+                                      sym_0)
+                                     site_0)
+                                   site_0))
+                                phase_0)
+                               (void))))
+                          (letrec*
+                           ((for-loop_0
+                             (|#%name|
+                              for-loop
+                              (lambda (i_0)
+                                (if i_0
+                                  (call-with-values
+                                   (lambda ()
+                                     (hash-iterate-key+value
+                                      defined-syms_0
+                                      i_0))
+                                   (lambda (phase_0 ht_0)
+                                     (call-with-values
+                                      (lambda ()
+                                        (letrec*
+                                         ((for-loop_1
+                                           (|#%name|
+                                            for-loop
+                                            (lambda (i_1)
+                                              (if i_1
+                                                (call-with-values
+                                                 (lambda ()
+                                                   (hash-iterate-key+value
+                                                    ht_0
+                                                    i_1))
+                                                 (lambda (sym_0 id_0)
+                                                   (begin
+                                                     (if (hash-ref
+                                                          candidates_0
+                                                          (syntax-e$1 id_0)
+                                                          #f)
+                                                       (add-site!_0
+                                                        (syntax-e$1 id_0)
+                                                        id_0
+                                                        phase_0)
+                                                       (void))
+                                                     (for-loop_1
+                                                      (hash-iterate-next
+                                                       ht_0
+                                                       i_1)))))
+                                                (values))))))
+                                         (for-loop_1
+                                          (hash-iterate-first ht_0))))
+                                      (lambda ()
+                                        (for-loop_0
+                                         (hash-iterate-next
+                                          defined-syms_0
+                                          i_0))))))
+                                  (values))))))
+                           (for-loop_0 (hash-iterate-first defined-syms_0)))
+                          (void))))
+                    (let ((sites_0
+                           (begin
+                             (if log-performance?
+                               (start-performance-region 'expand 'pl-resolve)
+                               (void))
+                             (begin0
+                               (reverse$1
+                                (letrec*
+                                 ((for-loop_0
+                                   (|#%name|
+                                    for-loop
+                                    (lambda (fold-var_0 i_0)
+                                      (if i_0
+                                        (call-with-values
+                                         (lambda ()
+                                           (hash-iterate-key+value
+                                            sym-sites_0
+                                            i_0))
+                                         (lambda (sym_0 l_0)
+                                           (let ((fold-var_1
                                                   (letrec*
-                                                   ((for-loop_0
+                                                   ((for-loop_1
                                                      (|#%name|
                                                       for-loop
-                                                      (lambda (fold-var_0
+                                                      (lambda (fold-var_1
                                                                lst_0)
                                                         (if (pair? lst_0)
-                                                          (let ((site_1
+                                                          (let ((site_0
                                                                  (unsafe-car
                                                                   lst_0)))
                                                             (let ((rest_0
                                                                    (unsafe-cdr
                                                                     lst_0)))
-                                                              (let ((fold-var_1
-                                                                     (if (let ((app_5
-                                                                                (syntax-e$1
-                                                                                 (vector-ref
-                                                                                  site_1
-                                                                                  0))))
-                                                                           (eq?
-                                                                            app_5
-                                                                            (syntax-e$1
-                                                                             id_0)))
-                                                                       (let ((fold-var_1
-                                                                              (cons
-                                                                               (let ((site-id_0
+                                                              (let ((fold-var_2
+                                                                     (let ((fold-var_2
+                                                                            (cons
+                                                                             (let ((id_0
+                                                                                    (vector-ref
+                                                                                     site_0
+                                                                                     0)))
+                                                                               (let ((app_0
                                                                                       (vector-ref
-                                                                                       site_1
-                                                                                       0)))
-                                                                                 (let ((app_5
-                                                                                        (vector-ref
-                                                                                         site_1
-                                                                                         1)))
-                                                                                   (let ((app_6
-                                                                                          (let ((loc_0
-                                                                                                 (syntax-srcloc$1
-                                                                                                  site-id_0)))
-                                                                                            (if (srcloc?
-                                                                                                 loc_0)
-                                                                                              (srcloc->string
-                                                                                               loc_0)
-                                                                                              "unknown location"))))
-                                                                                     (format
-                                                                                      "\n   phase ~a at ~a: ~a"
-                                                                                      app_5
-                                                                                      app_6
-                                                                                      (describe-binding
-                                                                                       (vector-ref
-                                                                                        site_1
-                                                                                        2))))))
-                                                                               fold-var_0)))
-                                                                         (values
-                                                                          fold-var_1))
-                                                                       fold-var_0)))
-                                                                (for-loop_0
-                                                                 fold-var_1
+                                                                                       site_0
+                                                                                       1)))
+                                                                                 (vector
+                                                                                  id_0
+                                                                                  app_0
+                                                                                  (let ((temp2_0
+                                                                                         (vector-ref
+                                                                                          site_0
+                                                                                          1)))
+                                                                                    (resolve+shift.1
+                                                                                     #f
+                                                                                     #f
+                                                                                     null
+                                                                                     unsafe-undefined
+                                                                                     #f
+                                                                                     id_0
+                                                                                     temp2_0)))))
+                                                                             fold-var_1)))
+                                                                       (values
+                                                                        fold-var_2))))
+                                                                (for-loop_1
+                                                                 fold-var_2
                                                                  rest_0))))
-                                                          fold-var_0)))))
-                                                   (for-loop_0
-                                                    null
-                                                    sites_0)))))))))))))))))))))))))))))
+                                                          fold-var_1)))))
+                                                   (for-loop_1
+                                                    fold-var_0
+                                                    l_0))))
+                                             (for-loop_0
+                                              fold-var_1
+                                              (hash-iterate-next
+                                               sym-sites_0
+                                               i_0)))))
+                                        fold-var_0)))))
+                                 (for-loop_0
+                                  null
+                                  (hash-iterate-first sym-sites_0))))
+                               (if log-performance?
+                                 (end-performance-region)
+                                 (void))))))
+                      (begin
+                        (make-shifted-multi-scope-phaseless! inside-scope_0)
+                        (let ((same-binding/maybe?_0
+                               (|#%name|
+                                same-binding/maybe?
+                                (lambda (a_0 b_0)
+                                  (let ((or-part_0 (eq? a_0 b_0)))
+                                    (if or-part_0
+                                      or-part_0
+                                      (if a_0
+                                        (if b_0
+                                          (if (let ((or-part_1
+                                                     (module-binding? a_0)))
+                                                (if or-part_1
+                                                  or-part_1
+                                                  (local-binding? a_0)))
+                                            (same-binding? a_0 b_0)
+                                            #f)
+                                          #f)
+                                        #f)))))))
+                          (let ((disagreeing-syms_0
+                                 (let ((by-sym_0 (make-hasheq)))
+                                   (let ((syms_0 hash2610))
+                                     (let ((syms_1 syms_0))
+                                       (letrec*
+                                        ((for-loop_0
+                                          (|#%name|
+                                           for-loop
+                                           (lambda (syms_2 lst_0)
+                                             (if (pair? lst_0)
+                                               (let ((site_0
+                                                      (unsafe-car lst_0)))
+                                                 (let ((rest_0
+                                                        (unsafe-cdr lst_0)))
+                                                   (let ((syms_3
+                                                          (let ((syms_3
+                                                                 (let ((sym_0
+                                                                        (syntax-e$1
+                                                                         (vector-ref
+                                                                          site_0
+                                                                          0))))
+                                                                   (let ((b_0
+                                                                          (vector-ref
+                                                                           site_0
+                                                                           2)))
+                                                                     (let ((prev_0
+                                                                            (hash-ref
+                                                                             by-sym_0
+                                                                             sym_0
+                                                                             missing)))
+                                                                       (if (eq?
+                                                                            prev_0
+                                                                            missing)
+                                                                         (begin
+                                                                           (hash-set!
+                                                                            by-sym_0
+                                                                            sym_0
+                                                                            b_0)
+                                                                           syms_2)
+                                                                         (if (same-binding/maybe?_0
+                                                                              prev_0
+                                                                              b_0)
+                                                                           syms_2
+                                                                           (hash-set
+                                                                            syms_2
+                                                                            sym_0
+                                                                            #t))))))))
+                                                            (values syms_3))))
+                                                     (for-loop_0
+                                                      syms_3
+                                                      rest_0))))
+                                               syms_2)))))
+                                        (for-loop_0 syms_1 sites_0)))))))
+                            (let ((bad-sites_0
+                                   (begin
+                                     (if log-performance?
+                                       (start-performance-region
+                                        'expand
+                                        'pl-resolve)
+                                       (void))
+                                     (begin0
+                                       (reverse$1
+                                        (letrec*
+                                         ((for-loop_0
+                                           (|#%name|
+                                            for-loop
+                                            (lambda (fold-var_0 lst_0)
+                                              (if (pair? lst_0)
+                                                (let ((site_0
+                                                       (unsafe-car lst_0)))
+                                                  (let ((rest_0
+                                                         (unsafe-cdr lst_0)))
+                                                    (let ((fold-var_1
+                                                           (if (hash-ref
+                                                                disagreeing-syms_0
+                                                                (syntax-e$1
+                                                                 (vector-ref
+                                                                  site_0
+                                                                  0))
+                                                                #f)
+                                                             (if (let ((app_0
+                                                                        (vector-ref
+                                                                         site_0
+                                                                         2)))
+                                                                   (same-binding/maybe?_0
+                                                                    app_0
+                                                                    (let ((temp3_0
+                                                                           (vector-ref
+                                                                            site_0
+                                                                            0)))
+                                                                      (let ((temp4_0
+                                                                             (vector-ref
+                                                                              site_0
+                                                                              1)))
+                                                                        (let ((temp3_1
+                                                                               temp3_0))
+                                                                          (resolve+shift.1
+                                                                           #f
+                                                                           #f
+                                                                           null
+                                                                           unsafe-undefined
+                                                                           #f
+                                                                           temp3_1
+                                                                           temp4_0))))))
+                                                               fold-var_0
+                                                               (let ((fold-var_1
+                                                                      (cons
+                                                                       site_0
+                                                                       fold-var_0)))
+                                                                 (values
+                                                                  fold-var_1)))
+                                                             fold-var_0)))
+                                                      (for-loop_0
+                                                       fold-var_1
+                                                       rest_0))))
+                                                fold-var_0)))))
+                                         (for-loop_0 null sites_0)))
+                                       (if log-performance?
+                                         (end-performance-region)
+                                         (void))))))
+                              (if (null? bad-sites_0)
+                                (void)
+                                (let ((site_0 (car bad-sites_0)))
+                                  (let ((id_0 (vector-ref site_0 0)))
+                                    (let ((phase_0 (vector-ref site_0 1)))
+                                      (let ((before-b_0 (vector-ref site_0 2)))
+                                        (let ((after-b_0
+                                               (resolve+shift.1
+                                                #f
+                                                #f
+                                                null
+                                                unsafe-undefined
+                                                #f
+                                                id_0
+                                                phase_0)))
+                                          (let ((all-names_0
+                                                 (letrec*
+                                                  ((loop_0
+                                                    (|#%name|
+                                                     loop
+                                                     (lambda (l_0 seen_0)
+                                                       (if (null? l_0)
+                                                         null
+                                                         (let ((sym_0
+                                                                (syntax-e$1
+                                                                 (vector-ref
+                                                                  (car l_0)
+                                                                  0))))
+                                                           (if (hash-ref
+                                                                seen_0
+                                                                sym_0
+                                                                #f)
+                                                             (loop_0
+                                                              (cdr l_0)
+                                                              seen_0)
+                                                             (cons
+                                                              sym_0
+                                                              (let ((app_0
+                                                                     (cdr
+                                                                      l_0)))
+                                                                (loop_0
+                                                                 app_0
+                                                                 (hash-set
+                                                                  seen_0
+                                                                  sym_0
+                                                                  #t)))))))))))
+                                                  (loop_0
+                                                   bad-sites_0
+                                                   hash2610))))
+                                            (let ((app_0
+                                                   (string-append
+                                                    "binding differs across phases in an unsafe cross-phase persistent module;\n"
+                                                    " a phase-0 binding and a phase-1 binding with the same name must be the same")))
+                                              (raise-syntax-error$1
+                                               #f
+                                               app_0
+                                               s_0
+                                               id_0
+                                               null
+                                               (let ((app_1
+                                                      (describe-binding
+                                                       before-b_0)))
+                                                 (let ((app_2
+                                                        (describe-binding
+                                                         after-b_0)))
+                                                   (let ((app_3
+                                                          (apply-string-append
+                                                           0
+                                                           (reverse$1
+                                                            (letrec*
+                                                             ((for-loop_0
+                                                               (|#%name|
+                                                                for-loop
+                                                                (lambda (fold-var_0
+                                                                         lst_0)
+                                                                  (if (pair?
+                                                                       lst_0)
+                                                                    (let ((sym_0
+                                                                           (unsafe-car
+                                                                            lst_0)))
+                                                                      (let ((rest_0
+                                                                             (unsafe-cdr
+                                                                              lst_0)))
+                                                                        (let ((fold-var_1
+                                                                               (let ((fold-var_1
+                                                                                      (cons
+                                                                                       (format
+                                                                                        " ~a"
+                                                                                        sym_0)
+                                                                                       fold-var_0)))
+                                                                                 (values
+                                                                                  fold-var_1))))
+                                                                          (for-loop_0
+                                                                           fold-var_1
+                                                                           rest_0))))
+                                                                    fold-var_0)))))
+                                                             (for-loop_0
+                                                              null
+                                                              all-names_0))))))
+                                                     (let ((app_4
+                                                            (syntax-e$1 id_0)))
+                                                       (format
+                                                        "\n  phase of binding: ~a\n  binding at that phase: ~a\n  merged binding: ~a\n  all conflicting names:~a\n  binding sites for `~a`:~a"
+                                                        phase_0
+                                                        app_1
+                                                        app_2
+                                                        app_3
+                                                        app_4
+                                                        (apply-string-append
+                                                         0
+                                                         (reverse$1
+                                                          (letrec*
+                                                           ((for-loop_0
+                                                             (|#%name|
+                                                              for-loop
+                                                              (lambda (fold-var_0
+                                                                       lst_0)
+                                                                (if (pair?
+                                                                     lst_0)
+                                                                  (let ((site_1
+                                                                         (unsafe-car
+                                                                          lst_0)))
+                                                                    (let ((rest_0
+                                                                           (unsafe-cdr
+                                                                            lst_0)))
+                                                                      (let ((fold-var_1
+                                                                             (if (let ((app_5
+                                                                                        (syntax-e$1
+                                                                                         (vector-ref
+                                                                                          site_1
+                                                                                          0))))
+                                                                                   (eq?
+                                                                                    app_5
+                                                                                    (syntax-e$1
+                                                                                     id_0)))
+                                                                               (let ((fold-var_1
+                                                                                      (cons
+                                                                                       (let ((site-id_0
+                                                                                              (vector-ref
+                                                                                               site_1
+                                                                                               0)))
+                                                                                         (let ((app_5
+                                                                                                (vector-ref
+                                                                                                 site_1
+                                                                                                 1)))
+                                                                                           (let ((app_6
+                                                                                                  (let ((loc_0
+                                                                                                         (syntax-srcloc$1
+                                                                                                          site-id_0)))
+                                                                                                    (if (srcloc?
+                                                                                                         loc_0)
+                                                                                                      (srcloc->string
+                                                                                                       loc_0)
+                                                                                                      "unknown location"))))
+                                                                                             (format
+                                                                                              "\n   phase ~a at ~a: ~a"
+                                                                                              app_5
+                                                                                              app_6
+                                                                                              (describe-binding
+                                                                                               (vector-ref
+                                                                                                site_1
+                                                                                                2))))))
+                                                                                       fold-var_0)))
+                                                                                 (values
+                                                                                  fold-var_1))
+                                                                               fold-var_0)))
+                                                                        (for-loop_0
+                                                                         fold-var_1
+                                                                         rest_0))))
+                                                                  fold-var_0)))))
+                                                           (for-loop_0
+                                                            null
+                                                            sites_0)))))))))))))))))))))))))))))))))
+(define missing (gensym))
 (define describe-binding
   (lambda (b_0)
     (if (not b_0)
@@ -97673,8 +98227,6 @@
 (define expander-place-init!
   (lambda ()
     (begin
-      (cross-phase-instances-place-init!)
-      (bulk-binding-place-init!)
       (syntax-place-init!)
       (scope-place-init!)
       (resolve-cache-place-init!)

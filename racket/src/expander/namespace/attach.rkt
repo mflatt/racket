@@ -78,25 +78,16 @@
                            (module-path-index-resolve mpi))))
     (define m-ns (hash-ref (hash-ref todo mod-name #hasheqv()) phase missing))
 
-    ;; If module instance is available, can use its shifted requires;
-    ;; a cross-phase persistent instance can come from a different module
-    ;; registry, though, so prefer the declaration in the source namespace
-    (define mi (and (eq? missing m-ns)
-                    (namespace->module-instance src-namespace mod-name phase)))
-    (define m (and (eq? missing m-ns)
-                   (or (namespace->module src-namespace mod-name)
-                       (and mi (module-instance-module mi)))))
-    (when (and (eq? missing m-ns)
-               (not m)
-               (not (label-phase? phase)))
-      (raise-arguments-error who
-                             "module not declared (in the source namespace)"
-                             "module name" mod-name))
-
-    ;; A submodule (attached at the label phase) might not be declared in
-    ;; the source namespace when its enclosing module's declaration came
-    ;; from a cross-phase persistent instance; skip it in that case
-    (when (and (eq? missing m-ns) m)
+    (when (eq? missing m-ns)
+      ;; If module instance is available, can use its shifted requires:
+      (define mi (namespace->module-instance src-namespace mod-name phase))
+      (define m (if mi
+                    (module-instance-module mi)
+                    (namespace->module src-namespace mod-name)))
+      (unless m
+        (raise-arguments-error who
+                               "module not declared (in the source namespace)"
+                               "module name" mod-name))
 
       (cond
        [(and (module-cross-phase-persistent? m)
@@ -126,6 +117,17 @@
                                      "module not instantiated (in the source namespace)"
                                      "module name" mod-name
                                      "instance phase" phase))
+
+            (when (module-cross-phase-persistent? m)
+              ;; The instance will be shared for all phases in the destination,
+              ;; so make sure that all of its phase levels have been run;
+              ;; also load any modules that it would load lazily, so that
+              ;; they're also attached
+              (cross-phase-module-instance-run-all-levels! mi)
+              (define inst-ns (module-instance-namespace mi))
+              (for ([dep-mpi (in-list (reverse (module-instance-attach-dependencies mi)))])
+                (parameterize ([current-namespace inst-ns])
+                  (namespace-module-instantiate! inst-ns dep-mpi 0 #:run-phase 0))))
             
             (define already-m-ns (and already-m
                                       (namespace->module-namespace dest-namespace mod-name phase)))
@@ -199,14 +201,20 @@
 
           (when (module-supermodule-name m)
             ;; Associated supermodule is treated like an associated submodule
-            (loop (module-path-index-join* `(submod "..") mpi) #f #f #f attach-phase #t)))])))
+            (loop (module-path-index-join* `(submod "..") mpi) #f #f #f attach-phase #t)))
+
+        (when (and m-ns
+                   (not already?)
+                   (module-cross-phase-persistent? m))
+          ;; Modules that would be loaded lazily by the instance are
+          ;; attached as if they are required; that's needed even when not
+          ;; `recur?`, since a flattened set of requires doesn't include them
+          (for ([dep-mpi (in-list (reverse (module-instance-attach-dependencies mi)))])
+            (loop dep-mpi #f phase attach-instances? attach-phase #t)))])))
 
   ;; Perform decided transfers
   (for ([(mod-name phases) (in-hash todo)])
-    (define m (or (namespace->module src-namespace mod-name)
-                  ;; a cross-phase persistent instance can supply the declaration:
-                  (let ([mi (namespace->module-instance src-namespace mod-name 0)])
-                    (and mi (module-instance-module mi)))))
+    (define m (namespace->module src-namespace mod-name))
     (module-force-bulk-binding! m src-namespace)
     (unless (eq? m (namespace->module dest-namespace mod-name))
       (namespace-copy-shifted-requires! dest-namespace src-namespace mod-name)
