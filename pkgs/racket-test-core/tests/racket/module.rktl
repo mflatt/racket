@@ -4767,5 +4767,57 @@ case of module-leve bindings; it doesn't cover local bindings.
   (err/rt-test (syntax-local-state-set! "key" 1)))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; `syntax-local-state` is shared by transformers and visit-time code
+;; in a module expansion, and it doesn't persist across expansions
+
+(parameterize ([current-namespace (make-base-namespace)])
+  (eval '(module ucpp-registry racket/base
+           (#%declare #:unsafe-cross-phase-persistent)
+           (require (for-syntax racket/base))
+           (provide (for-syntax register!)
+                    registered)
+           (define-for-syntax key (gensym 'registered))
+           (define-for-syntax (register! v)
+             (syntax-local-state-set! key (cons v (syntax-local-state-ref key null))))
+           (define-syntax (registered stx)
+             (datum->syntax stx (list 'quote (syntax-local-state-ref key null))))))
+  (eval '(module ucpp-registers racket/base
+           (require (for-syntax racket/base) 'ucpp-registry)
+           ;; runs when the module is visited for an expansion:
+           (begin-for-syntax (register! 'hello))))
+  (eval '(module ucpp-query-1 racket/base
+           (require 'ucpp-registry 'ucpp-registers)
+           (provide v)
+           (define v (registered))))
+  (eval '(module ucpp-query-2 racket/base
+           (require 'ucpp-registry 'ucpp-registers)
+           (provide v)
+           (define v (registered))))
+  (eval '(module ucpp-query-3 racket/base
+           (require 'ucpp-registry)
+           (provide v)
+           (define v (registered))))
+  (test '(hello) dynamic-require ''ucpp-query-1 'v)
+  (test '(hello) dynamic-require ''ucpp-query-2 'v)
+  (test '() dynamic-require ''ucpp-query-3 'v))
+
+;; `runtime-paths` (as used by `raco exe`) reports run-time paths
+;; registered when a module is visited, once per expansion
+(parameterize ([current-namespace (make-base-namespace)])
+  (eval '(module has-runtime-paths racket/base
+           (require racket/runtime-path (for-syntax racket/base))
+           (define-runtime-path data "data.txt")
+           (define-runtime-path-list more (list "a.txt" "b.txt"))
+           (provide data more)))
+  (define (query)
+    (syntax-case (expand '(module m racket/kernel
+                            (#%require (only 'has-runtime-paths) racket/runtime-path)
+                            (runtime-paths 'has-runtime-paths)))
+        ()
+      [(_ m mz (mb req (q specs))) (syntax->datum #'specs)]))
+  (test '("a.txt" "b.txt" "data.txt") query)
+  (test '("a.txt" "b.txt" "data.txt") query))
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (report-errs)

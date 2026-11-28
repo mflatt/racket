@@ -52,7 +52,18 @@
 ;; ----------------------------------------
 ;; the code below used to be in `mzlib/runtime-path`
   
-(define-for-syntax ext-file-table (make-hasheq))
+;; Compile-time tables are local to a module expansion (or namespace),
+;; since this module's instance is cross-phase persistent and shared;
+;; a global table would accumulate registrations (each holding a
+;; variable reference, and so a module instance) from every expansion
+(define-for-syntax (local-table key make-table)
+  (or (syntax-local-state-ref key #f)
+      (let ([ht (make-table)])
+        (syntax-local-state-set! key ht)
+        ht)))
+
+(define-for-syntax ext-file-table-key (gensym 'runtime-path-ext-files))
+(define-for-syntax (ext-file-table) (local-table ext-file-table-key make-hasheq))
 
 (define (lookup-in-table var-ref p)
   ;; This function is designed to cooperate with a table embedded
@@ -164,7 +175,8 @@
   
 (define-for-syntax (register-ext-files var-ref paths)
   (let ([modname (variable-reference->resolved-module-path var-ref)])
-    (let ([files (hash-ref ext-file-table modname null)])
+    (let* ([ext-file-table (ext-file-table)]
+           [files (hash-ref ext-file-table modname null)])
       (hash-set! ext-file-table modname (append paths files)))))
 
 (define-syntax (-define-runtime-path stx)
@@ -227,17 +239,18 @@
     [(_ id expr) #`(-define-runtime-path #,stx (id) `(module ,expr ,(#%variable-reference)) list values #f runtime?)]
     [(_ id #:runtime?-id runtime?-id expr) #`(-define-runtime-path #,stx (id) `(module ,expr ,(#%variable-reference)) list values #f runtime?-id)]))
 
-(define-for-syntax required-module-paths (make-hash))
+(define-for-syntax required-module-paths-key (gensym 'runtime-path-required))
+(define-for-syntax (required-module-paths) (local-table required-module-paths-key make-hash))
 (define-syntax (runtime-require stx)
   (syntax-case stx ()
     [(_ mod-path)
      (let ([mp (syntax->datum #'mod-path)])
        (unless (module-path? mp)
          (raise-syntax-error #f "not a module path" stx  #'mod-path))
-       (if (hash-ref required-module-paths mp #f)
+       (if (hash-ref (required-module-paths) mp #f)
            #'(begin)
            (begin
-             (hash-set! required-module-paths mp #t)
+             (hash-set! (required-module-paths) mp #t)
              #'(begin-for-syntax
                 (register-ext-files 
                  (#%variable-reference)
@@ -248,7 +261,7 @@
     [(_ mp)
      #`(quote
         #,(hash-ref
-           ext-file-table
+           (ext-file-table)
            (module-path-index-resolve 
             (let ([p (syntax->datum #'mp)]
                   [base (syntax-source-module stx)])

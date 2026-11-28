@@ -16076,16 +16076,16 @@
   (|#%name|
    root-expand-context-frame-id
    (record-accessor struct:root-expand-context/outer 3)))
-(define finish_2290
+(define finish_2837
   (make-struct-type-install-properties
    '(root-expand-context/inner)
-   8
+   7
    0
    #f
    (list (cons prop:authentic #t))
    (current-inspector)
    #f
-   '(0 1 2 3 4 5 6 7)
+   '(0 1 2 3 4 5 6)
    #f
    'root-expand-context/inner))
 (define struct:root-expand-context/inner
@@ -16096,13 +16096,13 @@
    (|#%nongenerative-uid| root-expand-context/inner)
    #f
    #f
-   '(8 . 0)
+   '(7 . 0)
    'make-struct-type
    #f
    #f
    #f
    |#%system-inspector|))
-(define effect_2880 (finish_2290 struct:root-expand-context/inner))
+(define effect_2880 (finish_2837 struct:root-expand-context/inner))
 (define root-expand-context/inner2.1
   (|#%name|
    root-expand-context/inner
@@ -16143,10 +16143,6 @@
   (|#%name|
    root-expand-context/inner-lift-key
    (record-accessor struct:root-expand-context/inner 6)))
-(define root-expand-context/inner-local-state
-  (|#%name|
-   root-expand-context/inner-local-state
-   (record-accessor struct:root-expand-context/inner 7)))
 (define root-expand-context/make
   (lambda (self-mpi_0
            module-scopes_0
@@ -16157,8 +16153,7 @@
            defined-syms_0
            frame-id_0
            counter_0
-           lift-key_0
-           local-state_0)
+           lift-key_0)
     (root-expand-context/outer1.1
      (root-expand-context/inner2.1
       self-mpi_0
@@ -16167,8 +16162,7 @@
       all-scopes-stx_0
       defined-syms_0
       counter_0
-      lift-key_0
-      local-state_0)
+      lift-key_0)
      post-expansion_0
      use-site-scopes_0
      frame-id_0)))
@@ -16204,10 +16198,6 @@
 (define root-expand-context-lift-key
   (lambda (v_0)
     (root-expand-context/inner-lift-key
-     (root-expand-context/outer-inner v_0))))
-(define root-expand-context-local-state
-  (lambda (v_0)
-    (root-expand-context/inner-local-state
      (root-expand-context/outer-inner v_0))))
 (define make-root-expand-context.1
   (|#%name|
@@ -16246,28 +16236,24 @@
                    (let ((frame-id_0 (string->uninterned-symbol "root-frame")))
                      (let ((counter_0 (box 0)))
                        (let ((lift-key_0 (generate-lift-key)))
-                         (let ((local-state_0 (make-hasheq)))
-                           (let ((lift-key_1 lift-key_0)
-                                 (counter_1 counter_0)
-                                 (frame-id_1 frame-id_0)
-                                 (defined-syms_1 defined-syms_0)
-                                 (use-site-scopes_1 use-site-scopes_0)
-                                 (all-scopes-stx_1 all-scopes-stx_0)
-                                 (top-level-bind-scope_1
-                                  top-level-bind-scope_0))
-                             (root-expand-context/outer1.1
-                              (root-expand-context/inner2.1
-                               self-mpi3_0
-                               module-scopes_0
-                               top-level-bind-scope_1
-                               all-scopes-stx_1
-                               defined-syms_1
-                               counter_1
-                               lift-key_1
-                               local-state_0)
-                              post-expansion-scope_0
-                              use-site-scopes_1
-                              frame-id_1))))))))))))))))
+                         (let ((counter_1 counter_0)
+                               (frame-id_1 frame-id_0)
+                               (defined-syms_1 defined-syms_0)
+                               (use-site-scopes_1 use-site-scopes_0)
+                               (all-scopes-stx_1 all-scopes-stx_0)
+                               (top-level-bind-scope_1 top-level-bind-scope_0))
+                           (root-expand-context/outer1.1
+                            (root-expand-context/inner2.1
+                             self-mpi3_0
+                             module-scopes_0
+                             top-level-bind-scope_1
+                             all-scopes-stx_1
+                             defined-syms_1
+                             counter_1
+                             lift-key_0)
+                            post-expansion-scope_0
+                            use-site-scopes_1
+                            frame-id_1)))))))))))))))
 (define apply-post-expansion
   (lambda (pe_0 s_0)
     (if (not pe_0)
@@ -16407,30 +16393,26 @@
                       (let ((counter_0
                              (box (syntax-e$1 (vector-ref vec_0 6)))))
                         (let ((lift-key_0 (generate-lift-key)))
-                          (let ((local-state_0 (make-hasheq)))
-                            (let ((lift-key_1 lift-key_0)
-                                  (counter_1 counter_0)
-                                  (frame-id_1 frame-id_0)
-                                  (defined-syms_1 defined-syms_0)
-                                  (use-site-scopes_1 use-site-scopes_0)
-                                  (all-scopes-stx_1 all-scopes-stx_0)
-                                  (top-level-bind-scope_1
-                                   top-level-bind-scope_0)
-                                  (post-expansion_1 post-expansion_0)
-                                  (module-scopes_1 module-scopes_0))
-                              (root-expand-context/outer1.1
-                               (root-expand-context/inner2.1
-                                self_0
-                                module-scopes_1
-                                top-level-bind-scope_1
-                                all-scopes-stx_1
-                                defined-syms_1
-                                counter_1
-                                lift-key_1
-                                local-state_0)
-                               post-expansion_1
-                               use-site-scopes_1
-                               frame-id_1))))))))))))))))
+                          (let ((counter_1 counter_0)
+                                (frame-id_1 frame-id_0)
+                                (defined-syms_1 defined-syms_0)
+                                (use-site-scopes_1 use-site-scopes_0)
+                                (all-scopes-stx_1 all-scopes-stx_0)
+                                (top-level-bind-scope_1 top-level-bind-scope_0)
+                                (post-expansion_1 post-expansion_0)
+                                (module-scopes_1 module-scopes_0))
+                            (root-expand-context/outer1.1
+                             (root-expand-context/inner2.1
+                              self_0
+                              module-scopes_1
+                              top-level-bind-scope_1
+                              all-scopes-stx_1
+                              defined-syms_1
+                              counter_1
+                              lift-key_0)
+                             post-expansion_1
+                             use-site-scopes_1
+                             frame-id_1)))))))))))))))
 (define defined-syms-hash?
   (lambda (v_0)
     (letrec*
@@ -20835,7 +20817,7 @@
                   (lambda (s_0) (error "bad syntax:" s_0)))))
             (lambda (t_0) v_0))))))))
 (define 1/make-set!-transformer
-  (let ((finish940
+  (let ((finish938
          (make-struct-type-install-properties
           '(set!-transformer)
           1
@@ -20857,11 +20839,11 @@
             #f
             '(1 . 0)
             'make-struct-type
-            (finish940 'proc)
-            (finish940 'arity)
+            (finish938 'proc)
+            (finish938 'arity)
             #f
             |#%system-inspector|)))
-      (let ((effect941 (finish940 struct:set!-transformer_0)))
+      (let ((effect939 (finish938 struct:set!-transformer_0)))
         (let ((set!-transformer1_0
                (|#%name|
                 set!-transformer
@@ -21495,7 +21477,6 @@
            frame-id_0
            counter_0
            lift-key_0
-           local-state_0
            to-parsed?_0
            context_0
            phase_0
@@ -21538,7 +21519,6 @@
       defined-syms_0
       counter_0
       lift-key_0
-      local-state_0
       to-parsed?_0
       phase_0
       namespace_0
@@ -21712,61 +21692,56 @@
                                 (root-expand-context/inner-lift-key
                                  (root-expand-context/outer-inner
                                   root-ctx_0))))
-                           (let ((local-state_0
-                                  (root-expand-context/inner-local-state
-                                   (root-expand-context/outer-inner
-                                    root-ctx_0))))
-                             (let ((phase_0 (namespace-phase ns13_0)))
-                               (let ((binding-layer_0
-                                      (root-expand-context/outer-frame-id
-                                       root-ctx_0)))
-                                 (let ((declared-submodule-names_0 hash2610))
-                                   (expand-context/outer1.1
-                                    (expand-context/inner2.1
-                                     self-mpi_0
-                                     module-scopes_0
-                                     top-level-bind-scope_0
-                                     all-scopes-stx_0
-                                     defined-syms_0
-                                     counter_0
-                                     lift-key_0
-                                     local-state_0
-                                     to-parsed?3_0
-                                     phase_0
-                                     ns13_0
-                                     #f
-                                     #f
-                                     #t
-                                     #f
-                                     #f
-                                     empty-free-id-set
-                                     declared-submodule-names_0
-                                     #f
-                                     '()
-                                     #f
-                                     #f
-                                     #f
-                                     #f
-                                     observer6_0
-                                     for-serializable?4_0
-                                     to-correlated-linklet?5_0
-                                     to-correlated-linklet?5_0
-                                     #f
-                                     skip-visit-available?7_0)
-                                    post-expansion_0
-                                    use-site-scopes_0
-                                    frame-id_0
-                                    'top-level
-                                    empty-env
-                                    null
-                                    #f
-                                    binding-layer_0
-                                    null
-                                    #f
-                                    #f
-                                    null
-                                    null
-                                    #f)))))))))))))))))))
+                           (let ((phase_0 (namespace-phase ns13_0)))
+                             (let ((binding-layer_0
+                                    (root-expand-context/outer-frame-id
+                                     root-ctx_0)))
+                               (let ((declared-submodule-names_0 hash2610))
+                                 (expand-context/outer1.1
+                                  (expand-context/inner2.1
+                                   self-mpi_0
+                                   module-scopes_0
+                                   top-level-bind-scope_0
+                                   all-scopes-stx_0
+                                   defined-syms_0
+                                   counter_0
+                                   lift-key_0
+                                   to-parsed?3_0
+                                   phase_0
+                                   ns13_0
+                                   #f
+                                   #f
+                                   #t
+                                   #f
+                                   #f
+                                   empty-free-id-set
+                                   declared-submodule-names_0
+                                   #f
+                                   '()
+                                   #f
+                                   #f
+                                   #f
+                                   #f
+                                   observer6_0
+                                   for-serializable?4_0
+                                   to-correlated-linklet?5_0
+                                   to-correlated-linklet?5_0
+                                   #f
+                                   skip-visit-available?7_0)
+                                  post-expansion_0
+                                  use-site-scopes_0
+                                  frame-id_0
+                                  'top-level
+                                  empty-env
+                                  null
+                                  #f
+                                  binding-layer_0
+                                  null
+                                  #f
+                                  #f
+                                  null
+                                  null
+                                  #f))))))))))))))))))
 (define copy-root-expand-context
   (lambda (ctx_0 root-ctx_0)
     (if (expand-context/outer? ctx_0)
@@ -21809,63 +21784,58 @@
                                             (root-expand-context/inner-lift-key
                                              (root-expand-context/outer-inner
                                               root-ctx_0))))
-                                       (let ((local-state37_0
-                                              (root-expand-context/inner-local-state
-                                               (root-expand-context/outer-inner
-                                                root-ctx_0))))
-                                         (expand-context/inner2.1
-                                          self-mpi30_0
-                                          module-scopes31_0
-                                          top-level-bind-scope32_0
-                                          all-scopes-stx33_0
-                                          defined-syms34_0
-                                          counter35_0
-                                          lift-key36_0
-                                          local-state37_0
-                                          (expand-context/inner-to-parsed?
-                                           the-struct_0)
-                                          (expand-context/inner-phase
-                                           the-struct_0)
-                                          (expand-context/inner-namespace
-                                           the-struct_0)
-                                          (expand-context/inner-just-once?
-                                           the-struct_0)
-                                          (expand-context/inner-module-begin-k
-                                           the-struct_0)
-                                          (expand-context/inner-allow-unbound?
-                                           the-struct_0)
-                                          (expand-context/inner-in-local-expand?
-                                           the-struct_0)
-                                          (|expand-context/inner-keep-#%expression?|
-                                           the-struct_0)
-                                          (expand-context/inner-stops
-                                           the-struct_0)
-                                          (expand-context/inner-declared-submodule-names
-                                           the-struct_0)
-                                          (expand-context/inner-lifts
-                                           the-struct_0)
-                                          (expand-context/inner-lift-envs
-                                           the-struct_0)
-                                          (expand-context/inner-module-lifts
-                                           the-struct_0)
-                                          (expand-context/inner-require-lifts
-                                           the-struct_0)
-                                          (expand-context/inner-to-module-lifts
-                                           the-struct_0)
-                                          (expand-context/inner-requires+provides
-                                           the-struct_0)
-                                          (expand-context/inner-observer
-                                           the-struct_0)
-                                          (expand-context/inner-for-serializable?
-                                           the-struct_0)
-                                          (expand-context/inner-to-correlated-linklet?
-                                           the-struct_0)
-                                          (expand-context/inner-normalize-locals?
-                                           the-struct_0)
-                                          (expand-context/inner-parsing-expanded?
-                                           the-struct_0)
-                                          (expand-context/inner-skip-visit-available?
-                                           the-struct_0))))))))))
+                                       (expand-context/inner2.1
+                                        self-mpi30_0
+                                        module-scopes31_0
+                                        top-level-bind-scope32_0
+                                        all-scopes-stx33_0
+                                        defined-syms34_0
+                                        counter35_0
+                                        lift-key36_0
+                                        (expand-context/inner-to-parsed?
+                                         the-struct_0)
+                                        (expand-context/inner-phase
+                                         the-struct_0)
+                                        (expand-context/inner-namespace
+                                         the-struct_0)
+                                        (expand-context/inner-just-once?
+                                         the-struct_0)
+                                        (expand-context/inner-module-begin-k
+                                         the-struct_0)
+                                        (expand-context/inner-allow-unbound?
+                                         the-struct_0)
+                                        (expand-context/inner-in-local-expand?
+                                         the-struct_0)
+                                        (|expand-context/inner-keep-#%expression?|
+                                         the-struct_0)
+                                        (expand-context/inner-stops
+                                         the-struct_0)
+                                        (expand-context/inner-declared-submodule-names
+                                         the-struct_0)
+                                        (expand-context/inner-lifts
+                                         the-struct_0)
+                                        (expand-context/inner-lift-envs
+                                         the-struct_0)
+                                        (expand-context/inner-module-lifts
+                                         the-struct_0)
+                                        (expand-context/inner-require-lifts
+                                         the-struct_0)
+                                        (expand-context/inner-to-module-lifts
+                                         the-struct_0)
+                                        (expand-context/inner-requires+provides
+                                         the-struct_0)
+                                        (expand-context/inner-observer
+                                         the-struct_0)
+                                        (expand-context/inner-for-serializable?
+                                         the-struct_0)
+                                        (expand-context/inner-to-correlated-linklet?
+                                         the-struct_0)
+                                        (expand-context/inner-normalize-locals?
+                                         the-struct_0)
+                                        (expand-context/inner-parsing-expanded?
+                                         the-struct_0)
+                                        (expand-context/inner-skip-visit-available?
+                                         the-struct_0)))))))))
                          (raise-argument-error
                           'struct-copy
                           "expand-context/inner?"
@@ -21928,9 +21898,9 @@
           #f)
       ctx_0
       (if (expand-context/outer? ctx_0)
-        (let ((inner41_0 (root-expand-context/outer-inner ctx_0)))
+        (let ((inner40_0 (root-expand-context/outer-inner ctx_0)))
           (expand-context/outer1.1
-           inner41_0
+           inner40_0
            #f
            (root-expand-context/outer-use-site-scopes ctx_0)
            (root-expand-context/outer-frame-id ctx_0)
@@ -21951,9 +21921,9 @@
     (if (not (expand-context/outer-name ctx_0))
       ctx_0
       (if (expand-context/outer? ctx_0)
-        (let ((inner43_0 (root-expand-context/outer-inner ctx_0)))
+        (let ((inner42_0 (root-expand-context/outer-inner ctx_0)))
           (expand-context/outer1.1
-           inner43_0
+           inner42_0
            (root-expand-context/outer-post-expansion ctx_0)
            (root-expand-context/outer-use-site-scopes ctx_0)
            (root-expand-context/outer-frame-id ctx_0)
@@ -21975,10 +21945,10 @@
    (lambda (wrt19_0 ctx21_0)
      (if (expand-context/outer-name wrt19_0)
        (if (expand-context/outer? ctx21_0)
-         (let ((name44_0 (expand-context/outer-name wrt19_0)))
-           (let ((inner45_0 (root-expand-context/outer-inner ctx21_0)))
+         (let ((name43_0 (expand-context/outer-name wrt19_0)))
+           (let ((inner44_0 (root-expand-context/outer-inner ctx21_0)))
              (expand-context/outer1.1
-              inner45_0
+              inner44_0
               (root-expand-context/outer-post-expansion ctx21_0)
               (root-expand-context/outer-use-site-scopes ctx21_0)
               (root-expand-context/outer-frame-id ctx21_0)
@@ -21992,18 +21962,18 @@
               (expand-context/outer-need-eventually-defined ctx21_0)
               (expand-context/outer-current-introduction-scopes ctx21_0)
               (expand-context/outer-current-use-scopes ctx21_0)
-              name44_0)))
+              name43_0)))
          (raise-argument-error 'struct-copy "expand-context/outer?" ctx21_0))
        ctx21_0))))
 (define as-named-context
   (lambda (ctx_0 ids_0)
     (if (if (pair? ids_0) (null? (cdr ids_0)) #f)
       (if (expand-context/outer? ctx_0)
-        (let ((name46_0 (car ids_0)))
-          (let ((inner47_0 (root-expand-context/outer-inner ctx_0)))
-            (let ((name46_1 name46_0))
+        (let ((name45_0 (car ids_0)))
+          (let ((inner46_0 (root-expand-context/outer-inner ctx_0)))
+            (let ((name45_1 name45_0))
               (expand-context/outer1.1
-               inner47_0
+               inner46_0
                (root-expand-context/outer-post-expansion ctx_0)
                (root-expand-context/outer-use-site-scopes ctx_0)
                (root-expand-context/outer-frame-id ctx_0)
@@ -22017,13 +21987,13 @@
                (expand-context/outer-need-eventually-defined ctx_0)
                (expand-context/outer-current-introduction-scopes ctx_0)
                (expand-context/outer-current-use-scopes ctx_0)
-               name46_1))))
+               name45_1))))
         (raise-argument-error 'struct-copy "expand-context/outer?" ctx_0))
       ctx_0)))
 (define as-to-parsed-context
   (lambda (ctx_0)
     (if (expand-context/outer? ctx_0)
-      (let ((inner48_0
+      (let ((inner47_0
              (let ((the-struct_0 (root-expand-context/outer-inner ctx_0)))
                (if (expand-context/inner? the-struct_0)
                  (expand-context/inner2.1
@@ -22034,7 +22004,6 @@
                   (root-expand-context/inner-defined-syms the-struct_0)
                   (root-expand-context/inner-counter the-struct_0)
                   (root-expand-context/inner-lift-key the-struct_0)
-                  (root-expand-context/inner-local-state the-struct_0)
                   #t
                   (expand-context/inner-phase the-struct_0)
                   (expand-context/inner-namespace the-struct_0)
@@ -22062,7 +22031,7 @@
                   "expand-context/inner?"
                   the-struct_0)))))
         (expand-context/outer1.1
-         inner48_0
+         inner47_0
          (root-expand-context/outer-post-expansion ctx_0)
          (root-expand-context/outer-use-site-scopes ctx_0)
          (root-expand-context/outer-frame-id ctx_0)
@@ -47122,8 +47091,7 @@
                         all-scopes-stx18_0
                         (root-expand-context/inner-defined-syms the-struct_0)
                         (root-expand-context/inner-counter the-struct_0)
-                        (root-expand-context/inner-lift-key the-struct_0)
-                        (root-expand-context/inner-local-state the-struct_0)))
+                        (root-expand-context/inner-lift-key the-struct_0)))
                      (raise-argument-error
                       'struct-copy
                       "root-expand-context/inner?"
@@ -54198,8 +54166,6 @@
                                                   (root-expand-context/inner-counter
                                                    the-struct_0)
                                                   lift-key_0
-                                                  (root-expand-context/inner-local-state
-                                                   the-struct_0)
                                                   (expand-context/inner-to-parsed?
                                                    the-struct_0)
                                                   (expand-context/inner-phase
@@ -54415,8 +54381,6 @@
                                 the-struct_0)
                                (root-expand-context/inner-counter the-struct_0)
                                (root-expand-context/inner-lift-key
-                                the-struct_0)
-                               (root-expand-context/inner-local-state
                                 the-struct_0)
                                (expand-context/inner-to-parsed? the-struct_0)
                                phase_0
@@ -56233,8 +56197,6 @@
                                                 the-struct_0)
                                                (root-expand-context/inner-lift-key
                                                 the-struct_0)
-                                               (root-expand-context/inner-local-state
-                                                the-struct_0)
                                                to-parsed?85_1
                                                (expand-context/inner-phase
                                                 the-struct_0)
@@ -57056,32 +57018,26 @@
        (root-expand-context/inner-lift-key
         (root-expand-context/outer-inner ctx_0))))))
 (define none (gensym 'none))
-(define cell.1$3 (unsafe-make-place-local (make-weak-hasheq)))
+(define cell.1$3 (unsafe-make-place-local (make-ephemeron-hasheq)))
 (define syntax-local-state-place-init!
-  (lambda () (unsafe-place-local-set! cell.1$3 (make-weak-hasheq))))
+  (lambda () (unsafe-place-local-set! cell.1$3 (make-ephemeron-hasheq))))
 (define current-local-state
   (lambda ()
     (let ((ctx_0 (get-current-expand-context.1 #t 'unexpected)))
-      (if ctx_0
-        (root-expand-context/inner-local-state
-         (root-expand-context/outer-inner ctx_0))
-        (let ((ns_0 (1/current-namespace)))
-          (let ((root-ctx_0 (namespace-get-root-expand-ctx ns_0)))
-            (if root-ctx_0
-              (root-expand-context/inner-local-state
-               (root-expand-context/outer-inner root-ctx_0))
-              (let ((key_0 (namespace-root-expand-ctx ns_0)))
-                (let ((or-part_0
-                       (hash-ref (unsafe-place-local-ref cell.1$3) key_0 #f)))
-                  (if or-part_0
-                    or-part_0
-                    (let ((ht_0 (make-hasheq)))
-                      (begin
-                        (hash-set!
-                         (unsafe-place-local-ref cell.1$3)
-                         key_0
-                         ht_0)
-                        ht_0))))))))))))
+      (let ((ns_0
+             (if ctx_0
+               (expand-context/inner-namespace
+                (root-expand-context/outer-inner ctx_0))
+               (1/current-namespace))))
+        (let ((key_0 (namespace-module-instances ns_0)))
+          (let ((or-part_0
+                 (hash-ref (unsafe-place-local-ref cell.1$3) key_0 #f)))
+            (if or-part_0
+              or-part_0
+              (let ((ht_0 (make-hasheq)))
+                (begin
+                  (hash-set! (unsafe-place-local-ref cell.1$3) key_0 ht_0)
+                  ht_0)))))))))
 (define 1/syntax-local-state-ref
   (let ((syntax-local-state-ref_0
          (|#%name|
@@ -60784,7 +60740,6 @@
                         (root-expand-context/inner-defined-syms the-struct_0)
                         (root-expand-context/inner-counter the-struct_0)
                         (root-expand-context/inner-lift-key the-struct_0)
-                        (root-expand-context/inner-local-state the-struct_0)
                         (expand-context/inner-to-parsed? the-struct_0)
                         (expand-context/inner-phase the-struct_0)
                         (expand-context/inner-namespace the-struct_0)
@@ -60923,8 +60878,6 @@
                                        the-struct_0)
                                       (root-expand-context/inner-lift-key
                                        the-struct_0)
-                                      (root-expand-context/inner-local-state
-                                       the-struct_0)
                                       (expand-context/inner-to-parsed?
                                        the-struct_0)
                                       phase_1
@@ -61021,8 +60974,6 @@
                                          (root-expand-context/inner-counter
                                           the-struct_0)
                                          (root-expand-context/inner-lift-key
-                                          the-struct_0)
-                                         (root-expand-context/inner-local-state
                                           the-struct_0)
                                          (expand-context/inner-to-parsed?
                                           the-struct_0)
@@ -61466,8 +61417,6 @@
                                             (root-expand-context/inner-counter
                                              the-struct_0)
                                             (root-expand-context/inner-lift-key
-                                             the-struct_0)
-                                            (root-expand-context/inner-local-state
                                              the-struct_0)
                                             (expand-context/inner-to-parsed?
                                              the-struct_0)
@@ -89594,8 +89543,6 @@
                                                                                                  the-struct_0)
                                                                                                 (root-expand-context/inner-lift-key
                                                                                                  the-struct_0)
-                                                                                                (root-expand-context/inner-local-state
-                                                                                                 the-struct_0)
                                                                                                 (expand-context/inner-to-parsed?
                                                                                                  the-struct_0)
                                                                                                 (expand-context/inner-phase
@@ -91411,7 +91358,7 @@
            "illegal use (not in a module top-level)"
            s_0)))))
     (void)))
-(define effect_2873
+(define effect_2843
   (begin
     (void
      (add-core-form!*
@@ -91453,7 +91400,6 @@
                          (root-expand-context/inner-defined-syms the-struct_0)
                          (root-expand-context/inner-counter the-struct_0)
                          (root-expand-context/inner-lift-key the-struct_0)
-                         (root-expand-context/inner-local-state the-struct_0)
                          (expand-context/inner-to-parsed? the-struct_0)
                          (expand-context/inner-phase the-struct_0)
                          (expand-context/inner-namespace the-struct_0)
@@ -91778,8 +91724,6 @@
                                                                          (root-expand-context/inner-counter
                                                                           the-struct_0)
                                                                          (root-expand-context/inner-lift-key
-                                                                          the-struct_0)
-                                                                         (root-expand-context/inner-local-state
                                                                           the-struct_0)
                                                                          (expand-context/inner-to-parsed?
                                                                           the-struct_0)
@@ -92223,8 +92167,6 @@
                                                                                                                  the-struct_0)
                                                                                                                 (root-expand-context/inner-lift-key
                                                                                                                  the-struct_0)
-                                                                                                                (root-expand-context/inner-local-state
-                                                                                                                 the-struct_0)
                                                                                                                 (expand-context/inner-to-parsed?
                                                                                                                  the-struct_0)
                                                                                                                 (expand-context/inner-phase
@@ -92495,8 +92437,6 @@
                                                                                                                                                                   (root-expand-context/inner-counter
                                                                                                                                                                    the-struct_0)
                                                                                                                                                                   lift-key327_1
-                                                                                                                                                                  (root-expand-context/inner-local-state
-                                                                                                                                                                   the-struct_0)
                                                                                                                                                                   (expand-context/inner-to-parsed?
                                                                                                                                                                    the-struct_0)
                                                                                                                                                                   phase_0
@@ -92648,8 +92588,6 @@
                                                                                                                                                                 (root-expand-context/inner-counter
                                                                                                                                                                  the-struct_0)
                                                                                                                                                                 (root-expand-context/inner-lift-key
-                                                                                                                                                                 the-struct_0)
-                                                                                                                                                                (root-expand-context/inner-local-state
                                                                                                                                                                  the-struct_0)
                                                                                                                                                                 (expand-context/inner-to-parsed?
                                                                                                                                                                  the-struct_0)
@@ -92955,8 +92893,6 @@
                                                                                                                                                                   the-struct_0)
                                                                                                                                                                  (root-expand-context/inner-lift-key
                                                                                                                                                                   the-struct_0)
-                                                                                                                                                                 (root-expand-context/inner-local-state
-                                                                                                                                                                  the-struct_0)
                                                                                                                                                                  (expand-context/inner-to-parsed?
                                                                                                                                                                   the-struct_0)
                                                                                                                                                                  (expand-context/inner-phase
@@ -93160,8 +93096,6 @@
                                                                                                      (root-expand-context/inner-counter
                                                                                                       the-struct_0)
                                                                                                      (root-expand-context/inner-lift-key
-                                                                                                      the-struct_0)
-                                                                                                     (root-expand-context/inner-local-state
                                                                                                       the-struct_0)
                                                                                                      (expand-context/inner-to-parsed?
                                                                                                       the-struct_0)
@@ -94813,8 +94747,6 @@
                                                                                                       the-struct_0)
                                                                                                      (root-expand-context/inner-lift-key
                                                                                                       the-struct_0)
-                                                                                                     (root-expand-context/inner-local-state
-                                                                                                      the-struct_0)
                                                                                                      (expand-context/inner-to-parsed?
                                                                                                       the-struct_0)
                                                                                                      (expand-context/inner-phase
@@ -96145,8 +96077,6 @@
                                                        the-struct_0)
                                                       (root-expand-context/inner-lift-key
                                                        the-struct_0)
-                                                      (root-expand-context/inner-local-state
-                                                       the-struct_0)
                                                       (expand-context/inner-to-parsed?
                                                        the-struct_0)
                                                       phase_0
@@ -96957,8 +96887,6 @@
                                                  the-struct_0)
                                                 (root-expand-context/inner-lift-key
                                                  the-struct_0)
-                                                (root-expand-context/inner-local-state
-                                                 the-struct_0)
                                                 (expand-context/inner-to-parsed?
                                                  the-struct_0)
                                                 (expand-context/inner-phase
@@ -97713,7 +97641,7 @@
                                  (list define-syntaxes15_0 ids_0 exp-rhs_0)))
                             (rebuild.1 #t s_0 temp28_0)))))))))))))))
     (void)))
-(define effect_2404
+(define effect_3390
   (begin
     (void
      (add-core-form!*
@@ -97795,8 +97723,6 @@
                                               (root-expand-context/inner-counter
                                                the-struct_0)
                                               lift-key38_0
-                                              (root-expand-context/inner-local-state
-                                               the-struct_0)
                                               (expand-context/inner-to-parsed?
                                                the-struct_0)
                                               (expand-context/inner-phase

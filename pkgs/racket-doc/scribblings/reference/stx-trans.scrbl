@@ -941,7 +941,11 @@ for caching lift information to avoid redundant lifts.
 Gets or sets a value associated with @racket[key] in a table that is
 local to the current module expansion (where each @tech{submodule} has
 its own table) or, for top-level expansion, local to the current
-@tech{namespace}. When no value is associated with @racket[key],
+@tech{namespace}. The same table is used by code that runs when a
+module is @tech{visit}ed for the expansion, such as a
+@racket[begin-for-syntax] body in a required module, so that such
+code can register information for use by transformers in the
+expansion. When no value is associated with @racket[key],
 @racket[syntax-local-state-ref] returns the result of
 @racket[failure-result] if it is a procedure, returns
 @racket[failure-result] itself otherwise, or raises

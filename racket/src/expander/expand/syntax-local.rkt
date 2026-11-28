@@ -24,7 +24,7 @@
          "definition-context.rkt"
          "../common/module-path.rkt"
          "../namespace/namespace.rkt"
-         (only-in (submod "../namespace/namespace.rkt" for-module) namespace-root-expand-ctx)
+         (only-in (submod "../namespace/namespace.rkt" for-module) namespace-module-instances)
          "../namespace/module.rkt"
          "../common/contract.rkt")
 
@@ -286,35 +286,35 @@
 ;; State that is local to the current module expansion (or top-level
 ;; namespace), which is useful for compile-time state in a module
 ;; that is cross-phase persistent, since such a module's compile-time
-;; instance is not created fresh for each module expansion. When not
-;; expanding, the state is associated with the current namespace,
-;; using the same table as top-level expansion in that namespace.
+;; instance is not created fresh for each module expansion.
+;;
+;; The state is keyed on a namespace's table of module instances. A
+;; module expansion gets a fresh table, and the namespaces of module
+;; instances created for the expansion share that table, so a
+;; transformer and code that runs when a module is visited for the
+;; expansion (such as a `begin-for-syntax` body) see the same state.
+;; For a top-level namespace, the state is associated with the
+;; namespace and the module instances created in it. An ephemeron
+;; table is needed, since a state value can refer back to its key
+;; (e.g., via a variable reference to a module instance).
 
 (define none (gensym 'none))
 
-(define-place-local namespace-local-states (make-weak-hasheq))
+(define-place-local local-states (make-ephemeron-hasheq))
 
 (define (syntax-local-state-place-init!)
-  (set! namespace-local-states (make-weak-hasheq)))
+  (set! local-states (make-ephemeron-hasheq)))
 
 (define (current-local-state)
   (define ctx (get-current-expand-context #:fail-ok? #t))
-  (cond
-    [ctx (root-expand-context-local-state ctx)]
-    [else
-     (define ns (current-namespace))
-     (define root-ctx (namespace-get-root-expand-ctx ns))
-     (cond
-       [root-ctx (root-expand-context-local-state root-ctx)]
-       [else
-        ;; A module instance's namespace might not have a root
-        ;; expand context, yet; key on the box that holds it, which
-        ;; is shared by the namespace's phase-specific variants
-        (define key (namespace-root-expand-ctx ns))
-        (or (hash-ref namespace-local-states key #f)
-            (let ([ht (make-hasheq)])
-              (hash-set! namespace-local-states key ht)
-              ht))])]))
+  (define ns (if ctx
+                 (expand-context-namespace ctx)
+                 (current-namespace)))
+  (define key (namespace-module-instances ns))
+  (or (hash-ref local-states key #f)
+      (let ([ht (make-hasheq)])
+        (hash-set! local-states key ht)
+        ht)))
 
 (define/who (syntax-local-state-ref key [failure-result none])
   (check who symbol? key)
